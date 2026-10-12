@@ -1,0 +1,28 @@
+id = "gcaudan.explorer"
+name = "Explorer"
+version = "0.1.0"
+min_herdr_version = "0.9.3"
+description = "VS Code-style file tree of the space, to the left of every tab"
+platforms = ["linux", "macos", "windows"]
+
+[[events]]
+on = "tab.created"
+command = ["node", "hook.js"]
+
+[[panes]]
+id = "tree"
+title = "Explorer"
+placement = "split"
+command = ["node", "explorer.js"]
+
+[[panes]]
+id = "diff"
+title = "Changes"
+placement = "zoomed"
+command = ["node", "diff.js"]
+
+[[actions]]
+id = "toggle"
+title = "Show or hide the explorer"
+contexts = ["tab"]
+command = ["node", "hook.js", "--toggle"]
