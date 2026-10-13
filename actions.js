@@ -24,7 +24,9 @@ const canPreview = abs => !SYSTEM.has(ext(abs)) || IMAGES.has(ext(abs));
 function detached(cmd, args, opts = {}) {
   return new Promise(resolve => {
     if (!cmd) return resolve(false);
-    const child = spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true, ...opts });
+    // A .cmd or .bat without a shell throws EINVAL on Windows instead of emitting 'error'.
+    let child;
+    try { child = spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true, ...opts }); } catch { return resolve(false); }
     child.on('error', () => resolve(false));
     child.on('spawn', () => { child.unref(); resolve(true); });
   });

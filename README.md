@@ -206,7 +206,7 @@ confirmations take `y`, any other key cancels.
 | `Tab`, `Shift+Tab` | query, include globs, exclude globs (`*.js, src/**`) |
 | `↑` `↓` (or `ctrl+k`, `ctrl+j` `ctrl+n`), `PageUp` `PageDown`, `ctrl+Home` `ctrl+End`, click | select; `alt+←` `alt+→` fold a file's results |
 | `Enter`, double-click | open in the preview at the line |
-| `alt+Enter` or `ctrl+o`, `ctrl+t`, `ctrl+y` | open in the editor, insert the path into the terminal, copy the relative path |
+| `ctrl+o` (or `alt+Enter`, which Windows Terminal keeps for full screen), `ctrl+t`, `ctrl+y` | open in the editor, insert the path into the terminal, copy the relative path |
 | `Esc`, `ctrl+c` | close |
 
 ### Source control
@@ -228,6 +228,7 @@ from 120 columns. Committing with nothing staged offers to stage everything firs
 | `n` `N`, `s` | in the diff: next and previous hunk, inline or side by side |
 | `c`, `Enter`, `Esc` | type the commit message, commit, leave the field; `alt+a` amend |
 | `ctrl+g` or `✧` | commit message written by Claude, or from the file names without it |
+| `c` `Enter` or `✓ Continue`, `X` or `✕ Abort` | during a rebase, cherry-pick or revert: continue once the conflicts are staged (git's message kept; refused when it would run `exec` lines or a merge strategy that is not git's), or abort (asks first); a merge ends with a commit, its message optional |
 | `b` or click on the branch | branches: filter, `Enter` switch, `n` new, `D` delete |
 | `f`, `P`, `p` | fetch, pull (fast-forward only), push (sets the upstream on the first push) |
 | Stashes | `n` stash (untracked files included), `a` apply, `o` pop, `d` drop |

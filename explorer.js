@@ -137,8 +137,9 @@ function select(i) {
   state.selected = state.rows.length ? state.rows[state.cursor].rel : null;
 }
 
-function toggle(row, open = !state.expanded.has(row.rel)) {
+function toggle(row, open) {
   if (!row || !row.dir || state.filter) return;
+  if (open === undefined) open = !state.expanded.has(row.rel);
   if (open) state.expanded.add(row.rel); else state.expanded.delete(row.rel);
   buildRows();
   save();
@@ -444,7 +445,11 @@ function header(W) {
     return line([[text, fg(C.yellow)], [' '.repeat(Math.max(0, room - w + 1)), ''], ...icons], W);
   }
   const [name, nw] = fit(` ${path.basename(ROOT).toUpperCase() || ROOT}`, room);
-  const [branch, bw] = fit(git.branch ? `  ${glyph(BRANCH)} ${git.branch}` : '', room - nw);
+  // A branch too long is cut with an ellipsis; without room for a few letters, it is left out rather than cut
+  // down to its icon.
+  const full = git.branch ? `  ${glyph(BRANCH)} ${git.branch}` : '';
+  const branch = textWidth(full) <= room - nw ? full : room - nw >= 7 ? ui.ellipsis(full, room - nw) : '';
+  const bw = textWidth(branch);
   return line([[name, ROOT === HOME ? '\x1b[1m' : '\x1b[1;3m'], [branch, fg(C.dim)], [' '.repeat(Math.max(0, room - nw - bw + 1)), ''], ...icons], W);
 }
 

@@ -133,6 +133,9 @@ async function git(args, opts = {}) {
 // The message of a failed git command: its first error line, without the "fatal: " prefix.
 function errorOf(res) {
   const lines = (res.err || res.out || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  // A refused push: the reason (non-fast-forward, fetch first…) rather than "failed to push some refs".
+  const rejected = lines.find(x => /^! \[(remote )?rejected\]/.test(x));
+  if (rejected) return rejected.replace(/^! \[(remote )?rejected\]\s+/, 'rejected ');
   const l = lines.find(x => /^(fatal|error):/.test(x)) || lines[0] || (res.code === null ? 'timed out or not run' : 'failed');
   return l.replace(/^(fatal|error): /, '');
 }
@@ -201,8 +204,14 @@ async function loadStatus() {
   info.detached = info.branch === '(detached)';
   info.hasHead = info.oid !== '(initial)';
   const has = name => fs.existsSync(path.join(info.gitdir, name));
-  info.state = has('MERGE_HEAD') ? 'MERGING' : has('rebase-merge') || has('rebase-apply') ? 'REBASING'
-    : has('CHERRY_PICK_HEAD') ? 'CHERRY-PICKING' : has('REVERT_HEAD') ? 'REVERTING' : has('BISECT_LOG') ? 'BISECTING' : '';
+  // rebase-apply is also git am's (applying); .git/sequencer alone: a cherry-pick or revert of several commits,
+  // between two of them once a commit made by hand ended one.
+  const next = () => { try { return fs.readFileSync(path.join(info.gitdir, 'sequencer', 'todo'), 'utf8'); } catch { return ''; } };
+  info.state = has('MERGE_HEAD') ? 'MERGING' : has('rebase-apply/applying') ? 'APPLYING'
+    : has('rebase-merge') || has('rebase-apply') ? 'REBASING'
+    : has('CHERRY_PICK_HEAD') ? 'CHERRY-PICKING' : has('REVERT_HEAD') ? 'REVERTING'
+    : has('sequencer') ? (/^\s*revert\s/.test(next()) ? 'REVERTING' : 'CHERRY-PICKING')
+    : has('BISECT_LOG') ? 'BISECTING' : '';
   S.repo = info;
   return true;
 }
@@ -500,9 +509,12 @@ function tabs(W) {
   return split(segs, right, W);
 }
 
-// Commit box: message field, ✧ (message written by Claude), amend toggle, commit button.
+// Commit box: message field, ✧ (message written by Claude), amend toggle, commit button (Continue during a rebase,
+// cherry-pick or revert), Abort during one of them or a merge.
 function commitRow(W) {
-  const btns = [['✧', generate], [S.amend ? '☑ amend' : '☐ amend', toggleAmend], [S.amend ? '✓ Amend' : '✓ Commit', commit]];
+  const o = ongoing();
+  const btns = [['✧', generate], [S.amend ? '☑ amend' : '☐ amend', toggleAmend],
+    [S.amend ? '✓ Amend' : continues() ? '✓ Continue' : '✓ Commit', commit], ...(o ? [['✕ Abort', abort]] : [])];
   const right = buttons(btns, 2, W, 0);
   const fw = Math.max(4, W - ui.textWidth(right.map(s => s[0]).join('')) - 2);
   hits.push({ y: 2, x0: 0, x1: fw + 1, fn: () => { S.editing = true; } });
@@ -511,7 +523,13 @@ function commitRow(W) {
   const cut = text => ui.ellipsis(text, fw - 1);
   if (S.generating) field = [[cut('✧ generating…'), fg(C.purple) + box]];
   else if (S.editing) field = S.field.segments(fw - 1, box + fg(C.text));
-  else if (!S.field.value) field = [[cut(S.amend ? 'Message (empty: keep the last one) · c' : 'Message · c to type, Enter to commit'), DIM + box]];
+  else if (!S.field.value) {
+    const text = S.amend ? 'Message (empty: keep the last one) · c'
+      : o && S.repo.state === 'REBASING' ? 'Rebase in progress · c, Enter: continue · X: abort'
+      : o ? `Message (empty: git's) · c, Enter: ${o.cont ? 'continue' : 'commit'} · X: abort`
+      : 'Message · c to type, Enter to commit';
+    field = [[cut(text), DIM + box]];
+  }
   else field = [[cut(S.field.value), fg(C.text) + box]];
   const used = ui.textWidth(field.map(s => s[0]).join(''));
   return ui.line([[' ', ''], [' ', box], ...field, [' '.repeat(Math.max(0, fw - 1 - used)), box], ...right], W);
@@ -532,11 +550,14 @@ function status(W) {
 
 function hints() {
   if (S.picker) return S.picker.typing ? 'type to filter · ↑↓ · Enter: switch · Esc: clear' : 'Enter: switch · n: new branch · D: delete · /: filter · Esc: close';
-  if (S.editing) return 'Enter: commit · Esc: leave · ctrl+g: ✧ write with Claude · alt+a: amend';
+  if (S.editing) return `Enter: ${continues() ? 'continue' : 'commit'} · Esc: leave · ctrl+g: ✧ write with Claude · alt+a: amend`;
   if (S.diff && (S.diff.focus || ui.size().W < SPLIT)) return '↑↓ PgUp PgDn: scroll · n/N: hunks · s: inline/side by side · Tab: list · q: back';
   const common = 'b: branch · f p P: fetch push pull · r · q: quit';
   if (!S.repo) return S.noGit ? 'q: quit' : 'i: git init · q: quit';
-  if (S.view === 'changes') return `s/Space: stage · u: unstage · a/A: all · d: discard · Enter: diff · c: commit · ^G: ✧ · t: tree · ${common}`;
+  if (S.view === 'changes') {
+    const o = ongoing();
+    return `s/Space: stage · u: unstage · a/A: all · d: discard · Enter: diff · c: ${continues() ? 'continue' : 'commit'}${o ? ' · X: abort' : ''} · ^G: ✧ · t: tree · ${common}`;
+  }
   if (S.view === 'history') return `Enter: show commit · 1-4: views · ${common}`;
   if (S.view === 'stashes') return `Enter: show · n: stash · a: apply · o: pop · d: drop · ${common}`;
   return `Enter: checkout · D: delete branch · ${common}`;
@@ -682,10 +703,24 @@ function discard(items, sec) {
 
 // --- commit
 
+// Operations in progress, by repository state: continue (a merge ends with a commit instead) and abort.
+const ONGOING = {
+  MERGING: { name: 'merge', abort: ['merge', '--abort'] },
+  REBASING: { name: 'rebase', cont: ['rebase', '--continue'], abort: ['rebase', '--abort'] },
+  'CHERRY-PICKING': { name: 'cherry-pick', cont: ['cherry-pick', '--continue'], abort: ['cherry-pick', '--abort'] },
+  REVERTING: { name: 'revert', cont: ['revert', '--continue'], abort: ['revert', '--abort'] },
+};
+const ongoing = () => (S.repo && ONGOING[S.repo.state]) || null;
+// Continue rather than commit: always for a rebase (git keeps each commit's message), without a message of the
+// user's for a cherry-pick or a revert (with one, a commit uses it).
+const continues = () => { const o = ongoing(); return !!(o && o.cont && !S.amend && (S.repo.state === 'REBASING' || !S.field.value.trim())); };
+
 async function commit() {
   const r = S.repo, msg = S.field.value.trim();
   if (!r || S.generating) return;
-  if (!msg && !S.amend) { S.editing = true; return flash('Type a commit message first, or ctrl+g to have one written', true); }
+  if (continues()) return proceed();
+  // A merge has a message prepared by git (MERGE_MSG), used as is without one.
+  if (!msg && !S.amend && r.state !== 'MERGING') { S.editing = true; return flash('Type a commit message first, or ctrl+g to have one written', true); }
   if (r.conflicts.length) return flash('Resolve the merge conflicts and stage the files first', true);
   if (!r.staged.length && !S.amend && !r.state) {
     if (!r.changes.length) return flash('Nothing to commit');
@@ -698,10 +733,62 @@ async function commit() {
 
 async function doCommit(msg) {
   const args = ['commit', '-q', ...(S.amend ? ['--amend'] : []), ...(msg ? ['--cleanup=strip', '-F', '-'] : ['--no-edit'])];
-  if (await op(S.amend ? 'Amending' : 'Committing', args, { input: msg + '\n', detached: true })) {
+  const amend = S.amend, o = ongoing();
+  if (await op(amend ? 'Amending' : 'Committing', args, { input: msg + '\n', detached: true })) {
     S.field.set(''); S.editing = false; S.amend = false;
-    flash(msg ? `Committed: ${msg}` : 'Last commit amended');
+    // A cherry-pick or revert of several commits goes on with the next one.
+    if (o && o.cont && S.repo.state !== 'REBASING' && fs.existsSync(path.join(S.repo.gitdir, 'sequencer'))) return proceed(o);
+    flash(msg ? `Committed: ${msg}` : amend ? 'Last commit amended' : 'Committed');
   }
+}
+
+// What --continue would run that the hardening cannot stop, from files a repository received with its .git can
+// carry: the exec lines of a rebase, and a merge strategy other than git's own, run as git merge-<name>, which
+// can be an alias of the repository's config.
+const STRATEGIES = new Set(['ort', 'recursive', 'resolve', 'octopus', 'ours', 'subtree']);
+async function unsafeToContinue() {
+  const file = name => path.join(S.repo.gitdir, name);
+  const read = name => { try { return fs.readFileSync(file(name), 'utf8'); } catch { return ''; } };
+  if (/^\s*(x|exec)(\s|$)/m.test(read('rebase-merge/git-rebase-todo'))) return 'commands (exec lines)';
+  const strategies = [read('rebase-merge/strategy').trim()];
+  // sequencer/opts read by git itself, as the sequencer does (no includes): its syntax has more forms than a key
+  // per line. Exit code 1: no strategy set.
+  if (fs.existsSync(file('sequencer/opts'))) {
+    const res = await git(['config', '--file', file('sequencer/opts'), '--get-all', 'options.strategy']);
+    if (res.code !== 0 && res.code !== 1) return 'options it could not check (sequencer/opts)';
+    strategies.push(...res.out.split('\n'));
+  }
+  // Without one there, the strategy is pull.twohead, its first value: one of the repository's wins over -c.
+  const twohead = await git(['config', '-z', '--includes', '--get-all', 'pull.twohead']);
+  if (twohead.code !== 0 && twohead.code !== 1) return 'options it could not check (pull.twohead)';
+  strategies.push(...twohead.out.split('\0'));
+  const s = strategies.map(x => x.trim()).find(x => x && !STRATEGIES.has(x));
+  return s ? `the merge strategy ${s}` : null;
+}
+
+// git <operation> --continue. GIT_EDITOR ':' keeps the message git prepared without opening an editor (nor the
+// core.editor the repository could set). A rebase stops again on the next conflict.
+async function proceed(o = ongoing()) {
+  if (S.repo.conflicts.length) return flash('Resolve the merge conflicts and stage the files first', true);
+  const unsafe = await unsafeToContinue();
+  if (unsafe) return flash(`Continue refused: the ${o.name} would run ${unsafe}; check it and continue in the terminal`, true);
+  const res = await op('Continuing', o.cont, { detached: true, env: { GIT_EDITOR: ':' }, quiet: true });
+  if (!res) return;
+  S.editing = false;
+  if (res.code === 0) { S.field.set(''); return flash(`${o.name[0].toUpperCase()}${o.name.slice(1)} continued`); }
+  // From the state rather than git's text: a pick left empty by the resolution mentions a conflict too.
+  await loadStatus();
+  flash(S.repo && S.repo.conflicts.length ? 'Stopped on a new conflict: resolve it, stage it, then continue'
+    : `Continuing failed: ${errorOf(res)}`, true);
+}
+
+function abort() {
+  const o = ongoing();
+  if (!o) return flash(S.repo && S.repo.state === 'APPLYING' ? 'git am in progress: continue or abort it in the terminal'
+    : 'No merge, rebase, cherry-pick or revert in progress');
+  confirm(`Abort the ${o.name} and go back to the state before it?`, async () => {
+    if (await op('Aborting', o.abort)) { S.field.set(''); S.editing = false; S.amend = false; flash(`${o.name[0].toUpperCase()}${o.name.slice(1)} aborted`); }
+  });
 }
 
 function toggleAmend() {
@@ -1099,6 +1186,7 @@ function viewKey(k, row) {
     if (k === 'A') return unstageAll();
     if (k === 'd') return row && row.items && discard(row.items, row.sec);
     if (k === 't') return toggleTree();
+    if (k === 'X') return abort();
   } else if (S.view === 'stashes') {
     if (k === 'n') return newStash();
     if (row && row.type === 'stash') {
