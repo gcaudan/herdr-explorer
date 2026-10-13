@@ -110,10 +110,10 @@ function themes() {
     try {
       const text = fs.readFileSync(path.join(dir, 'package.json'), 'utf8');
       if (!text.includes('"iconThemes"')) continue;
-      pkg = JSON.parse(text);
+      pkg = parseJsonc(text);
     } catch { continue; }
     let nls = {};
-    try { nls = JSON.parse(fs.readFileSync(path.join(dir, 'package.nls.json'), 'utf8')); } catch { }
+    try { nls = parseJsonc(fs.readFileSync(path.join(dir, 'package.nls.json'), 'utf8')); } catch { }
     for (const t of (pkg.contributes && pkg.contributes.iconThemes) || []) {
       if (!t || !t.id || !t.path) continue;
       const id = `${pkg.publisher}.${pkg.name}/${t.id}`.toLowerCase();
@@ -129,6 +129,7 @@ function themes() {
 
 // JSON with comments and trailing commas, as VS Code accepts for theme files.
 function parseJsonc(text) {
+  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1); // a BOM, which VS Code accepts too
   try { return JSON.parse(text); } catch { }
   return JSON.parse(text
     .replace(/("(?:\\.|[^"\\])*")|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, (m, str) => str || '')
