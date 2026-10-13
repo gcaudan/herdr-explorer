@@ -133,6 +133,9 @@ async function git(args, opts = {}) {
 // The message of a failed git command: its first error line, without the "fatal: " prefix.
 function errorOf(res) {
   const lines = (res.err || res.out || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  // A refused push: the reason (non-fast-forward, fetch first…) rather than "failed to push some refs".
+  const rejected = lines.find(x => /^! \[(remote )?rejected\]/.test(x));
+  if (rejected) return rejected.replace(/^! \[(remote )?rejected\]\s+/, 'rejected ');
   const l = lines.find(x => /^(fatal|error):/.test(x)) || lines[0] || (res.code === null ? 'timed out or not run' : 'failed');
   return l.replace(/^(fatal|error): /, '');
 }
