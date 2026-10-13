@@ -9,7 +9,7 @@ Node.js, with no dependencies and no build step.
 - **Explorer**: opens by itself on the left (or the right) of every new tab, without taking the focus.
   - Folders expand with the mouse or the keyboard; the expanded ones are remembered per root folder between
     sessions.
-  - Live git status: `M` modified, `U` untracked, `A` added, `R` renamed, `!` conflict, `●` on a folder holding
+  - Live git status: `M` modified, `U` untracked, `A` added, `R` renamed, `D` deleted, `!` conflict, `●` on a folder holding
     changes; git-ignored entries are greyed out. The header shows the space name and the branch.
   - Filter as you type (`/`): the tree keeps the names containing the text.
   - New file, new folder, rename, duplicate, move to the trash; stage, unstage or discard a file or a folder.
@@ -40,6 +40,8 @@ Node.js, with no dependencies and no build step.
   editor), in a terminal editor in a full-tab pane, or, for documents and media, in the system's default
   application. Executables and scripts are never run.
 - **Context menu**: insert the path into the terminal, copy the path, reveal in the file manager, view git changes.
+- **Updates**: a daily check for a newer release; `↑` in the explorer header updates the plugin, and the open panes
+  restart on the new code.
 
 ## Requirements
 
@@ -60,6 +62,8 @@ explorer was also tested on Windows 11. The other panes are not verified on Wind
 was not tested (only the fallback to the terminal editor).
 
 ## Installation
+
+The plugin runs from its git clone, which updates pull into: keep the clone in a permanent folder, on `main`.
 
 ### Linux and macOS
 
@@ -109,6 +113,26 @@ herdr keeps its own copy of the manifest: after pulling a new version, run the s
 The explorer only opens by itself in new tabs. To add it to the open tabs that have a single pane, run
 `node hook.js --all` in this folder from a herdr pane.
 
+### Update
+
+- At herdr startup and when a tab is created, the hook checks the latest GitHub release, at most once a day (3 s
+  timeout, never from the panes; off with the `updateCheck` setting). The result goes to `update.json`.
+- When that release is newer than the clone's version, a green `↑` appears in the explorer header, and *Update to
+  X…* at the end of the settings. Both ask for confirmation, then run `git pull --ff-only --no-rebase` in the plugin folder,
+  without a terminal prompt (ssh in batch mode, unless you set your own ssh command) and stopped after 60 s.
+- The update is refused when the plugin folder is not the root of a git clone (a copy inside another repository, such
+  as dotfiles), is not on `main`, has a git operation in progress or has changes to tracked files (untracked files
+  do not block it). When the pull itself fails (diverged history, network, an ssh key that needs its passphrase),
+  the command is copied to the clipboard, to run in a terminal.
+- The open explorers and previews restart by themselves on the new code, in place, 2 s after the version changes
+  and once they are idle (no menu, prompt, confirmation or active filter in the explorer; no find being typed or
+  selection being dragged in the preview): same root, same file. A `git pull` run by hand does the same.
+- One update runs at a time, across the explorers of every tab (`update.lock` in the state folder).
+- When the manifest (beyond its version) or the installer changed, the script must run again: a yellow `!` replaces
+  the `↑` in every explorer, even after their restart. A click on it, or *Finish the update…* in the settings, copies
+  the installer command to run in a terminal, and the `!` goes away.
+- A clone ahead of the latest release, as in development, shows no `↑`.
+
 ### Uninstall
 
 ```sh
@@ -116,8 +140,8 @@ herdr plugin unlink gcaudan.explorer
 ```
 
 Then remove the `[[keys.command]]` blocks of `gcaudan.explorer.*` from `config.toml` and run
-`herdr server reload-config`. The settings and the saved state remain in the plugin's state and config folders (see
-[Configuration](#configuration)): delete them if you do not reinstall.
+`herdr server reload-config`, and delete the clone. The settings and the saved state remain in the plugin's state and
+config folders (see [Configuration](#configuration)): delete them if you do not reinstall.
 
 ## Usage
 
@@ -131,7 +155,7 @@ Then remove the `[[keys.command]]` blocks of `gcaudan.explorer.*` from `config.t
 | Right-click an entry | its action menu |
 | Right-click below the last entry | the root's menu: new file or folder, go to file, search in files, source control (in a repository), reveal, copy path, up one level, back to the space folder (when the root is elsewhere), refresh, settings; `m` opens it too when the tree is empty |
 | Wheel | scroll the tree, or move in an open menu |
-| Header icons | go to file, source control, settings, `«` to close the explorer |
+| Header icons | `↑` to update when a newer release exists, `!` to finish an update (see [Update](#update)), go to file, source control, settings, `«` to close the explorer |
 
 Opening a file (`Enter`, double-click): text files and images go to the preview; documents and media (PDF, Office,
 archives, sound, video) go to their application. With *Open in the preview* off, text files go to the editor and
@@ -243,7 +267,7 @@ Mouse selection works everywhere but in images:
 | `ctrl+p`, `ctrl+f` | go to file, search in files (or the header tabs) |
 | `alt+c`, `alt+w`, `alt+r`, `alt+h` | case, whole word, regex, hidden and ignored files (or the chips) |
 | `Tab`, `Shift+Tab` | move between the query, the include globs and the exclude globs (`*.js, src/**`) |
-| `↑` `↓` (or `ctrl+k`, `ctrl+n`), `PageUp` `PageDown`, `ctrl+Home` `ctrl+End`, click, wheel | select, scroll; `alt+←` `alt+→` fold and unfold a file's results |
+| `↑` `↓` (or `ctrl+k`, `ctrl+j` `ctrl+n`), `PageUp` `PageDown`, `ctrl+Home` `ctrl+End`, click, wheel | select, scroll; `alt+←` `alt+→` fold and unfold a file's results |
 | `Enter`, double-click | open in the preview at the line |
 | `ctrl+o` (or `alt+Enter`, which Windows Terminal keeps for full screen), `ctrl+t`, `ctrl+y` | open in the editor, insert the path into the terminal, copy the relative path |
 | `Esc`, `ctrl+c` | close |
@@ -286,7 +310,9 @@ Confirmations take `y`; any other key cancels.
 
 ## Configuration
 
-- **Settings** (`,` or the gear icon) are saved in `settings.json` and shared by every explorer and preview:
+- **Settings** (`,` or the gear icon) are saved in `settings.json` and shared by every explorer and preview. In the
+  other open explorers, the icon theme, *Check for updates* and *Follow the terminal folder* apply at once, the other
+  settings at their next opening:
 
   | Setting | Menu item | Default | Effect |
   |---|---|---|---|
@@ -297,9 +323,10 @@ Confirmations take `y`; any other key cancels.
   | `singleClick` | Preview on single click | `false` | a single click on a file shows it in the preview |
   | `follow` | Follow the terminal folder | `false` | reveal the folder of the terminal in the tree, within the space folder |
   | `side` | Dock on the right | `"left"` | side of the explorer, for the tabs opened afterwards |
-  | `icons` | Icon theme… | `""` | a VS Code icon theme, `{ id, label, file }`; empty: Nerd Font icons. *Search…* lists the themes installed for VS Code, VS Code Insiders, VSCodium, Cursor, Windsurf or VS Code Server, and those built into these editors; the tree previews each one as the selection moves, and *Cancel* restores the saved one. Applied at once to every explorer; source control uses it from its next opening |
+  | `icons` | Icon theme… | `""` | a VS Code icon theme, `{ id, label, file }`; empty: Nerd Font icons. *Search…* lists the themes installed for VS Code, VS Code Insiders, VSCodium, Cursor, Windsurf or VS Code Server, and those built into these editors; the tree previews each one as the selection moves, and `Esc` restores the saved one. Applied at once to every explorer; source control uses it from its next opening |
   | `wrap` | (preview `w`) | `false` | preview: wrap long lines |
   | `lineNumbers` | (preview `L`) | `true` | preview: line number gutter |
+  | `updateCheck` | Check for updates | `true` | one request a day to the GitHub API; `↑` in the header when a newer release exists |
 
   The editor command (`zed`, `subl -w`, `code -r`…) runs without a shell, with the path as its last argument. A
   terminal editor (`vi`, `vim`, `nvim`, `nano`, `micro`, `hx`, `helix`, `kak`, `emacs`, `ne`, `joe`, `mcedit`,
@@ -316,7 +343,10 @@ Confirmations take `y`; any other key cancels.
   | `width` | the explorer width; delete it to go back to 32 columns |
   | `expanded.json` | the expanded folders of each root folder |
   | `search.json` | the last searches |
+  | `update.json` | the time of the last update check, the latest release found, and an update left to finish |
+  | `update.lock` | present while an update runs |
   | `panes/` | what each explorer and preview pane shows, read back after a herdr restart |
+  | `preview-<tab>.json` | the file requested for a tab's preview (see [How it works](#how-it-works)) |
 
 ### Key bindings
 
@@ -368,6 +398,9 @@ in the terminal editor. Changes apply within a second, without restarting the ex
   the git folder and `refs/`.
 - **State files** are written to a temporary file then renamed, so that another pane never reads them half-written.
 - **Closing**: when the tab's terminal exits, the explorer closes too, and the tab with it.
+- **Self-restart after an update**: the explorer and the preview poll `herdr-plugin.toml`; when its version differs
+  from the one they started with, they hand their terminal to a new `node` process running the new code, in the same
+  pane, and wait for it to exit.
 - **Right-click**: herdr keeps right-clicks for its own menu unless a pane asks for them; the explorer does so at
   startup (`herdr pane input --right-click pane`).
 
@@ -429,9 +462,12 @@ The explorer opens by itself on any folder, including freshly cloned untrusted r
   renamed files cannot leave their folder. *Duplicate* copies symbolic links as links.
 - **Preview**: only regular files are read (a named pipe or a device would block it), at most 8 MB of them.
   Highlighting is skipped for files over 1 MB and for lines over 2,000 characters; the hex dump covers the first
-  64 KB. Images are decoded in JavaScript, with their size checked (50 megapixels) before anything is allocated.
+  64 KB. Images are decoded in JavaScript, with their size checked (50 megapixels, 256 MB of inflated PNG data) before anything is allocated.
 - **Search**: files that are not regular, binary files and files over 2 MB are skipped, and symbolic link loops are
   cut.
+- **Updates**: the release check only reads a version number (digits and dots) from the GitHub API; nothing it
+  returns reaches a command. The update only runs `git pull --ff-only` in the plugin's own clone, with no terminal
+  prompt, and never runs the installer.
 - **Windows**: the clipboard and trash calls pass paths to PowerShell through environment variables, never inside
   the command, and VS Code is started through `Code.exe` rather than `cmd`.
 
@@ -465,11 +501,15 @@ The explorer opens by itself on any folder, including freshly cloned untrusted r
   the Markdown view are toggled.
 - The explorer's filter reads at most 20,000 entries and does not search git-ignored folders.
 - Search: the content search matches line by line (no multi-line regex), skips binary files and files over 2 MB,
-  and stops at 5,000 matches (50 per line; lines over 1,000 characters are cut around the first match); *Go to file*
+  and stops at 5,000 matches (lines over 1,000 characters are cut around the first match); *Go to file*
   keeps the best 1,000; a folder walk stops at 50,000 files.
 - Source control: conflicts show as a diff with their markers, not a 3-way merge; history stops at 500 commits;
   edits made outside show up within 5 s; fetch, pull and push cannot ask for a password (use an SSH agent or a
   credential helper). A diff stops at 200,000 rows and 200 untracked files.
+- Updates need the plugin folder to be a git clone on `main`, without changes to tracked files.
+- A pane restarted on new code keeps its previous `node` process, which only waits for the new one: after N version
+  changes (updates, or a `git checkout` between versions), an explorer or preview holds N+1 `node` processes until
+  it is closed. Close and reopen it (`prefix+f` twice) to start from one.
 
 ## Troubleshooting
 
@@ -487,6 +527,14 @@ The explorer opens by itself on any folder, including freshly cloned untrusted r
   was linked before the hook existed. Run `herdr plugin link .` in this folder, then restart herdr
   (`herdr server stop`, then `herdr`). `herdr plugin log` shows whether the hook ran, and its errors.
 
+- **Nothing opens at all**: `node` is not on the `PATH` that herdr sees.
+- **Icons shown as boxes**: the terminal font is not a Nerd Font (v3); a VS Code icon theme still needs one for the
+  chevrons and header icons.
+- **`prefix+f`, `prefix+a` or `prefix+d` do nothing**: check the `[[keys.command]]` blocks in `config.toml` and that
+  `herdr plugin list` shows `gcaudan.explorer`, or run the script again.
+- **No `↑` although a release is out**: `updateCheck` is off, the check already ran today, or the clone is ahead of
+  the release. Delete `update.json` to check again at the next tab creation.
+
 Messages of the plugin:
 
 | Message | Cause and fix |
@@ -497,6 +545,10 @@ Messages of the plugin:
 | `Clipboard unavailable`, or `(OSC 52)` after a copy | install `wl-copy` or `xclip`; OSC 52 works only if herdr and the terminal pass it on |
 | `No trash: delete … for good?` | install `gio` or `trash-put` to keep deletions recoverable |
 | `Fetching refused: the repository sets …` (or Pulling, Pushing, Publishing) | the repository's own config sets network settings: check them, then run the command in the terminal |
+| `Not a git clone`, `Not on main`, `Local changes in the plugin folder`… on update | switch the clone to `main`, or commit or stash your changes, then update again |
+| `… : update command copied` | the pull failed (network, diverged history, ssh passphrase): run the copied command in a terminal |
+| `Updated to X: rerun the installer`, or `!` in the header | the manifest or the installer changed: click the `!` to copy the installer command, then run it in a terminal |
+| `Update in progress` | another explorer is updating; a lock left by a killed update is taken over after 2 minutes |
 | `Claude not available` | install the `claude` CLI and sign in; meanwhile, the message is made from the file names |
 
 ## Project structure
@@ -514,6 +566,7 @@ Messages of the plugin:
 | `edit.js` | terminal editor pane |
 | `actions.js` | file actions: open, preview, insert, copy, reveal, create, rename, trash, stage, diff |
 | `icons.js` | Nerd Font icons, and VS Code icon themes |
+| `update.js` | daily check for a newer release, update by `git pull --ff-only`, restart of the panes on the new code |
 | `ui.js` | terminal helpers shared by the panes: text width, lines, input, text field |
 | `exec.js` | runs external programs from their absolute path, safe git options, settings, saved pane state, key bindings |
 | `install.sh`, `install.ps1` | installation: `herdr plugin link` and key bindings |
