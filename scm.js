@@ -9,12 +9,14 @@ const path = require('path');
 const { spawn } = require('child_process');
 const ui = require('./ui');
 const diffs = require('./diff');
-const { WIN, which, GIT, gitEnv } = require('./exec');
+const icons = require('./icons');
+const { WIN, which, GIT, gitEnv, readSettings } = require('./exec');
 
 const ROOT = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());
 const { C, fg, bg, glyph } = ui;
 const DIM = fg(C.dim), BOLD = '\x1b[1m';
-const CHEVRON = [glyph(0xeab6), glyph(0xeab4)], FOLDER = [glyph(0xf07b), glyph(0xf07c)], BRANCH = glyph(0xe0a0);
+const CHEVRON = [glyph(0xeab6), glyph(0xeab4)], BRANCH = glyph(0xe0a0);
+const theme = icons.load(readSettings().icons); // the explorer's icon theme
 const SPLIT = 100;      // columns from which the diff opens on the right of the list
 const MAX_PROMPT = 60000; // characters of diff sent to Claude
 const NET_TIMEOUT = 120000;
@@ -430,7 +432,9 @@ function rowLine(row, width, y, selected) {
       [...buttons(act, y, width, count.length + 1), [count, bg([60, 60, 60]) + fg(C.text)], [' ', '']], width, back);
   }
   if (row.type === 'folder') {
-    return split([[`${indent}${CHEVRON[row.open ? 1 : 0]} `, DIM], [`${FOLDER[row.open ? 1 : 0]} `, fg(C.folder)], [row.label, '']],
+    // A chain of folders shown as one ("src/lib"): the icon of the last.
+    const [code, rgb] = icons.icon(theme, row.label.split('/').pop(), true, row.open);
+    return split([[`${indent}${CHEVRON[row.open ? 1 : 0]} `, DIM], [`${glyph(code)} `, fg(rgb)], [row.label, '']],
       [...buttons(act, y, width, 3), [' ● ', badgeColor(rank(row.items))]], width, back);
   }
   if (row.type === 'file') {
