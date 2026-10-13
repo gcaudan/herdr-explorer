@@ -78,7 +78,7 @@ function load(keepScroll) {
     const lang = highlight && buf.length <= MAX_HIGHLIGHT ? highlight.language(path.basename(file)) : null;
     try { state.source = lang ? highlight.highlight(state.text, lang) : null; } catch { state.source = null; }
     if (!state.source || state.source.length < state.plain.length) state.source = state.plain.map(l => [[l, '']]);
-    state.info = `${lines.length} lines · ${state.info}`;
+    state.info = `${lines.length} line${lines.length === 1 ? '' : 's'} · ${state.info}`;
   }
   if (keepScroll) { state.top = top; state.left = left; } else { state.top = 0; state.left = 0; }
   if (state.find && state.find.field.value) search(false);

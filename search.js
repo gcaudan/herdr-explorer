@@ -531,7 +531,7 @@ function render() {
     status = state.fields.content.value ? `${n}${n >= MAX_MATCHES ? '+' : ''} result${n === 1 ? '' : 's'} in ${m} file${m === 1 ? '' : 's'}` : 'type to search';
     if (state.searching) status += '  searching…';
   } else {
-    status = `${state.fields.files.value ? `${state.results.length}${state.results.length >= MAX_ROWS ? '+' : ''} of ` : ''}${state.files.length} files`;
+    status = `${state.fields.files.value ? `${state.results.length}${state.results.length >= MAX_ROWS ? '+' : ''} of ` : ''}${state.files.length} file${state.files.length === 1 ? '' : 's'}`;
   }
   if (state.capped && !state.flash) status += `  (first ${MAX_FILES} files only)`;
   lines.push(line([[' ' + status, style]], W));
