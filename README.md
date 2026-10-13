@@ -206,7 +206,7 @@ confirmations take `y`, any other key cancels.
 | `Tab`, `Shift+Tab` | query, include globs, exclude globs (`*.js, src/**`) |
 | `↑` `↓` (or `ctrl+k`, `ctrl+j` `ctrl+n`), `PageUp` `PageDown`, `ctrl+Home` `ctrl+End`, click | select; `alt+←` `alt+→` fold a file's results |
 | `Enter`, double-click | open in the preview at the line |
-| `alt+Enter` or `ctrl+o`, `ctrl+t`, `ctrl+y` | open in the editor, insert the path into the terminal, copy the relative path |
+| `ctrl+o` (or `alt+Enter`, which Windows Terminal keeps for full screen), `ctrl+t`, `ctrl+y` | open in the editor, insert the path into the terminal, copy the relative path |
 | `Esc`, `ctrl+c` | close |
 
 ### Source control

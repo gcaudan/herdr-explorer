@@ -553,7 +553,7 @@ function render() {
   }
 
   // Keys.
-  const keys = '↵ open  alt+↵ editor  ctrl+t insert  ctrl+y copy path' + (content ? '  tab fields  alt+←→ fold' : '') + '  esc close';
+  const keys = '↵ open  ctrl+o editor  ctrl+t insert  ctrl+y copy path' + (content ? '  tab fields  alt+←→ fold' : '') + '  esc close';
   lines.push(line([[' ' + keys, DIM]], W, C.header));
   paint(lines.slice(0, H));
 }
