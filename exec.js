@@ -95,6 +95,27 @@ async function gitEnv(cwd) {
   return env;
 }
 
+// Operation under way in a repository, from the files git keeps in its folder: 'MERGING', 'REBASING'… or ''.
+// rebase-apply is also git am's (applying); .git/sequencer alone: a cherry-pick or revert of several commits,
+// between two of them once a commit made by hand ended one.
+function gitOperation(gitdir) {
+  const has = name => fs.existsSync(path.join(gitdir, name));
+  const next = () => { try { return fs.readFileSync(path.join(gitdir, 'sequencer', 'todo'), 'utf8'); } catch { return ''; } };
+  return has('MERGE_HEAD') ? 'MERGING' : has('rebase-apply/applying') ? 'APPLYING'
+    : has('rebase-merge') || has('rebase-apply') ? 'REBASING'
+    : has('CHERRY_PICK_HEAD') ? 'CHERRY-PICKING' : has('REVERT_HEAD') ? 'REVERTING'
+    : has('sequencer') ? (/^\s*revert\s/.test(next()) ? 'REVERTING' : 'CHERRY-PICKING')
+    : has('BISECT_LOG') ? 'BISECTING' : '';
+}
+
+// Dotted versions compared number by number: newer('1.10.0', '1.9.2') is true.
+const version = v => String(v).split('.').map(n => parseInt(n, 10) || 0);
+function newer(a, b) {
+  const [x, y] = [version(a), version(b)];
+  const i = x.findIndex((n, j) => n !== (y[j] || 0));
+  return i >= 0 && x[i] > (y[i] || 0);
+}
+
 // Pane width remembered by the explorer (width file in the state folder), 32 columns by default.
 const WIDTH_FILE = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'width');
 function readWidth() {
@@ -113,6 +134,7 @@ const DEFAULTS = {
   icons: '',          // explorer icon theme: { id, label, file } of a VS Code one; empty: Nerd Font icons
   wrap: false,        // preview: wrap long lines
   lineNumbers: true,  // preview: line number gutter
+  updateCheck: true,  // check GitHub once a day for a newer release
 };
 const SETTINGS_FILE = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'settings.json');
 function readSettings() {
@@ -174,6 +196,6 @@ function keysTemplate(pane, defaults) {
 }
 
 module.exports = {
-  WIN, PLUGIN, pathDirs, which, words, run, result, HERDR, GIT, gitEnv, WIDTH_FILE, readWidth,
+  WIN, PLUGIN, pathDirs, which, words, run, result, HERDR, GIT, gitEnv, gitOperation, version, newer, WIDTH_FILE, readWidth,
   SETTINGS_FILE, readSettings, writeSettings, PANES_DIR, paneFile, readPaneState, writePaneState, KEYS_FILE, readKeys, keysTemplate,
 };

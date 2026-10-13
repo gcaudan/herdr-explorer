@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const ui = require('./ui');
 const actions = require('./actions');
+const update = require('./update');
 const { run, HERDR, readSettings, writeSettings, writePaneState } = require('./exec');
 
 const PANE = process.env.HERDR_PANE_ID;
@@ -484,23 +485,29 @@ const paint = ui.screen({
 const saveFile = () => writePaneState(PANE, { file: state.file, root: state.root, line: state.line });
 
 // The explorer and the search ask for another file through the request file.
+// After a restart on new code, seen is the previous process's: a request made while the pane changed hands is still
+// taken, once the file it showed is loaded.
+const handed = process.env.EXPLORER_SEEN !== undefined;
+let seen = +process.env.EXPLORER_SEEN || 0;
 if (REQUEST) {
-  let seen = 0;
-  try { seen = fs.statSync(REQUEST).mtimeMs; } catch { }
-  fs.watchFile(REQUEST, { interval: 200 }, stat => {
-    if (!stat.mtimeMs || stat.mtimeMs === seen) return;
-    seen = stat.mtimeMs;
-    let req;
-    try { req = JSON.parse(fs.readFileSync(REQUEST, 'utf8')); } catch { return; }
-    if (!req.file) return;
-    const same = req.file === state.file;
-    state.file = req.file; state.root = req.root || state.root; state.line = +req.line || 0;
-    state.raw = same && state.raw;
-    if (!same) { state.find = null; watch(); }
-    load(same && !state.line);
-    saveFile();
-    if (state.line) { state.top = Math.max(0, rowOf(state.line - 1) - Math.floor((ui.size().H - 2) / 3)); render(); }
-  });
+  const stat = () => { try { return fs.statSync(REQUEST); } catch { return null; } };
+  if (!handed) seen = (stat() || {}).mtimeMs || 0;
+  else setImmediate(() => { const s = stat(); if (s) take(s); });
+  fs.watchFile(REQUEST, { interval: 200 }, take);
+}
+function take(stat) {
+  if (!stat.mtimeMs || stat.mtimeMs === seen) return;
+  seen = stat.mtimeMs;
+  let req;
+  try { req = JSON.parse(fs.readFileSync(REQUEST, 'utf8')); } catch { return; }
+  if (!req.file) return;
+  const same = req.file === state.file;
+  state.file = req.file; state.root = req.root || state.root; state.line = +req.line || 0;
+  state.raw = same && state.raw;
+  if (!same) { state.find = null; watch(); }
+  load(same && !state.line);
+  saveFile();
+  if (state.line) { state.top = Math.max(0, rowOf(state.line - 1) - Math.floor((ui.size().H - 2) / 3)); render(); }
 }
 
 // Changes on disk, by an agent or an editor: reloaded, keeping the position. The folder is watched rather than
@@ -526,3 +533,13 @@ if (!state.file) { state.file = ''; setError('No file'); } else {
   saveFile();
   if (state.line) { state.top = Math.max(0, rowOf(state.line - 1) - Math.floor((ui.size().H - 2) / 3)); render(); }
 }
+
+// Updated plugin: the preview starts again on the new code, on the same file and line, once no search is typed nor
+// selection dragged. This process stops watching, the new one taking over the pane.
+update.watch(() => !(state.find && state.find.active) && !(state.select && !state.select.done), () => {
+  saveFile();
+  clearTimeout(reload);
+  if (watcher) watcher.close();
+  if (REQUEST) fs.unwatchFile(REQUEST);
+  ui.restart({ EXPLORER_FILE: state.file, EXPLORER_ROOT: state.root, EXPLORER_LINE: String(state.line), EXPLORER_SEEN: String(seen) });
+});
