@@ -137,8 +137,9 @@ function select(i) {
   state.selected = state.rows.length ? state.rows[state.cursor].rel : null;
 }
 
-function toggle(row, open = !state.expanded.has(row.rel)) {
+function toggle(row, open) {
   if (!row || !row.dir || state.filter) return;
+  if (open === undefined) open = !state.expanded.has(row.rel);
   if (open) state.expanded.add(row.rel); else state.expanded.delete(row.rel);
   buildRows();
   save();
