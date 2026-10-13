@@ -11,17 +11,23 @@ const PLUGIN = process.env.HERDR_PLUGIN_ID || 'gcaudan.explorer';
 const pathDirs = () => (process.env.PATH || '').split(path.delimiter)
   .map(d => d.replace(/^"(.*)"$/, '$1')).filter(d => path.isAbsolute(d));
 
-// Absolute path of a program found in PATH, or null. On Windows, a bare name is looked up in the child's
-// working directory before PATH, so a git.exe planted in an untrusted repository would run: resolve it first.
+// Absolute path of a program found in the absolute folders of PATH, or null. On Windows, a bare name is looked up
+// in the child's working directory before PATH; elsewhere, an empty or '.' entry of PATH means that folder too: a git
+// planted in an untrusted repository would run. Resolved first, on every system.
 function which(name) {
-  if (!WIN || path.isAbsolute(name)) return name;
-  const file = path.extname(name) ? name : name + '.exe';
+  if (path.isAbsolute(name)) return name;
+  const file = WIN && !path.extname(name) ? name + '.exe' : name;
   for (const dir of pathDirs()) {
     const full = path.join(dir, file);
-    if (fs.existsSync(full)) return full;
+    try {
+      if (fs.statSync(full).isFile()) { if (!WIN) fs.accessSync(full, fs.constants.X_OK); return full; }
+    } catch { }
   }
   return null;
 }
+
+// Command line split at spaces outside quotes: "code --wait" → ['code', '--wait'].
+const words = s => (String(s).match(/"[^"]*"|'[^']*'|\S+/g) || []).map(w => w.replace(/^(["'])(.*)\1$/, '$2'));
 
 // Runs a program and resolves to its stdout, or null on failure (including a missing program).
 const run = (cmd, args, opts = {}) => new Promise(resolve => {
@@ -37,33 +43,55 @@ function result(stdout) {
 const HERDR = which(process.env.HERDR_BIN_PATH || 'herdr');
 const GIT = which('git');
 
+// Hooks folder that never exists. On Windows, /dev/null would mean C:\dev\null, a folder any user can create.
+const NO_HOOKS = WIN ? path.join(__dirname, '.no-hooks') : '/dev/null';
+
 // Environment for every git call in a repository that may not be trusted, whose config could run commands:
-// core.fsmonitor and hooks are disabled, and so are the filters (clean, smudge, process) the repository declares
-// itself, in .git/config, config.worktree or an included file; global ones, such as git-lfs, are kept. Passed as
-// GIT_CONFIG_KEY_n / GIT_CONFIG_VALUE_n, which, unlike -c, does not split a driver name containing '='.
-// Submodules have their own config: callers pass --ignore-submodules=all. GIT_OPTIONAL_LOCKS=0 keeps git status
-// from taking index.lock, which would make a concurrent git commit fail.
+// - core.fsmonitor and hooks are disabled: hook files through core.hooksPath, and the hooks the repository defines
+//   in its config (hook.<name>.command) one by one;
+// - so are the filters (clean, smudge, process) the repository declares itself, in .git/config, config.worktree or
+//   an included file; global ones, such as git-lfs, are kept;
+// - no lazy fetching in partial clones, and a core.worktree set by the repository is replaced by the folder holding
+//   it;
+// - submodules have their own config, out of reach of this one: git never recurses into them (switch, restore,
+//   fetch, pull, push), and callers pass --ignore-submodules=all.
+// Passed as GIT_CONFIG_KEY_n / GIT_CONFIG_VALUE_n, which, unlike -c, does not split a driver name containing '='.
+// GIT_OPTIONAL_LOCKS=0 keeps git status from taking index.lock, which would make a concurrent git commit fail.
 async function gitEnv(cwd) {
-  const config = [['core.fsmonitor', 'false'], ['core.hooksPath', '/dev/null']];
-  const listing = await run(GIT, ['config', '-z', '--includes', '--show-scope', '--name-only', '--get-regexp', '^filter\\.'],
-    { cwd, env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' } }) || '';
+  // log.showSignature would run the repository's gpg.program on every signed commit shown.
+  const config = [['core.fsmonitor', 'false'], ['core.hooksPath', NO_HOOKS], ['log.showSignature', 'false'],
+    ['submodule.recurse', 'false'], ['fetch.recurseSubmodules', 'false'], ['push.recurseSubmodules', 'no']];
+  const listing = await run(GIT, ['config', '-z', '--includes', '--show-scope', '--name-only', '--get-regexp',
+    '^((filter|hook)\\..+|core\\.worktree)$'], { cwd, env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' } }) || '';
   const fields = listing.split('\0');
-  const drivers = new Set();
+  const drivers = new Set(), hooks = new Set();
+  let worktree = false;
   for (let i = 0; i + 1 < fields.length; i += 2) {
-    const m = /^filter\.(.+)\.[^.]+$/s.exec(fields[i + 1]);
-    if (m && fields[i] !== 'system' && fields[i] !== 'global') drivers.add(m[1]);
+    if (fields[i] === 'system' || fields[i] === 'global') continue;
+    if (fields[i + 1] === 'core.worktree') { worktree = true; continue; }
+    const m = /^(filter|hook)\.(.+)\.[^.]+$/s.exec(fields[i + 1]);
+    if (m) (m[1] === 'filter' ? drivers : hooks).add(m[2]);
   }
   for (const d of drivers) {
     for (const k of ['clean', 'smudge', 'process']) config.push([`filter.${d}.${k}`, '']);
     config.push([`filter.${d}.required`, 'false']);
   }
-  const env = { ...process.env, GIT_OPTIONAL_LOCKS: '0' };
+  for (const h of hooks) config.push([`hook.${h}.enabled`, 'false']);
+  // GIT_NO_LAZY_FETCH: in a partial clone, a missing object would make git fetch it from the promisor remote,
+  // running that remote's upload-pack or ssh command, even for git status.
+  const env = { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_NO_LAZY_FETCH: '1' };
   let n = parseInt(env.GIT_CONFIG_COUNT, 10) || 0;
   for (const [key, value] of config) {
     env[`GIT_CONFIG_KEY_${n}`] = key;
     env[`GIT_CONFIG_VALUE_${n++}`] = value;
   }
   env.GIT_CONFIG_COUNT = String(n);
+  // core.worktree set by the repository could point anywhere (the home folder): switch, pull or discard would write
+  // there. The working tree is kept to the folder holding the repository.
+  if (worktree) {
+    const dir = (await run(GIT, ['rev-parse', '--absolute-git-dir'], { cwd, env }) || '').trim();
+    env.GIT_WORK_TREE = dir ? path.dirname(dir) : cwd;
+  }
   return env;
 }
 
@@ -73,4 +101,78 @@ function readWidth() {
   try { return Math.max(10, parseInt(fs.readFileSync(WIDTH_FILE, 'utf8'), 10)) || 32; } catch { return 32; }
 }
 
-module.exports = { WIN, PLUGIN, pathDirs, which, run, result, HERDR, GIT, gitEnv, WIDTH_FILE, readWidth };
+// User settings, shared by the explorer, the preview and the hook (settings.json in the state folder).
+const DEFAULTS = {
+  hidden: true,       // show dot files
+  ignored: true,      // show git-ignored files, greyed out
+  open: 'preview',    // Enter and double-click on a text file: 'preview' or 'editor'
+  editor: '',         // external editor command ("zed", "subl -w"); empty: VS Code when found, else the terminal editor
+  singleClick: false, // a single click on a file opens the preview, like VS Code
+  side: 'left',       // explorer docked to the left or the right of the tab
+  follow: false,      // reveal the folder of the terminal next to the explorer when it changes
+  wrap: false,        // preview: wrap long lines
+  lineNumbers: true,  // preview: line number gutter
+};
+const SETTINGS_FILE = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'settings.json');
+function readSettings() {
+  try { return { ...DEFAULTS, ...JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')) }; } catch { return { ...DEFAULTS }; }
+}
+// Written to a temporary file then renamed, so that another pane never reads it half-written.
+function writeSettings(settings) {
+  if (!SETTINGS_FILE) return;
+  const tmp = `${SETTINGS_FILE}.${process.pid}`;
+  try { fs.writeFileSync(tmp, JSON.stringify(settings, null, 1)); fs.renameSync(tmp, SETTINGS_FILE); } catch { try { fs.unlinkSync(tmp); } catch { } }
+}
+
+// What each plugin pane shows, one file per pane in the state folder (panes/), since herdr does not keep it across a
+// restart: the explorer's space folder and tree root, which Set as root may have moved; the preview's file.
+const PANES_DIR = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'panes');
+const paneFile = pane => PANES_DIR && pane && path.join(PANES_DIR, `${pane.replace(/[^\w.-]/g, '_')}.json`);
+function readPaneState(pane) {
+  try { return JSON.parse(fs.readFileSync(paneFile(pane), 'utf8')); } catch { return null; }
+}
+function writePaneState(pane, data) {
+  const file = paneFile(pane);
+  if (!file) return;
+  const tmp = `${file}.${process.pid}`;
+  try {
+    fs.mkdirSync(PANES_DIR, { recursive: true });
+    fs.writeFileSync(tmp, JSON.stringify(data)); fs.renameSync(tmp, file);
+  } catch { try { fs.unlinkSync(tmp); } catch { } }
+}
+
+// Key bindings, editable by the user: keys.json in the plugin config folder, one object per pane, mapping an action
+// to its keys ({ "explorer": { "newFile": ["a"] } }). An action left out keeps its default keys.
+const KEYS_FILE = process.env.HERDR_PLUGIN_CONFIG_DIR && path.join(process.env.HERDR_PLUGIN_CONFIG_DIR, 'keys.json');
+
+// Key name → action. A key the user gives to an action is taken from the action that had it by default.
+function readKeys(pane, defaults) {
+  let user = {};
+  try { user = JSON.parse(fs.readFileSync(KEYS_FILE, 'utf8'))[pane] || {}; } catch { }
+  const map = new Map();
+  for (const [action, keys] of Object.entries(defaults)) if (!(action in user)) for (const k of keys) map.set(k, action);
+  for (const [action, keys] of Object.entries(user)) {
+    if (action in defaults) for (const k of [].concat(keys)) if (typeof k === 'string') map.set(k, action);
+  }
+  return map;
+}
+
+// The file with every action of the pane and its current keys, created or completed so that the user edits a full
+// list; returns its path.
+function keysTemplate(pane, defaults) {
+  if (!KEYS_FILE) return null;
+  let all = {};
+  try { all = JSON.parse(fs.readFileSync(KEYS_FILE, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') return KEYS_FILE; }
+  const keys = { ...defaults, ...(all[pane] || {}) };
+  if (JSON.stringify(all[pane]) === JSON.stringify(keys)) return KEYS_FILE;
+  all[pane] = keys;
+  const lines = Object.entries(all).map(([p, actions]) => `  ${JSON.stringify(p)}: {\n`
+    + Object.entries(actions).map(([a, k]) => `    ${JSON.stringify(a)}: ${JSON.stringify(k)}`).join(',\n') + '\n  }');
+  try { fs.mkdirSync(path.dirname(KEYS_FILE), { recursive: true }); fs.writeFileSync(KEYS_FILE, `{\n${lines.join(',\n')}\n}\n`); } catch { }
+  return KEYS_FILE;
+}
+
+module.exports = {
+  WIN, PLUGIN, pathDirs, which, words, run, result, HERDR, GIT, gitEnv, WIDTH_FILE, readWidth,
+  SETTINGS_FILE, readSettings, writeSettings, PANES_DIR, paneFile, readPaneState, writePaneState, KEYS_FILE, readKeys, keysTemplate,
+};

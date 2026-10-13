@@ -1,9 +1,12 @@
 id = "gcaudan.explorer"
 name = "Explorer"
-version = "0.1.0"
+version = "0.2.0"
 min_herdr_version = "0.9.3"
-description = "VS Code-style file tree of the space, to the left of every tab"
+description = "VS Code-style file explorer, preview, search and source control for every tab"
 platforms = ["linux", "macos", "windows"]
+
+[[startup]]
+command = ["node", "hook.js", "--restore"]
 
 [[events]]
 on = "tab.created"
@@ -16,13 +19,51 @@ placement = "split"
 command = ["node", "explorer.js"]
 
 [[panes]]
+id = "preview"
+title = "Preview"
+placement = "split"
+command = ["node", "preview.js"]
+
+[[panes]]
+id = "search"
+title = "Search"
+placement = "popup"
+width = "80%"
+height = "80%"
+command = ["node", "search.js"]
+
+[[panes]]
+id = "scm"
+title = "Source Control"
+placement = "zoomed"
+command = ["node", "scm.js"]
+
+[[panes]]
 id = "diff"
 title = "Changes"
 placement = "zoomed"
 command = ["node", "diff.js"]
+
+[[panes]]
+id = "edit"
+title = "Editor"
+placement = "zoomed"
+command = ["node", "edit.js"]
 
 [[actions]]
 id = "toggle"
 title = "Show or hide the explorer"
 contexts = ["tab"]
 command = ["node", "hook.js", "--toggle"]
+
+[[actions]]
+id = "search"
+title = "Go to file"
+contexts = ["tab"]
+command = ["node", "hook.js", "--search"]
+
+[[actions]]
+id = "scm"
+title = "Source control"
+contexts = ["tab"]
+command = ["node", "hook.js", "--scm"]
