@@ -14,7 +14,7 @@ no dependencies and no build step.
   - new file, new folder, rename, duplicate, move to the trash; stage, unstage or discard a file or folder;
   - another folder as the root (*Set as root*, `Backspace` for the parent folder);
   - optionally, follows the folder of the terminal next to it;
-  - Nerd Font icons, adjustable width that is remembered;
+  - Nerd Font icons, or the colours of a VS Code icon theme (Material Icon Theme…); adjustable width that is remembered;
   - reopened after a herdr restart, at the same folder, with the preview at the same file.
 - **Preview**, a pane opened next to the terminal and reused for every file of the tab:
   - syntax highlighting for 27 languages and formats;
@@ -248,6 +248,7 @@ from 120 columns. Committing with nothing staged offers to stage everything firs
   | `singleClick` | Preview on single click | `false` | a single click on a file shows it in the preview |
   | `follow` | Follow the terminal folder | `false` | reveal the folder of the terminal in the tree, within the space folder |
   | `side` | Dock on the right | `"left"` | side of the explorer, applied to the tabs opened afterwards |
+  | `icons` | Icon theme… | `""` | VS Code icon theme chosen after *Search…*, which lists the ones installed in VS Code, Cursor, Windsurf… and shows each one in the tree as the selection moves: `{ id, label, file }`; empty: Nerd Font icons. Applied at once to every explorer, and to the source control folders |
   | `wrap` | (preview `w`) | `false` | preview: wrap long lines |
   | `lineNumbers` | (preview `L`) | `true` | preview: line number gutter |
 

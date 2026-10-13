@@ -5,9 +5,10 @@
 const fs = require('fs');
 const path = require('path');
 const actions = require('./actions');
+const icons = require('./icons');
 const ui = require('./ui');
 const { run, result, HERDR, GIT: GIT_BIN, gitEnv, WIDTH_FILE, readWidth, readSettings, writeSettings, KEYS_FILE, readKeys,
-  keysTemplate, writePaneState } = require('./exec');
+  keysTemplate, writePaneState, SETTINGS_FILE } = require('./exec');
 
 const { C, GIT, fg, glyph, line, fit, textWidth } = ui;
 const HOME = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());
@@ -38,28 +39,23 @@ const DEFAULT_KEYS = {
 let keys = readKeys('explorer', DEFAULT_KEYS);
 if (KEYS_FILE) fs.watchFile(KEYS_FILE, { interval: 1000 }, () => { keys = readKeys('explorer', DEFAULT_KEYS); });
 
-const FOLDER = [0xf07b, 0xf07c];
 const CHEVRON = [0xeab6, 0xeab4];
 const BRANCH = 0xe0a0;
 const SEARCH = 0xf002, SCM = 0xe725, GEAR = 0xf013;
-const FILE = [0xf15b, C.grey];
-const ICONS = {};
-for (const [exts, icon] of [
-  ['js mjs cjs jsx', [0xe74e, C.yellow]], ['ts tsx mts cts', [0xe628, C.blue]], ['json jsonc', [0xe60b, C.yellow]],
-  ['md mdx', [0xe609, C.blue]], ['py', [0xe606, C.blue]], ['html htm', [0xe736, C.orange]],
-  ['css scss sass less', [0xe749, C.blue]], ['sh bash zsh fish', [0xe795, C.green]],
-  ['ps1 psm1 psd1 bat cmd', [0xebc7, C.blue]], ['png jpg jpeg gif svg webp ico bmp', [0xf1c5, C.purple]],
-  ['pdf', [0xf1c1, C.red]], ['zip gz tgz 7z tar rar xz', [0xf1c6, C.orange]], ['xlsx xls csv', [0xf1c3, C.green]],
-  ['docx doc odt', [0xf1c2, C.blue]], ['lock', [0xf023, C.grey]],
-  ['toml yaml yml ini cfg conf env xml rules service', [0xf013, C.grey]], ['sql db sqlite', [0xf1c0, C.orange]],
-  ['rs', [0xe7a8, C.orange]], ['cs csproj sln', [0xf031b, C.purple]], ['java', [0xe738, C.red]],
-  ['vue', [0xe6a0, C.green]], ['txt log', [0xf0f6, C.grey]],
-  ['c h cpp hpp go rb php kt swift lua qml', [0xf121, C.blue]],
-]) for (const ext of exts.split(' ')) ICONS[ext] = icon;
-const NAMES = {
-  '.gitignore': [0xe702, C.orange], '.gitattributes': [0xe702, C.orange], '.gitmodules': [0xe702, C.orange],
-  'package.json': [0xe718, C.green], 'dockerfile': [0xe7b0, C.blue], 'readme.md': [0xf02d, C.blue],
-};
+let theme = icons.load(settings.icons); // VS Code icon theme; null: the default icons
+// Moved by an update of its extension: its new place saved for the next starts.
+if (theme && theme.entry.file !== settings.icons.file) {
+  settings.icons = theme.entry;
+  writeSettings({ ...readSettings(), icons: theme.entry });
+}
+// The icon theme chosen in another explorer.
+if (SETTINGS_FILE) fs.watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
+  const chosen = readSettings().icons;
+  if (JSON.stringify(chosen) === JSON.stringify(settings.icons)) return;
+  settings.icons = chosen;
+  theme = icons.load(chosen);
+  render();
+});
 
 const state = {
   expanded: new Set(['']), rows: [], cursor: 0, top: 0, selected: null, focused: true,
@@ -456,9 +452,7 @@ function header(W) {
 function row(r, W, selected) {
   const deco = decoration(r);
   const color = deco ? fg(GIT[deco]) : '';
-  let icon;
-  if (r.dir) icon = [FOLDER[r.open ? 1 : 0], C.folder];
-  else icon = NAMES[r.name.toLowerCase()] || ICONS[path.extname(r.name).slice(1).toLowerCase()] || FILE;
+  const icon = icons.icon(theme, r.name, r.dir, r.open);
   const indent = ' '.repeat(1 + r.depth * 2);
   const chevron = r.dir ? glyph(CHEVRON[r.open ? 1 : 0]) : ' ';
   const badge = !deco || deco === '!' ? '' : r.dir ? '●' : deco === 'C' ? '!' : deco;
@@ -611,11 +605,48 @@ function settingsItems() {
     [check(settings.singleClick) + 'Preview on single click', flip('singleClick')],
     [check(settings.follow) + 'Follow the terminal folder', flip('follow')],
     [check(settings.side === 'right') + 'Dock on the right', flip('side', settings.side === 'right' ? 'left' : 'right')],
+    ['  Icon theme…', () => openIconThemes()],
     ['  Edit key bindings…', () => {
       const file = keysTemplate('explorer', DEFAULT_KEYS);
       return file ? actions.edit(file, PANE) : 'No config folder';
     }],
   ];
+}
+
+// Icon themes: the current one and the default icons, then with Search… the VS Code ones installed (a scan of the
+// editors' extensions, kept out of the start). The tree shows the theme under the selection; Escape goes back to
+// the one saved.
+const NERD_FONT = { id: '', label: 'Nerd Font (default)' };
+function openIconThemes(found) {
+  const current = (settings.icons && settings.icons.id) ? settings.icons : NERD_FONT;
+  const list = found ? [NERD_FONT, ...found] : current.id ? [current, NERD_FONT] : [NERD_FONT];
+  const loaded = new Map();
+  const get = t => {
+    if (!loaded.has(t.id)) loaded.set(t.id, icons.load(t));
+    return loaded.get(t.id);
+  };
+  const items = () => [
+    ...list.map(t => [(t.id === ((settings.icons && settings.icons.id) || '') ? '✓ ' : '  ') + t.label, () => {
+      const chosen = get(t);
+      if (t.id && !chosen) return `${t.label}: not found`;
+      theme = chosen;
+      settings.icons = chosen ? chosen.entry : '';
+      writeSettings({ ...readSettings(), icons: settings.icons });
+      return null;
+    }]),
+    ...(found ? [] : [['  Search…', () => openIconThemes(icons.themes())]]),
+  ];
+  const saved = () => get((settings.icons && settings.icons.id) ? settings.icons : NERD_FONT);
+  const sel = Math.max(0, list.findIndex(t => t.id === current.id));
+  state.menu = {
+    items: items(), sel, off: 0, at: 1, keep: items,
+    move: i => { theme = list[i] ? get(list[i]) : saved(); },
+    cancel: () => { theme = saved(); },
+  };
+  // The saved theme, which a preview may have replaced, and the selection on screen.
+  theme = saved();
+  state.menu.off = Math.max(0, sel - menuRows() + 1);
+  return null;
 }
 
 function openSettings() {
@@ -674,6 +705,14 @@ function moveMenu(dir) {
   const n = menuRows();
   if (m.sel < m.off) m.off = m.sel;
   if (m.sel >= m.off + n) m.off = m.sel - n + 1;
+  if (m.move) m.move(m.sel);
+}
+
+// Closed without choosing: the menu can undo what its selection showed.
+function closeMenu() {
+  const m = state.menu;
+  state.menu = null;
+  if (m && m.cancel) m.cancel();
 }
 
 // Escape always closes the menu, whatever the bindings.
@@ -682,7 +721,7 @@ function menuKey(k) {
   if (action === 'up') moveMenu(-1);
   else if (action === 'down') moveMenu(1);
   else if (action === 'open' || action === 'expand') return runAction(m.items[m.sel][1]);
-  else if (k === 'escape' || ['close', 'collapse', 'menu', 'settings'].includes(action)) state.menu = null;
+  else if (k === 'escape' || ['close', 'collapse', 'menu', 'settings'].includes(action)) closeMenu();
   render();
 }
 
@@ -806,7 +845,7 @@ function mouse(m) {
       const item = state.menu.items[state.menu.off + k];
       return item ? runAction(item[1]) : undefined;
     }
-    state.menu = null;
+    closeMenu();
     if (btn === 0) return render();
   }
   if (y === 1) {
