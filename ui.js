@@ -94,7 +94,8 @@ function wrap(text, width) {
 const segWidth = segs => segs.reduce((w, [text]) => w + textWidth(text), 0);
 const segText = segs => segs.map(([text]) => text).join('');
 
-// The columns [from, from + width) of a segment list, for horizontal scrolling.
+// The columns [from, from + width) of a segment list, for horizontal scrolling. A wide character cut by the left
+// edge leaves a space, so that the text keeps its columns.
 function slice(segs, from, width) {
   const res = [];
   let col = 0;
@@ -103,6 +104,7 @@ function slice(segs, from, width) {
     for (const ch of text) {
       const c = cols(ch);
       if (col >= from && col + c <= from + width) part += ch;
+      else if (col < from && col + c > from) part += ' '.repeat(Math.max(0, Math.min(col + c - from, width)));
       col += c;
       if (col >= from + width) break;
     }
