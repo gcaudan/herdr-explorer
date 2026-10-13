@@ -43,14 +43,17 @@ const CHEVRON = [0xeab6, 0xeab4];
 const BRANCH = 0xe0a0;
 const SEARCH = 0xf002, SCM = 0xe725, GEAR = 0xf013;
 let theme = icons.load(settings.icons); // VS Code icon theme; null: the default icons
-// Moved by an update of its extension: its new place saved for the next starts.
-if (theme && theme.entry.file !== settings.icons.file) {
-  settings.icons = theme.entry;
-  writeSettings({ ...readSettings(), icons: theme.entry });
+// Moved by an update of its extension: its new place saved for the next starts. No longer installed: the default
+// icons saved, rather than searching for it again at every start.
+if (theme ? theme.entry.file !== settings.icons.file : settings.icons && settings.icons.id) {
+  settings.icons = theme ? theme.entry : '';
+  writeSettings({ ...readSettings(), icons: settings.icons });
 }
 // The icon theme chosen in another explorer.
 if (SETTINGS_FILE) fs.watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
-  const chosen = readSettings().icons;
+  // A file read while being written is skipped, rather than taken for the default settings.
+  let chosen;
+  try { chosen = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')).icons || ''; } catch { return; }
   if (JSON.stringify(chosen) === JSON.stringify(settings.icons)) return;
   settings.icons = chosen;
   theme = icons.load(chosen);
