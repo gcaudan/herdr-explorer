@@ -742,10 +742,36 @@ async function doCommit(msg) {
   }
 }
 
+// What --continue would run that the hardening cannot stop, from files a repository received with its .git can
+// carry: the exec lines of a rebase, and a merge strategy other than git's own, run as git merge-<name>, which
+// can be an alias of the repository's config.
+const STRATEGIES = new Set(['ort', 'recursive', 'resolve', 'octopus', 'ours', 'subtree']);
+async function unsafeToContinue() {
+  const file = name => path.join(S.repo.gitdir, name);
+  const read = name => { try { return fs.readFileSync(file(name), 'utf8'); } catch { return ''; } };
+  if (/^\s*(x|exec)(\s|$)/m.test(read('rebase-merge/git-rebase-todo'))) return 'commands (exec lines)';
+  const strategies = [read('rebase-merge/strategy').trim()];
+  // sequencer/opts read by git itself, as the sequencer does (no includes): its syntax has more forms than a key
+  // per line. Exit code 1: no strategy set.
+  if (fs.existsSync(file('sequencer/opts'))) {
+    const res = await git(['config', '--file', file('sequencer/opts'), '--get-all', 'options.strategy']);
+    if (res.code !== 0 && res.code !== 1) return 'options it could not check (sequencer/opts)';
+    strategies.push(...res.out.split('\n'));
+  }
+  // Without one there, the strategy is pull.twohead, its first value: one of the repository's wins over -c.
+  const twohead = await git(['config', '-z', '--includes', '--get-all', 'pull.twohead']);
+  if (twohead.code !== 0 && twohead.code !== 1) return 'options it could not check (pull.twohead)';
+  strategies.push(...twohead.out.split('\0'));
+  const s = strategies.map(x => x.trim()).find(x => x && !STRATEGIES.has(x));
+  return s ? `the merge strategy ${s}` : null;
+}
+
 // git <operation> --continue. GIT_EDITOR ':' keeps the message git prepared without opening an editor (nor the
 // core.editor the repository could set). A rebase stops again on the next conflict.
 async function proceed(o = ongoing()) {
   if (S.repo.conflicts.length) return flash('Resolve the merge conflicts and stage the files first', true);
+  const unsafe = await unsafeToContinue();
+  if (unsafe) return flash(`Continue refused: the ${o.name} would run ${unsafe}; check it and continue in the terminal`, true);
   const res = await op('Continuing', o.cont, { detached: true, env: { GIT_EDITOR: ':' }, quiet: true });
   if (!res) return;
   S.editing = false;

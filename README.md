@@ -228,7 +228,7 @@ from 120 columns. Committing with nothing staged offers to stage everything firs
 | `n` `N`, `s` | in the diff: next and previous hunk, inline or side by side |
 | `c`, `Enter`, `Esc` | type the commit message, commit, leave the field; `alt+a` amend |
 | `ctrl+g` or `✧` | commit message written by Claude, or from the file names without it |
-| `c` `Enter` or `✓ Continue`, `X` or `✕ Abort` | during a rebase, cherry-pick or revert: continue once the conflicts are staged (git's message kept), or abort (asks first); a merge ends with a commit, its message optional |
+| `c` `Enter` or `✓ Continue`, `X` or `✕ Abort` | during a rebase, cherry-pick or revert: continue once the conflicts are staged (git's message kept; refused when it would run `exec` lines or a merge strategy that is not git's), or abort (asks first); a merge ends with a commit, its message optional |
 | `b` or click on the branch | branches: filter, `Enter` switch, `n` new, `D` delete |
 | `f`, `P`, `p` | fetch, pull (fast-forward only), push (sets the upstream on the first push) |
 | Stashes | `n` stash (untracked files included), `a` apply, `o` pop, `d` drop |
