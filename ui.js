@@ -158,6 +158,79 @@ function mark(segs, ranges, style) {
   return res;
 }
 
+// --- scrollbar
+
+// The scrollbar of a list shown height rows at a time, in a column on its right, hidden while the list fits: a thin
+// rail, its thumb, and ▴ ▾ buttons at its ends when there is room. One per list, set again at each render; it keeps a
+// drag or a held button going from one mouse event to the next. scrollTo(top): moves the list and renders it.
+const RAIL = fg([60, 60, 60]) + '│\x1b[0m', THUMB = fg([130, 130, 130]) + '┃\x1b[0m';
+const UP = fg([140, 140, 140]) + '▴\x1b[0m', DOWN = fg([140, 140, 140]) + '▾\x1b[0m';
+const scrollbars = new Set(); // all of them, let go when the pane loses the focus (see screen())
+class Scrollbar {
+  constructor(scrollTo) { this.scrollTo = scrollTo; this.bar = null; this.held = null; scrollbars.add(this); }
+  // The list's length, the rows shown and the first shown; returns the columns the bar takes: 1, or 0 when hidden.
+  set(total, height, top) {
+    this.bar = null;
+    if (height < 2 || total <= height) return 0;
+    const max = total - height, arrows = height >= 4 ? 1 : 0, track = height - 2 * arrows;
+    const size = Math.max(1, Math.min(track - 1, Math.round(track * height / total)));
+    top = Math.max(0, Math.min(top, max));
+    this.bar = { height, max, top, arrows, track, size, at: arrows + Math.round((track - size) * top / max) };
+    return 1;
+  }
+  // The bar's cell on row k of the list (from 0), to add after the row's line; nothing when hidden.
+  cell(k) {
+    const b = this.bar;
+    if (!b) return '';
+    if (b.arrows && k === 0) return UP;
+    if (b.arrows && k === b.height - 1) return DOWN;
+    return k >= b.at && k < b.at + b.size ? THUMB : RAIL;
+  }
+  // The top that puts the thumb at row r, kept within the list.
+  topAt(r) {
+    const b = this.bar;
+    return Math.max(0, Math.min(b.max, Math.round((r - b.arrows) * b.max / Math.max(1, b.track - b.size))));
+  }
+  // A mouse event on row k of the list (from 0); on: whether it is on the bar's column. Returns whether the event was
+  // the bar's. A press on the thumb grabs it, the drag going on wherever the mouse goes until the release; elsewhere on
+  // the rail, the thumb first jumps under the mouse. A button scrolls one row, then again while held on it.
+  mouse(m, k, on) {
+    const b = this.bar, h = this.held;
+    if (m.wheel) return false;
+    if (h && !m.press) { this.stop(); return true; }
+    if (h && m.drag) {
+      if (h.step) { if (!on || k !== h.k) clearTimeout(h.timer); }
+      else if (b) this.scrollTo(Math.max(0, Math.min(b.max, h.top + Math.round((k - h.k) * b.max / Math.max(1, b.track - b.size)))));
+      return true;
+    }
+    this.stop();
+    if (!b || !on || !m.press || m.drag || m.button !== 0 || k < 0 || k >= b.height) return false;
+    const step = b.arrows && k === 0 ? -1 : b.arrows && k === b.height - 1 ? 1 : 0;
+    if (step) {
+      // The repeat stops at an end of the list, or when the list did not take the last move (gone from the screen).
+      const held = this.held = { k, step, last: null, timer: null };
+      const move = () => {
+        const t = this.bar;
+        const top = t ? Math.max(0, Math.min(t.max, t.top + step)) : null;
+        if (top === null || top === held.last || (t && top === t.top)) return clearTimeout(held.timer);
+        held.last = top;
+        this.scrollTo(top);
+      };
+      move();
+      held.timer = setTimeout(() => { held.timer = setInterval(move, 50); }, 400);
+      return true;
+    }
+    const top = k >= b.at && k < b.at + b.size ? b.top : this.topAt(k - Math.floor(b.size / 2));
+    this.held = { k, top };
+    if (top !== b.top) this.scrollTo(top);
+    return true;
+  }
+  stop() {
+    if (this.held) clearTimeout(this.held.timer);
+    this.held = null;
+  }
+}
+
 // --- input
 
 // Escape sequences from the terminal and their key names. Printable characters are their own name;
@@ -274,6 +347,8 @@ function screen(handlers, { mouse = true, motion = false, focus = true } = {}) {
   }
   if (process.stdin.isTTY) process.stdin.setRawMode(true);
   process.stdin.setEncoding('utf8');
+  // A button released out of the pane may never be reported: a held scrollbar stops with the focus.
+  const input = { ...handlers, focus: f => { if (!f) for (const b of scrollbars) b.stop(); if (handlers.focus) handlers.focus(f); } };
   // A long paste arrives in several reads: held until its end marker, so that its text never reads as keys.
   let pending = '';
   process.stdin.on('data', data => {
@@ -281,7 +356,7 @@ function screen(handlers, { mouse = true, motion = false, focus = true } = {}) {
     pending = '';
     const start = data.lastIndexOf('\x1b[200~');
     if (start >= 0 && data.indexOf('\x1b[201~', start) < 0) { pending = data.slice(start); data = data.slice(0, start); }
-    if (data) decode(data, handlers);
+    if (data) decode(data, input);
   });
   if (handlers.resize) out.on('resize', handlers.resize);
   return lines => { if (!child) out.write('\x1b[?2026h\x1b[H' + lines.join('\r\n') + '\x1b[?2026l'); };
@@ -308,6 +383,6 @@ const size = () => ({ W: process.stdout.columns || 80, H: process.stdout.rows ||
 
 module.exports = {
   fg, bg, glyph, C, GIT, clean, cleanLine, cols, fit, textWidth, ellipsis, line, wrap,
-  segWidth, segText, slice, split, mark,
+  segWidth, segText, slice, split, mark, Scrollbar,
   keyName, decode, printable, Field, screen, restart, size,
 };
