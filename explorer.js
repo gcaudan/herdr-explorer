@@ -50,13 +50,15 @@ if (theme ? theme.entry.file !== settings.icons.file : settings.icons && setting
   settings.icons = theme ? theme.entry : '';
   writeSettings({ ...readSettings(), icons: settings.icons });
 }
-// The icon theme chosen in another explorer, and the update check turned on or off there.
+// The icon theme chosen in another explorer, and the update check or the opening in new tabs turned on or off there.
 if (SETTINGS_FILE) fs.watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
   // A file read while being written is skipped, rather than taken for the default settings.
   let saved, chosen;
   try { saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')); chosen = saved.icons || ''; } catch { return; }
-  if (saved.updateCheck !== undefined && saved.updateCheck !== settings.updateCheck) {
-    settings.updateCheck = saved.updateCheck;
+  for (const name of ['updateCheck', 'autoOpen']) {
+    if (saved[name] === undefined || saved[name] === settings[name]) continue;
+    settings[name] = saved[name];
+    if (state.menu && state.menu.keep) state.menu.items = state.menu.keep(); // an open settings menu shows it too
     render();
   }
   if (JSON.stringify(chosen) === JSON.stringify(settings.icons)) return;
@@ -611,7 +613,7 @@ function settingsItems() {
     cache.clear();
     buildRows();
     if (name === 'follow') { lastCwd = null; follow(); }
-    if (name === 'side') return 'Applies to the next tabs';
+    if (name === 'side' || name === 'autoOpen') return 'Applies to the next tabs';
     return null;
   };
   return [
@@ -626,6 +628,7 @@ function settingsItems() {
     [check(settings.singleClick) + 'Preview on single click', flip('singleClick')],
     [check(settings.follow) + 'Follow the terminal folder', flip('follow')],
     [check(settings.side === 'right') + 'Dock on the right', flip('side', settings.side === 'right' ? 'left' : 'right')],
+    [check(settings.autoOpen) + 'Open in new tabs', flip('autoOpen')],
     ['  Icon theme…', () => openIconThemes()],
     ['  Edit key bindings…', () => {
       const file = keysTemplate('explorer', DEFAULT_KEYS);

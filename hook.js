@@ -1,5 +1,6 @@
 // Opens the explorer to the left (or the right, depending on the settings) of a tab.
-//   node hook.js           tab.created event (creating a space also emits it for its first tab)
+//   node hook.js           tab.created event (creating a space also emits it for its first tab), unless the
+//                          autoOpen setting is off
 //   node hook.js --toggle  key binding action: closes the current tab's explorer, or opens it
 //   node hook.js --all     adds it to existing tabs that have a single pane
 //   node hook.js --restore startup hook: reopens the explorer and preview panes that herdr restored as shells
@@ -131,7 +132,7 @@ if (process.argv.includes('--toggle')) {
   require('./update').check().catch(() => { });
   const ev = JSON.parse(process.env.HERDR_PLUGIN_EVENT_JSON || '{}');
   const tab = ev.data && ev.data.tab;
-  if (tab) {
+  if (tab && readSettings().autoOpen) {
     const panes = tabPanes(tab.workspace_id, tab.tab_id);
     const root = ctx.workspace_id === tab.workspace_id ? ctx.workspace_cwd : null;
     if (panes.length === 1 && panes[0].label !== LABEL) open(panes, tab.tab_id, root);

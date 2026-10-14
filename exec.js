@@ -130,6 +130,7 @@ const DEFAULTS = {
   editor: '',         // external editor command ("zed", "subl -w"); empty: VS Code when found, else the terminal editor
   singleClick: false, // a single click on a file opens the preview, like VS Code
   side: 'left',       // explorer docked to the left or the right of the tab
+  autoOpen: true,     // open the explorer in every new tab that has a single pane
   follow: false,      // reveal the folder of the terminal next to the explorer when it changes
   icons: '',          // explorer icon theme: { id, label, file } of a VS Code one; empty: Nerd Font icons
   wrap: false,        // preview: wrap long lines

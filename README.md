@@ -6,7 +6,8 @@ Node.js, with no dependencies and no build step.
 
 ## Features
 
-- **Explorer**: opens by itself on the left (or the right) of every new tab, without taking the focus.
+- **Explorer**: opens by itself on the left (or the right) of every new tab, without taking the focus (can be turned
+  off in the settings).
   - Folders expand with the mouse or the keyboard; the expanded ones are remembered per root folder between
     sessions.
   - Live git status: `M` modified, `U` untracked, `A` added, `R` renamed, `D` deleted, `!` conflict, `●` on a folder holding
@@ -349,6 +350,7 @@ Confirmations take `y`; any other key cancels.
   | `singleClick` | Preview on single click | `false` | a single click on a file shows it in the preview | at their next opening |
   | `follow` | Follow the terminal folder | `false` | reveal the folder of the terminal in the tree, within the space folder | at once |
   | `side` | Dock on the right | `"left"` | side of the explorer | new tabs only |
+  | `autoOpen` | Open in new tabs | `true` | open the explorer in every new tab that has a single pane; off: only with `prefix+f` | new tabs only |
   | `icons` | Icon theme… | `""` | a VS Code icon theme, `{ id, label, file }`; empty: Nerd Font icons. *Search…* lists the themes installed for VS Code, VS Code Insiders, VSCodium, Cursor, Windsurf or VS Code Server, and those built into these editors; the tree previews each one as the selection moves, and `Esc` restores the saved one | explorers at once; source control at its next opening |
   | `wrap` | (preview `w`) | `false` | preview: wrap long lines | other previews at their next opening |
   | `lineNumbers` | (preview `L`) | `true` | preview: line number gutter | other previews at their next opening |
