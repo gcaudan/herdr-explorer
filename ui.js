@@ -328,7 +328,7 @@ class Field {
 // --- screen
 
 // Alternate screen, hidden cursor, no line wrap, mouse (SGR), focus reports and bracketed paste;
-// raw input decoded into handlers; everything restored on exit. Returns a paint function.
+// raw input decoded into handlers; everything restored on exit. Returns a paint function, given the screen's lines.
 let off = '', child = null; // child: the process the terminal was given to by restart()
 function screen(handlers, { mouse = true, motion = false, focus = true } = {}) {
   const out = process.stdout;
@@ -358,8 +358,20 @@ function screen(handlers, { mouse = true, motion = false, focus = true } = {}) {
     if (start >= 0 && data.indexOf('\x1b[201~', start) < 0) { pending = data.slice(start); data = data.slice(0, start); }
     if (data) decode(data, input);
   });
-  if (handlers.resize) out.on('resize', handlers.resize);
-  return lines => { if (!child) out.write('\x1b[?2026h\x1b[H' + lines.join('\r\n') + '\x1b[?2026l'); };
+  // Only the lines changed since the last frame are written, each at its row: a whole frame is large, and on Windows
+  // a write to the terminal blocks until it is read. After a resize, the whole frame.
+  let shown = [];
+  out.on('resize', () => { shown = []; if (handlers.resize) handlers.resize(); });
+  const paint = lines => {
+    if (child) return;
+    let s = '';
+    lines.forEach((l, i) => { if (l !== shown[i]) s += `\x1b[${i + 1};1H${l}`; });
+    shown = lines.slice();
+    if (s) out.write('\x1b[?2026h' + s + '\x1b[?2026l');
+  };
+  // The next frame whole: after something else wrote on the screen.
+  paint.again = () => { shown = []; };
+  return paint;
 }
 
 // Runs the pane's script again, on the code updated on disk, in the same terminal: the pane keeps its place, width

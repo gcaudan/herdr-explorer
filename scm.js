@@ -174,8 +174,12 @@ async function net(label, args) {
   const keys = await repoNetworkKeys();
   if (keys.length) { flash(`${label.split(' ')[0]} refused: the repository sets ${keys[0]}; use the terminal`, true); return null; }
   // Only the usual transports: no remote helper (git-remote-<name>), local path or ext:: command.
-  return op(label, args, { detached: true, timeout: NET_TIMEOUT,
+  const res = await op(label, args, { detached: true, timeout: NET_TIMEOUT,
     env: { GIT_TERMINAL_PROMPT: '0', GIT_ALLOW_PROTOCOL: 'https:http:ssh:git' } });
+  // On Windows, ssh may still have asked for a passphrase or a host key on the pane's console, over the screen.
+  paint.again();
+  draw();
+  return res;
 }
 const nul = items => items.flatMap(i => (i.orig ? [i.orig, i.path] : [i.path])).join('\0') + '\0';
 
