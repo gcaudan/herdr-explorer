@@ -38,6 +38,8 @@ const S = {
 let hits = [];  // clickable areas of the last frame: { y, x0, x1, fn }
 let rows = [];  // rows of the current view
 let listY = 0, listH = 0, listW = 0;
+const listBar = new ui.Scrollbar(top => { S.top = top; draw(); });
+const diffBar = new ui.Scrollbar(top => { if (S.diff) { S.diff.top = top; draw(); } });
 
 // --- running git
 
@@ -172,8 +174,12 @@ async function net(label, args) {
   const keys = await repoNetworkKeys();
   if (keys.length) { flash(`${label.split(' ')[0]} refused: the repository sets ${keys[0]}; use the terminal`, true); return null; }
   // Only the usual transports: no remote helper (git-remote-<name>), local path or ext:: command.
-  return op(label, args, { detached: true, timeout: NET_TIMEOUT,
+  const res = await op(label, args, { detached: true, timeout: NET_TIMEOUT,
     env: { GIT_TERMINAL_PROMPT: '0', GIT_ALLOW_PROTOCOL: 'https:http:ssh:git' } });
+  // On Windows, ssh may still have asked for a passphrase or a host key on the pane's console, over the screen.
+  paint.again();
+  draw();
+  return res;
 }
 const nul = items => items.flatMap(i => (i.orig ? [i.orig, i.path] : [i.path])).join('\0') + '\0';
 
@@ -563,15 +569,19 @@ function hints() {
 function diffLines(width, height) {
   const d = S.diff;
   const mode = d.mode || diffs.defaultMode(width);
-  if (d.parsed && d.cache !== `${width}:${mode}`) { d.rows = diffs.render(d.parsed, width, mode); d.cache = `${width}:${mode}`; }
+  const layout = w => { if (d.parsed && d.cache !== `${w}:${mode}`) { d.rows = diffs.render(d.parsed, w, mode); d.cache = `${w}:${mode}`; } };
   const body = height - 1;
+  // One column narrower when the scrollbar shows (a narrower layout never has fewer rows): kept while it does.
+  if (d.cache !== `${width - 1}:${mode}` || d.rows.length <= body) layout(width);
+  if ((d.rows || []).length > body) layout(width - 1);
   d.top = Math.max(0, Math.min(d.top, (d.rows || []).length - body));
+  const bw = diffBar.set((d.rows || []).length, body, d.top);
   const counts = d.parsed ? [[` +${d.parsed.add}`, fg(C.green)], [` −${d.parsed.del}`, fg(ui.GIT.D)]] : [];
   const lines = [split([[` ${d.title}`, BOLD], ...counts, [`  ${mode === 'split' ? 'side by side' : 'inline'}`, DIM]],
     [[' ✕ ', fg(C.text)]], width, d.focus ? C.select : C.header)];
   if (!d.parsed) lines.push(ui.line([[' Loading…', DIM]], width));
   else if (!d.rows.length) lines.push(ui.line([[' (no changes)', DIM]], width));
-  for (const r of (d.rows || []).slice(d.top, d.top + body)) lines.push(ui.line(r.segs, width, r.back));
+  (d.rows || []).slice(d.top, d.top + body).forEach((r, k) => lines.push(ui.line(r.segs, width - bw, r.back) + diffBar.cell(k)));
   while (lines.length < height) lines.push(ui.line([], width));
   return lines.slice(0, height);
 }
@@ -599,7 +609,10 @@ function draw() {
     rows = viewRows();
     syncCursor();
     S.top = Math.max(0, Math.min(S.top, rows.length - listH));
-    for (let i = S.top; i < Math.min(rows.length, S.top + listH); i++) left.push(rowLine(rows[i], LW, listY + i - S.top, i === S.cursor));
+    const bw = listBar.set(rows.length, listH, S.top);
+    for (let i = S.top; i < Math.min(rows.length, S.top + listH); i++) {
+      left.push(rowLine(rows[i], LW - bw, listY + i - S.top, i === S.cursor) + listBar.cell(i - S.top));
+    }
     while (left.length < H - 2) left.push(ui.line([], LW));
     if (S.diff) {
       const right = diffLines(W - LW - 1, H - 2);
@@ -1204,6 +1217,9 @@ function mouse(m) {
     S.top = Math.max(0, Math.min(S.top + m.wheel * 3, rows.length - listH));
     return draw();
   }
+  // The diff's scrollbar in the last column, the list's in the last column of the list.
+  if (S.diff && !S.picker && diffBar.mouse(m, y - 2, x === W - 1)) return;
+  if (listW && !S.picker && listBar.mouse(m, y - listY, x === listW - 1)) return;
   if (!m.press || m.drag || m.button !== 0) return;
   if (S.prompt) { S.prompt = null; return draw(); }
   if (S.picker) {
@@ -1246,7 +1262,7 @@ paint = ui.screen({
   },
   focus(on) { if (on) schedule(); },
   resize: draw,
-});
+}, { motion: true });
 draw();
 refresh();
 setInterval(schedule, 5000); // the working tree is not watched: edits show up within 5 s
