@@ -34,17 +34,21 @@ function cleanLine(text, tab = 4) {
 }
 
 // Terminal columns of a character: none for combining marks (accents of decomposed names), two for wide
-// CJK characters and emoji.
-const WIDE = /[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦\u{1f300}-\u{1f64f}\u{1f900}-\u{1f9ff}\u{20000}-\u{3fffd}]/u;
-const cols = ch => (/[\p{M}​‍️]/u.test(ch) ? 0 : WIDE.test(ch) ? 2 : 1);
+// CJK characters, emoji (✅ ❌ included) and the trigrams ☰ (wide since Unicode 16, as herdr counts them).
+// prev: the character before, for the emoji selector U+FE0F, which makes a text symbol such as ⚠ an emoji two
+// columns wide. The two regional indicators of a flag (🇫🇷) take one column each, the flag two.
+const WIDE = /(?!\p{Regional_Indicator})[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦\u{20000}-\u{3fffd}\u2630-\u2637\u268a-\u268f\p{Emoji_Presentation}]/u;
+const cols = (ch, prev) => (ch === '\ufe0f' && prev && /\p{Emoji}/u.test(prev) && !WIDE.test(prev) ? 1
+  : /[\p{M}​‍️]/u.test(ch) ? 0 : WIDE.test(ch) ? 2 : 1);
 
-// The longest start of a text that fits in max columns, and its width.
-function fit(text, max) {
+// The longest start of a text that fits in max columns, and its width. prev: the character before the text, in
+// the segment before.
+function fit(text, max, prev) {
   let s = '', w = 0;
   for (const ch of text) {
-    const c = cols(ch);
+    const c = cols(ch, prev);
     if (w + c > max) break;
-    s += ch; w += c;
+    s += ch; w += c; prev = ch;
   }
   return [s, w];
 }
@@ -56,10 +60,11 @@ const ellipsis = (text, max) => (textWidth(text) <= max ? text : fit(text, Math.
 // control characters replaced; a style may set a background, reset after its segment. back: background colour
 // of the whole line.
 function line(segments, width, back) {
-  let s = back ? bg(back) : '', used = 0;
+  let s = back ? bg(back) : '', used = 0, prev;
   for (const [text, style] of segments) {
-    const [part, w] = fit(clean(text), width - used);
+    const [part, w] = fit(clean(text), width - used, prev);
     if (!part) continue;
+    prev = Array.from(part).pop();
     s += (style || '') + part + '\x1b[0m' + (back ? bg(back) : '');
     used += w;
   }
@@ -91,19 +96,23 @@ function wrap(text, width) {
 
 // --- segments: [text, style] lists, as given to line()
 
-const segWidth = segs => segs.reduce((w, [text]) => w + textWidth(text), 0);
 const segText = segs => segs.map(([text]) => text).join('');
+
+const segWidth = segs => fit(segText(segs), Infinity)[1];
 
 // The columns [from, from + width) of a segment list, for horizontal scrolling. A wide character cut by the left
 // edge leaves a space, so that the text keeps its columns.
 function slice(segs, from, width) {
   const res = [];
-  let col = 0;
+  let col = 0, prev, pw = 0;
   for (const [text, style] of segs) {
     let part = '';
     for (const ch of text) {
-      const c = cols(ch);
-      if (col >= from && col + c <= from + width) part += ch;
+      const c = cols(ch, prev);
+      // An emoji selector whose character was cut by the left edge: a space in its place.
+      const lone = c && ch === '\ufe0f' && col - pw < from;
+      prev = ch; pw = c;
+      if (col >= from && col + c <= from + width) part += lone ? ' ' : ch;
       else if (col < from && col + c > from) part += ' '.repeat(Math.max(0, Math.min(col + c - from, width)));
       col += c;
       if (col >= from + width) break;
@@ -117,16 +126,30 @@ function slice(segs, from, width) {
 // A segment list cut into lines of at most width columns.
 function split(segs, width) {
   const lines = [[]];
-  let w = 0;
+  let w = 0, prev, pw = 0;
   for (const [text, style] of segs) {
     let part = '';
     for (const ch of text) {
-      const c = cols(ch);
-      if (w + c > width && w > 0) {
+      const c = cols(ch, prev);
+      // The emoji selector widens the character before it (pw columns, maybe in the previous segment): both go to
+      // the next line.
+      const base = c && ch === '\ufe0f' ? prev : '';
+      const bw = base ? pw : 0;
+      if (w + c > width && w - bw > 0) {
+        let moved = [], keep = '';
+        if (base && part.endsWith(base)) { part = part.slice(0, -base.length); keep = base; }
+        else if (base) {
+          const line = lines[lines.length - 1], last = line[line.length - 1];
+          if (last && last[0].endsWith(base)) {
+            last[0] = last[0].slice(0, -base.length);
+            if (!last[0]) line.pop();
+            moved = [[base, last[1]]];
+          }
+        }
         if (part) lines[lines.length - 1].push([part, style]);
-        lines.push([]); part = ''; w = 0;
+        lines.push(moved); part = keep; w = moved.length || keep ? bw : 0;
       }
-      part += ch; w += c;
+      part += ch; w += c; prev = ch; pw = c;
     }
     if (part) lines[lines.length - 1].push([part, style]);
   }
