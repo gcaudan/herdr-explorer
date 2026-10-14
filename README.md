@@ -44,8 +44,8 @@ Node.js, with no dependencies and no build step.
 - **Changes**: the git diff of a file or folder in a full-tab pane, inline or side by side.
 - **Scrollbars** on every list that scrolls: a thin rail with a draggable thumb and `▴` `▾` buttons that repeat while
   held, hidden when everything fits.
-- **Updates**: a daily check for a newer release; `↑` in the explorer header updates the plugin, and the open panes
-  restart on the new code.
+- **Updates**: a daily check for a newer release; `↑` in the explorer header updates the plugin, and the open
+  explorers and previews restart on the new code.
 
 ## Requirements
 
@@ -111,6 +111,9 @@ instance after moving the folder.
 | `prefix+a` | go to file, in the current tab's folder |
 | `prefix+d` | source control of the current tab's folder |
 
+The keys run the plugin actions `gcaudan.explorer.toggle`, `gcaudan.explorer.search` and `gcaudan.explorer.scm`,
+which can be bound to other keys in `config.toml`.
+
 herdr keeps its own copy of the manifest: after pulling a new version, run the script again (or
 `herdr plugin link .`) so that herdr picks up new hooks, such as the startup hook.
 
@@ -159,10 +162,19 @@ Results:
 **Restart.** Open explorers and previews watch `herdr-plugin.toml` (polled every 2 s). When its version differs from
 the one they started with — after an update or a manual `git pull` / `git checkout` — they wait 2 s, then restart as
 soon as they are idle (explorer: no update running, no menu, prompt, confirmation or filter being typed; preview: no
-find being typed, no selection being dragged). The new process takes over the same pane with the same root, file
-and line. The old `node` process stays alive, waiting for the new one and forwarding signals to it: each restart adds
-one waiting process until the pane is closed. Search, Source Control, Changes and Editor panes do not restart; they
-run the old code until closed.
+find being typed, no selection being dragged). A pull that leaves the version unchanged restarts nothing. The pane
+keeps its place, width and id, with the same root (*Set as root* included), file and line.
+
+The pane's first `node` process is a small launcher (`launch.js`) that loads nothing else and runs the explorer or
+preview as its child, in the same terminal. To restart, the child leaves the alternate screen, sends the launcher
+(over IPC) what the next one must show, and exits with code 75; the launcher then starts the script again, on the
+code now on disk. Any other exit (`q` in the preview, the pane closed) ends the launcher, and the pane with it. The
+launcher passes `SIGTERM`, `SIGHUP` and `SIGINT` on to the child and keeps the terminal in raw mode between two
+children, so that a `ctrl+c` typed meanwhile cannot kill the pane; the child exits if the launcher is killed. A pane
+opened with the launcher thus keeps two processes however many updates it goes through (an older one, see
+[Limitations](#limitations)). The launcher itself stays on the code it started on:
+a change to `launch.js` only applies to panes opened afterwards. Search, Source Control, Changes and Editor panes do
+not restart; they run the old code until closed.
 
 ### Uninstall
 
@@ -302,6 +314,8 @@ A popup over the tab, opened with `prefix+a` (Go to file in the tab's folder), f
   *hidden* on, the folder is walked instead (without `.git`, and without `node_modules` and dot folders unless
   *hidden* is on).
 - From 100 columns, the selected result is previewed on the right.
+- Opening a result in the preview or the editor, or inserting its path, closes the popup; on failure, the popup stays
+  and shows the message.
 - The status line counts the files (`12 of 840 files`) or the results (`37 results in 9 files`), and shows
   `indexing…` and `searching…` while they run.
 - The results have a scrollbar (see [Scrollbars](#scrollbars)), in the last column of the list.
@@ -475,8 +489,8 @@ in the terminal editor. Changes apply within a second, without restarting the ex
 - **State files** are written to a temporary file then renamed, so that another pane never reads them half-written.
 - **Closing**: when the tab's terminal exits, the explorer closes too, and the tab with it.
 - **Self-restart after an update**: the explorer and the preview poll `herdr-plugin.toml`; when its version differs
-  from the one they started with, they hand their terminal to a new `node` process running the new code, in the same
-  pane, and wait for it to exit.
+  from the one they started with, they exit with code 75, and their launcher, the pane's first `node` process, starts
+  them again on the new code in the same terminal (see [Update](#update)).
 - **Right-click**: herdr keeps right-clicks for its own menu unless a pane asks for them; the explorer does so at
   startup (`herdr pane input --right-click pane`).
 
@@ -586,9 +600,9 @@ The explorer opens by itself on any folder, including freshly cloned untrusted r
   credential helper). A diff stops at 200,000 rows.
 - *View changes* shows at most 200 untracked files.
 - Updates need the plugin folder to be a git clone on `main`, without changes to tracked files.
-- A pane restarted on new code keeps its previous `node` process, which only waits for the new one: after N version
-  changes (updates, or a `git checkout` between versions), an explorer or preview holds N+1 `node` processes until
-  it is closed. Close and reopen it (`prefix+f` twice) to start from one.
+- An explorer or preview started by a version without the launcher (0.4.0 and earlier) keeps its old waiting `node`
+  processes after updating to one with it, until it is closed. Close and reopen it (`prefix+f` twice for the
+  explorer) to start from the launcher and its child.
 
 ## Troubleshooting
 
@@ -643,6 +657,7 @@ Messages of the plugin:
 | `hook.js` | opens the explorer next to a tab, or closes it; reopens the panes after a restart; search and source control actions |
 | `explorer.js` | the explorer: tree, git status, filter, file operations, menu, settings, width |
 | `preview.js` | file preview: text, Markdown, images, hex dump, find, mouse selection |
+| `launch.js` | launcher of the explorer and preview panes: runs the pane as its child, and starts it again on new code |
 | `highlight.js`, `markdown.js`, `image.js` | syntax highlighting, Markdown rendering, image decoding |
 | `search.js` | go to file and search in files popup |
 | `scm.js` | source control pane |

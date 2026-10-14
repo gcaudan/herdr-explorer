@@ -2,6 +2,8 @@
 // rendered Markdown, images drawn with half blocks, a hex dump for other binary files. Reloads by itself when the
 // file changes on disk, and shows the next file the explorer asks for (request file, see actions.preview).
 'use strict';
+// The pane's first process only starts the real one (launch.js).
+if (require('./launch').launch()) return;
 const fs = require('fs');
 const path = require('path');
 const ui = require('./ui');
