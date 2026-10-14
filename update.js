@@ -127,6 +127,7 @@ async function install() {
 }
 async function pull() {
   // The plugin's own clone, not a repository holding a copy of it (dotfiles), whose pull would run its hooks.
+  if (!GIT) return { ok: false, message: 'git not found in PATH' };
   const top = await git(['rev-parse', '--show-toplevel']);
   if (!top.ok || !samePath(real(top.out.trim()), real(DIR))) return { ok: false, message: 'Not a git clone' };
   const head = await git(['rev-parse', '--abbrev-ref', 'HEAD']);
@@ -142,8 +143,8 @@ async function pull() {
   const pull = await git(['pull', '--ff-only', '--no-rebase'], 60000, own ? {} : { GIT_SSH_COMMAND: 'ssh -o BatchMode=yes' });
   if (!pull.ok) {
     const lines = pull.err.split(/\r?\n/).filter(Boolean);
-    const error = lines.find(l => /^(fatal|error):/.test(l)) || lines[0];
-    return { ok: false, retry: true, message: error ? error.replace(/^(fatal|error):\s*/, '') : 'Update failed' };
+    const error = lines.find(l => /^(fatal|error)\s*:/.test(l)) || lines[0];
+    return { ok: false, retry: true, message: error ? error.replace(/^(fatal|error)\s*:\s*/, '') : 'Update failed' };
   }
   const after = (await git(['rev-parse', 'HEAD'])).out.trim();
   if (!before || after === before) return { ok: true, message: 'Already up to date' };
@@ -152,8 +153,9 @@ async function pull() {
   const changed = !diff.ok || diff.out.split('\n')
     .some(l => /^[+-]/.test(l) && !/^(\+\+\+|---)/.test(l) && !/^[+-]version\s*=/.test(l));
   const to = readVersion();
+  // Rewritten even when unchanged, so that the explorers of the other tabs read it again and hide their ↑.
+  if (FILE) write({ ...read(), ...(changed ? { finish: to } : {}) });
   if (!changed) return { ok: true, message: `Updated to ${to}` };
-  if (FILE) write({ ...read(), finish: to });
   return { ok: true, message: `Updated to ${to}: rerun the installer` };
 }
 
