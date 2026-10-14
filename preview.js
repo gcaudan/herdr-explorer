@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const ui = require('./ui');
 const actions = require('./actions');
+const update = require('./update');
 const { run, HERDR, readSettings, writeSettings, writePaneState } = require('./exec');
 
 const PANE = process.env.HERDR_PANE_ID;
@@ -33,7 +34,7 @@ const state = {
   top: 0, left: 0, focused: true,
   find: null,       // { field, active } while searching
   matches: [], match: -1,
-  select: null,     // { from, to } display rows being selected with the mouse
+  select: null,     // { from, to, moved } positions { row, at } (display row, character) selected with the mouse
   flash: null, chips: [],
 };
 
@@ -115,6 +116,8 @@ function rows() {
   const { W, H } = ui.size();
   const width = Math.max(1, W - gutter() - 1);
   if (state.rows && state.rows.width === width && state.rows.height === H) return state.rows;
+  // A selection holds positions in the old rows.
+  state.select = null;
   let list = [];
   if (state.kind === 'image') {
     let res;
@@ -126,7 +129,7 @@ function rows() {
   } else if (markdownView()) {
     let res;
     try { res = markdown.render(state.text, Math.min(width, 120), { highlight }); } catch { res = null; }
-    if (res) list = res.lines.map(segs => ({ segs: [[' ', ''], ...segs], src: -1 }));
+    if (res) list = res.lines.map(segs => ({ segs: [[' ', ''], ...segs], src: -1, pad: 1 }));
     else list = state.source.map((segs, i) => ({ segs, src: i, first: true }));
   } else if (state.kind === 'error') {
     list = [{ segs: [[` ${state.info}`, fg(C.dim)]], src: -1 }];
@@ -153,9 +156,11 @@ function render() {
     const r = list[i];
     const num = g ? [[(r.first ? String(r.src + 1) : '').padStart(g - 1) + ' ', fg(r.src + 1 === state.line ? C.text : C.dim)]] : [];
     let segs = r.src >= 0 && ranges.has(r.src) && r.first && !settings.wrap ? ui.mark(r.segs, ranges.get(r.src), bg(C.find)) : r.segs;
+    const sel = selectedRange(i);
+    // A selection going on past the end of the row shows one more cell, as an editor shows the line break.
+    if (sel) segs = [...ui.mark(segs, [sel], bg(C.select)), ...(sel[2] ? [[' ', bg(C.select)]] : [])];
     if (!settings.wrap && r.src >= 0) segs = ui.slice(segs, state.left, W - g);
-    const selected = state.select && i >= Math.min(state.select.from, state.select.to) && i <= Math.max(state.select.from, state.select.to);
-    const back = selected ? C.select : r.src >= 0 && r.src + 1 === state.line ? C.selectBlur : null;
+    const back = r.src >= 0 && r.src + 1 === state.line ? C.selectBlur : null;
     lines.push(ui.line([...num, ...segs], W, back));
   }
   while (lines.length < H - 1) lines.push(ui.line([], W));
@@ -262,15 +267,106 @@ function toggle(name) {
   render();
 }
 
-function copySelection() {
+// --- mouse selection, by character
+//
+// A position is { row, at }: a display row and the index of a character in its text. Both ends of the selection
+// are included, as in a terminal; at equal to the text length is past the end of the row.
+
+const before = (a, b) => a.row < b.row || (a.row === b.row && a.at <= b.at);
+// The end of the character at, with the combining marks that follow it (a decomposed accent, an emoji selector).
+function charEnd(text, at) {
+  const next = i => String.fromCodePoint(text.codePointAt(i));
+  if (at >= text.length) return at;
+  let i = at + next(at).length;
+  while (i < text.length && ui.cols(next(i)) === 0) i += next(i).length;
+  return i;
+}
+
+// The position under a screen cell of the body.
+function positionAt(row, x) {
+  const r = rows()[row];
+  const text = ui.segText(r.segs);
+  let col = x - 1 - gutter() + (!settings.wrap && r.src >= 0 ? state.left : 0), w = 0, at = 0;
+  for (const ch of text) {
+    w += ui.cols(ch);
+    if (w > col) return { row, at };
+    at += ch.length;
+  }
+  return { row, at: text.length };
+}
+
+// The selected characters [start, end) of a display row, and whether the selection takes the line break at its
+// end (none between the rows of a wrapped line).
+function selectedRange(i) {
+  if (!state.select || !state.select.moved) return null;
   const { from, to } = state.select;
-  const list = rows().slice(Math.min(from, to), Math.max(from, to) + 1);
-  // Source lines in full for text (not the visible part of wrapped or scrolled rows), displayed text otherwise.
-  const text = list.every(r => r.src >= 0)
-    ? [...new Set(list.map(r => r.src))].map(i => state.plain[i]).join('\n')
-    : list.map(r => ui.segText(r.segs).trimEnd()).join('\n');
-  const n = list.length;
-  act(actions.copy(text, `Copied ${n} line${n > 1 ? 's' : ''}`));
+  const [a, b] = before(from, to) ? [from, to] : [to, from];
+  if (i < a.row || i > b.row) return null;
+  const list = rows(), text = ui.segText(list[i].segs);
+  const start = i === a.row ? a.at : 0;
+  const end = i === b.row ? charEnd(text, b.at) : text.length;
+  const next = list[i + 1];
+  const lineEnd = !next || next.src < 0 || next.first;
+  return [start, end, lineEnd && (i < b.row || b.at >= text.length)];
+}
+
+// The selected text: wrapped rows of a line joined again, rendered rows without their left margin and trailing
+// spaces.
+function selectedText() {
+  const { from, to } = state.select;
+  const [a, b] = before(from, to) ? [from, to] : [to, from];
+  const list = rows();
+  let text = '';
+  for (let i = a.row; i <= b.row; i++) {
+    const r = list[i];
+    const [start, end] = selectedRange(i);
+    let part = ui.segText(r.segs).slice(Math.max(start, r.pad || 0), end);
+    if (r.src < 0) part = part.trimEnd();
+    text += (i > a.row && (r.src < 0 || r.first) ? '\n' : '') + part;
+  }
+  return text;
+}
+
+function copySelection() {
+  const text = selectedText();
+  if (!text) return;
+  const n = text.split('\n').length, chars = Array.from(text).length;
+  act(actions.copy(text, n > 1 ? `Copied ${n} lines` : `Copied ${chars} character${chars > 1 ? 's' : ''}`));
+}
+
+// Ends the selection, copied if the mouse moved: on release, or later when the release came outside the pane
+// and never reached it. A copied selection stays shown (done) until the next click or Escape.
+function endSelection() {
+  if (!state.select || state.select.done) return;
+  if (state.select.moved) { copySelection(); state.select.done = true; } else state.select = null;
+  render();
+}
+
+// The word, run of spaces or punctuation character under a position: its first and last characters.
+const WORD = /[\p{L}\p{N}\p{M}_$]/u;
+function wordAt({ row, at }) {
+  const chars = [];
+  let i = 0;
+  for (const ch of ui.segText(rows()[row].segs)) { chars.push([i, WORD.test(ch) ? 1 : /\s/.test(ch) ? 2 : 3]); i += ch.length; }
+  let a = chars.findIndex(([j]) => j === at), b = a;
+  if (a < 0) return null;
+  const kind = chars[a][1];
+  if (kind !== 3) {
+    while (a > 0 && chars[a - 1][1] === kind) a--;
+    while (b < chars.length - 1 && chars[b + 1][1] === kind) b++;
+  }
+  return { from: { row, at: chars[a][0] }, to: { row, at: chars[b][0] }, moved: true, fixed: true };
+}
+
+// All the rows of the line under a position, up to its end.
+function lineAt({ row }) {
+  const list = rows();
+  let a = row, b = row;
+  if (list[row].src >= 0) {
+    while (a > 0 && list[a - 1].src === list[row].src) a--;
+    while (b < list.length - 1 && list[b + 1].src === list[row].src) b++;
+  }
+  return { from: { row: a, at: 0 }, to: { row: b, at: ui.segText(list[b].segs).length }, moved: true, fixed: true };
 }
 
 // --- input
@@ -291,6 +387,7 @@ function key(k) {
   const page = ui.size().H - 3;
   switch (k) {
     case 'q': case 'escape': case 'ctrl+c':
+      if (k === 'escape' && state.select) { state.select = null; return render(); }
       if (state.find) { state.find = null; state.matches = []; return render(); }
       return process.exit(0);
     case 'up': case 'k': return scroll(-1);
@@ -320,11 +417,17 @@ function key(k) {
   }
 }
 
+let lastClick = { time: 0, x: 0, y: 0, count: 0 };
+
 function mouse(m) {
-  if (m.wheel) { if (state.select) return; return scroll(m.wheel * 3); }
+  // The wheel scrolls under a selection, which may still be dragged: the button state is unknown here.
+  if (m.wheel) return scroll(m.wheel * 3);
   const H = ui.size().H;
-  if (m.y === 1) {
+  // The header has the chips; a selection going on is dragged or released over it like over the body.
+  const selecting = state.select && !state.select.done && (m.drag || !m.press);
+  if (m.y === 1 && !selecting) {
     if (!m.press || m.button !== 0 || m.drag) return;
+    endSelection();
     const chip = state.chips.find(c => m.x >= c.from && m.x <= c.to);
     if (!chip) return;
     if (chip.id === 'close') return process.exit(0);
@@ -333,28 +436,47 @@ function mouse(m) {
     return;
   }
   if (m.button !== 0 && !(m.drag && state.select)) return;
-  // Selection of whole rows with the left button, copied when released.
-  const row = Math.max(0, Math.min(rows().length - 1, state.top + Math.min(Math.max(m.y, 2), H - 1) - 2));
-  if (m.press && !m.drag) { state.select = { from: row, to: row, moved: false }; return render(); }
-  if (!state.select) return;
-  if (m.drag) {
-    if (m.y <= 2 && state.top > 0) state.top--;
-    if (m.y >= H - 1) state.top++;
-    state.select.to = row; state.select.moved = true;
+  if (state.kind === 'image' || !rows().length) return;
+  // Selection of characters with the left button, copied when released; a double click selects a word, a triple
+  // click the line. Above the body: from the start of the top row; below: to the end of the bottom row.
+  const under = () => {
+    const row = Math.max(0, Math.min(rows().length - 1, state.top + Math.min(Math.max(m.y, 2), H - 1) - 2));
+    return positionAt(row, m.y < 2 ? -Infinity : m.y >= H ? Infinity : m.x);
+  };
+  let pos = under();
+  if (m.press && !m.drag) {
+    endSelection();
+    const now = Date.now();
+    const again = now - lastClick.time < 400 && m.x === lastClick.x && m.y === lastClick.y;
+    lastClick = { time: now, x: m.x, y: m.y, count: again ? lastClick.count % 3 + 1 : 1 };
+    state.select = lastClick.count === 2 ? wordAt(pos) : lastClick.count === 3 ? lineAt(pos) : null;
+    if (!state.select) state.select = { from: pos, to: pos, moved: false };
     return render();
   }
-  if (!m.press) {
-    if (state.select.moved) copySelection();
-    state.select = null;
-    render();
+  if (!state.select) return;
+  if (m.drag) {
+    if (state.select.fixed || state.select.done) return;
+    // At the edges, scrolls, then takes the position under the mouse again.
+    const top = state.top, left = state.left;
+    if (m.y <= 2 && state.top > 0) state.top--;
+    if (m.y >= H - 1) state.top = Math.min(state.top + 1, Math.max(0, rows().length - (H - 2)));
+    // Rendered rows (Markdown, messages) never scroll sideways.
+    if (!settings.wrap && rows()[pos.row].src >= 0) {
+      if (m.x >= ui.size().W) state.left += 2;
+      else if (m.x <= gutter() + 1) state.left = Math.max(0, state.left - 2);
+    }
+    if (state.top !== top || state.left !== left) pos = under();
+    state.select.to = pos; state.select.moved = true;
+    return render();
   }
+  if (!m.press) endSelection();
 }
 
 // --- startup
 
 const paint = ui.screen({
   key, mouse,
-  focus: f => { state.focused = f; },
+  focus: f => { state.focused = f; if (!f) endSelection(); },
   paste: text => { if (state.find && state.find.active) { state.find.field.insert(text); search(); } },
   resize: () => { state.rows = null; render(); },
 }, { motion: true });
@@ -363,23 +485,29 @@ const paint = ui.screen({
 const saveFile = () => writePaneState(PANE, { file: state.file, root: state.root, line: state.line });
 
 // The explorer and the search ask for another file through the request file.
+// After a restart on new code, seen is the previous process's: a request made while the pane changed hands is still
+// taken, once the file it showed is loaded.
+const handed = process.env.EXPLORER_SEEN !== undefined;
+let seen = +process.env.EXPLORER_SEEN || 0;
 if (REQUEST) {
-  let seen = 0;
-  try { seen = fs.statSync(REQUEST).mtimeMs; } catch { }
-  fs.watchFile(REQUEST, { interval: 200 }, stat => {
-    if (!stat.mtimeMs || stat.mtimeMs === seen) return;
-    seen = stat.mtimeMs;
-    let req;
-    try { req = JSON.parse(fs.readFileSync(REQUEST, 'utf8')); } catch { return; }
-    if (!req.file) return;
-    const same = req.file === state.file;
-    state.file = req.file; state.root = req.root || state.root; state.line = +req.line || 0;
-    state.raw = same && state.raw;
-    if (!same) { state.find = null; watch(); }
-    load(same && !state.line);
-    saveFile();
-    if (state.line) { state.top = Math.max(0, rowOf(state.line - 1) - Math.floor((ui.size().H - 2) / 3)); render(); }
-  });
+  const stat = () => { try { return fs.statSync(REQUEST); } catch { return null; } };
+  if (!handed) seen = (stat() || {}).mtimeMs || 0;
+  else setImmediate(() => { const s = stat(); if (s) take(s); });
+  fs.watchFile(REQUEST, { interval: 200 }, take);
+}
+function take(stat) {
+  if (!stat.mtimeMs || stat.mtimeMs === seen) return;
+  seen = stat.mtimeMs;
+  let req;
+  try { req = JSON.parse(fs.readFileSync(REQUEST, 'utf8')); } catch { return; }
+  if (!req.file) return;
+  const same = req.file === state.file;
+  state.file = req.file; state.root = req.root || state.root; state.line = +req.line || 0;
+  state.raw = same && state.raw;
+  if (!same) { state.find = null; watch(); }
+  load(same && !state.line);
+  saveFile();
+  if (state.line) { state.top = Math.max(0, rowOf(state.line - 1) - Math.floor((ui.size().H - 2) / 3)); render(); }
 }
 
 // Changes on disk, by an agent or an editor: reloaded, keeping the position. The folder is watched rather than
@@ -405,3 +533,13 @@ if (!state.file) { state.file = ''; setError('No file'); } else {
   saveFile();
   if (state.line) { state.top = Math.max(0, rowOf(state.line - 1) - Math.floor((ui.size().H - 2) / 3)); render(); }
 }
+
+// Updated plugin: the preview starts again on the new code, on the same file and line, once no search is typed nor
+// selection dragged. This process stops watching, the new one taking over the pane.
+update.watch(() => !(state.find && state.find.active) && !(state.select && !state.select.done), () => {
+  saveFile();
+  clearTimeout(reload);
+  if (watcher) watcher.close();
+  if (REQUEST) fs.unwatchFile(REQUEST);
+  ui.restart({ EXPLORER_FILE: state.file, EXPLORER_ROOT: state.root, EXPLORER_LINE: String(state.line), EXPLORER_SEEN: String(seen) });
+});

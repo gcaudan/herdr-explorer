@@ -94,7 +94,8 @@ function wrap(text, width) {
 const segWidth = segs => segs.reduce((w, [text]) => w + textWidth(text), 0);
 const segText = segs => segs.map(([text]) => text).join('');
 
-// The columns [from, from + width) of a segment list, for horizontal scrolling.
+// The columns [from, from + width) of a segment list, for horizontal scrolling. A wide character cut by the left
+// edge leaves a space, so that the text keeps its columns.
 function slice(segs, from, width) {
   const res = [];
   let col = 0;
@@ -103,6 +104,7 @@ function slice(segs, from, width) {
     for (const ch of text) {
       const c = cols(ch);
       if (col >= from && col + c <= from + width) part += ch;
+      else if (col < from && col + c > from) part += ' '.repeat(Math.max(0, Math.min(col + c - from, width)));
       col += c;
       if (col >= from + width) break;
     }
@@ -254,15 +256,22 @@ class Field {
 
 // Alternate screen, hidden cursor, no line wrap, mouse (SGR), focus reports and bracketed paste;
 // raw input decoded into handlers; everything restored on exit. Returns a paint function.
+let off = '', child = null; // child: the process the terminal was given to by restart()
 function screen(handlers, { mouse = true, motion = false, focus = true } = {}) {
   const out = process.stdout;
   const on = '\x1b[?1049h\x1b[?25l\x1b[?7l\x1b[?2004h' + (mouse ? (motion ? '\x1b[?1002h' : '\x1b[?1000h') + '\x1b[?1006h' : '')
     + (focus ? '\x1b[?1004h' : '');
-  const off = (focus ? '\x1b[?1004l' : '') + (mouse ? '\x1b[?1006l\x1b[?1002l\x1b[?1000l' : '')
+  off = (focus ? '\x1b[?1004l' : '') + (mouse ? '\x1b[?1006l\x1b[?1002l\x1b[?1000l' : '')
     + '\x1b[?2004l\x1b[?7h\x1b[?25h\x1b[?1049l';
   out.write(on);
-  process.on('exit', () => out.write(off));
-  for (const sig of ['SIGTERM', 'SIGHUP', 'SIGINT']) process.on(sig, () => process.exit(0));
+  process.on('exit', () => { if (!child) out.write(off); });
+  // After a restart, passed on to the new process, which this one exits with.
+  for (const sig of ['SIGTERM', 'SIGHUP', 'SIGINT']) {
+    process.on(sig, () => {
+      if (!child) process.exit(0);
+      try { child.kill(sig); } catch { child.kill(); }
+    });
+  }
   if (process.stdin.isTTY) process.stdin.setRawMode(true);
   process.stdin.setEncoding('utf8');
   // A long paste arrives in several reads: held until its end marker, so that its text never reads as keys.
@@ -275,7 +284,24 @@ function screen(handlers, { mouse = true, motion = false, focus = true } = {}) {
     if (data) decode(data, handlers);
   });
   if (handlers.resize) out.on('resize', handlers.resize);
-  return lines => out.write('\x1b[?2026h\x1b[H' + lines.join('\r\n') + '\x1b[?2026l');
+  return lines => { if (!child) out.write('\x1b[?2026h\x1b[H' + lines.join('\r\n') + '\x1b[?2026l'); };
+}
+
+// Runs the pane's script again, on the code updated on disk, in the same terminal: the pane keeps its place, width
+// and id. This process hands the terminal over, paints nothing more and exits with the new one. env: what the new
+// process must show, added to this one's environment.
+function restart(env) {
+  if (child) return;
+  process.stdout.write(off);
+  // The terminal stays in raw mode, which the new process takes as it is: leaving it would start a line-mode read on
+  // the shared console on Windows, and on Unix let a ctrl+c typed before the new process is ready kill it.
+  process.stdin.removeAllListeners('data');
+  process.stdin.pause();
+  process.stdout.removeAllListeners('resize');
+  child = require('child_process').spawn(process.execPath, process.argv.slice(1),
+    { stdio: 'inherit', env: { ...process.env, ...env } });
+  child.on('exit', code => process.exit(code ?? 0));
+  child.on('error', () => process.exit(1));
 }
 
 const size = () => ({ W: process.stdout.columns || 80, H: process.stdout.rows || 24 });
@@ -283,5 +309,5 @@ const size = () => ({ W: process.stdout.columns || 80, H: process.stdout.rows ||
 module.exports = {
   fg, bg, glyph, C, GIT, clean, cleanLine, cols, fit, textWidth, ellipsis, line, wrap,
   segWidth, segText, slice, split, mark,
-  keyName, decode, printable, Field, screen, size,
+  keyName, decode, printable, Field, screen, restart, size,
 };

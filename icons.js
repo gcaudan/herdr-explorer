@@ -6,6 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { C } = require('./ui');
+const { newer } = require('./exec');
 
 const FOLDER = [0xf07b, 0xf07c];
 const FILE = [0xf15b, C.grey];
@@ -92,13 +93,6 @@ function extensionDirs() {
     try { for (const name of fs.readdirSync(root)) dirs.push(path.join(root, name)); } catch { }
   }
   return dirs;
-}
-
-const version = v => String(v).split('.').map(n => parseInt(n, 10) || 0);
-function newer(a, b) {
-  const [x, y] = [version(a), version(b)];
-  const i = x.findIndex((n, j) => n !== (y[j] || 0));
-  return i >= 0 && x[i] > (y[i] || 0);
 }
 
 // Icon themes installed, by name: [{ id: 'publisher.extension/theme', label, file }], from the newest version of

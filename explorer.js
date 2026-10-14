@@ -7,6 +7,7 @@ const path = require('path');
 const actions = require('./actions');
 const icons = require('./icons');
 const ui = require('./ui');
+const update = require('./update');
 const { run, result, HERDR, GIT: GIT_BIN, gitEnv, WIDTH_FILE, readWidth, readSettings, writeSettings, KEYS_FILE, readKeys,
   keysTemplate, writePaneState, SETTINGS_FILE } = require('./exec');
 
@@ -49,16 +50,28 @@ if (theme ? theme.entry.file !== settings.icons.file : settings.icons && setting
   settings.icons = theme ? theme.entry : '';
   writeSettings({ ...readSettings(), icons: settings.icons });
 }
-// The icon theme chosen in another explorer.
+// The icon theme chosen in another explorer, and the update check turned on or off there.
 if (SETTINGS_FILE) fs.watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
   // A file read while being written is skipped, rather than taken for the default settings.
-  let chosen;
-  try { chosen = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')).icons || ''; } catch { return; }
+  let saved, chosen;
+  try { saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')); chosen = saved.icons || ''; } catch { return; }
+  if (saved.updateCheck !== undefined && saved.updateCheck !== settings.updateCheck) {
+    settings.updateCheck = saved.updateCheck;
+    render();
+  }
   if (JSON.stringify(chosen) === JSON.stringify(settings.icons)) return;
   settings.icons = chosen;
   theme = icons.load(chosen);
   render();
 });
+// A newer release, found by the hook's daily check: ↑ in the header.
+let latest = update.available();
+// An update that changed the manifest or the installer, which the installer must finish: ! in the header.
+let finish = update.finishing();
+let updating = false; // a pull running: no second one, ↑ hidden
+// Restarted on new code: this process only waits for the new one, its async work still running stops there.
+let stopped = false;
+if (update.FILE) fs.watchFile(update.FILE, { interval: 1000 }, () => { latest = update.available(); finish = update.finishing(); render(); });
 
 const state = {
   expanded: new Set(['']), rows: [], cursor: 0, top: 0, selected: null, focused: true,
@@ -171,7 +184,7 @@ function save() {
 // Another folder as the root of the tree: from the menu (Set as root), or its parent (Backspace).
 function setRoot(dir) {
   dir = path.resolve(dir);
-  if (dir === ROOT) return;
+  if (stopped || dir === ROOT) return;
   const from = ROOT;
   save();
   ROOT = dir;
@@ -200,7 +213,7 @@ async function initGit() {
   const root = ROOT;
   const res = await gitRun(['rev-parse', '--show-toplevel', '--absolute-git-dir', '--show-prefix']);
   probing = false;
-  if (!res || root !== ROOT) return;
+  if (stopped || !res || root !== ROOT) return;
   const [top, gitdir, prefix = ''] = res.split(/\r?\n/);
   git.top = top;
   git.prefix = prefix.replace(/\/$/, '');
@@ -275,9 +288,10 @@ function hidden(rel) {
 // At most one refresh every 250 ms: a file written continuously (a log) must not postpone it forever.
 let timer = null, busy = false, again = false;
 function schedule() {
-  if (!timer) timer = setTimeout(() => { timer = null; refresh(); }, 250);
+  if (!timer && !stopped) timer = setTimeout(() => { timer = null; refresh(); }, 250);
 }
 async function refresh() {
+  if (stopped) return;
   if (busy) { again = true; return; }
   busy = true;
   cache.clear();
@@ -295,6 +309,7 @@ let rootWatcher = null;
 function watchRoot() {
   if (rootWatcher) rootWatcher.close();
   rootWatcher = null;
+  if (stopped) return;
   const real = p => { try { return fs.realpathSync(p); } catch { return p; } }; // /home → /var/home on some systems
   const up = path.relative(real(ROOT), real(require('os').homedir()));
   const big = ROOT === path.parse(ROOT).root || !up.startsWith('..') && !path.isAbsolute(up);
@@ -393,7 +408,7 @@ async function follow() {
   const p = target && (result(await run(HERDR, ['pane', 'get', target])) || {}).pane;
   const cwd = p && (p.foreground_cwd || p.cwd);
   // Retried once the menu, the filter or the prompt is closed.
-  if (!cwd || cwd === lastCwd || state.filter || state.menu || state.prompt || state.confirm) return;
+  if (stopped || !cwd || cwd === lastCwd || state.filter || state.menu || state.prompt || state.confirm) return;
   lastCwd = cwd;
   const inside = (dir, root) => { const r = path.relative(root, dir); return !r.startsWith('..') && !path.isAbsolute(r); };
   // Outside the root: back to the space folder when it holds the terminal folder. Never above it, where the
@@ -435,10 +450,13 @@ function render() {
   paint(lines.slice(0, H));
 }
 
-// Header: space name, git branch (or an action message), then the icons: search, source control, settings, «.
+// Header: space name, git branch (or an action message), then the icons: ! when the installer must finish an
+// update, else ↑ when a newer release exists (left out while a message shows), search, source control, settings, «.
+const showUpdate = () => !state.flash && (finish || (latest && settings.updateCheck && !updating));
 function header(W) {
-  const icons = [[`${glyph(SEARCH)} ${glyph(SCM)} ${glyph(GEAR)} `, fg(C.dim)], ['«', fg(C.dim)]];
-  const room = W - 9;
+  const up = !showUpdate() ? [] : finish ? [['! ', fg(C.yellow)]] : [['↑ ', fg(C.green)]];
+  const icons = [...up, [`${glyph(SEARCH)} ${glyph(SCM)} ${glyph(GEAR)} `, fg(C.dim)], ['«', fg(C.dim)]];
+  const room = W - 9 - (up.length ? 2 : 0);
   if (state.flash) {
     const [text, w] = fit(` ${state.flash}`, room);
     return line([[text, fg(C.yellow)], [' '.repeat(Math.max(0, room - w + 1)), ''], ...icons], W);
@@ -613,7 +631,37 @@ function settingsItems() {
       const file = keysTemplate('explorer', DEFAULT_KEYS);
       return file ? actions.edit(file, PANE) : 'No config folder';
     }],
+    [check(settings.updateCheck) + 'Check for updates', flip('updateCheck')],
+    ...(finish ? [['  Finish the update…', () => finishUpdate()]] : []),
+    ...(latest && settings.updateCheck && !updating ? [[`  Update to ${latest}…`, () => askUpdate()]] : []),
   ];
+}
+
+// A fast-forward pull of the plugin's clone; the panes then restart on the new code by themselves (update.watch).
+// Refused: the reason only, since the command would bypass the checks. The pull failed: the command copied, to run in
+// the terminal. "Updating…" stays until the pull ends, which may take up to a minute.
+function askUpdate() {
+  if (updating) return 'Update in progress';
+  const to = latest;
+  confirm(`Update to ${to}?`, async () => {
+    updating = true;
+    clearTimeout(flash.timer);
+    state.flash = 'Updating…';
+    render();
+    const { ok, retry, message } = await update.install();
+    updating = false;
+    state.flash = null;
+    if (ok || !retry) return message;
+    return `${message}: ${await actions.copy(`git -C "${update.DIR}" pull --ff-only --no-rebase`, 'update command copied')}`;
+  });
+  return null;
+}
+
+// The installer command copied, to run in a terminal; the ! then goes away in every explorer.
+async function finishUpdate() {
+  const done = await actions.copy(update.INSTALLER, 'Installer command copied');
+  if (done !== 'Clipboard unavailable') update.finished();
+  return done;
 }
 
 // Icon themes: the current one and the default icons, then with Search… the VS Code ones installed (a scan of the
@@ -858,6 +906,7 @@ function mouse(m) {
     if (x >= W - 3) return openSettings();
     if (x >= W - 5) return runAction(() => (git.top ? actions.scm(ROOT, PANE) : 'Not a git repository'));
     if (x >= W - 7) return runAction(() => actions.search(ROOT, PANE, 'files'));
+    if (x >= W - 9 && showUpdate()) return runAction(finish ? finishUpdate : askUpdate);
     return render();
   }
   if (y > bodyHeight() + 1) { if (state.filter) { state.filter.active = true; render(); } return; }
@@ -889,8 +938,23 @@ const paint = ui.screen({
 });
 
 watchRoot();
-setInterval(schedule, 30000); // safety net in case a file event is lost
-setInterval(follow, 2000);
+const timers = [
+  setInterval(schedule, 30000), // safety net in case a file event is lost
+  setInterval(follow, 2000),
+];
+
+// Updated plugin: this explorer starts again on the new code, at the same root, once nothing is being typed or
+// chosen. This process stops watching and acting, the new one taking over the pane.
+update.watch(() => !updating && !state.prompt && !state.confirm && !state.menu && !(state.filter && state.filter.active), () => {
+  stopped = true;
+  save();
+  writePaneState(PANE, { home: HOME, root: ROOT });
+  for (const t of timers) clearInterval(t);
+  clearTimeout(settle); clearTimeout(timer);
+  for (const w of [rootWatcher, gitWatcher]) if (w) w.close();
+  for (const f of [KEYS_FILE, SETTINGS_FILE, update.FILE]) if (f) fs.unwatchFile(f);
+  ui.restart({ EXPLORER_TREE: ROOT });
+});
 
 // Right-clicks in this pane go to the explorer (its menu) instead of herdr's menu; the frame keeps herdr's.
 if (PANE) run(HERDR, ['pane', 'input', PANE, '--right-click', 'pane']);

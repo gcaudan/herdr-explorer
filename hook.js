@@ -95,6 +95,8 @@ if (process.argv.includes('--toggle')) {
   const exists = (p, dir) => { try { return p && fs.statSync(p).isDirectory() === dir ? p : null; } catch { return null; } };
   const running = p => herdr('pane', 'process-info', '--pane', p.pane_id).process_info.foreground_processes
     .some(f => /^node(\.exe)?$/i.test(path.basename((f.argv && f.argv[0]) || '')));
+  // A newer release, looked for alongside (at most once a day).
+  require('./update').check().catch(() => { });
   (async () => {
     for (const ws of herdr('workspace', 'list').workspaces) {
       const tabs = new Map();
@@ -125,6 +127,8 @@ if (process.argv.includes('--toggle')) {
     } catch { }
   })();
 } else {
+  // Also here, for a herdr session running for days: the check itself happens once a day at most.
+  require('./update').check().catch(() => { });
   const ev = JSON.parse(process.env.HERDR_PLUGIN_EVENT_JSON || '{}');
   const tab = ev.data && ev.data.tab;
   if (tab) {

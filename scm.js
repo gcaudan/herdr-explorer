@@ -10,7 +10,7 @@ const { spawn } = require('child_process');
 const ui = require('./ui');
 const diffs = require('./diff');
 const icons = require('./icons');
-const { WIN, which, GIT, gitEnv, readSettings } = require('./exec');
+const { WIN, which, GIT, gitEnv, gitOperation, readSettings } = require('./exec');
 
 const ROOT = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());
 const { C, fg, bg, glyph } = ui;
@@ -205,15 +205,7 @@ async function loadStatus() {
   for (const k of ['conflicts', 'staged', 'changes']) info[k].sort(byPath);
   info.detached = info.branch === '(detached)';
   info.hasHead = info.oid !== '(initial)';
-  const has = name => fs.existsSync(path.join(info.gitdir, name));
-  // rebase-apply is also git am's (applying); .git/sequencer alone: a cherry-pick or revert of several commits,
-  // between two of them once a commit made by hand ended one.
-  const next = () => { try { return fs.readFileSync(path.join(info.gitdir, 'sequencer', 'todo'), 'utf8'); } catch { return ''; } };
-  info.state = has('MERGE_HEAD') ? 'MERGING' : has('rebase-apply/applying') ? 'APPLYING'
-    : has('rebase-merge') || has('rebase-apply') ? 'REBASING'
-    : has('CHERRY_PICK_HEAD') ? 'CHERRY-PICKING' : has('REVERT_HEAD') ? 'REVERTING'
-    : has('sequencer') ? (/^\s*revert\s/.test(next()) ? 'REVERTING' : 'CHERRY-PICKING')
-    : has('BISECT_LOG') ? 'BISECTING' : '';
+  info.state = gitOperation(info.gitdir);
   S.repo = info;
   return true;
 }
