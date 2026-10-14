@@ -648,9 +648,12 @@ function settingsItems() {
 
 // A fast-forward pull of the plugin's clone; the panes then restart on the new code by themselves (update.watch).
 // Refused: the reason only, since the command would bypass the checks. The pull failed: the command copied, to run in
-// the terminal. "Updating…" stays until the pull ends, which may take up to a minute.
-function askUpdate() {
+// the terminal. "Updating…" stays until the pull ends, which may take up to a minute. Installed by herdr: herdr's
+// update command copied instead, since only herdr may move its checkout (herdr not answering: the pull, whose checks
+// refuse such a checkout).
+async function askUpdate() {
   if (updating) return 'Update in progress';
+  if (await update.managed()) return actions.copy(update.HERDR_UPDATE, 'Update command copied');
   const to = latest;
   confirm(`Update to ${to}?`, async () => {
     updating = true;
