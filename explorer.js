@@ -800,7 +800,7 @@ function promptKey(k) {
   if (state.confirm) {
     const { yes } = state.confirm;
     state.confirm = null;
-    if (k === 'y' || k === 'Y') return runAction(yes);
+    if (k === 'y') return runAction(yes);
     return render();
   }
   const p = state.prompt;
