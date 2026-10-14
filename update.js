@@ -71,10 +71,12 @@ function available() {
 }
 
 // git in the plugin's folder: { ok, out, err }. detached (not on Windows): a session without terminal, so that ssh
-// or a credential helper can never prompt in the pane.
+// or a credential helper can never prompt in the pane. GCM_INTERACTIVE: Git Credential Manager (Windows) otherwise
+// opens its sign-in window, GIT_TERMINAL_PROMPT not reaching it, and the update waits for it until the timeout.
 const git = (args, timeout = 10000, env = {}) => new Promise(resolve => {
   if (!GIT) return resolve({ ok: false, out: '', err: 'git not found' });
-  execFile(GIT, args, { cwd: DIR, windowsHide: true, detached: !WIN, timeout, env: { ...process.env, GIT_TERMINAL_PROMPT: '0', ...env } },
+  execFile(GIT, args, { cwd: DIR, windowsHide: true, detached: !WIN, timeout,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'never', ...env } },
     (err, out, stderr) => resolve({ ok: !err, out: String(out), err: String(stderr) }));
 });
 

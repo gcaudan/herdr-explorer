@@ -652,7 +652,7 @@ function askUpdate() {
     updating = false;
     state.flash = null;
     if (ok || !retry) return message;
-    return `${message}: ${await actions.copy(`git -C "${update.DIR}" pull --ff-only`, 'update command copied')}`;
+    return `${message}: ${await actions.copy(`git -C "${update.DIR}" pull --ff-only --no-rebase`, 'update command copied')}`;
   });
   return null;
 }
