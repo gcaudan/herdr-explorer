@@ -329,7 +329,7 @@ class Field {
 
 // Alternate screen, hidden cursor, no line wrap, mouse (SGR), focus reports and bracketed paste;
 // raw input decoded into handlers; everything restored on exit. Returns a paint function, given the screen's lines.
-let off = '', child = null; // child: the process the terminal was given to by restart()
+let off = '', handed = false; // handed: the terminal given over to the next process by restart()
 function screen(handlers, { mouse = true, motion = false, focus = true } = {}) {
   const out = process.stdout;
   const on = '\x1b[?1049h\x1b[?25l\x1b[?7l\x1b[?2004h' + (mouse ? (motion ? '\x1b[?1002h' : '\x1b[?1000h') + '\x1b[?1006h' : '')
@@ -337,14 +337,8 @@ function screen(handlers, { mouse = true, motion = false, focus = true } = {}) {
   off = (focus ? '\x1b[?1004l' : '') + (mouse ? '\x1b[?1006l\x1b[?1002l\x1b[?1000l' : '')
     + '\x1b[?2004l\x1b[?7h\x1b[?25h\x1b[?1049l';
   out.write(on);
-  process.on('exit', () => { if (!child) out.write(off); });
-  // After a restart, passed on to the new process, which this one exits with.
-  for (const sig of ['SIGTERM', 'SIGHUP', 'SIGINT']) {
-    process.on(sig, () => {
-      if (!child) process.exit(0);
-      try { child.kill(sig); } catch { child.kill(); }
-    });
-  }
+  process.on('exit', () => { if (!handed) out.write(off); });
+  for (const sig of ['SIGTERM', 'SIGHUP', 'SIGINT']) process.on(sig, () => process.exit(0));
   if (process.stdin.isTTY) process.stdin.setRawMode(true);
   process.stdin.setEncoding('utf8');
   // A button released out of the pane may never be reported: a held scrollbar stops with the focus.
@@ -363,7 +357,7 @@ function screen(handlers, { mouse = true, motion = false, focus = true } = {}) {
   let shown = [];
   out.on('resize', () => { shown = []; if (handlers.resize) handlers.resize(); });
   const paint = lines => {
-    if (child) return;
+    if (handed) return;
     let s = '';
     lines.forEach((l, i) => { if (l !== shown[i]) s += `\x1b[${i + 1};1H${l}`; });
     shown = lines.slice();
@@ -375,20 +369,16 @@ function screen(handlers, { mouse = true, motion = false, focus = true } = {}) {
 }
 
 // Runs the pane's script again, on the code updated on disk, in the same terminal: the pane keeps its place, width
-// and id. This process hands the terminal over, paints nothing more and exits with the new one. env: what the new
-// process must show, added to this one's environment.
+// and id. This process hands the terminal over, paints nothing more and exits; its launcher starts the new one
+// (launch.js). env: what the new process must show, added to this one's environment.
 function restart(env) {
-  if (child) return;
+  if (handed) return;
+  handed = true;
   process.stdout.write(off);
-  // The terminal stays in raw mode, which the new process takes as it is: leaving it would start a line-mode read on
-  // the shared console on Windows, and on Unix let a ctrl+c typed before the new process is ready kill it.
   process.stdin.removeAllListeners('data');
   process.stdin.pause();
   process.stdout.removeAllListeners('resize');
-  child = require('child_process').spawn(process.execPath, process.argv.slice(1),
-    { stdio: 'inherit', env: { ...process.env, ...env } });
-  child.on('exit', code => process.exit(code ?? 0));
-  child.on('error', () => process.exit(1));
+  process.send({ restart: env }, () => process.exit(require('./launch').RESTART));
 }
 
 const size = () => ({ W: process.stdout.columns || 80, H: process.stdout.rows || 24 });

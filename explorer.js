@@ -2,6 +2,8 @@
 // git status, filter as you type, file operations, automatic refresh. Enter or double-click: preview (or the editor);
 // right-click: action menu (actions.js). Header icons: search, source control, settings, « to close.
 'use strict';
+// The pane's first process only starts the real one (launch.js).
+if (require('./launch').launch()) return;
 const fs = require('fs');
 const path = require('path');
 const actions = require('./actions');
