@@ -45,7 +45,8 @@ Node.js, with no dependencies and no build step.
 - **Scrollbars** on every list that scrolls: a thin rail with a draggable thumb and `▴` `▾` buttons that repeat while
   held, hidden when everything fits.
 - **Updates**: a daily check for a newer release; `↑` in the explorer header updates the plugin, and the open
-  explorers and previews restart on the new code.
+  explorers and previews restart on the new code (installed from the herdr plugin index: `↑` copies the
+  `herdr plugin update` command instead).
 
 ## Requirements
 
@@ -67,9 +68,49 @@ was not tested (only the fallback to the terminal editor).
 
 ## Installation
 
+Two ways: from the [herdr plugin index](https://herdr.dev/plugins/), where herdr keeps the checkout and the
+updates, or from a git clone with the install script, which also adds the key bindings and lets the explorer
+update itself.
+
+### From the herdr plugin index
+
+```sh
+herdr plugin install gcaudan/herdr-explorer
+```
+
+The explorer then opens by itself in new tabs. The key bindings are not added: copy them into `config.toml`
+(`~/.config/herdr/config.toml`, or `%APPDATA%\herdr\config.toml` on Windows), then run `herdr server reload-config`:
+
+```toml
+[[keys.command]]
+key = "prefix+f"
+type = "plugin_action"
+command = "gcaudan.explorer.toggle"
+description = "file explorer"
+
+[[keys.command]]
+key = "prefix+a"
+type = "plugin_action"
+command = "gcaudan.explorer.search"
+description = "go to file"
+
+[[keys.command]]
+key = "prefix+d"
+type = "plugin_action"
+command = "gcaudan.explorer.scm"
+description = "source control"
+```
+
+The optional tools and the Nerd Font are the same as below. To update, run `herdr plugin update gcaudan.explorer`
+(clicking `↑` in the explorer copies this command): herdr installs the new version into a new folder, so the open
+explorers and previews keep the old code until closed; close and reopen them (`prefix+f` twice). To uninstall:
+`herdr plugin uninstall gcaudan.explorer`, then remove the key bindings.
+
+### From a git clone
+
 The plugin runs from its git clone, which updates pull into: keep the clone in a permanent folder, on `main`.
 
-### Linux and macOS
+#### Linux and macOS
 
 ```sh
 git clone https://github.com/gcaudan/herdr-explorer.git
@@ -85,7 +126,7 @@ cd herdr-explorer
 - Install a Nerd Font (for instance `JetBrainsMono Nerd Font`, from your package manager or
   [nerdfonts.com](https://www.nerdfonts.com/)) and select it in your terminal.
 
-### Windows
+#### Windows
 
 ```powershell
 git clone https://github.com/gcaudan/herdr-explorer.git
@@ -99,7 +140,7 @@ cd herdr-explorer
   default user install folder. Any other editor must be an `.exe`: a `.cmd` launcher cannot run without a shell.
 - Install a Nerd Font with `winget install DEVCOM.JetBrainsMonoNerdFont`, then select it in Windows Terminal.
 
-### What the script does
+#### What the script does
 
 It links the plugin to herdr from this folder (`herdr plugin link`, after unlinking any previous link), adds the key
 bindings below to `config.toml` when they are missing, then reloads the configuration. It is safe to run again, for
@@ -121,6 +162,10 @@ The explorer only opens by itself in new tabs. To add it to the open tabs that h
 `node hook.js --all` in this folder from a herdr pane.
 
 ### Update
+
+This section is about a git clone; installed from the herdr plugin index, the check and the `↑` are the same, but
+clicking it copies `herdr plugin update gcaudan.explorer` instead of pulling (see
+[From the herdr plugin index](#from-the-herdr-plugin-index)).
 
 **Check.** The startup hook (`hook.js --restore`) and the `tab.created` hook (`hook.js`) ask the GitHub API for the
 latest release of `gcaudan/herdr-explorer` — never the panes. At most once every 24 h (a failed check also waits a
@@ -177,6 +222,8 @@ a change to `launch.js` only applies to panes opened afterwards. Search, Source 
 not restart; they run the old code until closed.
 
 ### Uninstall
+
+Installed from the herdr plugin index: see [above](#from-the-herdr-plugin-index). From a git clone:
 
 ```sh
 herdr plugin unlink gcaudan.explorer
@@ -599,7 +646,8 @@ The explorer opens by itself on any folder, including freshly cloned untrusted r
   edits made outside show up within 5 s; fetch, pull and push cannot ask for a password (use an SSH agent or a
   credential helper). A diff stops at 200,000 rows.
 - *View changes* shows at most 200 untracked files.
-- Updates need the plugin folder to be a git clone on `main`, without changes to tracked files.
+- Updates from the explorer need the plugin folder to be a git clone on `main`, without changes to tracked files;
+  installed from the herdr plugin index, they go through `herdr plugin update`, and the open panes keep the old code.
 - An explorer or preview started by a version without the launcher (0.4.0 and earlier) keeps its old waiting `node`
   processes after updating to one with it, until it is closed. Close and reopen it (`prefix+f` twice for the
   explorer) to start from the launcher and its child.
