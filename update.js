@@ -6,9 +6,10 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { execFile } = require('child_process');
-const { WIN, GIT, gitOperation, newer, readSettings } = require('./exec');
+const { WIN, GIT, HERDR, PLUGIN, run, result, gitOperation, newer, readSettings } = require('./exec');
 
 const DIR = __dirname; // the plugin's folder, a git clone
+const HERDR_UPDATE = `herdr plugin update ${PLUGIN}`;
 const MANIFEST = path.join(DIR, 'herdr-plugin.toml');
 const URL = 'https://api.github.com/repos/gcaudan/herdr-explorer/releases/latest';
 const DAY = 24 * 60 * 60 * 1000;
@@ -97,6 +98,15 @@ function lock() {
   } catch { return false; }
 }
 
+// Installed by `herdr plugin install` rather than linked, as herdr reports it (source kind "github", "local" when
+// linked): a checkout herdr manages (detached HEAD), which only `herdr plugin update` may move; that update installs
+// into a new folder, so the open panes stay on this code. false when herdr does not answer.
+async function managed() {
+  const res = await run(HERDR, ['plugin', 'list', '--plugin', PLUGIN, '--json'], { timeout: 5000 }).then(result);
+  const plugin = res && Array.isArray(res.plugins) && res.plugins.find(p => p.plugin_id === PLUGIN);
+  return !!(plugin && plugin.source && plugin.source.kind === 'github');
+}
+
 // The command that runs the installer again, to finish an update that changed the manifest or the installer.
 const INSTALLER = WIN ? `powershell -ExecutionPolicy Bypass -File "${path.join(DIR, 'install.ps1')}"` : `"${path.join(DIR, 'install.sh')}"`;
 // The version whose update the installer must finish, or null: kept in update.json, so that every explorer shows it
@@ -164,4 +174,6 @@ function watch(idle, restart) {
   });
 }
 
-module.exports = { DIR, CURRENT, FILE, INSTALLER, readVersion, check, available, install, finishing, finished, watch };
+module.exports = {
+  DIR, HERDR_UPDATE, CURRENT, FILE, INSTALLER, readVersion, check, available, managed, install, finishing, finished, watch,
+};
