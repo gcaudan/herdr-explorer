@@ -292,10 +292,13 @@ function charEnd(text, at) {
 function positionAt(row, x) {
   const r = rows()[row];
   const text = ui.segText(r.segs);
-  let col = x - 1 - gutter() + (!settings.wrap && r.src >= 0 ? state.left : 0), w = 0, at = 0;
+  let col = x - 1 - gutter() + (!settings.wrap && r.src >= 0 ? state.left : 0), w = 0, at = 0, prev, prevAt = 0;
   for (const ch of text) {
-    w += ui.cols(ch);
-    if (w > col) return { row, at };
+    const c = ui.cols(ch, prev);
+    w += c;
+    // The cell an emoji selector adds belongs to the character before it.
+    if (w > col) return { row, at: c && ch === '\ufe0f' && prev ? prevAt : at };
+    prev = ch; prevAt = at;
     at += ch.length;
   }
   return { row, at: text.length };
