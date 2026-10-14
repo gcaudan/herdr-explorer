@@ -461,6 +461,8 @@ function previewLines(t, W, H) {
 
 let zones = []; // clickable areas of the last frame: { y, x1, x2, fn }
 let paint, paintTimer = null;
+const scrollbar = new ui.Scrollbar(top => { state.top = top; render(); });
+let listW = 0; // width of the results list, the scrollbar in its last column
 
 // A screen line whose parts ([text, style, onClick]) are clickable.
 function bar(y, parts, W, back) {
@@ -542,12 +544,14 @@ function render() {
   if (content && !state.touched && list.length > 1 && state.cursor === 0) state.cursor = 1;
   state.cursor = Math.max(0, Math.min(state.cursor, list.length - 1));
   state.top = Math.max(0, Math.min(state.top, list.length - h));
-  const LW = W >= 100 ? Math.floor(W / 2) : W;
+  const LW = listW = W >= 100 ? Math.floor(W / 2) : W;
   const right = LW < W ? previewLines(target(list[state.cursor]), W - LW - 1, h) : [];
+  const bw = scrollbar.set(list.length, h, state.top), RW = LW - bw;
   for (let k = 0; k < h; k++) {
     const i = state.top + k, r = list[i];
-    let l = r ? line(content ? contentRow(r, LW) : fileRow(r, LW), LW, i === state.cursor ? C.select : null) : line([], LW);
-    if (!r && !k && state.files && !list.length) l = line([[content && !state.fields.content.value ? '' : '  no results', DIM]], LW);
+    let l = r ? line(content ? contentRow(r, RW) : fileRow(r, RW), RW, i === state.cursor ? C.select : null) : line([], RW);
+    if (!r && !k && state.files && !list.length) l = line([[content && !state.fields.content.value ? '' : '  no results', DIM]], RW);
+    l += scrollbar.cell(k);
     if (LW < W) l += DIM + '│\x1b[0m' + (right[k] || line([], W - LW - 1));
     lines.push(l);
   }
@@ -694,10 +698,11 @@ function mouse({ button, x, y, press, wheel, drag }) {
     state.top = Math.max(0, Math.min(state.top + wheel * 3, rows().length - listHeight()));
     return render();
   }
+  const first = state.mode === 'content' ? 4 : 3; // screen rows above the list
+  if (scrollbar.mouse({ button, press, drag }, y - 1 - first, x === listW)) return;
   if (!press || drag || button !== 0) return;
   const zone = zones.find(z => z.y === y - 1 && x >= z.x1 && x <= z.x2);
   if (zone) return zone.fn();
-  const first = state.mode === 'content' ? 4 : 3; // screen rows above the list
   const i = state.top + y - 1 - first;
   const r = rows()[i];
   if (y - 1 < first || !r || y > ui.size().H - 1) return;
@@ -711,7 +716,7 @@ function mouse({ button, x, y, press, wheel, drag }) {
 
 // --- startup
 
-paint = ui.screen({ key, mouse, paste, resize: render });
+paint = ui.screen({ key, mouse, paste, resize: render }, { motion: true });
 process.on('exit', save);
 render();
 loadFiles();

@@ -41,6 +41,9 @@ Node.js, with no dependencies and no build step.
   editor), in a terminal editor in a full-tab pane, or, for documents and media, in the system's default
   application. Executables and scripts are never run.
 - **Context menu**: insert the path into the terminal, copy the path, reveal in the file manager, view git changes.
+- **Changes**: the git diff of a file or folder in a full-tab pane, inline or side by side.
+- **Scrollbars** on every list that scrolls: a thin rail with a draggable thumb and `▴` `▾` buttons that repeat while
+  held, hidden when everything fits.
 - **Updates**: a daily check for a newer release; `↑` in the explorer header updates the plugin, and the open panes
   restart on the new code.
 
@@ -48,7 +51,7 @@ Node.js, with no dependencies and no build step.
 
 - herdr 0.9.3 or later.
 - Node.js 20 or later.
-- git, optional: without it there is no git status, no changes view and no source control.
+- git, optional: without it there is no git status, no changes view, no source control and no updates.
 - A [Nerd Font](https://www.nerdfonts.com/) in the terminal running herdr; without one, icons show as empty boxes.
 - Optional:
   - a graphical editor (VS Code by default);
@@ -184,9 +187,13 @@ config folders (see [Configuration](#configuration)): delete them if you do not 
 | Right-click below the last entry | the root's menu: new file or folder, go to file, search in files, source control (in a repository), reveal, copy path, up one level, back to the space folder (when the root is elsewhere), refresh, settings; `m` opens it too when the tree is empty |
 | Wheel | scroll the tree, or move in an open menu |
 | Header icons | `↑` to update when a newer release exists, `!` to finish an update (see [Update](#update)), go to file, source control, settings, `«` to close the explorer |
+| Scrollbar | drag the thumb, click the rail to jump, hold `▴` `▾` to scroll (see [Scrollbars](#scrollbars)) |
 
-Opening a file (`Enter`, double-click): text files and images go to the preview; documents and media (PDF, Office,
-archives, sound, video) go to their application. With *Open in the preview* off, text files go to the editor and
+The header shows the root folder's name, in italics when it is not the space folder (after *Set as root*), and the
+git branch.
+
+Opening a file (`Enter`, double-click): text files, images and other binary files (as a hex dump) go to the preview;
+documents and media (PDF, Office, archives, sound, video) go to their application. With *Open in the preview* off, text files go to the editor and
 images to their application.
 
 Default keys, each one changeable under its action name (see [Key bindings](#key-bindings)):
@@ -217,9 +224,11 @@ Default keys, each one changeable under its action name (see [Key bindings](#key
 | `m`, `Shift+F10`, Menu key | `menu` | action menu |
 | `r` | `refresh` | refresh now (a full scan also runs every 30 s) |
 
-While filtering, typed characters go to the filter and the other bound keys (arrows, `Enter`, `ctrl+…`) act on the
-list; `Tab` leaves the field and a click on it returns to it. `Esc` closes the filter and shows the selected entry in
-the full tree. The contents of git-ignored folders are not searched.
+The filter keeps the entries whose name contains the text (case-insensitive), with the folders leading to them
+expanded, the matching part underlined and the number of matches on the right of the field. While filtering, typed
+characters go to the filter and the other bound keys (arrows, `Enter`, `ctrl+…`) act on the list; `Tab` leaves the
+field and a click on it returns to it. `Esc` closes the filter and shows the selected entry in the full tree. The
+contents of git-ignored folders are not searched.
 
 ### Action menu
 
@@ -232,8 +241,8 @@ the full tree. The contents of git-ignored folders are not searched.
 | Insert into terminal | type the path into the terminal, relative to its folder, and focus it; prefixed with `@` when an agent such as Claude Code runs there (quoted instead when the name contains spaces) |
 | New file, New folder, Rename, Duplicate, Delete | Delete moves to the trash, and asks before deleting for good when there is no trash |
 | Search in folder, Set as root | on a folder |
-| Reveal in Explorer (Windows) or Open folder, Copy path, Copy relative path | |
-| View changes | full-tab git diff against the last commit, untracked files in full (`s` inline or side by side, `n` `N` hunks, `q` close) |
+| Reveal in Explorer (Windows) or Open folder, Copy path, Copy relative path | Reveal selects the entry in File Explorer (Windows) or Finder (macOS); on Linux, the file manager opens the folder holding it |
+| View changes | full-tab git diff against the last commit, untracked files in full (see [Changes](#changes)) |
 | Stage, Unstage, Discard changes | discard restores tracked files from the last commit; untracked files and files added since that commit go to the trash (kept when there is no trash) |
 
 Preview, Open in app and Edit in terminal are offered on files only. The git items appear in a repository, on an
@@ -248,19 +257,22 @@ take `y`, and any other key cancels.
 
 | Key or mouse | Effect |
 |---|---|
-| `↑` `↓`, `j` `k`, `Enter`, wheel, `PageUp` `PageDown`, `Space` `b`, `ctrl+d` `ctrl+u`, `g` `G` | scroll |
+| `↑` `↓`, `j` `k`, `Enter`, wheel, `PageUp` `PageDown`, `Space` `b`, `ctrl+d` `ctrl+u`, `Home` `End`, `g` `G` | scroll |
 | `←` `→`, `h` `l` | scroll sideways (without wrap) |
-| `/` or `ctrl+f`, then `Enter`; `n` `N` | find in the file (case-insensitive unless the text has a capital letter) |
+| `/` or `ctrl+f`, then `Enter`; `n` `N` | find in the file (case-insensitive unless the text has a capital letter); while typing, `↓` `↑` go to the next and previous match, and the field shows `current/total` |
 | `w`, `L`, `m` | wrap, line numbers (both saved in the settings), rendered or raw Markdown |
 | Drag with the left button | select text by character, copied to the clipboard on release |
 | Double click, triple click | select and copy a word, the line |
 | Header chips | rendered or raw Markdown, wrap or no wrap, `✕` close |
-| `e`, `o`, `O` | edit in the terminal editor; open (documents, media and images in their application, the rest in the editor); open in the default app |
+| `e`, `o`, `O` | edit in the terminal editor; open (documents, media and images in their application, the rest in the editor); open in the default app (the file types of *Open in app* only) |
 | `y`, `Y` | copy the path, the relative path |
 | `ctrl+p` | go to file |
 | `z` | zoom the preview to the full tab, and back |
 | `r` | reload |
 | `q`, `Esc`, `ctrl+c`, `✕` | close the find bar, else the pane; `Esc` first clears a selection |
+| Scrollbar | drag the thumb, click the rail to jump, hold `▴` `▾` to scroll (see [Scrollbars](#scrollbars)) |
+
+The footer lists the main keys and, when the file is longer than the pane, how far down it is shown (`42%`).
 
 Mouse selection works everywhere but in images:
 
@@ -278,6 +290,9 @@ Mouse selection works everywhere but in images:
 
 ### Search
 
+A popup over the tab, opened with `prefix+a` (Go to file in the tab's folder), from the explorer (header icon,
+`ctrl+p`, `ctrl+f`, *Search in folder…*, the root's menu) or from the preview (`ctrl+p`).
+
 - *Go to file* scores paths like fzf and VS Code: matches at the start of a segment or a word, in the file name, or
   on consecutive characters score higher. `path:line` or `path:line:column` opens the file at that line.
 - *Search in files* takes plain text or a regular expression. The include and exclude fields take comma-separated
@@ -287,6 +302,9 @@ Mouse selection works everywhere but in images:
   *hidden* on, the folder is walked instead (without `.git`, and without `node_modules` and dot folders unless
   *hidden* is on).
 - From 100 columns, the selected result is previewed on the right.
+- The status line counts the files (`12 of 840 files`) or the results (`37 results in 9 files`), and shows
+  `indexing…` and `searching…` while they run.
+- The results have a scrollbar (see [Scrollbars](#scrollbars)), in the last column of the list.
 - The last queries and globs, and the case, whole word and regex options, come back at the next opening, selected:
   typing replaces them.
 
@@ -313,6 +331,7 @@ header icon.
   then follows the selection), over the list below that. A diff is side by side when it has 120 columns or more.
 - **Commit**: a message is needed, except for a merge (git's prepared message is used) or an amend. With nothing
   staged and no operation in progress, committing offers to stage everything first.
+- **Scrollbars**: the list and the diff each have their own (see [Scrollbars](#scrollbars)).
 - Outside a repository, `i` runs `git init` after confirmation, and `r` refreshes.
 
 | Key | Effect |
@@ -326,7 +345,7 @@ header icon.
 | `Tab` | switch between the list and the diff (a click on the diff focuses it) |
 | `n` `N`, `s`, `q` or `Esc` | in the diff: next and previous hunk, inline or side by side, close; it scrolls with the list keys, `Enter`, `Space` `b`, and `Shift+Tab` goes back to the list |
 | `c`, `Enter`, `Esc` or `Tab` | type the commit message (from any view), commit, leave the field; `alt+a` amend (starts from the last message) |
-| `ctrl+g` or `✧` | commit message written by Claude, or made from the file names when Claude is not available |
+| `ctrl+g` or `✧` | commit message written by Claude (one Conventional Commits subject line, from the staged changes, else all of them), or made from the file names when Claude is not available |
 | `c` `Enter` or `✓ Continue`, `X` or `✕ Abort` | during a rebase, cherry-pick or revert: continue once the conflicts are staged, or abort after confirmation. A rebase always continues with git's messages; a cherry-pick or revert continues with git's message when the field is empty, and commits with the typed message otherwise. Continuing is refused when it would run `exec` lines or a merge strategy other than git's own (ort, recursive, resolve, octopus, ours, subtree), or when those cannot be checked. A merge ends with a commit, its message optional. A `git am` is continued or aborted in the terminal |
 | `b` or click on the branch | branches: `/` or typing filters, `Enter` switches (a remote branch through its local one, created if needed), `n` new, `D` delete, `Esc` clears the filter then closes, `q` closes |
 | `f`, `P`, `p` | fetch, pull (fast-forward only), push (the first push publishes the branch on `origin` or the only remote and sets its upstream) |
@@ -335,6 +354,35 @@ header icon.
 | `t`, `r`, `q` or `Esc`, `ctrl+c` | list or tree, refresh, close (`Esc` closes the diff first) |
 
 Confirmations take `y`; any other key cancels.
+
+### Changes
+
+*View changes* in the explorer's menu opens the git diff of a file or folder in a full-tab pane: tracked files
+against the last commit (staged and unstaged changes together; before the first commit, the staged then the unstaged
+changes), and untracked files in full, up to 200. The header shows the name, the added and removed line counts, and
+the layout.
+
+| Key or mouse | Effect |
+|---|---|
+| `↑` `↓`, `k` `j`, `Enter`, wheel, `PageUp` `PageDown`, `b` `Space`, `Home` `End`, `g` `G` | scroll |
+| `n`, `N` | next, previous hunk |
+| `s` | inline or side by side (side by side by default from 120 columns) |
+| Scrollbar | drag the thumb, click the rail to jump, hold `▴` `▾` to scroll (see [Scrollbars](#scrollbars)) |
+| `q`, `Esc`, `ctrl+c` | close |
+
+### Scrollbars
+
+Every list that scrolls has a scrollbar in its last column: the explorer's tree, the preview, the search results,
+the source control list and its diff, and the *Changes* pane. It is hidden while everything fits.
+
+- `│` is the rail and `┃` the thumb, sized to the part shown; `▴` and `▾` buttons sit at its ends when the list is at
+  least 4 rows high.
+- A press on the thumb grabs it: the list follows the mouse until the button is released, even outside the column.
+- A press elsewhere on the rail moves the thumb under the mouse, then drags it the same way.
+- A click on `▴` or `▾` scrolls one row; held, it repeats (after 400 ms, then every 50 ms) until the end of the list,
+  or until the mouse leaves the button.
+- The wheel still scrolls the list. The explorer's scrollbar ignores clicks while a menu is open, the preview's while a
+  selection is being dragged, and source control's while the branch picker is open.
 
 ## Configuration
 
@@ -436,9 +484,11 @@ in the terminal editor. Changes apply within a second, without restarting the ex
 
 The explorer opens by itself on any folder, including freshly cloned untrusted repositories. Therefore:
 
-- **Programs** (`git`, `herdr` and the others) run from their absolute path, looked up in the absolute folders of
-  `PATH` only. On Windows, a bare program name is first looked up in the working directory, and elsewhere an empty
-  or `.` entry of `PATH` means that folder too: a repository could plant a `git` there.
+- **Programs**: `git`, `herdr`, `claude`, a graphical editor command, and on Windows every program, run from their
+  absolute path, looked up in the absolute folders of `PATH` only. On Windows, a bare program name is first looked up
+  in the working directory, and elsewhere an empty or `.` entry of `PATH` means that folder too: a repository could
+  plant a `git` there. On Linux and macOS, the clipboard, trash and file manager tools and the fallback terminal
+  editor go through the usual `PATH` lookup.
 - **Every git command** runs with the following disabled, so that the repository's config cannot run commands
   through them:
   - hooks: hook files (`core.hooksPath` set to a folder that never exists: `/dev/null`, or `.no-hooks` in the
@@ -533,7 +583,8 @@ The explorer opens by itself on any folder, including freshly cloned untrusted r
   keeps the best 1,000; a folder walk stops at 50,000 files.
 - Source control: conflicts show as a diff with their markers, not a 3-way merge; history stops at 500 commits;
   edits made outside show up within 5 s; fetch, pull and push cannot ask for a password (use an SSH agent or a
-  credential helper). A diff stops at 200,000 rows and 200 untracked files.
+  credential helper). A diff stops at 200,000 rows.
+- *View changes* shows at most 200 untracked files.
 - Updates need the plugin folder to be a git clone on `main`, without changes to tracked files.
 - A pane restarted on new code keeps its previous `node` process, which only waits for the new one: after N version
   changes (updates, or a `git checkout` between versions), an explorer or preview holds N+1 `node` processes until
@@ -600,7 +651,7 @@ Messages of the plugin:
 | `actions.js` | file actions: open, preview, insert, copy, reveal, create, rename, trash, stage, diff |
 | `icons.js` | Nerd Font icons, and VS Code icon themes |
 | `update.js` | daily check for a newer release, update by `git pull --ff-only`, restart of the panes on the new code |
-| `ui.js` | terminal helpers shared by the panes: text width, lines, input, text field |
+| `ui.js` | terminal helpers shared by the panes: text width, lines, input, text field, scrollbar |
 | `exec.js` | runs external programs from their absolute path, safe git options, settings, saved pane state, key bindings |
 | `install.sh`, `install.ps1` | installation: `herdr plugin link` and key bindings |
 

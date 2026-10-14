@@ -37,6 +37,7 @@ const state = {
   select: null,     // { from, to, moved } positions { row, at } (display row, character) selected with the mouse
   flash: null, chips: [],
 };
+const scrollbar = new ui.Scrollbar(top => { state.top = top; render(); });
 
 // --- loading
 
@@ -128,7 +129,7 @@ function rows() {
     } else list = [{ segs: [[` ${(res && res.info) || 'No preview'}`, fg(C.dim)]], src: -1 }];
   } else if (markdownView()) {
     let res;
-    try { res = markdown.render(state.text, Math.min(width, 120), { highlight }); } catch { res = null; }
+    try { res = markdown.render(state.text, Math.max(1, Math.min(width - 1, 120)), { highlight }); } catch { res = null; }
     if (res) list = res.lines.map(segs => ({ segs: [[' ', ''], ...segs], src: -1, pad: 1 }));
     else list = state.source.map((segs, i) => ({ segs, src: i, first: true }));
   } else if (state.kind === 'error') {
@@ -152,6 +153,8 @@ function render() {
   const lines = [header(W)];
   const g = gutter();
   const ranges = matchRanges();
+  // Wrapped and rendered rows (see rows()) leave the last column free for the scrollbar.
+  const bw = scrollbar.set(list.length, bodyH, state.top);
   for (let i = state.top; i < Math.min(list.length, state.top + bodyH); i++) {
     const r = list[i];
     const num = g ? [[(r.first ? String(r.src + 1) : '').padStart(g - 1) + ' ', fg(r.src + 1 === state.line ? C.text : C.dim)]] : [];
@@ -159,9 +162,9 @@ function render() {
     const sel = selectedRange(i);
     // A selection going on past the end of the row shows one more cell, as an editor shows the line break.
     if (sel) segs = [...ui.mark(segs, [sel], bg(C.select)), ...(sel[2] ? [[' ', bg(C.select)]] : [])];
-    if (!settings.wrap && r.src >= 0) segs = ui.slice(segs, state.left, W - g);
+    if (!settings.wrap && r.src >= 0) segs = ui.slice(segs, state.left, W - g - bw);
     const back = r.src >= 0 && r.src + 1 === state.line ? C.selectBlur : null;
-    lines.push(ui.line([...num, ...segs], W, back));
+    lines.push(ui.line([...num, ...segs], W - bw, back) + scrollbar.cell(i - state.top));
   }
   while (lines.length < H - 1) lines.push(ui.line([], W));
   lines.push(footer(W));
@@ -247,7 +250,8 @@ function next(dir, fromTop) {
   const bodyH = ui.size().H - 2;
   if (row < state.top || row >= state.top + bodyH) state.top = Math.max(0, row - Math.floor(bodyH / 3));
   if (!md) {
-    const width = ui.size().W - gutter();
+    // Less the scrollbar's column, shown when the rows do not fit.
+    const width = ui.size().W - gutter() - (rows().length > bodyH ? 1 : 0);
     const col = ui.textWidth(state.plain[l].slice(0, a));
     if (col < state.left || col >= state.left + width) state.left = Math.max(0, col - 8);
   }
@@ -422,7 +426,8 @@ let lastClick = { time: 0, x: 0, y: 0, count: 0 };
 function mouse(m) {
   // The wheel scrolls under a selection, which may still be dragged: the button state is unknown here.
   if (m.wheel) return scroll(m.wheel * 3);
-  const H = ui.size().H;
+  const { W, H } = ui.size();
+  if (scrollbar.mouse(m, m.y - 2, m.x === W && !(state.select && !state.select.done))) return;
   // The header has the chips; a selection going on is dragged or released over it like over the body.
   const selecting = state.select && !state.select.done && (m.drag || !m.press);
   if (m.y === 1 && !selecting) {
@@ -439,9 +444,11 @@ function mouse(m) {
   if (state.kind === 'image' || !rows().length) return;
   // Selection of characters with the left button, copied when released; a double click selects a word, a triple
   // click the line. Above the body: from the start of the top row; below: to the end of the bottom row.
+  // right: the last column of text, before the scrollbar when it shows.
+  const right = W - (scrollbar.bar ? 1 : 0);
   const under = () => {
     const row = Math.max(0, Math.min(rows().length - 1, state.top + Math.min(Math.max(m.y, 2), H - 1) - 2));
-    return positionAt(row, m.y < 2 ? -Infinity : m.y >= H ? Infinity : m.x);
+    return positionAt(row, m.y < 2 ? -Infinity : m.y >= H ? Infinity : Math.min(m.x, right));
   };
   let pos = under();
   if (m.press && !m.drag) {
@@ -462,7 +469,7 @@ function mouse(m) {
     if (m.y >= H - 1) state.top = Math.min(state.top + 1, Math.max(0, rows().length - (H - 2)));
     // Rendered rows (Markdown, messages) never scroll sideways.
     if (!settings.wrap && rows()[pos.row].src >= 0) {
-      if (m.x >= ui.size().W) state.left += 2;
+      if (m.x >= right) state.left += 2;
       else if (m.x <= gutter() + 1) state.left = Math.max(0, state.left - 2);
     }
     if (state.top !== top || state.left !== left) pos = under();
