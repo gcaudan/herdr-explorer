@@ -1,0 +1,18 @@
+# Release PR kept up to date from the Conventional Commits on main (version in herdr-plugin.toml, CHANGELOG.md);
+# merging it tags vX.Y.Z and publishes the GitHub release, which the explorer's update check reads.
+name: release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0

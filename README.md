@@ -717,6 +717,7 @@ Messages of the plugin:
 | `ui.js` | terminal helpers shared by the panes: text width, lines, input, text field, scrollbar |
 | `exec.js` | runs external programs from their absolute path, safe git options, settings, saved pane state, key bindings |
 | `install.sh`, `install.ps1` | installation: `herdr plugin link` and key bindings |
+| `.github/workflows/release.yml`, `release-please-config.json`, `.release-please-manifest.json` | releases: [release-please](https://github.com/googleapis/release-please) keeps a release PR up to date from the Conventional Commits on `main` (version in `herdr-plugin.toml`, `CHANGELOG.md`); merging it tags `vX.Y.Z` and publishes the GitHub release |
 
 ## License
 
