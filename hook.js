@@ -13,6 +13,8 @@ const path = require('path');
 
 const { PLUGIN, HERDR, result, readWidth, readSettings, PANES_DIR, paneFile, readPaneState } = require('./exec');
 const LABEL = 'Explorer';
+// The plugin's panes, by label.
+const OWN = new Set(['Explorer', 'Preview', 'Source Control', 'Changes', 'Editor', 'Search']);
 if (!HERDR) process.exit(0);
 
 const herdr = (...args) => result(execFileSync(HERDR, args, { encoding: 'utf8' }));
@@ -77,7 +79,12 @@ if (process.argv.includes('--toggle')) {
   const panes = ctx.tab_id ? tabPanes(ctx.workspace_id, ctx.tab_id) : [];
   const explorer = panes.find(p => p.label === LABEL);
   const pane = (explorer && explorer.pane_id) || process.env.HERDR_PANE_ID || ctx.pane_id || (panes[0] && panes[0].pane_id);
-  const root = ctx.workspace_cwd || (panes[0] && panes[0].cwd);
+  // The explorer's root: workspace_cwd is the folder of the focused pane, the plugin's own when it is one of its panes.
+  const saved = explorer && readPaneState(explorer.pane_id);
+  // The focused terminal first, else the tab's first one.
+  const focused = panes.find(p => p.pane_id === (process.env.HERDR_PANE_ID || ctx.pane_id));
+  const terminal = focused && !OWN.has(focused.label) ? focused : panes.find(p => !OWN.has(p.label));
+  const root = (saved && saved.root) || (terminal && terminal.cwd) || ctx.workspace_cwd;
   if (pane && root) (process.argv.includes('--scm') ? actions.scm(root, pane) : actions.search(root, pane, 'files'));
 } else if (process.argv.includes('--all')) {
   for (const ws of herdr('workspace', 'list').workspaces) {
@@ -92,7 +99,6 @@ if (process.argv.includes('--toggle')) {
   // them, then reopen the explorer and the preview in the tabs that had them, at what they saved under the same
   // pane id (the preview's file only when it still exists).
   const actions = require('./actions');
-  const OWN = new Set(['Explorer', 'Preview', 'Source Control', 'Changes', 'Editor']);
   const exists = (p, dir) => { try { return p && fs.statSync(p).isDirectory() === dir ? p : null; } catch { return null; } };
   const running = p => herdr('pane', 'process-info', '--pane', p.pane_id).process_info.foreground_processes
     .some(f => /^node(\.exe)?$/i.test(path.basename((f.argv && f.argv[0]) || '')));

@@ -624,7 +624,8 @@ async function act(kind) {
     else if (kind === 'editor') msg = await actions.editor(abs, PANE);
     else if (kind === 'copy') return flash(await actions.copy(t.rel));
   } catch { msg = 'Action failed'; }
-  if (!msg) process.exit(0);
+  // An outside editor answers with its name and the file's when it was started.
+  if (!msg || (kind === 'editor' && msg.endsWith(`: ${path.basename(abs)}`))) process.exit(0);
   flash(msg);
 }
 
@@ -654,7 +655,7 @@ function key(k) {
       return focus(order[(order.indexOf(state.focus) + (k === 'tab' ? 1 : 2)) % 3]);
     }
     case 'up': case 'ctrl+k': select(state.cursor - 1); break;
-    case 'down': case 'ctrl+j': case 'ctrl+n': select(state.cursor + 1); break;
+    case 'down': case 'ctrl+n': select(state.cursor + 1); break;
     case 'pageup': select(state.cursor - page); break;
     case 'pagedown': select(state.cursor + page); break;
     case 'ctrl+home': select(0); break;
