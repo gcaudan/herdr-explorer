@@ -84,6 +84,7 @@ const state = {
   prompt: null,    // { label, field, done(value) }: a name typed at the bottom
   confirm: null,   // { text, yes() }: y to confirm, any other key to cancel
 };
+const scrollbar = new ui.Scrollbar(top => { state.top = top; render(); });
 const git = { top: null, prefix: '', branch: '', files: new Map(), dirs: new Map(), untracked: new Set(), ignored: new Set() };
 const cache = new Map(); // relative folder → sorted entries
 
@@ -435,7 +436,10 @@ function render() {
   const lines = [header(W)];
   const listH = bodyHeight();
   if (state.top > state.rows.length - listH) state.top = Math.max(0, state.rows.length - listH);
-  for (let i = state.top; i < Math.min(state.rows.length, state.top + listH); i++) lines.push(row(state.rows[i], W, i === state.cursor));
+  const bw = scrollbar.set(state.rows.length, listH, state.top);
+  for (let i = state.top; i < Math.min(state.rows.length, state.top + listH); i++) {
+    lines.push(row(state.rows[i], W - bw, i === state.cursor) + scrollbar.cell(i - state.top));
+  }
   if (!state.rows.length) lines.push(line([[state.filter ? ' No match' : ' (empty)', fg(C.dim)]], W));
   while (lines.length < listH + 1) lines.push(line([], W));
   // The question cut to leave room for y/N in a narrow pane.
@@ -889,6 +893,7 @@ function mouse(m) {
     state.top = Math.max(0, Math.min(max, state.top + m.wheel * 3));
     return render();
   }
+  if (scrollbar.mouse(m, m.y - 2, m.x === W && !state.menu)) return;
   if (!m.press || m.drag || (m.button !== 0 && m.button !== 2)) return;
   const btn = m.button, { x, y } = m;
   if (state.confirm || state.prompt) { state.confirm = null; state.prompt = null; return render(); }
@@ -938,7 +943,7 @@ const paint = ui.screen({
     render();
   },
   resize: () => { resized(); reveal(); render(); },
-});
+}, { motion: true });
 
 watchRoot();
 const timers = [

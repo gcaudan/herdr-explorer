@@ -268,24 +268,28 @@ function main() {
   const name = commit ? `commit ${commit}${file ? ` · ${path.relative(cwd, file) || path.basename(file)}` : ''}`
     : `${file ? path.relative(cwd, file) || path.basename(file) : path.basename(cwd)}${staged ? ' (staged)' : ''}`;
   let parsed = null, rows = [], mode = null, cache = '', top = 0;
+  const scrollbar = new ui.Scrollbar(t => { top = t; draw(); });
 
-  function layout(W) {
-    const key = `${W}:${mode || defaultMode(W)}`;
-    if (parsed && key !== cache) { rows = render(parsed, W, mode || defaultMode(W)); cache = key; }
+  function layout(width, m) {
+    const key = `${width}:${m}`;
+    if (parsed && key !== cache) { rows = render(parsed, width, m); cache = key; }
   }
 
   function draw() {
     const { W, H } = ui.size();
-    layout(W);
-    const body = H - 1;
-    top = Math.max(0, Math.min(top, rows.length - body));
     const m = mode || defaultMode(W);
+    const body = H - 1;
+    // One column narrower when the scrollbar shows (a narrower layout never has fewer rows): kept while it does.
+    if (cache !== `${W - 1}:${m}` || rows.length <= body) layout(W, m);
+    if (rows.length > body) layout(W - 1, m);
+    top = Math.max(0, Math.min(top, rows.length - body));
+    const bw = scrollbar.set(rows.length, body, top);
     const counts = parsed ? [[` +${parsed.add}`, GREEN], [` −${parsed.del}`, RED]] : [];
     const hints = `   ${m === 'split' ? 'side by side' : 'inline'} · s: layout · n/N: hunks · q: close`;
     const lines = [ui.line([[` ${name}`, '\x1b[1m'], ...counts, [hints, DIM]], W, ui.C.header)];
     if (!parsed) lines.push(ui.line([[' Loading…', DIM]], W));
     else if (!rows.length) lines.push(ui.line([[' (no changes)', DIM]], W));
-    for (const r of rows.slice(top, top + body)) lines.push(ui.line(r.segs, W, r.back));
+    rows.slice(top, top + body).forEach((r, k) => lines.push(ui.line(r.segs, W - bw, r.back) + scrollbar.cell(k)));
     while (lines.length < H) lines.push(ui.line([], W));
     paint(lines.slice(0, H));
   }
@@ -312,9 +316,12 @@ function main() {
       else if (k === 'N') jump(-1);
       else if (k === 's') { mode = (mode || defaultMode(ui.size().W)) === 'split' ? 'inline' : 'split'; draw(); }
     },
-    mouse(m) { if (m.wheel) scroll(m.wheel * 3); },
+    mouse(m) {
+      if (m.wheel) return scroll(m.wheel * 3);
+      scrollbar.mouse(m, m.y - 2, m.x === ui.size().W);
+    },
     resize: draw,
-  }, { focus: false });
+  }, { focus: false, motion: true });
   draw();
   changes().then(text => { parsed = parse(text); cache = ''; draw(); });
 }
