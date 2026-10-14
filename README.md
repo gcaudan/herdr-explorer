@@ -21,7 +21,7 @@ Node.js, with no dependencies and no build step.
 - **Preview**: one pane per tab, opened next to the terminal and reused for every file.
   - Syntax highlighting for 27 languages and formats.
   - Rendered Markdown: headings, lists, task lists, tables, code blocks, quotes, GitHub alerts, Mermaid flowcharts.
-  - Images (PNG, baseline JPEG, GIF, BMP, ICO) drawn with half blocks; a hex dump for other binary files.
+  - Images (PNG, baseline JPEG, GIF, BMP, ICO, CUR) drawn with half blocks; a hex dump for other binary files.
   - Reloads as soon as the file changes on disk, for instance when an agent writes it.
   - Find in file, wrap, line numbers, full-tab zoom.
   - Mouse selection by character, word or line, copied to the clipboard.
@@ -115,23 +115,50 @@ The explorer only opens by itself in new tabs. To add it to the open tabs that h
 
 ### Update
 
-- At herdr startup and when a tab is created, the hook checks the latest GitHub release, at most once a day (3 s
-  timeout, never from the panes; off with the `updateCheck` setting). The result goes to `update.json`.
-- When that release is newer than the clone's version, a green `↑` appears in the explorer header, and *Update to
-  X…* at the end of the settings. Both ask for confirmation, then run `git pull --ff-only --no-rebase` in the plugin folder,
-  without a terminal prompt (ssh in batch mode, unless you set your own ssh command) and stopped after 60 s.
-- The update is refused when the plugin folder is not the root of a git clone (a copy inside another repository, such
-  as dotfiles), is not on `main`, has a git operation in progress or has changes to tracked files (untracked files
-  do not block it). When the pull itself fails (diverged history, network, an ssh key that needs its passphrase),
-  the command is copied to the clipboard, to run in a terminal.
-- The open explorers and previews restart by themselves on the new code, in place, 2 s after the version changes
-  and once they are idle (no menu, prompt, confirmation or active filter in the explorer; no find being typed or
-  selection being dragged in the preview): same root, same file. A `git pull` run by hand does the same.
-- One update runs at a time, across the explorers of every tab (`update.lock` in the state folder).
-- When the manifest (beyond its version) or the installer changed, the script must run again: a yellow `!` replaces
-  the `↑` in every explorer, even after their restart. A click on it, or *Finish the update…* in the settings, copies
-  the installer command to run in a terminal, and the `!` goes away.
-- A clone ahead of the latest release, as in development, shows no `↑`.
+**Check.** The startup hook (`hook.js --restore`) and the `tab.created` hook (`hook.js`) ask the GitHub API for the
+latest release of `gcaudan/herdr-explorer` — never the panes. At most once every 24 h (a failed check also waits a
+day), 3 s timeout, skipped when `updateCheck` is `false`. Only a version made of digits and dots (leading `v`
+stripped) is kept, in `update.json` (`checkedAt`, `latest`).
+
+**Signal.** When `latest` is newer than the version in the clone's `herdr-plugin.toml`, the explorer header shows a
+green `↑` and the settings menu ends with *Update to X…*. A clone ahead of the release shows nothing. The `↑` is
+hidden while an update runs, while a header message is shown, and when *Check for updates* is off.
+
+**Update.** Clicking `↑` or *Update to X…* asks `Update to X? y/N`, then shows `Updating…` until done. Steps
+(`update.js`):
+
+| Step | Refusal message |
+|---|---|
+| Take `update.lock` in the state folder (one update at a time across all explorers; a lock older than 2 min is taken over) | `Update in progress` |
+| `git rev-parse --show-toplevel` must be the plugin folder itself (not a copy inside another repository, e.g. dotfiles) | `Not a git clone` |
+| Current branch must be `main` | `Not on main` |
+| No merge, rebase, cherry-pick, revert, `git am` or bisect in progress | `A git operation is in progress` |
+| `git status --porcelain --untracked-files=no` must be empty (untracked files are allowed) | `Local changes in the plugin folder` |
+| `git pull --ff-only --no-rebase` (60 s timeout) | see below |
+
+Every git call runs with `GIT_TERMINAL_PROMPT=0` and `GCM_INTERACTIVE=never` (no Git Credential Manager window), and
+outside Windows in a detached session with no terminal, so nothing can prompt in the pane. The pull uses
+`GIT_SSH_COMMAND="ssh -o BatchMode=yes"` unless you set `GIT_SSH_COMMAND`, `GIT_SSH` or `core.sshCommand` yourself.
+
+Results:
+
+- `Already up to date` or `Updated to X`.
+- The pull itself failed (network, passphrase, diverged history): the git error is shown and
+  `git -C "<clone>" pull --ff-only --no-rebase` is copied to the clipboard (`…: update command copied`) to run in a terminal.
+  A refusal from the table above copies nothing.
+- `Updated to X: rerun the installer`: the update changed `install.sh`, `install.ps1` or the manifest beyond its
+  `version` line. `finish: X` is stored in `update.json`, so every explorer shows a yellow `!` instead of `↑`, even
+  after restarting. Clicking `!` or *Finish the update…* copies the installer command
+  (`"<clone>/install.sh"`, or `powershell -ExecutionPolicy Bypass -File "<clone>\install.ps1"`); once copied, the
+  flag is removed and the `!` disappears everywhere. The update itself never runs the installer.
+
+**Restart.** Open explorers and previews watch `herdr-plugin.toml` (polled every 2 s). When its version differs from
+the one they started with — after an update or a manual `git pull` / `git checkout` — they wait 2 s, then restart as
+soon as they are idle (explorer: no update running, no menu, prompt, confirmation or filter being typed; preview: no
+find being typed, no selection being dragged). The new process takes over the same pane with the same root, file
+and line. The old `node` process stays alive, waiting for the new one and forwarding signals to it: each restart adds
+one waiting process until the pane is closed. Search, Source Control, Changes and Editor panes do not restart; they
+run the old code until closed.
 
 ### Uninstall
 
@@ -223,7 +250,7 @@ take `y`, and any other key cancels.
 | `↑` `↓`, `j` `k`, `Enter`, wheel, `PageUp` `PageDown`, `Space` `b`, `ctrl+d` `ctrl+u`, `g` `G` | scroll |
 | `←` `→`, `h` `l` | scroll sideways (without wrap) |
 | `/` or `ctrl+f`, then `Enter`; `n` `N` | find in the file (case-insensitive unless the text has a capital letter) |
-| `w`, `L`, `m` | wrap, line numbers (both saved for every preview), rendered or raw Markdown |
+| `w`, `L`, `m` | wrap, line numbers (both saved in the settings), rendered or raw Markdown |
 | Drag with the left button | select text by character, copied to the clipboard on release |
 | Double click, triple click | select and copy a word, the line |
 | Header chips | rendered or raw Markdown, wrap or no wrap, `✕` close |
@@ -310,23 +337,22 @@ Confirmations take `y`; any other key cancels.
 
 ## Configuration
 
-- **Settings** (`,` or the gear icon) are saved in `settings.json` and shared by every explorer and preview. In the
-  other open explorers, the icon theme, *Check for updates* and *Follow the terminal folder* apply at once, the other
-  settings at their next opening:
+- **Settings** (`,` or the gear icon) are saved in `settings.json` and shared by every explorer and preview. The pane
+  where a setting changes applies it at once; the last column says when the other open panes do:
 
-  | Setting | Menu item | Default | Effect |
-  |---|---|---|---|
-  | `hidden` | Show hidden files | `true` | show dot files |
-  | `ignored` | Show git-ignored files | `true` | show git-ignored files, greyed out |
-  | `open` | Open in the preview | `"preview"` | `Enter` and double-click on a text file: `"preview"` or `"editor"` |
-  | `editor` | Editor command… | `""` | external editor command; empty: VS Code when found, else the terminal editor |
-  | `singleClick` | Preview on single click | `false` | a single click on a file shows it in the preview |
-  | `follow` | Follow the terminal folder | `false` | reveal the folder of the terminal in the tree, within the space folder |
-  | `side` | Dock on the right | `"left"` | side of the explorer, for the tabs opened afterwards |
-  | `icons` | Icon theme… | `""` | a VS Code icon theme, `{ id, label, file }`; empty: Nerd Font icons. *Search…* lists the themes installed for VS Code, VS Code Insiders, VSCodium, Cursor, Windsurf or VS Code Server, and those built into these editors; the tree previews each one as the selection moves, and `Esc` restores the saved one. Applied at once to every explorer; source control uses it from its next opening |
-  | `wrap` | (preview `w`) | `false` | preview: wrap long lines |
-  | `lineNumbers` | (preview `L`) | `true` | preview: line number gutter |
-  | `updateCheck` | Check for updates | `true` | one request a day to the GitHub API; `↑` in the header when a newer release exists |
+  | Setting | Menu item | Default | Effect | Other open panes |
+  |---|---|---|---|---|
+  | `hidden` | Show hidden files | `true` | show dot files | at their next opening |
+  | `ignored` | Show git-ignored files | `true` | show git-ignored files, greyed out | at their next opening |
+  | `open` | Open in the preview | `"preview"` | `Enter` and double-click on a text file: `"preview"` or `"editor"` | at their next opening |
+  | `editor` | Editor command… | `""` | external editor command; empty: VS Code when found, else the terminal editor | at once (read at each use) |
+  | `singleClick` | Preview on single click | `false` | a single click on a file shows it in the preview | at their next opening |
+  | `follow` | Follow the terminal folder | `false` | reveal the folder of the terminal in the tree, within the space folder | at once |
+  | `side` | Dock on the right | `"left"` | side of the explorer | new tabs only |
+  | `icons` | Icon theme… | `""` | a VS Code icon theme, `{ id, label, file }`; empty: Nerd Font icons. *Search…* lists the themes installed for VS Code, VS Code Insiders, VSCodium, Cursor, Windsurf or VS Code Server, and those built into these editors; the tree previews each one as the selection moves, and `Esc` restores the saved one | explorers at once; source control at its next opening |
+  | `wrap` | (preview `w`) | `false` | preview: wrap long lines | other previews at their next opening |
+  | `lineNumbers` | (preview `L`) | `true` | preview: line number gutter | other previews at their next opening |
+  | `updateCheck` | Check for updates | `true` | one request a day to the GitHub API; `↑` in the header when a newer release exists | explorers at once |
 
   The editor command (`zed`, `subl -w`, `code -r`…) runs without a shell, with the path as its last argument. A
   terminal editor (`vi`, `vim`, `nvim`, `nano`, `micro`, `hx`, `helix`, `kak`, `emacs`, `ne`, `joe`, `mcedit`,
@@ -414,8 +440,8 @@ The explorer opens by itself on any folder, including freshly cloned untrusted r
 - **Every git command** runs with the following disabled, so that the repository's config cannot run commands
   through them:
   - hooks: hook files (`core.hooksPath` set to a folder that never exists: `/dev/null`, or `.no-hooks` in the
-    plugin folder on Windows), and the `hook.<name>.command` hooks the repository defines in its config; commits
-    therefore skip the repository's hooks (pre-commit, commit-msg…);
+    plugin folder on Windows), and the `hook.<name>.command` hooks the repository defines in its config; no hook
+    file runs, those of a global hooks folder included, so commits skip pre-commit, commit-msg and the others;
   - `core.fsmonitor`;
   - the repository's own filters (`filter.<driver>.clean`, `smudge`, `process`, from `.git/config`,
     `config.worktree` or an included file); filters from the global and system config, such as git-lfs, are kept;
@@ -549,6 +575,11 @@ Messages of the plugin:
 | `… : update command copied` | the pull failed (network, diverged history, ssh passphrase): run the copied command in a terminal |
 | `Updated to X: rerun the installer`, or `!` in the header | the manifest or the installer changed: click the `!` to copy the installer command, then run it in a terminal |
 | `Update in progress` | another explorer is updating; a lock left by a killed update is taken over after 2 minutes |
+| `Not a git repository` | the folder is not in a repository; `i` in source control runs `git init` |
+| `No terminal next to the explorer` | *Insert into terminal* found no terminal pane beside the explorer |
+| `No editor: set one in the settings` | opening a folder needs an editor command or VS Code |
+| `Not opened: file type not allowed` | *Open in app* only takes documents, media and a few text formats |
+| `Continue refused: …` | the rebase or cherry-pick would run commands or a merge strategy of its own: check it, then continue in the terminal |
 | `Claude not available` | install the `claude` CLI and sign in; meanwhile, the message is made from the file names |
 
 ## Project structure
