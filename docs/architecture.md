@@ -5,17 +5,17 @@ declares them to herdr:
 
 | Kind      | Id         | Command                       | Placement                 |
 | --------- | ---------- | ----------------------------- | ------------------------- |
-| startup   |            | `node hook.js --restore`      |                           |
-| event     | `tab.created` | `node hook.js`             |                           |
-| pane      | `tree`     | `node explorer.js`            | split                     |
-| pane      | `preview`  | `node preview.js`             | split                     |
-| pane      | `search`   | `node search.js`              | popup, 80% × 80%          |
-| pane      | `scm`      | `node scm.js`                 | zoomed                    |
-| pane      | `diff`     | `node diff.js`                | zoomed                    |
-| pane      | `edit`     | `node edit.js`                | zoomed                    |
-| action    | `toggle`   | `node hook.js --toggle`       | tab context               |
-| action    | `search`   | `node hook.js --search`       | tab context               |
-| action    | `scm`      | `node hook.js --scm`          | tab context               |
+| startup   |            | `node src/hook.js --restore`  |                           |
+| event     | `tab.created` | `node src/hook.js`         |                           |
+| pane      | `tree`     | `node src/explorer.js`        | split                     |
+| pane      | `preview`  | `node src/preview.js`         | split                     |
+| pane      | `search`   | `node src/search.js`          | popup, 80% × 80%          |
+| pane      | `scm`      | `node src/scm.js`             | zoomed                    |
+| pane      | `diff`     | `node src/diff.js`            | zoomed                    |
+| pane      | `edit`     | `node src/edit.js`            | zoomed                    |
+| action    | `toggle`   | `node src/hook.js --toggle`   | tab context               |
+| action    | `search`   | `node src/hook.js --search`   | tab context               |
+| action    | `scm`      | `node src/hook.js --scm`      | tab context               |
 
 The scripts talk to herdr through its CLI (`herdr pane …`, `herdr plugin pane open …`), whose JSON
 answers they parse. Inputs reach a pane through `--env` variables (`EXPLORER_ROOT`, `EXPLORER_FILE`,

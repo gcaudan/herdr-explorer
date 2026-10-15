@@ -6,23 +6,23 @@ description = "VS Code-style file explorer, preview, search and source control f
 platforms = ["linux", "macos", "windows"]
 
 [[startup]]
-command = ["node", "hook.js", "--restore"]
+command = ["node", "src/hook.js", "--restore"]
 
 [[events]]
 on = "tab.created"
-command = ["node", "hook.js"]
+command = ["node", "src/hook.js"]
 
 [[panes]]
 id = "tree"
 title = "Explorer"
 placement = "split"
-command = ["node", "explorer.js"]
+command = ["node", "src/explorer.js"]
 
 [[panes]]
 id = "preview"
 title = "Preview"
 placement = "split"
-command = ["node", "preview.js"]
+command = ["node", "src/preview.js"]
 
 [[panes]]
 id = "search"
@@ -30,40 +30,40 @@ title = "Search"
 placement = "popup"
 width = "80%"
 height = "80%"
-command = ["node", "search.js"]
+command = ["node", "src/search.js"]
 
 [[panes]]
 id = "scm"
 title = "Source Control"
 placement = "zoomed"
-command = ["node", "scm.js"]
+command = ["node", "src/scm.js"]
 
 [[panes]]
 id = "diff"
 title = "Changes"
 placement = "zoomed"
-command = ["node", "diff.js"]
+command = ["node", "src/diff.js"]
 
 [[panes]]
 id = "edit"
 title = "Editor"
 placement = "zoomed"
-command = ["node", "edit.js"]
+command = ["node", "src/edit.js"]
 
 [[actions]]
 id = "toggle"
 title = "Show or hide the explorer"
 contexts = ["tab"]
-command = ["node", "hook.js", "--toggle"]
+command = ["node", "src/hook.js", "--toggle"]
 
 [[actions]]
 id = "search"
 title = "Go to file"
 contexts = ["tab"]
-command = ["node", "hook.js", "--search"]
+command = ["node", "src/hook.js", "--search"]
 
 [[actions]]
 id = "scm"
 title = "Source control"
 contexts = ["tab"]
-command = ["node", "hook.js", "--scm"]
+command = ["node", "src/hook.js", "--scm"]
