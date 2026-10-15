@@ -45,3 +45,20 @@ test('random text keeps its width', () => {
     assert.ok(ui.segWidth(ui.slice(segs, from, width)) <= width, `slice over ${width}: ${JSON.stringify(segs)}`);
   }
 });
+
+test('key hints keep the pairs that fit, whole', () => {
+  const pairs = [['s', 'stage'], ['d', 'discard'], ['q', 'quit']];
+  assert.strictEqual(text(ui.keys(pairs)), ' s stage   d discard   q quit');
+  assert.strictEqual(text(ui.keys(pairs, 20)), ' s stage   d discard');
+  assert.strictEqual(ui.keys(pairs)[0][1].includes('\x1b[1m'), true);
+});
+
+test('a click on a hint gives its key', () => {
+  const segs = ui.keys([['⏎', 'open'], ['↑↓', 'move'], ['space s', 'stage']]);
+  // " ⏎ open   ↑↓ move   space s stage"
+  assert.strictEqual(ui.keyAt(segs, 1), 'enter');
+  assert.strictEqual(ui.keyAt(segs, 11), null);
+  assert.strictEqual(ui.keyAt(segs, 21), 'space');
+  assert.strictEqual(ui.keyAt(segs, 0), null);
+  assert.strictEqual(ui.keyAt(segs, 22, 1), 'space');
+});

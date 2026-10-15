@@ -509,7 +509,7 @@ function render() {
     ? [chip('Aa', state.opts.case, toggle('case')), chip('ab', state.opts.word, toggle('word')), chip('.*', state.opts.regex, toggle('regex')), [' ', '']]
     : [];
   chips.push(chip('hidden', state.opts.hidden, toggle('hidden')), [' ', '']);
-  const prompt = [' ❯ ', fg(C.blue), () => focus('query')];
+  const prompt = [` ${ui.SEARCH} `, DIM, () => focus('query')];
   const qw = Math.max(1, W - 3 - width(chips) - 1);
   const qparts = fieldParts(queryField(), qw, !content || state.focus === 'query').map(p => [...p, () => focus('query')]);
   lines.push(bar(1, [prompt, ...qparts, [' '.repeat(Math.max(0, W - 3 - width(qparts) - width(chips))), '', () => focus('query')], ...chips], W));
@@ -557,10 +557,26 @@ function render() {
   }
 
   // Keys.
-  const keys = '↵ open  ctrl+o editor  ctrl+t insert  ctrl+y copy path' + (content ? '  tab fields  alt+←→ fold' : '') + '  esc close';
-  lines.push(line([[' ' + keys, DIM]], W, C.header));
+  const keys = [['↵', 'open'], ['ctrl+o', 'editor'], ['ctrl+t', 'insert'], ['ctrl+y', 'copy path'],
+    ...(content ? [['tab', 'fields'], ['alt+←→', 'fold']] : []), ['esc', 'close'], ['f1', 'keys']];
+  while (lines.length < H - 1) lines.push(line([], W));
+  lines.length = H - 1;
+  state.hints = ui.keys(keys, W);
+  lines.push(line(state.hints, W, C.header));
+  if (state.help) ui.help(lines, W, state.mode === 'content' ? 'Search in files' : 'Go to file', HELP, state.help);
   paint(lines.slice(0, H));
 }
+
+// The key help (f1: ? is typed in the fields), over the whole pane (ui.help); state.help: { top, find } while it shows.
+const HELP = [
+  ['Results', [['↑↓', 'select'], ['ctrl+n', 'next'], ['ctrl+k', 'previous'], ['pgup pgdn', 'page'], ['ctrl+home', 'first'],
+    ['ctrl+end', 'last'], ['alt+← →', 'fold, unfold a file']]],
+  ['Open', [['⏎', 'in the preview'], ['ctrl+o', 'in the editor'], ['alt+⏎', 'in the editor'], ['ctrl+t', 'insert in terminal'],
+    ['ctrl+y', 'copy the path']]],
+  ['Search', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['tab', 'next field'], ['alt+c', 'match case'],
+    ['alt+w', 'whole word'], ['alt+r', 'regular expression'], ['alt+h', 'hidden files']]],
+  ['Pane', [['f1', 'keys'], ['esc', 'close']]],
+];
 
 function paintSoon() {
   if (!paintTimer) paintTimer = setTimeout(render, 50);
@@ -641,7 +657,9 @@ function fold(collapsed) {
 
 function key(k) {
   const page = listHeight() - 1;
+  if (state.help && k !== 'ctrl+c') { if (!ui.helpKey(k, state.help)) state.help = null; return render(); }
   switch (k) {
+    case 'f1': state.help = { top: 0, find: null }; return render();
     case 'escape': case 'ctrl+c': return process.exit(0);
     case 'ctrl+p': return setMode('files');
     case 'ctrl+f': return setMode('content');
@@ -695,6 +713,12 @@ function paste(text) {
 }
 
 function mouse({ button, x, y, press, wheel, drag }) {
+  if (state.help) { if (!ui.helpMouse({ button, x, y, press, wheel, drag }, state.help)) state.help = null; return render(); }
+  // A click on a hint of the footer does what its key does.
+  if (y === ui.size().H && press && !drag && !wheel && button === 0) {
+    const k = ui.keyAt(state.hints, x - 1);
+    if (k) return key(k);
+  }
   if (wheel) {
     state.top = Math.max(0, Math.min(state.top + wheel * 3, rows().length - listHeight()));
     return render();

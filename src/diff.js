@@ -7,7 +7,7 @@
 const path = require('path');
 const { spawnSync } = require('child_process');
 const ui = require('./ui');
-const { GIT, gitEnv } = require('./exec');
+const { GIT, gitEnv, readSettings, writeSettings } = require('./exec');
 
 const MAX_UNTRACKED = 200;
 const MAX_ROWS = 200000; // beyond, a huge diff would take seconds to lay out at every resize
@@ -153,13 +153,15 @@ function fileRow(f, width) {
 }
 
 // Rows of a parsed diff for a width: { segs, back } for ui.line(segs, width, back), hunk: true on the rows
-// n and N jump to. mode: 'inline', or 'split' (old version on the left, new on the right).
-function render(d, width, mode = 'inline') {
+// n and N jump to. mode: 'inline', or 'split' (old version on the left, new on the right). titled: the caller's
+// title already names the only file, whose own row is left out.
+function render(d, width, mode = 'inline', titled = false) {
   const rows = [];
+  const single = titled && !d.pre.length && d.files.length === 1;
   for (const l of d.pre) rows.push(preRow(ui.cleanLine(l)));
   for (const f of d.files) {
     if (rows.length) rows.push({ segs: [] });
-    rows.push({ ...fileRow(f, width), hunk: !f.hunks.length });
+    if (!single) rows.push({ ...fileRow(f, width), hunk: !f.hunks.length });
     for (const note of f.notes) rows.push({ segs: [[`  ${note}`, DIM]] });
     if (!f.hunks.length && !f.notes.length && f.status !== 'renamed') rows.push({ segs: [['  (no content change)', DIM]] });
     let last = 1;
@@ -231,7 +233,12 @@ function splitRows(rows, b, width, nw) {
 
 const defaultMode = width => (width >= SPLIT_MIN ? 'split' : 'inline');
 
-module.exports = { DIFF_OPTS, MAX_UNTRACKED, SPLIT_MIN, parse, render, defaultMode, unquote, main };
+// The layout chosen with s, kept in the settings for the next diffs (source control included): 'inline', 'split',
+// or null to choose by width.
+const savedMode = () => { const m = readSettings().diffLayout; return m === 'inline' || m === 'split' ? m : null; };
+const saveMode = m => writeSettings({ ...readSettings(), diffLayout: m });
+
+module.exports = { DIFF_OPTS, MAX_UNTRACKED, SPLIT_MIN, parse, render, defaultMode, savedMode, saveMode, unquote, main };
 
 // --- pane
 
@@ -267,7 +274,7 @@ function main() {
 
   const name = commit ? `commit ${commit}${file ? ` · ${path.relative(cwd, file) || path.basename(file)}` : ''}`
     : `${file ? path.relative(cwd, file) || path.basename(file) : path.basename(cwd)}${staged ? ' (staged)' : ''}`;
-  let parsed = null, rows = [], mode = null, cache = '', top = 0;
+  let parsed = null, rows = [], mode = savedMode(), cache = '', top = 0;
   const scrollbar = new ui.Scrollbar(t => { top = t; draw(); });
 
   function layout(width, m) {
@@ -285,14 +292,28 @@ function main() {
     top = Math.max(0, Math.min(top, rows.length - body));
     const bw = scrollbar.set(rows.length, body, top);
     const counts = parsed ? [[` +${parsed.add}`, GREEN], [` −${parsed.del}`, RED]] : [];
-    const hints = `   ${m === 'split' ? 'side by side' : 'inline'} · s: layout · n/N: hunks · q: close`;
-    const lines = [ui.line([[` ${name}`, '\x1b[1m'], ...counts, [hints, DIM]], W, ui.C.header)];
+    const head = [[` ${name}`, '\x1b[1m'], ...counts, [`   ${m === 'split' ? 'side by side' : 'inline'}  `, DIM]];
+    hints = ui.keys([['s', 'layout'], ['n N', 'hunks'], ['q', 'close'], ['?', 'keys']], W - ui.segWidth(head));
+    hintsAt = ui.segWidth(head);
+    const lines = [ui.line([...head, ...hints], W, ui.C.header)];
     if (!parsed) lines.push(ui.line([[' Loading…', DIM]], W));
     else if (!rows.length) lines.push(ui.line([[' (no changes)', DIM]], W));
     rows.slice(top, top + body).forEach((r, k) => lines.push(ui.line(r.segs, W - bw, r.back) + scrollbar.cell(k)));
     while (lines.length < H) lines.push(ui.line([], W));
-    paint(lines.slice(0, H));
+    lines.length = H;
+    if (help) ui.help(lines, W, 'Changes', HELP, help);
+    paint(lines);
   }
+
+  // The key help (? or f1), over the whole pane (ui.help): { top, find } while it shows. hints: those of the header, from column hintsAt.
+  let help = null, hints = [], hintsAt = 0;
+  const HELP = [
+    ['Scroll', [['↑↓ j k', 'line'], ['pgup pgdn', 'page'], ['space', 'page down'], ['ctrl+u/d', 'half page'], ['g G', 'top, bottom']]],
+    ['Diff', [['n N', 'next, previous hunk'], ['s', 'inline, side by side']]],
+    ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
+  ];
+  // Go to file and Search in files from the diff's folder, as from the explorer.
+  const search = mode => require('./actions').search(cwd, process.env.HERDR_PANE_ID, mode);
 
   function scroll(n) { top += n; draw(); }
   // Next or previous hunk: its header comes to the top.
@@ -302,22 +323,35 @@ function main() {
     if (i !== undefined && i >= 0) { top = i; draw(); }
   }
 
+  function onKey(k) {
+    const page = ui.size().H - 2;
+    if (k === 'ctrl+c') process.exit(0);
+    if (help) { if (!ui.helpKey(k, help)) help = null; return draw(); }
+    if (k === '?' || k === 'f1') { help = { top: 0, find: null }; draw(); }
+    else if (k === 'q' || k === 'escape') process.exit(0);
+    else if (k === 'up' || k === 'k') scroll(-1);
+    else if (k === 'down' || k === 'j' || k === 'enter') scroll(1);
+    else if (k === 'pageup') scroll(-page);
+    else if (k === 'pagedown' || k === 'space') scroll(page);
+    else if (k === 'ctrl+u') scroll(-Math.ceil(page / 2));
+    else if (k === 'ctrl+d') scroll(Math.ceil(page / 2));
+    else if (k === 'ctrl+p') search('files');
+    else if (k === 'ctrl+f') search('content');
+    else if (k === 'home' || k === 'g') { top = 0; draw(); }
+    else if (k === 'end' || k === 'G') { top = rows.length; draw(); }
+    else if (k === 'n') jump(1);
+    else if (k === 'N') jump(-1);
+    else if (k === 's') { mode = (mode || defaultMode(ui.size().W)) === 'split' ? 'inline' : 'split'; saveMode(mode); draw(); }
+  }
+
   const paint = ui.screen({
-    key(k) {
-      const page = ui.size().H - 2;
-      if (k === 'q' || k === 'escape' || k === 'ctrl+c') process.exit(0);
-      else if (k === 'up' || k === 'k') scroll(-1);
-      else if (k === 'down' || k === 'j' || k === 'enter') scroll(1);
-      else if (k === 'pageup' || k === 'b') scroll(-page);
-      else if (k === 'pagedown' || k === 'space') scroll(page);
-      else if (k === 'home' || k === 'g') { top = 0; draw(); }
-      else if (k === 'end' || k === 'G') { top = rows.length; draw(); }
-      else if (k === 'n') jump(1);
-      else if (k === 'N') jump(-1);
-      else if (k === 's') { mode = (mode || defaultMode(ui.size().W)) === 'split' ? 'inline' : 'split'; draw(); }
-    },
+    key: onKey,
     mouse(m) {
+      if (help) { if (!ui.helpMouse(m, help)) help = null; return draw(); }
       if (m.wheel) return scroll(m.wheel * 3);
+      // A click on a hint of the header does what its key does.
+      const k = m.y === 1 && m.press && !m.drag && m.button === 0 && ui.keyAt(hints, m.x - 1, hintsAt);
+      if (k) return onKey(k);
       scrollbar.mouse(m, m.y - 2, m.x === ui.size().W);
     },
     resize: draw,
