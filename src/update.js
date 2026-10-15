@@ -8,7 +8,7 @@ const https = require('https');
 const { execFile } = require('child_process');
 const { WIN, GIT, HERDR, PLUGIN, run, result, gitOperation, newer, readSettings } = require('./exec');
 
-const DIR = __dirname; // the plugin's folder, a git clone
+const DIR = path.join(__dirname, '..'); // the plugin's folder, a git clone
 const HERDR_UPDATE = `herdr plugin update ${PLUGIN}`;
 const MANIFEST = path.join(DIR, 'herdr-plugin.toml');
 const URL = 'https://api.github.com/repos/gcaudan/herdr-explorer/releases/latest';
