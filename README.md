@@ -34,7 +34,7 @@ Plugin id `gcaudan.explorer` · herdr 0.9.3 or later · Linux, macOS and Windows
 - **Search**: a popup with fuzzy *Go to file* (`path:line` supported) and *Search in files* (case, whole word, regex,
   include and exclude globs), with a preview of the selected result on wide screens.
 - **Source control**: stage, unstage, discard, commit or amend (with an optional message written by Claude), fetch,
-  pull, push, branches, history, stashes and refs; continue or abort a merge, rebase, cherry-pick or revert. Inline
+  pull, push, branches, history with a graph of the branches, stashes and refs; continue or abort a merge, rebase, cherry-pick or revert. Inline
   or side-by-side diffs with word-level highlights.
 - **Editors**: your graphical editor (VS Code by default), a terminal editor in a full-tab pane, or, for documents
   and media, the system's default application. Executables and scripts are never run.
@@ -150,7 +150,7 @@ See [docs/usage.md](docs/usage.md) for every pane, key, mouse action and menu it
 ## Configuration
 
 Settings (hidden files, docking side, editor command, icon theme, update check…) are changed from the explorer's
-settings menu and stored in `settings.json`. The explorer's keys can be rebound in `keys.json`. See
+settings (`,`) and stored in `settings.json`. The explorer's keys can be rebound from the settings, or in `keys.json`. See
 [docs/configuration.md](docs/configuration.md).
 
 ## Documentation

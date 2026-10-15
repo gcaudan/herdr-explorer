@@ -1,25 +1,29 @@
 # Configuration
 
-Change the settings from the explorer's settings menu (`,` or the gear icon). The menu writes them to
+Change the settings from the explorer's settings (`,` or the gear icon), which write them to
 `settings.json`. You can also edit the files below by hand.
 
 ## Settings
 
 The pane where a setting changes applies it at once; the last column says when the other open panes do.
 
-| Key | Default | Menu item | Effect | Other open panes |
+| Key | Default | Setting | Effect | Other open panes |
 |---|---|---|---|---|
-| `hidden` | `true` | Show hidden files | show dot files in the tree | at their next opening |
-| `ignored` | `true` | Show git-ignored files | show git-ignored files, greyed out | at their next opening |
-| `open` | `"preview"` | Open in the preview | what `Enter` and a double-click do on a text file: `"preview"` or `"editor"` | at their next opening |
-| `editor` | `""` | Editor command… | external editor command, see below | at once (read at each use) |
-| `singleClick` | `false` | Preview on single click | a single click on a file shows it in the preview | at their next opening |
-| `follow` | `false` | Follow the terminal folder | reveal the folder of the terminal next to the explorer, within the tab's folder | within 2 s |
-| `side` | `"left"` | Dock on the right | `"left"` or `"right"`: where new explorers dock; an open explorer keeps its side | new tabs only |
-| `autoOpen` | `true` | Open in new tabs | open the explorer in every new tab that has a single pane; off: only with `prefix+f` | new tabs only |
-| `icons` | `""` | Icon theme… | `""` for the Nerd Font icons, or `{ "id", "label", "file" }` of a VS Code icon theme | explorers within a second; source control at its next opening |
-| `wrap` | `false` | preview `w`, Wrap chip | wrap long lines in the preview | other previews at their next opening |
-| `lineNumbers` | `true` | preview `L` | line number gutter in the preview | other previews at their next opening |
+| `hidden` | `true` | Hidden files | show dot files in the tree | at their next opening |
+| `ignored` | `true` | Git-ignored files | show git-ignored files, greyed out | at their next opening |
+| `open` | `"preview"` | Enter opens | what `Enter` and a double-click do on a text file: `"preview"` or `"editor"` | at their next opening |
+| `editor` | `""` | Editor | external editor command, see below | at once (read at each use) |
+| `singleClick` | `false` | Single-click preview | a single click on a file shows it in the preview | at their next opening |
+| `follow` | `false` | Follow terminal | reveal the folder of the terminal next to the explorer, within the tab's folder | within 2 s |
+| `side` | `"left"` | Dock side | `"left"` or `"right"`: where new explorers dock; an open explorer keeps its side | new tabs only |
+| `autoOpen` | `true` | Open automatically | open the explorer in every new tab that has a single pane; off: only with `prefix+f` | new tabs only |
+| `icons` | `""` | Icon theme | `""` for the Nerd Font icons, or `{ "id", "label", "file" }` of a VS Code icon theme | explorers within a second; source control at its next opening |
+| `wrap` | `false` | Wrap lines; preview `w`, Wrap chip | wrap long lines in the preview | other previews at their next opening |
+| `lineNumbers` | `true` | Line numbers; preview `L` | line number gutter in the preview | other previews at their next opening |
+| `diffLayout` | `""` | Diff layout; diff `s` (source control and diff pane) | `"inline"` or `"split"` (side by side); `""` chooses by width | other diffs at their next opening |
+| `scmListShare` | `{}` | source control: drag the separator, `<` `>`, `shift+left` `shift+right` | share of the width taken by the list beside the diff, per view: `{ "changes": 0.3, "history": 0.6 }`; a view left out: 38 %, from 34 to 70 columns | other source control panes at their next opening |
+| `scmGraphAll` | `true` | source control History `a` | show every local and remote branch in History, or only the current one | other source control panes at their next opening |
+| `scmTree` | `false` | source control `t`, List/Tree button | show the Changes view as a tree of folders | other source control panes at their next opening |
 | `updateCheck` | `true` | Check for updates | check GitHub once a day for a newer release | explorers within a second |
 
 A missing or unreadable `settings.json` means all defaults, and keys left out keep their default.
@@ -43,20 +47,20 @@ When no terminal editor is configured, the Editor pane uses `$VISUAL`, `$EDITOR`
 
 ### Icon themes
 
-**Icon theme… → Search…** lists the file icon themes installed for VS Code, VS Code Insiders,
+**Icon theme** lists the file icon themes installed for VS Code, VS Code Insiders,
 VSCodium, Cursor, Windsurf or VS Code Server. It searches each editor's user `extensions` folder
 (`~/.vscode/extensions`, `~/.cursor/extensions`…), the macOS application bundles, and the extensions
 next to the `code`, `code-insiders`, `codium`, `cursor` or `windsurf` commands found on `PATH`. Each
 icon is drawn in the colour of its SVG or font glyph. Popular icons, mostly from Material Icon Theme,
 get a Nerd Font glyph of their own, and the others use the default glyph in the theme's colour. When
 an extension update moves the theme, the plugin finds it again. When the theme is uninstalled, the
-explorer goes back to the Nerd Font icons. While choosing, the tree previews each theme as the
-selection moves, and `Esc` restores the saved one.
+explorer goes back to the Nerd Font icons. While choosing, a sample tree under the list previews the
+theme under the selection, and `Esc` goes back without a change.
 
 ### Width
 
-The explorer is 32 columns wide by default (10 at least). A width set by dragging its border is kept
-for the next explorers, and restored when the window is resized. Delete the `width` file to go back
+The explorer is 32 columns wide by default (10 at least). A width set by dragging its border, or with
+`<` `>` or `shift+left` `shift+right`, is kept for the next explorers, and restored when the window or another pane is resized. Delete the `width` file to go back
 to 32 columns.
 
 ## Files
@@ -77,6 +81,7 @@ the explorer's width falls back to 32 columns.
 | `expanded.json`        | expanded folders, per tree root                                                              |
 | `search.json`          | last Go to file query, search query, include/exclude globs, case/word/regex options          |
 | `update.json`          | `checkedAt`, `latest` release found, and `finish` (an update the installer must finish)      |
+| `resizing`             | the pane resizing itself, for half a second: the panes it moves let it put them back         |
 | `update.lock`          | present while an update runs                                                                 |
 | `panes/<pane id>.json` | per pane: the explorer's tab folder (`home`) and tree root (`root`), the preview's `file`, `root` and `line` |
 | `preview-<tab id>.json`| the last file the explorer or search asked the tab's preview to show                         |
@@ -86,9 +91,10 @@ half-written file. At herdr startup, the state files of panes that no longer exi
 
 ### Config folder: `keys.json`
 
-`keys.json` holds the explorer's key bindings. To edit it, choose **Settings… → Edit key bindings…**.
-The plugin creates the file, or completes it, with every explorer action and its current keys, then
-opens it in the Editor pane. The explorer reloads the file within a second of a save.
+`keys.json` holds the explorer's key bindings. Change them from **Settings → Key bindings**, which
+writes the actions you change to the file (see [usage.md](usage.md#settings--or-the-gear-icon)). Its
+last row, **Open keys.json**, creates the file, or completes it, with every explorer action and its
+current keys, then opens it in the Editor pane. The explorer reloads the file within a second of a save.
 
 ```json
 {
@@ -128,7 +134,12 @@ opens it in the Editor pane. The explorer reloads the file within a second of a 
 | `refresh`          | `r`                     | `openInEditor`     | `o`                     |
 | `filter`           | `/`                     | `preview`          | `p`                     |
 | `copyPath`         | `y`                     | `copyRelativePath` | `Y`                     |
-| `parentRoot`       | `backspace`             |                    |                         |
+| `parentRoot`       | `backspace`             | `help`             | `?`, `f1`               |
+| `halfPageUp`       | `ctrl+u`                | `halfPageDown`     | `ctrl+d`                |
+| `openInApp`        | `O`                     | `narrower`         | `>`, `shift+left`¹      |
+| `wider`            | `<`, `shift+right`¹     |                    |                         |
+
+¹ Docked on the right, `shift+left` and `shift+right` swap: each one pushes the inner border its way.
 
 #### Key names
 

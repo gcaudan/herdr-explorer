@@ -90,10 +90,10 @@ Once a day at most, the plugin asks GitHub for the latest release
 (`api.github.com/repos/gcaudan/herdr-explorer/releases/latest`, 3 s timeout). The check runs from the
 hook, both at herdr startup and when a tab is created, never from the panes. A failed check is not
 retried before the next day. Only a version made of digits and dots (a leading `v` stripped) is
-kept, in `update.json`. Turn it off with **Settings… → Check for updates**.
+kept, in `update.json`. Turn it off with **Settings → Check for updates**.
 
-When a newer release exists, a green `↑` shows in the explorer header and the settings menu gets
-**Update to X.Y.Z…**. The version found is compared with the version on disk, so the `↑` goes away
+When a newer release exists, a green `↑` shows in the explorer header and the settings show
+**↑ X.Y.Z available** under their title (`u` to update). The version found is compared with the version on disk, so the `↑` goes away
 once you have pulled. A clone ahead of the latest release, as in development, shows nothing. The `↑` is also hidden while an
 update runs and while a header message is shown.
 
