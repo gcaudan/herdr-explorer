@@ -192,6 +192,120 @@ async function diff(abs, root, pane) {
   return result(res) ? null : 'Cannot show changes';
 }
 
+// --- pane widths
+
+// The tab's layout as seen from a pane: its panes and splits, with their rects.
+async function layoutOf(pane) {
+  const res = result(await run(HERDR, ['pane', 'layout', '--pane', pane]));
+  return res && res.layout;
+}
+
+// The split of which the pane is a whole side: { split, left, me }, left when the pane is its left part, or null.
+// A pane's width includes its border.
+function sideSplit(layout, pane) {
+  const me = layout.panes.find(p => p.pane_id === pane);
+  if (!me) return null;
+  for (const s of layout.splits) {
+    if (s.direction !== 'right' || s.rect.y !== me.rect.y || s.rect.height !== me.rect.height) continue;
+    if (s.rect.x === me.rect.x && Math.abs(Math.round(s.rect.width * s.ratio) - me.rect.width) <= 1) return { split: s, left: true, me };
+    if (s.rect.x + s.rect.width === me.rect.x + me.rect.width
+      && Math.abs(Math.round(s.rect.width * (1 - s.ratio)) - me.rect.width) <= 1) return { split: s, left: false, me };
+  }
+  return null;
+}
+
+// The pane given want columns (its border included) by moving the border of its split; the ratio is that of the
+// split's left part. Returns the ratio asked for.
+async function setWidth(pane, { split, left }, want) {
+  const ratio = left ? (want + 0.25) / split.rect.width : 1 - (want + 0.25) / split.rect.width;
+  const delta = ratio - split.ratio;
+  await run(HERDR, ['pane', 'resize', '--pane', pane, '--direction', delta > 0 ? 'right' : 'left', '--amount', Math.abs(delta).toFixed(6)]);
+  return ratio;
+}
+
+// Keeps a pane at its width. herdr keeps the ratio of each split, so that moving a border, resizing the window, or
+// opening or closing a pane rescales the panes nested beside it. check(), after each resize of the pane, puts its
+// width back when its own split kept its ratio, and takes the new width when that ratio changed (its own border
+// dragged); check(true) puts it back in any case, as after < > changed the width kept, and puts back the panes this
+// moves (KEEPING). Checks asked while a resize
+// runs make one more once it ends, with the panes' new sizes and the last width asked for: a key held down (< >)
+// moves the border as fast as herdr follows. The width kept is at least 10 columns, and leaves 20 to the other side
+// of the split. columns(): the pane's width now, without border; get(): the width it keeps (null at first: the
+// width it has); set(width): the width taken; side: 'left' or 'right', the part of its split the pane must be
+// (null: either).
+// The plugin's panes that keep their width, and the file where a pane changing its own width says so, for half a
+// second: the panes it moved are then put back by it, in the same burst (no frame shows them moved), rather than
+// by themselves as well, which would move them twice (herdr resizes by a relative amount).
+const KEEPING = new Set(['Explorer', 'Preview']);
+const RESIZING = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'resizing');
+function resizingElsewhere(pane) {
+  try {
+    const { by, at } = JSON.parse(fs.readFileSync(RESIZING, 'utf8'));
+    return by !== pane && Date.now() - at < 500;
+  } catch { return false; }
+}
+function markResizing(pane) {
+  try { fs.writeFileSync(RESIZING, JSON.stringify({ by: pane, at: Date.now() })); } catch { }
+}
+
+// The widths (borders included) of the other panes of the layout that keep theirs.
+async function keptWidths(layout, pane) {
+  const list = ((await herdr('pane', 'list')) || {}).panes || [];
+  const keeping = new Set(list.filter(p => KEEPING.has(p.label)).map(p => p.pane_id));
+  return new Map(layout.panes.filter(p => p.pane_id !== pane && keeping.has(p.pane_id)).map(p => [p.pane_id, p.rect.width]));
+}
+
+// The panes of widths moved by a resize, put back.
+async function restoreWidths(pane, widths) {
+  const layout = await layoutOf(pane);
+  for (const [id, width] of widths) {
+    const found = layout && sideSplit(layout, id);
+    if (found && found.me.rect.width !== width) await setWidth(id, found, width);
+  }
+}
+
+function widthKeeper(pane, { columns, get, set, side = null }) {
+  // border: the columns of the pane's border, the difference between its width in the layout and its terminal's,
+  // learnt when both are up to date: not right after a resize, the terminal hearing of it a little later.
+  // left: the pane is the left part of its split (its inner border on its right), as last seen; null before.
+  let ratio = null, area = 0, panes = '', border = null, left = null, busy = false, again = null;
+  async function check(force = false) {
+    if (!pane) return;
+    if (busy) { again = again || force; return; }
+    busy = true;
+    try {
+      const layout = await layoutOf(pane);
+      if (!layout || layout.zoomed) return;
+      const found = sideSplit(layout, pane);
+      if (!found || (side && found.left !== (side === 'left'))) return;
+      left = found.left;
+      if (!force || border === null) border = found.me.rect.width - columns();
+      const now = found.me.rect.width - border;
+      const set_ = layout.panes.map(p => p.pane_id).sort().join(' ');
+      const own = !force && ratio !== null && layout.area.width === area && set_ === panes
+        && Math.abs(found.split.ratio - ratio) >= 0.001;
+      // Panes opened, closed or moved: checked again once the layout has settled, as a move made in two steps may
+      // leave nothing to report the last one.
+      if (panes && set_ !== panes) setTimeout(() => check(), 500);
+      area = layout.area.width; panes = set_; ratio = found.split.ratio;
+      if (own || get() === null) return set(now);
+      const want = Math.max(10, Math.min(found.split.rect.width - border - 20, get()));
+      if (want !== get()) set(want);
+      if (now === want) return;
+      if (!force && resizingElsewhere(pane)) return;
+      // Changing its own width (< >), the pane puts back the others it moves.
+      const others = force ? await keptWidths(layout, pane) : null;
+      if (others && others.size) markResizing(pane);
+      ratio = await setWidth(pane, found, want + border);
+      if (others && others.size) await restoreWidths(pane, others);
+    } catch { } finally {
+      busy = false;
+      if (again !== null) { const f = again; again = null; check(f); }
+    }
+  }
+  return { check, left: () => left };
+}
+
 // --- plugin panes
 
 const herdr = (...args) => run(HERDR, args).then(result);
@@ -246,8 +360,9 @@ async function search(root, pane, mode = 'files', query = '') {
   return await openPane('search', 'popup', pane, env) ? null : 'Cannot open the search';
 }
 
-async function scm(root, pane) {
-  return await openPane('scm', 'zoomed', pane, { EXPLORER_ROOT: root, EXPLORER_PANE: pane }) ? null
+// file: a file or folder to select among the changes.
+async function scm(root, pane, file = '') {
+  return await openPane('scm', 'zoomed', pane, { EXPLORER_ROOT: root, EXPLORER_PANE: pane, ...(file ? { EXPLORER_FILE: file } : {}) }) ? null
     : 'Cannot open source control';
 }
 
@@ -366,5 +481,6 @@ async function discard(abs, root) {
 
 module.exports = {
   open, editor, system, canOpen, canPreview, reveal, copy, insert, diff, preview, edit, search, scm, requestFile, tabOf, terminalOf,
+  layoutOf, sideSplit, setWidth, widthKeeper,
   create, rename, duplicate, trash, remove, stage, unstage, discard, REVEAL: WIN ? 'Reveal in Explorer' : 'Open folder',
 };
