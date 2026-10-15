@@ -20,13 +20,13 @@ The plugin is plain Node.js with no dependencies, no build step and no `package.
    - **explorer and preview**: these panes keep running. Close and reopen them (`prefix+f` twice
      toggles the explorer), or open a new tab. They restart by themselves only when the `version` in
      `herdr-plugin.toml` changes.
-   - **hook.js**: runs on each event or action, so the next one picks up your changes.
+   - **src/hook.js**: runs on each event or action, so the next one picks up your changes.
    - **herdr-plugin.toml** (hooks, panes, actions): herdr keeps its own copy of the manifest, so run
      `./install.sh` again, or `herdr plugin link .`.
 4. A pane script can also run outside herdr for a quick check, for example
-   `EXPLORER_FILE=README.md node diff.js` or `node search.js <folder>`. Features that need herdr
+   `EXPLORER_FILE=README.md node src/diff.js` or `node src/search.js <folder>`. Features that need herdr
    (opening panes, the neighbouring terminal) then do nothing or report an error.
-5. `herdr plugin log` shows the hooks' output and errors. `node hook.js --all`, run from a herdr
+5. `herdr plugin log` shows the hooks' output and errors. `node src/hook.js --all`, run from a herdr
    pane, adds an explorer to the open tabs that have a single pane.
 6. Run `node --test` before pushing. The tests in `test/` check that every script parses, the
    terminal width of text (emoji, flags, wide characters) and the relative links of the docs.
@@ -49,22 +49,23 @@ Keep the conventions of the existing code:
 | --------------------- | -------------------------------------------------------------------------------------------- |
 | `herdr-plugin.toml`   | manifest: id, version, min herdr version, startup hook, `tab.created` event, panes, actions  |
 | `install.sh`, `install.ps1` | link the clone to herdr and add the three key bindings                                 |
-| `hook.js`             | startup restore, `tab.created`, and the toggle, search and source control actions. Opens and places the explorer |
-| `launch.js`           | launcher that keeps the explorer and preview panes alive across self-restarts (exit code 75) |
-| `explorer.js`         | explorer pane: tree, git decorations, filter, menus, settings, width, follow, update UI      |
-| `actions.js`          | file and pane actions: open, preview, edit, insert, copy, reveal, create, rename, duplicate, trash, stage, unstage, discard; opens the plugin's other panes |
-| `preview.js`          | preview pane: text, Markdown, images, hex dump; find, selection, live reload, request file   |
-| `highlight.js`        | table-driven syntax highlighter (VS Code Dark+ colours)                                      |
-| `markdown.js`         | Markdown renderer for the terminal, including tables, alerts and Mermaid flowcharts          |
-| `image.js`            | image header sniffing and pure-JS decoders (PNG, GIF, BMP, baseline JPEG, ICO), half-block rendering |
-| `search.js`           | Go to file (fuzzy) and Search in files (text/regex, globs) popup                             |
-| `scm.js`              | source control pane: changes, commit, branches, remotes, history, stashes, refs, Claude messages |
-| `diff.js`             | diff parser and renderer (inline, side by side, word highlights), and the Changes pane       |
-| `edit.js`             | Editor pane: runs the terminal editor on a file                                              |
-| `icons.js`            | Nerd Font icons and VS Code icon theme loading                                               |
-| `ui.js`               | terminal helpers: colours, text width, lines, input decoding, text field, scrollbar, screen, restart |
-| `exec.js`             | safe program execution, git hardening, settings, pane state, key bindings                    |
-| `update.js`           | daily release check, self-update by fast-forward pull, version watch                         |
+| `src/hook.js`         | startup restore, `tab.created`, and the toggle, search and source control actions. Opens and places the explorer |
+| `src/launch.js`       | launcher that keeps the explorer and preview panes alive across self-restarts (exit code 75) |
+| `src/explorer.js`     | explorer pane: tree, git decorations, filter, menus, settings, width, follow, update UI      |
+| `src/actions.js`      | file and pane actions: open, preview, edit, insert, copy, reveal, create, rename, duplicate, trash, stage, unstage, discard; opens the plugin's other panes |
+| `src/preview.js`      | preview pane: text, Markdown, images, hex dump; find, selection, live reload, request file   |
+| `src/highlight.js`    | table-driven syntax highlighter (VS Code Dark+ colours)                                      |
+| `src/markdown.js`     | Markdown renderer for the terminal, including tables, alerts and Mermaid flowcharts          |
+| `src/image.js`        | image header sniffing and pure-JS decoders (PNG, GIF, BMP, baseline JPEG, ICO), half-block rendering |
+| `src/search.js`       | Go to file (fuzzy) and Search in files (text/regex, globs) popup                             |
+| `src/scm.js`          | source control pane: changes, commit, branches, remotes, history, stashes, refs, Claude messages |
+| `src/diff.js`         | diff parser and renderer (inline, side by side, word highlights), and the Changes pane       |
+| `src/edit.js`         | Editor pane: runs the terminal editor on a file                                              |
+| `src/icons.js`        | Nerd Font icons and VS Code icon theme loading                                               |
+| `src/ui.js`           | terminal helpers: colours, text width, lines, input decoding, text field, scrollbar, screen, restart |
+| `src/exec.js`         | safe program execution, git hardening, settings, pane state, key bindings                    |
+| `src/update.js`       | daily release check, self-update by fast-forward pull, version watch                         |
+| `hook.js`, `explorer.js`, … | one-line stand-ins for the panes and hooks of a 0.5.x manifest, until its installer is run again; to remove in a later release |
 | `release-please-config.json`, `.release-please-manifest.json` | release automation                       |
 | `test/`               | `node --test` suite: scripts parse, text width, doc links                                    |
 | `.github/workflows/ci.yml` | runs the tests on every pull request and push to `main`                                 |
