@@ -77,7 +77,7 @@ The explorer opens by itself only in tabs created after the install. In an exist
 single pane:
 
 ```sh
-node hook.js --all
+node src/hook.js --all
 ```
 
 Run it from the plugin folder, in a herdr pane.
@@ -113,7 +113,7 @@ and is taken over after 2 minutes if a previous update was killed.
 
 ### Refusals
 
-The update checks, in this order (`update.js`), and stops with the message when a check fails:
+The update checks, in this order (`src/update.js`), and stops with the message when a check fails:
 
 | Check | Message |
 |---|---|
