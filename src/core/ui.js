@@ -461,7 +461,7 @@ const SEQ = {
   '\r': 'enter', '\n': 'enter', '\t': 'tab', '\x7f': 'backspace', '\x08': 'backspace', '\x1b': 'escape',
   '\x1b\x7f': 'alt+backspace', '\x1b\r': 'alt+enter', ' ': 'space',
 };
-const TOKEN = /\x1b\[200~[\s\S]*?\x1b\[201~|\x1b\[<(\d+);(\d+);(\d+)([Mm])|\x1b\[([IO])|\x1b\[[\d;]*[A-Za-z~]|\x1bO[A-Za-z]|\x1b[^\x1b]|[\s\S]/gu;
+const TOKEN = /\x1b\[200~[\s\S]*?\x1b\[201~|\x1b_[^\x1b]*\x1b\\|\x1b\[(\d+(?:;\d+)*)t|\x1b\[<(\d+);(\d+);(\d+)([Mm])|\x1b\[([IO])|\x1b\[[\d;]*[A-Za-z~]|\x1bO[A-Za-z]|\x1b[^\x1b]|[\s\S]/gu;
 
 function keyName(k) {
   if (SEQ[k]) return SEQ[k];
@@ -476,21 +476,24 @@ function keyName(k) {
 //   mouse({ button, x, y, press, drag, wheel })   x and y from 1; wheel: -1 up, 1 down; drag: motion with a button
 //   focus(bool)                    focus reports (mode 1004)
 //   paste(text)                    bracketed paste (mode 2004), control characters removed
+//   reply(text)                    the terminal's answer to a query: a Kitty graphics reply (\x1b_G…) or a size
+//                                  report (\x1b[6;h;wt), never read as keys
 function decode(data, handlers) {
   for (const m of data.matchAll(TOKEN)) {
     const t = m[0];
+    if (t.startsWith('\x1b_') || m[1] !== undefined) { if (handlers.reply) handlers.reply(t); continue; }
     if (t.startsWith('\x1b[200~')) {
       if (handlers.paste) handlers.paste(t.slice(6, -6).replace(/\r\n?/g, '\n').replace(/[\x00-\x09\x0b-\x1f\x7f-\x9f]/g, ''));
       continue;
     }
-    if (m[1] !== undefined) {
+    if (m[2] !== undefined) {
       if (!handlers.mouse) continue;
-      const b = +m[1];
+      const b = +m[2];
       const wheel = b & 64 ? ((b & 3) === 0 ? -1 : (b & 3) === 1 ? 1 : 0) : 0;
-      handlers.mouse({ button: b & 3, mods: b & 28, x: +m[2], y: +m[3], press: m[4] === 'M', drag: !!(b & 32), wheel });
+      handlers.mouse({ button: b & 3, mods: b & 28, x: +m[3], y: +m[4], press: m[5] === 'M', drag: !!(b & 32), wheel });
       continue;
     }
-    if (m[5]) { if (handlers.focus) handlers.focus(m[5] === 'I'); continue; }
+    if (m[6]) { if (handlers.focus) handlers.focus(m[6] === 'I'); continue; }
     const name = keyName(t);
     if (name && handlers.key) handlers.key(name);
   }

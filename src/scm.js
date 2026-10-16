@@ -39,7 +39,7 @@ function shares(saved) {
 }
 
 const S = {
-  view: 'changes', repo: null, // repo: null until loaded, false outside a repository
+  view: process.env.EXPLORER_HISTORY ? 'history' : 'changes', repo: null, // repo: null until loaded, false outside a repository
   tree: settings.scmTree === true, collapsed: new Set(), cursor: 0, top: 0, selKey: null,
   field: new ui.Field(), editing: false, amend: false, generating: false,
   diff: null,   // { key, title, parsed, top, mode, focus }
@@ -55,6 +55,8 @@ const S = {
   resizing: false, // the separator is being dragged
   compareBase: null, // Refs: the branch the others are compared with, null for the current one
   allBranches: settings.scmGraphAll !== false, // History: every branch and remote branch, or the current one
+  // History: the commits of one file only (its absolute path), from the explorer's or the preview's File history.
+  histFile: process.env.EXPLORER_HISTORY || null,
   history: [], stashes: [], refs: null,
 };
 let hits = [];  // clickable areas of the last frame: { y, x0, x1, fn }
@@ -246,16 +248,28 @@ async function loadStatus() {
 }
 
 async function loadHistory() {
-  // Children before their parents, by date, as the graph needs.
+  // Children before their parents, by date, as the graph needs. For one file, --parents links each commit to the
+  // previous one that changed it, so that the graph joins them up.
   const revs = S.allBranches ? [...(S.repo.hasHead ? ['HEAD'] : []), '--branches', '--remotes'] : [];
   const res = await git(['log', '--no-show-signature', '--decorate=full', '--date-order', '-n', '500',
-    '--format=%H%x1f%h%x1f%s%x1f%an%x1f%at%x1f%D%x1f%P', ...revs, '--']);
+    '--format=%H%x1f%h%x1f%s%x1f%an%x1f%at%x1f%D%x1f%P', ...(S.histFile ? ['--parents'] : []), ...revs, '--', ...(S.histFile ? [histName()] : [])]);
   S.history = res.code !== 0 ? [] : res.out.split('\n').filter(Boolean).map(l => {
     const [hash, short, subject, author, time, refs, parents] = l.split('\x1f');
     return { hash, short, subject, author, date: ago(+time), refs: refList(refs), head: /(^|, )HEAD($|,| ->)/.test(refs),
       parents: (parents || '').split(' ').filter(Boolean) };
   });
   graph.layout(S.history).forEach((g, i) => Object.assign(S.history[i], { graph: g.cells, lane: g.color, node: node(g) }));
+  S.histLoaded = true;
+}
+
+// The file whose history is shown, relative to the repository (git runs there), through symbolic links (/home and
+// /var/home).
+const histName = () => path.relative(realPath(S.repo.top), realPath(S.histFile)).split(path.sep).join('/');
+// Back to the history of every file.
+function allFiles() {
+  S.histFile = null; S.histLoaded = false; S.cursor = 0; S.top = 0; S.selKey = null; S.diff = null;
+  flash('History of every file');
+  schedule();
 }
 
 // Short age of a commit: "5 min", "3 h", "2 d", "4 mo", "1 y".
@@ -372,11 +386,13 @@ async function refresh() {
 // The file or folder selected in the explorer, selected here once the changes are loaded: the file, else the first
 // changed file of the folder.
 reveal.file = process.env.EXPLORER_FILE || null;
+// A path with its symbolic links resolved, as far as it exists.
+function realPath(p) {
+  try { return fs.realpathSync(p); } catch { const up = path.dirname(p); return up === p ? p : path.join(realPath(up), path.basename(p)); }
+}
+
 function reveal(abs) {
-  const real = p => {
-    try { return fs.realpathSync(p); } catch { const up = path.dirname(p); return up === p ? p : path.join(real(up), path.basename(p)); }
-  };
-  const rel = path.relative(real(S.repo.top), real(abs)).split(path.sep).join('/');
+  const rel = path.relative(realPath(S.repo.top), realPath(abs)).split(path.sep).join('/');
   const r = S.repo, inside = p => !rel || p === rel || p.startsWith(rel + '/');
   const it = rel.startsWith('..') ? null : [...r.conflicts, ...r.staged, ...r.changes].find(i => inside(i.path));
   if (!it) { draw(); return flash(`No changes in ${base(rel) || 'the repository'}`); }
@@ -468,7 +484,7 @@ function viewRows() {
     const authorW = Math.min(20, Math.max(0, ...S.history.map(c => ui.textWidth(c.author))));
     const graphW = Math.min(MAX_GRAPH, Math.max(1, ...S.history.map(c => c.graph.length)));
     return S.history.length ? S.history.map(c => ({ type: 'commit', key: c.hash, commit: c, authorW, graphW }))
-      : [{ type: 'note', key: 'none', text: S.repo.hasHead ? 'Loading…' : 'No commits yet', depth: 1 }];
+      : [{ type: 'note', key: 'none', text: !S.repo.hasHead ? 'No commits yet' : S.histLoaded ? 'No commits for this file' : 'Loading…', depth: 1 }];
   }
   if (S.view === 'stashes') {
     return [{ type: 'action', key: 'new', text: '+ Stash all changes…  (n)', fn: newStash },
@@ -649,7 +665,8 @@ function tabs(W) {
     segs.push([' ', ''], [label, id === S.view ? BOLD + fg(C.text) + UNDERLINE : DIM], [count, DIM], ['  ', '']);
     x += w + 1;
   });
-  const right = S.view === 'changes' ? buttons([[S.tree ? '⊞ Tree' : '≡ List', toggleTree, DIM]], 1, W, 0) : [];
+  const right = S.view === 'changes' ? buttons([[S.tree ? '⊞ Tree' : '≡ List', toggleTree, DIM]], 1, W, 0)
+    : S.view === 'history' && S.histFile ? buttons([[`${ui.ellipsis(histName(), Math.max(8, W - x - 8))} ✕`, allFiles, fg(C.blue)]], 1, W, 0) : [];
   return split(segs, right, W);
 }
 
@@ -720,7 +737,10 @@ function hints() {
     return [['space', 'stage'], ['u', 'unstage'], ['d', 'discard'], ['c', commitKey], ...(ongoing() ? [['X', 'abort']] : []),
       ['⏎', wide() ? 'focus diff' : 'diff'], ['ctrl+g', '✧ Claude'], ['t', 'tree'], ...common];
   }
-  if (S.view === 'history') return [['⏎', wide() ? 'focus commit' : 'show commit'], ['a', S.allBranches ? 'current branch' : 'all branches'], ...common];
+  if (S.view === 'history') {
+    return [['⏎', wide() ? 'focus commit' : 'show commit'], ...(S.histFile ? [['x', 'every file']] : []),
+      ['a', S.allBranches ? 'current branch' : 'all branches'], ...common];
+  }
   if (S.view === 'stashes') return [['n', 'stash'], ['a', 'apply'], ['o', 'pop'], ['d', 'drop'], ['⏎', 'show'], ...common];
   return [['⏎', 'checkout'], ['=', 'compare'], ['B', 'compare base'], ['D', 'delete branch'], ...common];
 }
@@ -734,7 +754,7 @@ function helpGroups() {
       ['Commit', [['c', 'type the message'], ['⏎', 'commit, when typing'], ['ctrl+g', '✧ write with Claude'], ['alt+a', 'amend'],
         ['X', 'abort the operation']]]);
   }
-  if (S.view === 'history') g.push(['History', [['⏎', 'show the commit'], ['a', 'all branches or current']]]);
+  if (S.view === 'history') g.push(['History', [['⏎', 'show the commit'], ['a', 'all branches or current'], ['x', 'every file, after a file history']]]);
   if (S.view === 'stashes') g.push(['Stashes', [['n', 'stash all changes'], ['a', 'apply'], ['o', 'pop'], ['d', 'drop'], ['⏎', 'show']]]);
   if (S.view === 'refs') {
     g.push(['Refs', [['⏎', 'check out'], ['=', 'compare with the base'], ['B', 'set as compare base'], ['D', 'delete the branch']]],
@@ -1485,7 +1505,8 @@ function openRow(row, follow) {
   if (row.type === 'file') return openItemDiff(row.item);
   if (row.type === 'commit') {
     return showDiff(row.key, `${row.commit.short} ${row.commit.subject}`,
-      ['show', ...diffs.DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', '--format=fuller', row.commit.hash]);
+      ['show', ...diffs.DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', '--format=fuller', row.commit.hash,
+        ...(S.histFile ? ['--', histName()] : [])]);
   }
   if (row.type === 'stash') {
     return showDiff(row.key, `${row.stash.ref} ${row.stash.subject}`, ['stash', 'show', ...diffs.DIFF_OPTS, '--stat', '-p', '--include-untracked', row.stash.ref]);
@@ -1697,6 +1718,7 @@ function viewKey(k, row) {
     if (['y', 'Y', 'e', 'o'].includes(k)) return fileAction(k, row);
   } else if (S.view === 'history') {
     if (k === 'a') return toggleAllBranches();
+    if (k === 'x' && S.histFile) return allFiles();
   } else if (S.view === 'stashes') {
     if (k === 'n') return newStash();
     if (row && row.type === 'stash') {

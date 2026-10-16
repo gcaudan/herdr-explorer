@@ -91,6 +91,14 @@ async function editor(abs, pane) {
   return edit(abs, pane);
 }
 
+// A page of the plugin's documentation in the browser: https only, never a path or another scheme.
+async function web(url) {
+  if (!/^https:\/\/[\w.-]+\/[\w./#%-]*$/.test(url)) return 'Not opened: not a web page';
+  const ok = WIN ? await detached(which('explorer.exe'), [url], { windowsHide: false })
+    : await detached(MAC ? 'open' : 'xdg-open', [url]);
+  return ok ? 'Opening the documentation' : 'Cannot open a browser';
+}
+
 async function system(abs) {
   if (!canOpen(abs)) return 'Not opened: file type not allowed';
   const ok = WIN ? await detached(which('explorer.exe'), [abs], { windowsHide: false })
@@ -145,16 +153,39 @@ async function insert(abs, pane) {
   const [target, side] = await terminalOf(pane);
   if (!target) return 'No terminal next to the explorer';
   const p = await run(HERDR, ['pane', 'get', target]).then(result).then(r => r && r.pane);
-  let ref = abs;
-  if (p && p.cwd) {
-    const rel = path.relative(p.cwd, abs);
-    if (!rel.startsWith('..') && !path.isAbsolute(rel)) ref = rel || '.';
-  }
-  ref = ref.split(path.sep).join('/');
+  const ref = relativeTo(p && p.cwd, abs);
   if (/[\x00-\x1f\x7f-\x9f]/.test(ref)) return 'Not inserted: control character in name';
   const text = (p && p.agent && !/\s/.test(ref) ? `@${ref}` : quote(ref)) + ' ';
+  return await typeInto(target, side, pane, text) ? null : 'Cannot insert';
+}
+
+// A path relative to a folder when inside it, with '/' separators; else the absolute path.
+function relativeTo(dir, abs) {
+  let ref = abs;
+  if (dir) {
+    const rel = path.relative(dir, abs);
+    if (!rel.startsWith('..') && !path.isAbsolute(rel)) ref = rel || '.';
+  }
+  return ref.split(path.sep).join('/');
+}
+
+// Types one line of text into the terminal next to the explorer, without submitting it, and focuses that terminal.
+// text: the line, or a function of the terminal's folder giving it. It must hold no control character: a newline
+// would submit a prompt or run a command.
+async function type(text, pane) {
+  const [target, side] = await terminalOf(pane);
+  if (!target) return 'No terminal next to the explorer';
+  if (typeof text === 'function') {
+    const p = await run(HERDR, ['pane', 'get', target]).then(result).then(r => r && r.pane);
+    text = text(p && p.cwd);
+  }
+  if (/[\x00-\x1f\x7f-\x9f]/.test(text)) return 'Not typed: control character';
+  return await typeInto(target, side, pane, text) ? null : 'Cannot type into the terminal';
+}
+
+async function typeInto(target, side, pane, text) {
   // send-text prints nothing on success: its exit code tells.
-  if (await run(HERDR, ['pane', 'send-text', target, text]) === null) return 'Cannot insert';
+  if (await run(HERDR, ['pane', 'send-text', target, text]) === null) return false;
   // By direction from the terminal's other neighbour would be fragile: move the focus step by step until it lands.
   for (let from = pane, n = 0; n < 4; n++) {
     const res = await run(HERDR, ['pane', 'focus', '--direction', side, '--pane', from]).then(result);
@@ -162,7 +193,7 @@ async function insert(abs, pane) {
     if (!now || now === target) break;
     from = now;
   }
-  return null;
+  return true;
 }
 
 // The terminal next to the explorer and its side: on the right of an explorer docked on the left, on the left of
@@ -188,7 +219,7 @@ async function terminalOf(pane) {
 // explorer's tab rather than the active pane.
 async function diff(abs, root, pane) {
   const res = await run(HERDR, ['plugin', 'pane', 'open', '--plugin', PLUGIN, '--entrypoint', 'diff', '--placement', 'zoomed',
-    '--target-pane', pane, '--env', `EXPLORER_FILE=${abs}`, '--env', `EXPLORER_ROOT=${root}`]);
+    '--target-pane', pane, '--env', `EXPLORER_FILE=${abs}`, '--env', `EXPLORER_ROOT=${root}`, '--env', `EXPLORER_PANE=${pane}`]);
   return result(res) ? null : 'Cannot show changes';
 }
 
@@ -333,8 +364,9 @@ const requestFile = tab => process.env.HERDR_PLUGIN_STATE_DIR
   && path.join(process.env.HERDR_PLUGIN_STATE_DIR, `preview-${String(tab).replace(/[^\w-]/g, '_')}.json`);
 
 // Shows a file in the tab's preview pane, opened next to the terminal when there is none: explorer | terminal |
-// preview. line: 1-based line to scroll to. focus: give the focus to the preview.
-async function preview(abs, root, pane, line = 0, focus = false) {
+// preview. line: 1-based line to scroll to. focus: give the focus to the preview. open: false to only update a
+// preview already open, doing nothing without one.
+async function preview(abs, root, pane, line = 0, focus = false, open = true) {
   const tab = pane && await tabOf(pane);
   if (!tab) return 'Cannot preview';
   const request = { file: abs, root, line, t: Date.now() };
@@ -344,6 +376,7 @@ async function preview(abs, root, pane, line = 0, focus = false) {
     if (focus) await herdr('plugin', 'pane', 'focus', existing.pane_id);
     return null;
   }
+  if (!open) return null;
   const target = (await terminalOf(pane))[0] || pane;
   const res = await openPane('preview', 'split', target, {
     EXPLORER_FILE: abs, EXPLORER_ROOT: root, EXPLORER_LINE: line, EXPLORER_TAB: tab.me.tab_id,
@@ -365,10 +398,10 @@ async function search(root, pane, mode = 'files', query = '') {
   return await openPane('search', 'popup', pane, env) ? null : 'Cannot open the search';
 }
 
-// file: a file or folder to select among the changes.
-async function scm(root, pane, file = '') {
-  return await openPane('scm', 'zoomed', pane, { EXPLORER_ROOT: root, EXPLORER_PANE: pane, ...(file ? { EXPLORER_FILE: file } : {}) }) ? null
-    : 'Cannot open source control';
+// file: a file or folder to select among the changes; history: show the commits of that file instead.
+async function scm(root, pane, file = '', history = false) {
+  const env = { EXPLORER_ROOT: root, EXPLORER_PANE: pane, ...(file ? { [history ? 'EXPLORER_HISTORY' : 'EXPLORER_FILE']: file } : {}) };
+  return await openPane('scm', 'zoomed', pane, env) ? null : 'Cannot open source control';
 }
 
 // --- files
@@ -485,7 +518,7 @@ async function discard(abs, root) {
 }
 
 module.exports = {
-  open, editor, system, canOpen, canPreview, reveal, copy, insert, diff, preview, edit, search, scm, requestFile, tabOf, terminalOf,
+  open, editor, system, web, canOpen, canPreview, reveal, copy, insert, type, relativeTo, diff, preview, edit, search, scm, requestFile, tabOf, terminalOf,
   layoutOf, sideSplit, setWidth, widthKeeper,
   create, rename, duplicate, trash, remove, stage, unstage, discard, REVEAL: WIN ? 'Reveal in Explorer' : 'Open folder',
 };

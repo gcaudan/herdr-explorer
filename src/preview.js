@@ -1,18 +1,22 @@
 // File preview of a tab, opened next to the terminal by the explorer and the search: syntax-highlighted text,
-// rendered Markdown, images drawn with half blocks, a hex dump for other binary files. Reloads by itself when the
+// rendered Markdown, images (in pixels with the Kitty graphics protocol, else drawn with half blocks), a hex dump for
+// other binary files. Reloads by itself when the
 // file changes on disk, and shows the next file the explorer asks for (request file, see actions.preview).
 'use strict';
 // The pane's first process only starts the real one (launch.js).
 if (require('./launch').launch()) return;
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 const ui = require('./core/ui');
 const actions = require('./core/actions');
+const notes = require('./core/notes');
 const update = require('./core/update');
-const { run, HERDR, readSettings, writeSettings, writePaneState } = require('./core/exec');
+const { run, HERDR, readSettings, writeSettings, writePaneState, SETTINGS_FILE } = require('./core/exec');
 
 const PANE = process.env.HERDR_PANE_ID;
-const REQUEST = process.env.EXPLORER_TAB && actions.requestFile(process.env.EXPLORER_TAB);
+const TAB = process.env.EXPLORER_TAB;
+const REQUEST = TAB && actions.requestFile(TAB);
 const MAX_BYTES = 8 << 20;     // larger files: the start only
 const MAX_HIGHLIGHT = 1 << 20; // larger files: plain text
 const HEX_BYTES = 64 << 10;
@@ -38,6 +42,10 @@ const state = {
   matches: [], match: -1,
   select: null,     // { from, to, moved } positions { row, at } (display row, character) selected with the mouse
   flash: null, chips: [],
+  notes: [],        // the tab's review notes on this file (notes.js)
+  noteCount: 0,     // the tab's notes on every file
+  note: null,       // { field, kind, from, to } while a note is typed
+  sharp: null,      // p: images in pixels (true) or half blocks (false) in this pane; null: as the Images setting
 };
 const scrollbar = new ui.Scrollbar(top => { state.top = top; render(); });
 
@@ -66,11 +74,22 @@ function load(keepScroll) {
   } catch (e) { return setError(e.code === 'ENOENT' ? 'File deleted' : `Cannot read: ${e.code || e.message}`); }
 
   const top = state.top, left = state.left;
-  state.rows = null; state.buffer = null; state.matches = []; state.match = -1;
+  state.rows = null; state.buffer = null; state.matches = []; state.match = -1; state.converting = false; state.missing = null; pictures.clear();
   if (image && image.FORMATS.has(ext(file))) {
     state.kind = 'image'; state.buffer = buf; state.plain = []; state.source = [];
     const meta = image.info(buf);
     if (meta) state.info = `${meta.format} ${meta.width}×${meta.height} · ${state.info}`;
+    // A WebP: shown once dwebp has made a PNG of it.
+    if (meta && meta.format === 'WebP') {
+      state.converting = true;
+      image.convert(path.resolve(file), buf).then(png => {
+        if (state.file !== file || state.buffer !== buf) return;
+        state.converting = false;
+        if (png) state.buffer = png; else state.missing = 'install dwebp (libwebp) to see WebP images';
+        state.rows = null;
+        render();
+      });
+    }
   } else if (buf.subarray(0, 8000).includes(0)) {
     state.kind = 'binary';
     state.plain = hexdump(buf.subarray(0, HEX_BYTES));
@@ -125,16 +144,30 @@ function rows() {
   // A selection holds positions in the old rows.
   state.select = null;
   let list = [];
-  if (state.kind === 'image') {
+  if (state.kind === 'image' && (state.converting || (kitty.probing && state.sharp === null && settings.images === 'auto'))) list = [];
+  else if (state.kind === 'image' && sharp()) {
+    // In pixels: blank rows that the image covers, the first holding what to place (see placeImage).
+    const [cw, ch] = kitty.cell;
+    let px;
+    try { px = image.pixels(state.buffer, W * cw, (H - 2) * ch); } catch { px = { info: 'No preview' }; }
+    if (px.data) {
+      const cols = Math.min(W, Math.ceil(px.width / cw)), count = Math.min(H - 2, Math.ceil(px.height / ch));
+      const picture = { px, cols, rows: count, pad: Math.max(0, Math.floor((W - cols) / 2)) };
+      list = Array.from({ length: count }, (_, k) => ({ segs: [], src: -1, picture: k ? null : picture }));
+    } else list = [{ empty: noPreview(px.info), pairs: [['o', 'open'], ['q', 'close']], src: -1 }];
+  } else if (state.kind === 'image') {
+    // With half blocks, and a line under the image on how to see it sharp.
+    const hint = imageHint(W);
     let res;
-    try { res = image.render(state.buffer, W, H - 2); } catch { res = null; }
+    try { res = image.render(state.buffer, W, H - 2 - (hint ? 2 : 0)); } catch { res = null; }
     if (res && res.lines) {
       const pad = Math.max(0, Math.floor((W - res.width) / 2));
       list = res.lines.map(segs => ({ segs: [[' '.repeat(pad), ''], ...segs], src: -1 }));
-    } else list = [{ empty: (res && res.info) || 'No preview', pairs: [['o', 'open'], ['q', 'close']], src: -1 }];
+      if (hint) list.push({ segs: [], src: -1 }, hint);
+    } else list = [{ empty: noPreview(res && res.info), pairs: [['o', 'open'], ['q', 'close']], src: -1 }];
   } else if (markdownView()) {
     let res;
-    try { res = markdown.render(state.text, Math.max(1, Math.min(width - 1, 120)), { highlight }); } catch { res = null; }
+    try { res = markdown.render(state.text, Math.max(1, Math.min(width - 1, 120)), { highlight, image: picture }); } catch { res = null; }
     if (res) list = res.lines.map(segs => ({ segs: [[' ', ''], ...segs], src: -1, pad: 1 }));
     else list = state.source.map((segs, i) => ({ segs, src: i, first: true }));
   } else if (state.kind === 'error') {
@@ -146,11 +179,152 @@ function rows() {
       ui.split(segs, width).forEach((part, k) => { list.push({ segs: part, src: i, first: !k, off }); off += ui.segText(part).length; });
     });
   } else list = state.source.map((segs, i) => ({ segs, src: i, first: true }));
+  list = withNotes(list, width);
   list.width = width; list.height = H;
   return (state.rows = list);
 }
 
+// The review notes shown in the text: each one under the last line it covers, those on the whole file (and every
+// one where the rows are not the file's lines: rendered Markdown) at the top.
+const NOTE = fg(C.yellow);
+function withNotes(list, width) {
+  if (!state.notes.length || state.kind === 'image' || state.kind === 'error' || (list.length === 1 && list[0].empty)) return list;
+  const lines = !markdownView() && state.kind !== 'binary';
+  const rowsOf = n => ui.split([[`✎ ${lines || !n.from ? '' : `${notes.where(n, path.dirname(n.file)).replace(/^.*:/, 'L')} `}`
+    + `${n.kind ? `${n.kind}: ` : ''}${ui.cleanLine(n.text)}`, NOTE]], Math.max(1, width - 2))
+    .map(segs => ({ segs: [['  ', ''], ...segs], src: -1, note: true }));
+  const top = state.notes.filter(n => !lines || !n.from || n.to > state.plain.length).flatMap(rowsOf);
+  if (!lines) return [...top, ...list];
+  const out = [...top];
+  list.forEach((r, i) => {
+    out.push(r);
+    const next = list[i + 1];
+    if (r.src >= 0 && !(next && next.src === r.src)) out.push(...state.notes.filter(n => n.from && n.to === r.src + 1).flatMap(rowsOf));
+  });
+  return out;
+}
+const noted = src => state.notes.some(n => n.from && src + 1 >= n.from && src + 1 <= n.to);
+
 const rowOf = src => Math.max(0, rows().findIndex(r => r.src >= src));
+
+// Why an image is not shown, with how to see it when a tool is missing.
+const noPreview = why => (state.missing ? `${why || 'No preview'}: ${state.missing}` : why || 'No preview');
+
+// --- images in rendered Markdown
+
+// The images a Markdown file shows, drawn with half blocks under their paragraph: local files only (never a URL),
+// relative to the Markdown file, at most 60 columns and 20 rows. Decoded once per file and width (pictures).
+const pictures = new Map();
+function picture(url, width) {
+  if (!image || /^[a-z][\w+.-]*:/i.test(url) || url.startsWith('//')) return null;
+  let rel = url.replace(/[?#].*$/, '');
+  try { rel = decodeURIComponent(rel); } catch { }
+  if (!rel || !image.FORMATS.has(ext(rel)) || ext(rel) === 'svg') return null;
+  const abs = path.resolve(path.dirname(state.file), rel), key = `${abs}\0${width}`;
+  if (pictures.has(key)) return pictures.get(key);
+  let lines = null;
+  try {
+    const stat = fs.statSync(abs);
+    if (stat.isFile() && stat.size <= image.MAX_BYTES) {
+      const res = image.render(fs.readFileSync(abs), Math.min(60, width - 2), 20);
+      if (res.lines) lines = res.lines.map(segs => [[' ', ''], ...segs]);
+    }
+  } catch { }
+  pictures.set(key, lines);
+  return lines;
+}
+
+// --- Kitty graphics
+//
+// The Images setting chooses how an image shows: 'blocks' with half blocks, 'auto' in pixels when the terminal
+// answers the protocol's query (herdr does, in a terminal that supports it), 'pixels' in pixels without waiting for
+// the answer. In pixels, an image is sent once and placed over blank rows. supported: the terminal answered; probing:
+// the answer is awaited, at most 500 ms, before an image is drawn in 'auto'. cell: the size of a cell in pixels,
+// [width, height].
+const kitty = { supported: false, probing: true, cell: [8, 16], id: 0x4846, sent: null, shown: null };
+const sharp = () => (state.sharp ?? (settings.images === 'pixels' || (settings.images === 'auto' && kitty.supported)));
+
+// The line under an image drawn with half blocks: p and the setting when the terminal has the protocol, else where
+// the documentation tells which terminals have it. Nothing until the answer, nor when p chose half blocks. Its parts
+// with an action are clickable (imageClick).
+const DOCS = 'https://github.com/gcaudan/herdr-explorer/blob/main/docs/usage.md#sharp-images';
+function imageHint(W) {
+  if (kitty.probing || state.sharp === false) return null;
+  const dim = fg(C.dim), link = fg(C.blue) + '\x1b[4m';
+  const choices = kitty.supported
+    ? [[['▦ Pixelated  ', dim], ['p', fg(C.text) + '\x1b[1m', 'p'], [' sharp', dim, 'p'], ['  ·  ', dim], ['sharp by default', link, 'default']],
+      [['p', fg(C.text) + '\x1b[1m', 'p'], [' sharp', dim, 'p']]]
+    : [[['▦ Pixelated: this terminal shows no image in pixels  ', dim], ['Sharp images ↗', link, 'docs']],
+      [['▦ Pixelated  ', dim], ['Sharp images ↗', link, 'docs']], [['Sharp images ↗', link, 'docs']]];
+  const parts = choices.find(c => ui.segWidth(c) <= W - 2) || choices[choices.length - 1];
+  const pad = Math.max(0, Math.floor((W - ui.segWidth(parts)) / 2));
+  // The screen columns of each part, from 1.
+  let x = pad + 1;
+  const chips = parts.map(([text, , id]) => { const from = x; x += ui.textWidth(text); return { id, from, to: x - 1 }; }).filter(c => c.id);
+  return { segs: [[' '.repeat(pad), ''], ...parts.map(([text, style]) => [text, style])], src: -1, hint: chips };
+}
+function imageClick(id) {
+  if (id === 'p') return key('p');
+  if (id === 'docs') return act(actions.web(DOCS));
+  if (id === 'default') {
+    settings.images = 'auto';
+    writeSettings({ ...readSettings(), images: 'auto' });
+    state.rows = null;
+    return flash('Images: sharp when the terminal can');
+  }
+}
+// p: this pane's images in pixels or half blocks, whatever the setting.
+function toggleSharp() {
+  if (state.kind !== 'image') return;
+  state.sharp = !sharp();
+  state.rows = null;
+  if (state.sharp && !kitty.supported && !kitty.probing) flash('The terminal did not answer the Kitty graphics query: the image may not show');
+  else render();
+}
+// restarting: the terminal is being handed to the next process (update), which sends its own image.
+let restarting = false;
+const graphics = text => { if (!restarting) process.stdout.write(text); };
+
+function reply(text) {
+  if (/^\x1b_Gi=31;OK/.test(text)) { kitty.supported = true; kitty.probing = false; state.rows = null; render(); }
+  const m = /^\x1b\[6;(\d+);(\d+)t$/.exec(text);
+  if (m && +m[1] && +m[2]) { kitty.cell = [+m[2], +m[1]]; state.rows = null; render(); }
+}
+function settle() {
+  if (!kitty.probing) return;
+  kitty.probing = false;
+  state.rows = null;
+  render();
+}
+
+// After each frame: the image of the rows placed, sent first when new; removed when none shows (another file, the
+// key help over the pane).
+function placeImage() {
+  const first = state.kind === 'image' && sharp() && !state.help && state.rows && state.rows[0];
+  const pic = first && first.picture;
+  if (!pic) {
+    if (kitty.shown) graphics(`\x1b_Ga=d,d=${state.kind === 'image' ? 'i' : 'I'},i=${kitty.id},q=2\x1b\\`);
+    kitty.shown = null;
+    if (state.kind !== 'image') kitty.sent = null;
+    return;
+  }
+  if (kitty.sent !== pic) {
+    const { px } = pic;
+    const data = zlib.deflateSync(Buffer.from(px.data.buffer, px.data.byteOffset, px.data.length)).toString('base64');
+    let out = `\x1b_Ga=d,d=I,i=${kitty.id},q=2\x1b\\`;
+    for (let i = 0; i < data.length; i += 4096) {
+      const more = i + 4096 < data.length ? 1 : 0, chunk = data.slice(i, i + 4096);
+      out += i ? `\x1b_Gm=${more};${chunk}\x1b\\` : `\x1b_Ga=t,f=32,o=z,s=${px.width},v=${px.height},i=${kitty.id},q=2,m=${more};${chunk}\x1b\\`;
+    }
+    graphics(out);
+    kitty.sent = pic; kitty.shown = null;
+  }
+  const at = `${2 - state.top};${pic.pad + 1}`;
+  if (kitty.shown === at) return;
+  // The cursor saved and restored around the placement, which C=1 keeps from moving anyway.
+  graphics(`\x1b7\x1b[${at}H\x1b_Ga=p,i=${kitty.id},p=1,c=${pic.cols},r=${pic.rows},C=1,q=2\x1b\\\x1b8`);
+  kitty.shown = at;
+}
 
 // --- rendering
 
@@ -171,7 +345,8 @@ function render() {
   if (none) lines.push(...ui.empty(W, bodyH, none.empty, none.pairs));
   for (let i = state.top; !none && i < Math.min(list.length, state.top + bodyH); i++) {
     const r = list[i];
-    const num = g ? [[(r.first ? String(r.src + 1) : '').padStart(g - 1) + ' ', fg(r.src + 1 === state.line ? C.text : C.dim)]] : [];
+    const num = g ? [[(r.first ? String(r.src + 1) : '').padStart(g - 1) + ' ',
+      r.src >= 0 && noted(r.src) ? NOTE + '\x1b[1m' : fg(r.src + 1 === state.line ? C.text : C.dim)]] : [];
     // The find's matches: every one marked, the current one brighter (in rendered Markdown, matches are by row).
     const at = md ? i : r.src, off = r.off || 0;
     let segs = r.segs;
@@ -190,6 +365,7 @@ function render() {
   lines.push(footer(W));
   if (state.help) ui.help(lines, W, path.basename(state.file || ''), HELP, state.help);
   paint(lines);
+  placeImage();
 }
 
 // The key help (? or f1), over the whole pane (ui.help); state.help: { top, find } while it shows.
@@ -197,8 +373,11 @@ const HELP = [
   ['Scroll', [['↑↓ j k', 'line'], ['pgup pgdn', 'page'], ['space', 'page down'], ['ctrl+u/d', 'half page'], ['g G', 'top, bottom'],
     ['← → h l', 'left, right']]],
   ['Find', [['/', 'find in the file'], ['n N', 'next, previous match'], ['esc', 'stop finding']]],
-  ['View', [['w', 'wrap'], ['L', 'line numbers'], ['m', 'Markdown source'], ['z', 'zoom the pane'], ['< >', 'narrower, wider'], ['shift+← →', 'move the border'], ['r', 'reload']]],
-  ['File', [['e', 'edit in the terminal'], ['o', 'open in the editor (media: in its app)'], ['O', 'open with the system'], ['y', 'copy path'], ['Y', 'copy relative path']]],
+  ['View', [['w', 'wrap'], ['L', 'line numbers'], ['m', 'Markdown source'], ['p', 'image sharp or pixelated'], ['z', 'zoom the pane'], ['< >', 'narrower, wider'], ['shift+← →', 'move the border'], ['r', 'reload']]],
+  ['File', [['e', 'edit in the terminal'], ['o', 'open in the editor (media: in its app)'], ['O', 'open with the system'], ['y', 'copy path'],
+    ['Y', 'copy relative path, with the selected lines'], ['H', 'history of the file']]],
+  ['Review', [['a', 'note on the selected lines (or the file)'], ['tab', 'kind of note, while typing'], ['A', 'send the notes to the agent'],
+    ['u', 'remove the last note']]],
   ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
 ];
 
@@ -242,11 +421,18 @@ function footer(W) {
     const count = state.find.field.value ? ` ${state.matches.length ? state.match + 1 : 0}/${state.matches.length}` : '';
     return ui.line([[` ${ui.SEARCH} `, fg(C.dim)], ...state.find.field.segments(W - 4 - count.length), [count, fg(C.dim)]], W, C.header);
   }
+  if (state.note) {
+    const n = state.note, lead = ` ✎ ${n.from ? `L${n.from}${n.to > n.from ? `-${n.to}` : ''}` : 'file'} `;
+    const kind = n.kind ? `[${n.kind}] ` : '[tab: kind] ';
+    return ui.line([[lead, NOTE], [kind, fg(C.dim)], ...n.field.segments(Math.max(1, W - ui.textWidth(lead + kind)))], W, C.header);
+  }
   if (state.flash) return ui.line(ui.message(state.flash), W, C.header);
   const list = rows(), bodyH = ui.size().H - 2;
   const pos = list.length > bodyH ? ` ${Math.round(100 * Math.min(1, (state.top + bodyH) / list.length))}%` : '';
-  const keys = ui.keys(state.kind === 'image' ? [['o', 'open'], ['y', 'copy path'], ['q', 'close'], ['?', 'keys']]
-    : [['/', 'find'], ['e', 'edit'], ['o', 'editor'], ['w', 'wrap'], ['z', 'zoom'], ['q', 'close'], ['?', 'keys']], W - pos.length - 1);
+  const all = state.noteCount;
+  const send = all ? [['A', `send ${all} note${all > 1 ? 's' : ''}`]] : [];
+  const keys = ui.keys(state.kind === 'image' ? [...send, ['p', sharp() ? 'pixelated' : 'sharp'], ['o', 'open'], ['y', 'copy path'], ['q', 'close'], ['?', 'keys']]
+    : [...send, ['/', 'find'], ['a', 'note'], ['e', 'edit'], ['o', 'editor'], ['w', 'wrap'], ['z', 'zoom'], ['q', 'close'], ['?', 'keys']], W - pos.length - 1);
   state.hints = keys;
   return ui.line([...keys, [pos.padStart(Math.max(0, W - ui.segWidth(keys))), fg(C.dim)]], W, C.header);
 }
@@ -433,6 +619,7 @@ function scroll(n) {
 }
 
 function key(k) {
+  if (state.note) return noteKey(k);
   if (state.find && state.find.active) {
     if (k === 'escape') { state.find = null; state.matches = []; return render(); }
     if (k === 'enter' || k === 'down') { state.find.active = k !== 'enter' || !state.matches.length; return next(1); }
@@ -464,13 +651,18 @@ function key(k) {
     case 'N': return next(-1);
     case 'w': return toggle('wrap');
     case 'L': return toggle('lineNumbers');
+    case 'p': return toggleSharp();
     case 'm': if (state.kind === 'markdown') { state.raw = !state.raw; state.rows = null; state.top = 0; render(); } return;
     case 'r': return load(true);
     case 'e': return act(actions.edit(state.file, PANE));
     case 'o': return act(actions.open(state.file, PANE));
     case 'O': return act(actions.system(state.file));
     case 'y': return act(actions.copy(state.file));
-    case 'Y': return act(actions.copy(state.root ? path.relative(state.root, state.file) : state.file));
+    case 'Y': return copyReference();
+    case 'H': return act(actions.scm(state.root || path.dirname(state.file), PANE, state.file, true));
+    case 'a': return startNote();
+    case 'A': return act(notes.send(TAB, PANE));
+    case 'u': return act(Promise.resolve(notes.undo(TAB)));
     case 'z': if (PANE) herdr('pane', 'zoom', PANE, '--toggle'); return;
     case '<': case '>': return widen(k === '<' ? -4 : 4);
     // The inner border pushed: on the left of a preview that is the right part of its split, as it is most often.
@@ -479,6 +671,71 @@ function key(k) {
     case 'ctrl+f': return act(actions.search(state.root || path.dirname(state.file), PANE, 'content'));
   }
 }
+
+// --- review notes and references
+
+// The file's lines under the selection, else the highlighted line: [from, to], 1-based; null when none (rendered
+// Markdown, no selection).
+function selectedLines() {
+  if (state.select && state.select.moved) {
+    const { from, to } = state.select;
+    const [a, b] = before(from, to) ? [from, to] : [to, from];
+    const src = rows().slice(a.row, b.row + 1).map(r => r.src).filter(i => i >= 0);
+    // A selection ending at the very start of a row leaves that line out, as an editor does.
+    if (src.length > 1 && b.at === 0 && rows()[b.row].first && rows()[b.row].src === src[src.length - 1]) src.pop();
+    return src.length ? [Math.min(...src) + 1, Math.max(...src) + 1] : null;
+  }
+  return state.line ? [state.line, state.line] : null;
+}
+
+// Y: the path relative to the root, with the selected lines (src/app.js:12-14), to paste into a prompt.
+function copyReference() {
+  const rel = (state.root ? path.relative(state.root, state.file) : state.file).split(path.sep).join('/');
+  const at = selectedLines();
+  act(actions.copy(at ? `${rel}:${at[0]}${at[1] > at[0] ? `-${at[1]}` : ''}` : rel, at ? 'Reference copied' : 'Path copied'));
+}
+
+function startNote() {
+  if (!TAB) return flash('Notes need the explorer');
+  if (!state.file || state.kind === 'error') return;
+  const at = selectedLines();
+  state.note = { field: new ui.Field(), kind: '', from: at ? at[0] : 0, to: at ? at[1] : 0 };
+  render();
+}
+
+// While a note is typed: Enter saves it, Esc cancels, Tab changes its kind; other keys edit it.
+function noteKey(k) {
+  const n = state.note;
+  if (k === 'escape' || k === 'ctrl+c') { state.note = null; return render(); }
+  if (k === 'tab' || k === 'shift+tab') {
+    const i = notes.KINDS.indexOf(n.kind);
+    n.kind = notes.KINDS[(i + (k === 'tab' ? 1 : notes.KINDS.length - 1)) % notes.KINDS.length];
+    return render();
+  }
+  if (k === 'enter') {
+    state.note = null;
+    if (!n.field.value.trim()) return render();
+    state.select = null;
+    const msg = notes.add(TAB, { file: state.file, from: n.from, to: n.to, kind: n.kind, text: n.field.value });
+    loadNotes();
+    return flash(msg);
+  }
+  if (n.field.key(k)) render();
+}
+
+// The tab's notes on the shown file, read again when they change (taken or sent in another pane).
+function readNotes() {
+  const all = notes.read(TAB), file = state.file && notes.real(state.file);
+  state.noteCount = all.length;
+  state.notes = all.filter(n => n.file === file);
+}
+function loadNotes() {
+  const was = JSON.stringify(state.notes);
+  readNotes();
+  if (JSON.stringify(state.notes) !== was) state.rows = null;
+  render();
+}
+if (TAB) notes.watch(TAB, loadNotes);
 
 let lastClick = { time: 0, x: 0, y: 0, count: 0 };
 
@@ -506,7 +763,12 @@ function mouse(m) {
     return;
   }
   if (m.button !== 0 && !(m.drag && state.select)) return;
-  if (state.kind === 'image' || !rows().length) return;
+  if (state.kind === 'image') {
+    const r = m.press && !m.drag && rows()[state.top + m.y - 2], chip = r && r.hint && r.hint.find(c => m.x >= c.from && m.x <= c.to);
+    if (chip) imageClick(chip.id);
+    return;
+  }
+  if (!rows().length) return;
   // Selection of characters with the left button, copied when released; a double click selects a word, a triple
   // click the line. Above the body: from the start of the top row; below: to the end of the bottom row.
   // right: the last column of text, before the scrollbar when it shows.
@@ -547,9 +809,11 @@ function mouse(m) {
 // --- startup
 
 const paint = ui.screen({
-  key, mouse,
+  key, mouse, reply,
   focus: f => { state.focused = f; if (!f) endSelection(); },
-  paste: text => { if (state.find && state.find.active) { state.find.field.insert(text); search(); } },
+  paste: text => {
+    if (state.note) { state.note.field.insert(text); render(); } else if (state.find && state.find.active) { state.find.field.insert(text); search(); }
+  },
   resize: () => { state.rows = null; render(); keeper.check(); },
 }, { motion: true });
 
@@ -564,6 +828,21 @@ function widen(cols) {
   keeper.check(true);
 }
 keeper.check();
+
+// The Images setting changed in the explorer's settings, or by a click in another preview: the image drawn again
+// as it says, p's choice forgotten.
+if (SETTINGS_FILE) fs.watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
+  const images = readSettings().images;
+  if (images === settings.images) return;
+  settings.images = images;
+  state.sharp = null; state.rows = null;
+  render();
+});
+
+// The Kitty graphics query, and the size of a cell in pixels.
+graphics('\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b[16t');
+setTimeout(settle, 500);
+process.on('exit', () => { if (kitty.sent) process.stdout.write(`\x1b_Ga=d,d=I,i=${kitty.id},q=2\x1b\\`); });
 
 // The file shown, reopened by the startup hook after a herdr restart.
 const saveFile = () => writePaneState(PANE, { file: state.file, root: state.root, line: state.line });
@@ -588,7 +867,7 @@ function take(stat) {
   const same = req.file === state.file;
   state.file = req.file; state.root = req.root || state.root; state.line = +req.line || 0;
   state.raw = same && state.raw;
-  if (!same) { state.find = null; watch(); }
+  if (!same) { state.find = null; state.note = null; watch(); readNotes(); }
   load(same && !state.line);
   saveFile();
   if (state.line) { state.top = Math.max(0, rowOf(state.line - 1) - Math.floor((ui.size().H - 2) / 3)); render(); }
@@ -612,6 +891,7 @@ function watch() {
 }
 
 if (!state.file) { state.file = ''; setError('No file'); } else {
+  readNotes();
   watch();
   load(false);
   saveFile();
@@ -620,10 +900,13 @@ if (!state.file) { state.file = ''; setError('No file'); } else {
 
 // Updated plugin: the preview starts again on the new code, on the same file and line, once no search is typed nor
 // selection dragged. This process stops watching, the new one taking over the pane.
-update.watch(() => !(state.find && state.find.active) && !(state.select && !state.select.done), () => {
+update.watch(() => !(state.find && state.find.active) && !state.note && !(state.select && !state.select.done), () => {
   saveFile();
   clearTimeout(reload);
+  if (kitty.sent) graphics(`\x1b_Ga=d,d=I,i=${kitty.id},q=2\x1b\\`);
+  restarting = true; kitty.sent = null;
   if (watcher) watcher.close();
   if (REQUEST) fs.unwatchFile(REQUEST);
+  if (SETTINGS_FILE) fs.unwatchFile(SETTINGS_FILE);
   ui.restart({ EXPLORER_FILE: state.file, EXPLORER_ROOT: state.root, EXPLORER_LINE: String(state.line), EXPLORER_SEEN: String(seen) });
 });

@@ -135,6 +135,8 @@ const DEFAULTS = {
   icons: '',          // explorer icon theme: { id, label, file } of a VS Code one; empty: Nerd Font icons
   wrap: false,        // preview: wrap long lines
   lineNumbers: true,  // preview: line number gutter
+  images: 'auto',     // preview images: 'auto' (pixels when the terminal has the Kitty graphics protocol, else half
+                      // blocks), 'blocks' (half blocks), 'pixels' (pixels without waiting for the terminal's answer)
   diffLayout: '',     // diffs 'inline' or 'split' (side by side); empty: side by side when the pane is wide enough
   updateCheck: true,  // check GitHub once a day for a newer release
   scmTree: false,     // source control: the changes as a folder tree rather than a list

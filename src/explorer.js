@@ -39,7 +39,7 @@ const DEFAULT_KEYS = {
   menu: ['m', 'menu', 'shift+f10'], refresh: ['r'], filter: ['/'], goToFile: ['ctrl+p'], searchInFiles: ['ctrl+f'],
   sourceControl: ['s'], settings: [','], toggleHidden: ['.'], toggleIgnored: ['i'], newFile: ['n'], newFolder: ['N'],
   rename: ['R', 'f2'], delete: ['delete'], edit: ['e'], openInEditor: ['o'], openInApp: ['O'], preview: ['p'], copyPath: ['y'],
-  copyRelativePath: ['Y'], parentRoot: ['backspace'], narrower: ['>', INNER === 'right' ? 'shift+left' : 'shift+right'],
+  copyRelativePath: ['Y'], parentRoot: ['backspace'], changedOnly: ['c'], nextChange: [']'], previousChange: ['['], fileHistory: ['H'], narrower: ['>', INNER === 'right' ? 'shift+left' : 'shift+right'],
   wider: ['<', INNER === 'right' ? 'shift+right' : 'shift+left'], halfPageUp: ['ctrl+u'], halfPageDown: ['ctrl+d'], help: ['?', 'f1'],
 };
 // The key help (help action), by group, with the keys bound now: [group, [[action, description]]].
@@ -47,6 +47,8 @@ const HELP = [
   ['Move', [['up', 'up'], ['down', 'down'], ['pageUp', 'page up'], ['pageDown', 'page down'], ['halfPageUp', 'half page up'],
     ['halfPageDown', 'half page down'], ['top', 'first'], ['bottom', 'last'], ['expand', 'unfold'], ['collapse', 'fold, parent'],
     ['filter', 'filter']]],
+  ['Review', [['changedOnly', 'changed files only'], ['nextChange', 'next changed file'], ['previousChange', 'previous changed file'],
+    ['fileHistory', 'history of the file']]],
   ['Open', [['open', 'open, fold'], ['preview', 'preview'], ['edit', 'edit (terminal)'], ['openInEditor', 'open in editor'], ['openInApp', 'open in app'],
     ['copyPath', 'copy path'], ['copyRelativePath', 'copy relative path']]],
   ['Files', [['newFile', 'new file'], ['newFolder', 'new folder'], ['rename', 'rename'], ['delete', 'to the trash'],
@@ -73,7 +75,7 @@ if (SETTINGS_FILE) fs.watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
   // A file read while being written is skipped, rather than taken for the default settings.
   let saved, chosen;
   try { saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')); chosen = saved.icons || ''; } catch { return; }
-  for (const name of ['updateCheck', 'autoOpen', 'wrap', 'lineNumbers', 'diffLayout']) {
+  for (const name of ['updateCheck', 'autoOpen', 'wrap', 'lineNumbers', 'images', 'diffLayout']) {
     if (saved[name] === undefined || saved[name] === settings[name]) continue;
     settings[name] = saved[name];
     render();
@@ -102,6 +104,7 @@ const state = {
   flash: null,     // short message shown in the header
   lastClick: null, // to detect double-clicks
   filter: null,    // { field, active }: rows limited to the names containing the text
+  changed: false,  // rows limited to the changed files and their folders, all unfolded
   prompt: null,    // { label, field, done(value), inline }: a name typed in the tree (inline: { rel } or
                    // { dir, folder }) or at the bottom
   confirm: null,   // { title, name, where, note, action, tone, yes(), focus }: y, or Enter on the action's button
@@ -139,6 +142,9 @@ function readDir(rel) {
 const visible = rel => readDir(rel).filter(e => (settings.hidden || !e.name.startsWith('.'))
   && (settings.ignored || decoration(e) !== '!'));
 
+// A changed entry: a file with a git change, or a folder holding one.
+const isChanged = e => { const d = decoration(e); return !!d && d !== '!'; };
+
 function buildRows() {
   const rows = [];
   const query = state.filter && state.filter.field.value.toLowerCase();
@@ -149,6 +155,7 @@ function buildRows() {
       const found = [];
       for (const e of visible(rel)) {
         if (--budget < 0) break;
+        if (state.changed && !isChanged(e)) continue;
         const at = e.name.toLowerCase().indexOf(query);
         const kids = e.dir && !git.ignored.has(e.rel) ? walk(e.rel, depth + 1) : [];
         if (at >= 0 || kids.length) found.push({ ...e, depth, hit: at >= 0 ? [at, at + query.length] : null, open: kids.length > 0 }, ...kids);
@@ -156,6 +163,18 @@ function buildRows() {
       return found;
     };
     rows.push(...walk('', 0));
+  } else if (state.changed) {
+    // Only the changed entries, every folder unfolded, within the filter's budget.
+    let budget = FILTER_BUDGET;
+    const walk = (rel, depth) => {
+      for (const e of visible(rel)) {
+        if (--budget < 0) return;
+        if (!isChanged(e)) continue;
+        rows.push({ ...e, depth, open: e.dir });
+        if (e.dir) walk(e.rel, depth + 1);
+      }
+    };
+    walk('', 0);
   } else {
     const walk = (rel, depth) => {
       for (const e of visible(rel)) {
@@ -176,7 +195,7 @@ function select(i) {
 }
 
 function toggle(row, open) {
-  if (!row || !row.dir || state.filter) return;
+  if (!row || !row.dir || state.filter || state.changed) return;
   if (open === undefined) open = !state.expanded.has(row.rel);
   if (open) state.expanded.add(row.rel); else state.expanded.delete(row.rel);
   buildRows();
@@ -332,12 +351,16 @@ function watchRoot() {
   if (rootWatcher) rootWatcher.close();
   rootWatcher = null;
   if (stopped) return;
-  const real = p => { try { return fs.realpathSync(p); } catch { return p; } }; // /home → /var/home on some systems
-  const up = path.relative(real(ROOT), real(require('os').homedir()));
-  const big = ROOT === path.parse(ROOT).root || !up.startsWith('..') && !path.isAbsolute(up);
-  for (const recursive of big ? [false] : [true, false]) {
+  for (const recursive of big(ROOT) ? [false] : [true, false]) {
     try { rootWatcher = watchTree(recursive); return; } catch { }
   }
+}
+
+// $HOME, one of its parents or the filesystem root.
+function big(dir) {
+  const real = p => { try { return fs.realpathSync(p); } catch { return p; } }; // /home → /var/home on some systems
+  const up = path.relative(real(dir), real(require('os').homedir()));
+  return dir === path.parse(dir).root || !up.startsWith('..') && !path.isAbsolute(up);
 }
 
 function watchTree(recursive) {
@@ -423,11 +446,12 @@ async function follow() {
   if (stopped || !cwd || cwd === lastCwd || state.filter || state.menu || state.settings || state.help || state.prompt || state.confirm) return;
   lastCwd = cwd;
   const inside = (dir, root) => { const r = path.relative(root, dir); return !r.startsWith('..') && !path.isAbsolute(r); };
-  // Outside the root: back to the space folder when it holds the terminal folder. Never above it, where the
-  // recursive watch could cover $HOME or the whole disk.
+  // Outside the root: back to the space folder when it holds the terminal folder, else the terminal folder itself.
+  // Never $HOME, one of its parents or the filesystem root, where the tree would be too big to follow.
   if (!inside(cwd, ROOT)) {
-    if (!inside(cwd, HOME)) return;
-    setRoot(HOME);
+    if (inside(cwd, HOME)) setRoot(HOME);
+    else if (big(cwd)) return;
+    else setRoot(cwd);
   }
   const rel = path.relative(ROOT, cwd).split(path.sep).join('/');
   if (!rel) return;
@@ -438,7 +462,7 @@ async function follow() {
 
 // --- rendering
 
-const bodyHeight = () => (out.rows || 24) - 1 - (state.filter || state.prompt ? 1 : 0);
+const bodyHeight = () => (out.rows || 24) - 1 - (state.filter || state.prompt || state.changed ? 1 : 0);
 
 // The tree, or a page in its place (settings, key help), and a question over it.
 function render() {
@@ -466,13 +490,14 @@ function treeView(W, H) {
   if (!shown.length) {
     const first = a => ui.keyLabel(keysOf(a)[0] || '');
     lines.push(...(state.filter ? ui.empty(W, listH, 'No match', [['esc', 'clear']])
+      : state.changed ? ui.empty(W, listH, git.top ? 'No changes' : 'Not a git repository', [['esc', 'all files']])
       : ui.empty(W, listH, 'Empty folder', [[first('newFile'), 'new file'], [first('newFolder'), 'folder']].filter(([k]) => k))));
   }
   while (lines.length < listH + 1) lines.push(line([], W));
   if (state.prompt) lines.push(state.prompt.inline ? line(promptKeys(W), W, C.header) : promptLine(W));
   else if (state.filter) {
     lines.push(filterLine(W));
-  }
+  } else if (state.changed) lines.push(changedLine(W));
   if (state.menu) drawMenu(lines, W);
   while (lines.length < H) lines.push(line([], W));
   lines.length = H;
@@ -544,6 +569,15 @@ function filterLine(W) {
   }
   const left = [lead, [f.field.value, fg(C.blue)], [count && `  ${count}`, fg(C.dim)]];
   const hint = ui.keys([['esc', 'clear']]);
+  const room = W - ui.segWidth(left) - ui.segWidth(hint) - 1;
+  return line(room >= 0 ? [...left, [' '.repeat(room), ''], ...hint] : left, W, C.header);
+}
+
+// The line of the changed files only view: how many, and how to leave it.
+function changedLine(W) {
+  const n = state.rows.filter(r => !r.dir).length;
+  const left = [[' ● ', fg(C.blue)], ['Changes', fg(C.blue)], [`  ${n} file${n === 1 ? '' : 's'}`, fg(C.dim)]];
+  const hint = ui.keys([['esc', 'all files']]);
   const room = W - ui.segWidth(left) - ui.segWidth(hint) - 1;
   return line(room >= 0 ? [...left, [' '.repeat(room), ''], ...hint] : left, W, C.header);
 }
@@ -673,6 +707,7 @@ function menuItems(r) {
       const changed = deco && deco !== '!';
       items.push(null);
       if (changed) items.push(['View changes', () => actions.diff(abs, ROOT, PANE)]);
+      if (!r.dir && deco !== 'U') items.push(['File history', () => actions.scm(ROOT, PANE, abs, true), 'fileHistory']);
       if (changed) items.push(['Stage', () => actions.stage(abs, ROOT)]);
       items.push(['Unstage', () => actions.unstage(abs, ROOT)]);
       if (changed) {
@@ -684,7 +719,10 @@ function menuItems(r) {
     items.push(['New file…', () => newEntry('', false), 'newFile'], ['New folder…', () => newEntry('', true), 'newFolder'], null);
     items.push(['Go to file…', () => actions.search(ROOT, PANE, 'files'), 'goToFile'],
       ['Search in files…', () => actions.search(ROOT, PANE, 'content'), 'searchInFiles']);
-    if (git.top) items.push(['Source control', () => actions.scm(ROOT, PANE), 'sourceControl']);
+    if (git.top) {
+      items.push(['Source control', () => actions.scm(ROOT, PANE), 'sourceControl'],
+        [state.changed ? 'All files' : 'Changed files only', () => showChanged(!state.changed), 'changedOnly']);
+    }
     items.push(null, [actions.REVEAL, () => actions.reveal(ROOT)], ['Copy path', () => actions.copy(ROOT)],
       ['Up one level', () => setRoot(path.dirname(ROOT)), 'parentRoot']);
     if (ROOT !== HOME) items.push(['Back to the space folder', () => setRoot(HOME)]);
@@ -841,19 +879,22 @@ function settingsRows() {
     { group: 'TREE' },
     { label: 'Hidden files', help: 'Show dot files in the tree.', ...onOff('hidden') },
     { label: 'Git-ignored files', help: 'Show the files git ignores, greyed out.', ...onOff('ignored') },
-    { label: 'Follow terminal', help: 'Reveal the folder of the terminal beside the explorer, within the tab folder.', ...onOff('follow') },
+    { label: 'Follow terminal', help: 'Reveal the folder of the terminal beside the explorer, moving the root when it leaves the tree.', ...onOff('follow') },
     { label: 'Icon theme', help: 'Nerd Font icons, or a file icon theme installed for VS Code.',
       ...dialog((settings.icons && settings.icons.label) || 'Nerd Font', () => openIconThemes()) },
     { group: 'OPENING' },
     { label: 'Enter opens', help: 'Enter and double-click on a text file: show it in the preview or in the editor.', ...choice('open', ['preview', 'editor']) },
     { label: 'Editor', help: 'Command run with the path. Empty: VS Code if installed, else a terminal editor.', ...dialog(settings.editor || 'default', editor) },
-    { label: 'Single-click preview', help: 'A single click on a file shows it in the preview.', ...onOff('singleClick') },
+    { label: 'Preview follows selection', help: 'A file selected by a click or the arrow keys shows in the preview: arrow keys only update an open one.', ...onOff('singleClick') },
     { group: 'NEXT TABS' },
     { label: 'Dock side', help: 'Where new explorers dock. An open explorer keeps its side.', ...choice('side', ['left', 'right']) },
     { label: 'Open automatically', help: 'Open the explorer in new tabs that have a single pane. Off: only with prefix+f.', ...onOff('autoOpen') },
     { group: 'PREVIEW' },
     { label: 'Wrap lines', help: 'Wrap long lines in the preview (w). Other previews at their next opening.', ...onOff('wrap') },
     { label: 'Line numbers', help: 'Line numbers in the preview (L). Other previews at their next opening.', ...onOff('lineNumbers') },
+    { label: 'Images', help: `Images in the preview: pixelated (half blocks), or sharp with the Kitty graphics protocol of Kitty, Ghostty or WezTerm (p). ${
+      graphics === null ? 'Checking this terminal…' : graphics ? 'This terminal has it.' : 'This terminal does not have it: sharp images would not show.'}`,
+    ...choice('images', ['auto', 'blocks', 'pixels'], v => ({ blocks: 'pixelated', auto: 'sharp if possible', pixels: 'always sharp' })[v]) },
     { label: 'Diff layout', help: 'Diffs inline or side by side (s). Auto: side by side when the pane is wide enough.', ...choice('diffLayout', ['', 'split', 'inline'], v => v || 'auto') },
     { group: 'GENERAL' },
     { label: 'Key bindings', help: 'Change the explorer keys, saved in keys.json.',
@@ -1317,6 +1358,61 @@ function filterKey(k) {
   }
 }
 
+// The changed files only, or the whole tree again with the selected entry shown.
+function showChanged(on) {
+  if (on && !git.top) return flash('Not a git repository');
+  const sel = state.selected;
+  state.changed = on;
+  state.top = 0;
+  if (!on && sel) revealRel(sel); else { buildRows(); reveal(); }
+  render();
+}
+
+// The changed files in the tree's order (folders first, then names, as readDir sorts them).
+function changedFiles() {
+  const out = [];
+  let budget = FILTER_BUDGET;
+  const walk = rel => {
+    for (const e of visible(rel)) {
+      if (--budget < 0) return;
+      if (!isChanged(e)) continue;
+      if (e.dir) walk(e.rel); else out.push(e.rel);
+    }
+  };
+  walk('');
+  return out;
+}
+
+// ] and [: the next or previous changed file after the selected entry, unfolded, selected and previewed; past the
+// last one, back to the first.
+const NAME_ORDER = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+// Whether a comes before b in the tree; aDir and bDir: whether each is a folder.
+function treeBefore(a, aDir, b, bDir) {
+  const x = a.split('/'), y = b.split('/');
+  for (let i = 0; i < Math.min(x.length, y.length); i++) {
+    if (x[i] === y[i]) continue;
+    const xd = i < x.length - 1 || aDir, yd = i < y.length - 1 || bDir;
+    if (xd !== yd) return xd;
+    return NAME_ORDER(x[i], y[i]) < 0;
+  }
+  return x.length < y.length;
+}
+function nextChange(dir) {
+  if (!git.top) return flash('Not a git repository');
+  const list = changedFiles();
+  if (!list.length) return flash('No changes');
+  const r = state.rows[state.cursor];
+  let i;
+  if (!r) i = dir > 0 ? 0 : list.length - 1;
+  else if (dir > 0) { i = list.findIndex(f => treeBefore(r.rel, r.dir, f, false)); if (i < 0) i = 0; }
+  else { i = list.findLastIndex(f => treeBefore(f, false, r.rel, r.dir)); if (i < 0) i = list.length - 1; }
+  const rel = list[i];
+  revealRel(rel);
+  render();
+  const abs = absOf(rel);
+  if (actions.canPreview(abs)) runAction(() => actions.preview(abs, ROOT, PANE));
+}
+
 function closeFilter() {
   const sel = state.selected;
   state.filter = null;
@@ -1331,11 +1427,26 @@ function key(k) {
   if (state.help) { if (!ui.helpKey(k, state.help)) state.help = null; return render(); }
   if (state.filter && state.filter.active) return filterKey(k);
   if (state.filter && (k === 'escape' || keys.get(k) === 'close')) return closeFilter();
+  if (state.changed && (k === 'escape' || keys.get(k) === 'close')) return showChanged(false);
   listKey(k);
 }
 
 function listKey(k) {
   listAction(keys.get(k));
+}
+
+// Preview follows selection, from the keyboard: once the cursor stops (a key held down sends a burst), and only in a
+// preview already open, so that moving never splits the tab.
+const MOVES = new Set(['up', 'down', 'pageUp', 'pageDown', 'halfPageUp', 'halfPageDown', 'top', 'bottom', 'expand', 'collapse']);
+let following = null;
+function followSelection() {
+  clearTimeout(following);
+  if (!settings.singleClick) return;
+  following = setTimeout(() => {
+    const r = state.rows[state.cursor];
+    if (!r || r.dir || !actions.canPreview(absOf(r.rel))) return;
+    actions.preview(absOf(r.rel), ROOT, PANE, 0, false, false).then(flash, () => { });
+  }, 150);
 }
 
 // An action of the tree, from its key.
@@ -1386,10 +1497,17 @@ function listAction(action) {
     case 'copyPath': if (r) runAction(() => actions.copy(absOf(r.rel))); return;
     case 'copyRelativePath': if (r) runAction(() => actions.copy(r.rel)); return;
     case 'parentRoot': return setRoot(path.dirname(ROOT));
+    case 'changedOnly': return showChanged(!state.changed);
+    case 'nextChange': return nextChange(1);
+    case 'previousChange': return nextChange(-1);
+    case 'fileHistory':
+      if (r && !r.dir) runAction(() => (git.top ? actions.scm(ROOT, PANE, absOf(r.rel), true) : 'Not a git repository'));
+      return;
     case 'narrower': return widen(-4);
     case 'wider': return widen(4);
     default: return;
   }
+  if (MOVES.has(action)) followSelection();
   reveal();
   render();
 }
@@ -1450,8 +1568,11 @@ function mouse(m) {
 
 // --- startup
 
+// Whether the terminal has the Kitty graphics protocol, for the Images setting: null until its answer, at most 500 ms.
+let graphics = null;
 const paint = ui.screen({
   key, mouse,
+  reply: text => { if (/^\x1b_Gi=31;OK/.test(text)) { graphics = true; render(); } },
   focus: f => { state.focused = f; render(); },
   paste: text => {
     if (state.prompt) state.prompt.field.insert(text);
@@ -1460,6 +1581,9 @@ const paint = ui.screen({
   },
   resize: () => { resized(); reveal(); render(); },
 }, { motion: true });
+// The Kitty graphics query, as the preview sends it.
+process.stdout.write('\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\');
+setTimeout(() => { if (graphics === null) { graphics = false; render(); } }, 500);
 
 watchRoot();
 const timers = [
