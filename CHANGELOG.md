@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/gcaudan/herdr-explorer/compare/v0.5.1...v0.6.0) (2026-10-16)
+
+
+### Features
+
+* redesign the explorer, source control and shared UI ([#19](https://github.com/gcaudan/herdr-explorer/issues/19)) ([8d6db93](https://github.com/gcaudan/herdr-explorer/commit/8d6db934b4c5cb47c5ffc88059ec7159ceef091f))
+
 ## [0.5.1](https://github.com/gcaudan/herdr-explorer/compare/v0.5.0...v0.5.1) (2026-10-14)
 
 
