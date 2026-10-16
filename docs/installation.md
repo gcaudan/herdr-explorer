@@ -1,43 +1,57 @@
 # Installation
 
-There are two ways to install the plugin:
+Install the plugin [from the herdr plugin index](#from-the-herdr-plugin-index), which manages the checkout and its
+updates but adds no key bindings, or [from a git clone](#from-a-git-clone), whose install script adds them and whose
+updates are fast-forward pulls.
 
-- **From the herdr plugin index**: `herdr plugin install gcaudan/herdr-explorer`, then add the key
-  bindings yourself (see [From the herdr plugin index](../README.md#from-the-herdr-plugin-index)). herdr manages that checkout and its
-  updates.
-- **From a git clone**, described below. The install script links the clone to herdr and adds the
-  key bindings. Updates are fast-forward pulls of the clone.
+## Requirements
 
-Both need herdr 0.9.3 or later and `node` on `PATH`.
+| Requirement | Used for |
+|---|---|
+| herdr 0.9.3 or later | the host (`min_herdr_version` in `herdr-plugin.toml`) |
+| Node.js 20 or later, as `node` on the `PATH` herdr gives plugins | every pane and hook runs `node src/<script>.js` |
+| A [Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr | icons, chevrons and header icons; without one, they show as empty boxes |
+| git (optional) | git status, the changes view, source control, updates. Without it, the explorer and preview still work |
+| VS Code or another graphical editor (optional) | the external editor (see [Editor command](configuration.md#editor-command)) |
+| A terminal editor (optional) | the [Editor pane](usage.md#editor-pane) |
+| The [Claude Code](https://claude.com/claude-code) CLI, `claude` (optional) | commit messages written by Claude |
+
+### Platform tools
+
+Each feature degrades gracefully without its tool.
+
+| Feature | Linux | macOS | Windows |
+|---|---|---|---|
+| Clipboard | `wl-copy`, else `xclip`, else OSC 52 | `pbcopy` | PowerShell `Set-Clipboard` |
+| Trash | `gio trash`, else `trash-put` | `/usr/bin/trash` (macOS 14), else Finder | Recycle Bin (PowerShell) |
+| Open in app | `xdg-open` | `open` | `explorer.exe` |
+| Reveal | `xdg-open` on the parent folder | `open -R` (selects the file) | `explorer.exe /select` |
+
+Without a trash, deleting asks a second time before removing for good.
+
+Install a Nerd Font, for instance `JetBrainsMono Nerd Font` (from your package manager, from
+[nerdfonts.com](https://www.nerdfonts.com/), or with `winget install DEVCOM.JetBrainsMonoNerdFont` on Windows), and
+select it in your terminal.
+
+## From the herdr plugin index
+
+```sh
+herdr plugin install gcaudan/herdr-explorer
+```
+
+herdr manages this checkout and its updates, but does not add key bindings: append the blocks of
+[Key bindings](#key-bindings) to herdr's `config.toml`, then run `herdr server reload-config`.
+
+To update, run `herdr plugin update gcaudan.explorer` (`↑` in the explorer copies it): herdr installs the new version into a new folder, so the open explorers and previews keep the old code until you reopen
+them (`prefix+f` twice). To uninstall, see [Uninstall](#uninstall).
 
 ## From a git clone
-
-### Linux and macOS
 
 ```sh
 git clone https://github.com/gcaudan/herdr-explorer.git
 cd herdr-explorer
-./install.sh
+./install.sh            # Windows (PowerShell): powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
-
-- Optional tools (see [Platform tools](../README.md#platform-tools)):
-  - VS Code with `code` in `PATH`, or another editor set in the settings;
-  - on Linux, `wl-copy` (Wayland) or `xclip` (X11) for the copy actions, and `gio` or `trash-put` for the trash;
-  - on macOS, nothing: `pbcopy` and the trash are built in.
-- Install a Nerd Font (for instance `JetBrainsMono Nerd Font`, from your package manager or
-  [nerdfonts.com](https://www.nerdfonts.com/)) and select it in your terminal.
-
-### Windows (PowerShell)
-
-```powershell
-git clone https://github.com/gcaudan/herdr-explorer.git
-cd herdr-explorer
-powershell -ExecutionPolicy Bypass -File .\install.ps1
-```
-
-- The clipboard and the recycle bin go through PowerShell, which is built in. VS Code is found in `PATH` or in its
-  default user install folder. Any other editor must be an `.exe`: a `.cmd` launcher cannot run without a shell.
-- Install a Nerd Font with `winget install DEVCOM.JetBrainsMonoNerdFont`, then select it in Windows Terminal.
 
 Keep the clone where it is, on `main`: herdr runs the plugin from that folder, and updates pull into it.
 
@@ -50,31 +64,46 @@ Keep the clone where it is, on `main`: herdr runs the plugin from that folder, a
    Running the script again is safe.
 3. Open the herdr config, `~/.config/herdr/config.toml` on Linux and macOS or
    `%APPDATA%\herdr\config.toml` on Windows, and create it if missing.
-4. Append one `[[keys.command]]` block per action, unless the config already mentions that action:
-
-   | Key        | Command                    | Description      |
-   | ---------- | -------------------------- | ---------------- |
-   | `prefix+f` | `gcaudan.explorer.toggle`  | file explorer    |
-   | `prefix+a` | `gcaudan.explorer.search`  | go to file       |
-   | `prefix+d` | `gcaudan.explorer.scm`     | source control   |
-
-   A binding you already changed, for example to another key, is left alone.
+4. Append one `[[keys.command]]` block per action (see [Key bindings](#key-bindings)), unless the config already
+   mentions that action. A binding you already changed, for example to another key, is left alone.
 5. Run `herdr server reload-config`, ignoring errors.
 
-`prefix+f` means `ctrl+b`, then `f`, with herdr's default prefix. The actions can be bound to other keys in
-`config.toml`.
+The script prints the plugin folder and each key it added.
 
 herdr keeps its own copy of the manifest: after pulling a version that changes it, run the script again (or
 `herdr plugin link .`) so that herdr picks up new hooks, such as the startup hook. The update tells you when (see
 [Finishing an update](#finishing-an-update)).
 
-The script prints the plugin folder and each key it added.
+### Key bindings
+
+```toml
+[[keys.command]]
+key = "prefix+f"
+type = "plugin_action"
+command = "gcaudan.explorer.toggle"
+description = "file explorer"
+
+[[keys.command]]
+key = "prefix+a"
+type = "plugin_action"
+command = "gcaudan.explorer.search"
+description = "go to file"
+
+[[keys.command]]
+key = "prefix+d"
+type = "plugin_action"
+command = "gcaudan.explorer.scm"
+description = "source control"
+```
+
+`prefix+f` means `ctrl+b`, then `f`, with herdr's default prefix. To use other keys, edit the `key` lines, then run
+`herdr server reload-config`.
 
 ### Adding the explorer to existing tabs
 
-The explorer opens by itself only in tabs created after the install. In an existing tab, press
-`prefix+f`. The hook script also has a mode that adds the explorer to every existing tab that has a
-single pane:
+The explorer opens by itself only in tabs created after the install, and only in a tab that has a single pane
+(setting [`autoOpen`](configuration.md#settings)). In an existing tab, press `prefix+f`. The hook script also has a
+mode that adds the explorer to every existing tab that has a single pane:
 
 ```sh
 node src/hook.js --all
@@ -86,30 +115,25 @@ Run it from the plugin folder, in a herdr pane.
 
 ### The update check
 
-Once a day at most, the plugin asks GitHub for the latest release
-(`api.github.com/repos/gcaudan/herdr-explorer/releases/latest`, 3 s timeout). The check runs from the
-hook, both at herdr startup and when a tab is created, never from the panes. A failed check is not
-retried before the next day. Only a version made of digits and dots (a leading `v` stripped) is
-kept, in `update.json`. Turn it off with **Settings → Check for updates**.
+Once a day at most, from the hook (at herdr startup and when a tab is created, never from the panes), the plugin
+asks GitHub for the latest release (`api.github.com/repos/gcaudan/herdr-explorer/releases/latest`, 3 s timeout). A
+failed check waits for the next day. Only a version made of digits and dots (a leading `v` stripped) is kept, in
+`update.json`. Turn it off with **Settings → Check for updates**.
 
-When a newer release exists, a green `↑` shows in the explorer header and the settings show
-**↑ X.Y.Z available** under their title (`u` to update). The version found is compared with the version on disk, so the `↑` goes away
-once you have pulled. A clone ahead of the latest release, as in development, shows nothing. The `↑` is also hidden while an
-update runs and while a header message is shown.
+When a newer release exists, a green `↑` shows in the explorer header, and **↑ X.Y.Z available** under the
+settings title (`u` to update). It is compared with the version on disk, so it goes away once you have pulled, and
+a clone ahead of the release (development) shows nothing. The `↑` is also hidden while an update runs or a header
+message shows.
 
 ### Updating
 
-Click the `↑`, or choose **Update to X.Y.Z…** in the settings, then confirm with `y`.
+Click the `↑`, or press `u` (or click **↑ X.Y.Z available**) in the settings.
 
-- **Installed from the plugin index**: herdr owns that checkout. Instead of pulling, the explorer
-  copies `herdr plugin update gcaudan.explorer` to the clipboard (*Update command copied*). Run it
-  in a terminal. That update installs into a new folder, so panes already open keep running the old
-  code until you reopen them.
-- **Linked git clone**: the explorer runs `git pull --ff-only --no-rebase` in the plugin folder.
-  *Updating…* shows in the header while it runs, which can take up to a minute.
-
-Only one update runs at a time across all explorers. A lock file in the state folder handles this,
-and is taken over after 2 minutes if a previous update was killed.
+- **Installed from the plugin index**: herdr owns that checkout. Without asking, the explorer copies
+  `herdr plugin update gcaudan.explorer` instead (*Update command copied*): run it in a terminal.
+- **Linked git clone**: after confirmation, the explorer runs `git pull --ff-only --no-rebase` in the
+  plugin folder. *Updating…* shows in the header while it runs, which can take up to a minute. Success messages
+  are `Already up to date` and `Updated to X.Y.Z`.
 
 ### Refusals
 
@@ -124,51 +148,40 @@ The update checks, in this order (`src/update.js`), and stops with the message w
 | no merge, rebase, cherry-pick, revert, `git am` or bisect in progress | `A git operation is in progress` |
 | `git status --porcelain --untracked-files=no` is empty (untracked files are allowed) | `Local changes in the plugin folder` |
 
-A refusal copies nothing. Then comes `git pull --ff-only --no-rebase`, with a 60 s timeout. Every git call runs
-with `GIT_TERMINAL_PROMPT=0` and `GCM_INTERACTIVE=never` (no Git Credential Manager window), and outside Windows in
-a detached session with no terminal, so nothing can prompt in the pane. The pull uses
-`GIT_SSH_COMMAND="ssh -o BatchMode=yes"` unless you set `GIT_SSH_COMMAND`, `GIT_SSH` or `core.sshCommand`
-yourself.
+A refusal copies nothing. Then comes `git pull --ff-only --no-rebase`, with a 60 s timeout and no prompt: no
+terminal, no Git Credential Manager window, and ssh in batch mode unless you set `GIT_SSH_COMMAND`, `GIT_SSH` or
+`core.sshCommand` yourself (see [SECURITY.md](../SECURITY.md#updates)).
 
 The pull itself can also fail, for example when you are offline, a fast-forward is impossible, or an
-ssh key needs a passphrase. In that case the explorer shows git's error and copies
-`git -C "<plugin folder>" pull --ff-only --no-rebase` to the clipboard, so that you can run it in a
-terminal.
-
-Success messages are `Already up to date` and `Updated to X.Y.Z`.
+ssh key needs a passphrase. The message is then git's error followed by `update command copied`: the explorer has
+copied `git -C "<plugin folder>" pull --ff-only --no-rebase` to the clipboard, to run in a terminal.
 
 ### Finishing an update
 
-When the update changed `herdr-plugin.toml` (beyond its version) or one of the install scripts, the
-message is `Updated to X.Y.Z: rerun the installer`. A yellow `!` then shows in every explorer header,
-and the settings get **Finish the update…**. Clicking either copies the installer command to the
-clipboard (`"<plugin folder>/install.sh"`, or the `powershell -ExecutionPolicy Bypass -File …`
-command on Windows). The `!` goes away once the command is copied. Run the command in a terminal.
-The plugin never reruns the installer itself, because the installer unlinks and relinks the plugin
-while its panes are running.
+When the update changed `herdr-plugin.toml` (beyond its version) or an install script, the message is
+`Updated to X.Y.Z: rerun the installer`: every explorer header shows a yellow `!`, and the settings
+**! Finish the update** (`u`). Either one copies the installer command (`"<plugin folder>/install.sh"`, or
+`powershell -ExecutionPolicy Bypass -File …` on Windows), and the `!` goes away; run it in a terminal. The plugin
+never reruns the installer itself, since it unlinks and relinks the plugin while its panes run.
 
 ### Pane restart
 
-The explorer and preview panes watch the version in `herdr-plugin.toml`, checked every 2 s. When it
-changes, through the update or a `git pull` you ran yourself, each pane restarts on the new code
-2 s later, in place: same pane, width and position. A pull that leaves the version unchanged restarts
-nothing. It waits until you are not busy:
+The explorer and preview panes check the version in `herdr-plugin.toml` every 2 s. When it changes, through the
+update or a `git pull` you ran yourself, each pane restarts on the new code 2 s later, in place (same pane, width
+and position), once you are not busy:
 
-- the explorer, while no prompt, confirmation, menu or active filter is open and no update is running;
+- the explorer, while no prompt, confirmation, menu, active filter, settings or key help is open and
+  no update is running;
 - the preview, while no find field is being typed and no mouse selection is being dragged.
 
-The explorer keeps its tree root (*Set as root* included). The preview keeps its file and line. The search, source control,
-changes and editor panes are new processes each time they open, so they always run the current code.
+A pull that leaves the version unchanged restarts nothing. The explorer keeps its tree root (*Set as root*
+included), the preview its file and line. The other panes start a new process each time they open, so they always
+run the current code.
 
 ## Uninstall
 
-1. Remove the plugin from herdr. For a linked clone:
-
-   ```sh
-   herdr plugin unlink gcaudan.explorer
-   ```
-
-   For a plugin index install: `herdr plugin uninstall gcaudan.explorer`.
+1. Remove the plugin from herdr: `herdr plugin unlink gcaudan.explorer` for a linked clone,
+   `herdr plugin uninstall gcaudan.explorer` for a plugin index install.
 2. Delete the `[[keys.command]]` blocks whose `command` starts with `gcaudan.explorer.` from your
    herdr `config.toml`, then run `herdr server reload-config`.
 3. Optionally, delete the clone and the plugin's state and config folders (see

@@ -20,7 +20,7 @@ The pane where a setting changes applies it at once; the last column says when t
 | `icons` | `""` | Icon theme | `""` for the Nerd Font icons, or `{ "id", "label", "file" }` of a VS Code icon theme | explorers within a second; source control at its next opening |
 | `wrap` | `false` | Wrap lines; preview `w`, Wrap chip | wrap long lines in the preview | other previews at their next opening |
 | `lineNumbers` | `true` | Line numbers; preview `L` | line number gutter in the preview | other previews at their next opening |
-| `diffLayout` | `""` | Diff layout; diff `s` (source control and diff pane) | `"inline"` or `"split"` (side by side); `""` chooses by width | other diffs at their next opening |
+| `diffLayout` | `""` (unset) | Diff layout; diff `s` (source control and diff pane) | `"inline"` or `"split"` (side by side); `""` chooses by width | other diffs at their next opening |
 | `scmListShare` | `{}` | source control: drag the separator, `<` `>`, `shift+left` `shift+right` | share of the width taken by the list beside the diff, per view: `{ "changes": 0.3, "history": 0.6 }`; a view left out: 38 %, from 34 to 70 columns | other source control panes at their next opening |
 | `scmGraphAll` | `true` | source control History `a` | show every local and remote branch in History, or only the current one | other source control panes at their next opening |
 | `scmTree` | `false` | source control `t`, List/Tree button | show the Changes view as a tree of folders | other source control panes at their next opening |
@@ -42,35 +42,29 @@ runs without a shell, with the path as its last argument.
   `.exe`, since `.cmd` and `.bat` launchers cannot run without a shell. `code` is the exception: the
   plugin starts VS Code itself.
 
-When no terminal editor is configured, the Editor pane uses `$VISUAL`, `$EDITOR`, then `nano`,
-`nvim`, `vim`, `vi` (`edit`, `nvim`, `vim`, `nano` on Windows).
+Without a terminal editor here, the Editor pane picks one itself (see [Editor pane](usage.md#editor-pane)).
 
 ### Icon themes
 
-**Icon theme** lists the file icon themes installed for VS Code, VS Code Insiders,
-VSCodium, Cursor, Windsurf or VS Code Server. It searches each editor's user `extensions` folder
-(`~/.vscode/extensions`, `~/.cursor/extensions`…), the macOS application bundles, and the extensions
-next to the `code`, `code-insiders`, `codium`, `cursor` or `windsurf` commands found on `PATH`. Each
-icon is drawn in the colour of its SVG or font glyph. Popular icons, mostly from Material Icon Theme,
-get a Nerd Font glyph of their own, and the others use the default glyph in the theme's colour. When
-an extension update moves the theme, the plugin finds it again. When the theme is uninstalled, the
-explorer goes back to the Nerd Font icons. While choosing, a sample tree under the list previews the
-theme under the selection, and `Esc` goes back without a change.
+**Icon theme** lists the file icon themes installed for VS Code, VS Code Insiders, VSCodium, Cursor, Windsurf or
+VS Code Server: in each editor's user `extensions` folder (`~/.vscode/extensions`, `~/.cursor/extensions`…), the
+macOS application bundles, and next to the `code`, `code-insiders`, `codium`, `cursor` or `windsurf` commands on
+`PATH`. Each icon takes the colour of its SVG or font glyph; popular icons, mostly from Material Icon Theme, get a
+Nerd Font glyph of their own, the others the default glyph. A theme moved by an extension update is found again;
+an uninstalled one falls back to the Nerd Font icons.
 
 ### Width
 
-The explorer is 32 columns wide by default (10 at least). A width set by dragging its border, or with
-`<` `>` or `shift+left` `shift+right`, is kept for the next explorers, and restored when the window or another pane is resized. Delete the `width` file to go back
-to 32 columns.
+The explorer is 32 columns wide by default (10 at least). A width set by hand is kept in the `width` file, for
+the next explorers and across window resizes (see [Other behaviours](usage.md#other-behaviours)). Delete the file
+to go back to 32 columns.
 
 ## Files
 
-herdr gives each plugin a **state folder** (`$HERDR_PLUGIN_STATE_DIR`) and a **config folder**
-(`$HERDR_PLUGIN_CONFIG_DIR`). Their location is chosen by herdr: the state folder is
-`~/.local/state/herdr/plugins/gcaudan.explorer` on Linux and
-`%LOCALAPPDATA%\herdr\plugins\gcaudan.explorer` on Windows, and
-`herdr plugin config-dir gcaudan.explorer` prints the config folder. Without them, nothing is saved, and
-the explorer's width falls back to 32 columns.
+herdr gives each plugin a **state folder** (`$HERDR_PLUGIN_STATE_DIR`: `~/.local/state/herdr/plugins/gcaudan.explorer`
+on Linux, `%LOCALAPPDATA%\herdr\plugins\gcaudan.explorer` on Windows) and a **config folder**
+(`$HERDR_PLUGIN_CONFIG_DIR`, printed by `herdr plugin config-dir gcaudan.explorer`). Without them, nothing is
+saved, and the explorer's width falls back to 32 columns.
 
 ### State folder
 
@@ -86,15 +80,16 @@ the explorer's width falls back to 32 columns.
 | `panes/<pane id>.json` | per pane: the explorer's tab folder (`home`) and tree root (`root`), the preview's `file`, `root` and `line` |
 | `preview-<tab id>.json`| the last file the explorer or search asked the tab's preview to show                         |
 
-The plugin writes these files to a temporary file and then renames it, so a pane never reads a
-half-written file. At herdr startup, the state files of panes that no longer exist are deleted.
+`settings.json`, `expanded.json`, `update.json` and `panes/*.json` are written to a temporary file and
+then renamed, so a pane never reads them half-written. At herdr startup, the state files of panes
+that no longer exist are deleted.
 
 ### Config folder: `keys.json`
 
 `keys.json` holds the explorer's key bindings. Change them from **Settings → Key bindings**, which
 writes the actions you change to the file (see [usage.md](usage.md#settings--or-the-gear-icon)). Its
-last row, **Open keys.json**, creates the file, or completes it, with every explorer action and its
-current keys, then opens it in the Editor pane. The explorer reloads the file within a second of a save.
+last row, **Open keys.json**, creates the file, or completes it with the default keys of the actions
+it leaves out, then opens it in the Editor pane. The explorer reloads the file within a second of a save.
 
 ```json
 {
@@ -106,40 +101,20 @@ current keys, then opens it in the Editor pane. The explorer reloads the file wi
 }
 ```
 
-- One object per pane. Only `"explorer"` is read.
+- One object per pane. Only `"explorer"` is read, with the action names of
+  [Keys (defaults)](usage.md#keys-defaults).
 - Each action maps to a key name or a list of key names. An action you leave out keeps its default
-  keys, and listing keys for an action replaces all its defaults. Unknown actions are ignored.
+  keys, and listing keys for an action replaces all its defaults. Unknown actions and keys that are not
+  strings are ignored.
 - A key you give to an action is taken away from the action that had it by default. A key listed for
   two actions goes to the last one.
 - Only the explorer's keys can be changed: the preview, search and source control keys are fixed.
 - In menus, the keys of `up`, `down`, `open`, `expand`, `close`, `collapse`, `menu` and `settings`
   apply. `escape` always closes a menu.
-- While the filter field is active, only bound keys that are not single characters reach the list.
-
-#### Actions and default keys
-
-| Action             | Default keys            | Action             | Default keys            |
-| ------------------ | ----------------------- | ------------------ | ----------------------- |
-| `up`               | `up`, `k`               | `goToFile`         | `ctrl+p`                |
-| `down`             | `down`, `j`             | `searchInFiles`    | `ctrl+f`                |
-| `pageUp`           | `pageup`                | `sourceControl`    | `s`                     |
-| `pageDown`         | `pagedown`              | `settings`         | `,`                     |
-| `top`              | `home`, `g`             | `toggleHidden`     | `.`                     |
-| `bottom`           | `end`, `G`              | `toggleIgnored`    | `i`                     |
-| `open`             | `enter`, `space`        | `newFile`          | `n`                     |
-| `expand`           | `right`, `l`            | `newFolder`        | `N`                     |
-| `collapse`         | `left`, `h`             | `rename`           | `R`, `f2`               |
-| `close`            | `escape`, `q`           | `delete`           | `delete`                |
-| `menu`             | `m`, `menu`, `shift+f10`| `edit`             | `e`                     |
-| `refresh`          | `r`                     | `openInEditor`     | `o`                     |
-| `filter`           | `/`                     | `preview`          | `p`                     |
-| `copyPath`         | `y`                     | `copyRelativePath` | `Y`                     |
-| `parentRoot`       | `backspace`             | `help`             | `?`, `f1`               |
-| `halfPageUp`       | `ctrl+u`                | `halfPageDown`     | `ctrl+d`                |
-| `openInApp`        | `O`                     | `narrower`         | `>`, `shift+left`¹      |
-| `wider`            | `<`, `shift+right`¹     |                    |                         |
-
-¹ Docked on the right, `shift+left` and `shift+right` swap: each one pushes the inner border its way.
+- In the settings and key bindings pages, the arrows, page keys, `home` and `end` always move and `escape` always
+  goes back, so that a rebinding cannot lock you out.
+- While the filter field is active, bound keys that are not single characters reach the list, except
+  `backspace`, `delete`, `ctrl+u` and `ctrl+d`, which edit the field.
 
 #### Key names
 
@@ -148,13 +123,25 @@ current keys, then opens it in the Editor pane. The explorer reloads the file wi
   `shift+f10`
 - `up`, `down`, `left`, `right`, `home`, `end`, `pageup`, `pagedown`
 - `ctrl+up`, `ctrl+down`, `ctrl+left`, `ctrl+right`, `ctrl+home`, `ctrl+end`, `shift+up`,
-  `shift+down`, `alt+up`, `alt+down`, `alt+left`, `alt+right`
+  `shift+down`, `shift+left`, `shift+right`, `alt+up`, `alt+down`, `alt+left`, `alt+right`
 - `f1`, `f2`, `f3`, `f4`, `f5`
-- `ctrl+a` … `ctrl+z` (note that `ctrl+i` is `tab`, `ctrl+m` is `enter` and `ctrl+h` is `backspace`
-  in a terminal)
+- `ctrl+a` … `ctrl+z` (note that `ctrl+i` is `tab`, `ctrl+j` and `ctrl+m` are `enter` and `ctrl+h` is
+  `backspace` in a terminal)
 - `alt+<character>`, `alt+enter`, `alt+backspace`
 
 ### herdr config
 
 The herdr key bindings that open the panes live in herdr's own `config.toml`, not in the plugin's
-folders. See [installation.md](installation.md#what-the-install-script-does).
+folders. See [installation.md](installation.md#key-bindings).
+
+## Environment
+
+| Variable | Effect |
+|---|---|
+| `PATH` | where `node`, `git`, `code`, `claude`, the editors and the clipboard and trash tools are found (absolute entries only) |
+| `VISUAL`, `EDITOR` | the Editor pane's terminal editor, after one set in **Editor** |
+| `GIT_SSH_COMMAND`, `GIT_SSH` | left alone by updates, which otherwise run ssh in batch mode |
+| `HERDR_BIN_PATH` | the herdr binary, else `herdr` from `PATH` |
+
+The `EXPLORER_*` variables only pass between the plugin's own panes (see
+[Pane environment](architecture.md#pane-environment)).
