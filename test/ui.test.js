@@ -76,3 +76,21 @@ test('a question card fits the pane, buttons included', () => {
     else assert.ok(q.zones.y < H, `${W}×${H}: buttons out of the pane`);
   }
 });
+
+test('segmented switch: the choices and their columns', () => {
+  const s = ui.segmented([['file', 'File'], ['diff', 'Diff']], 'diff');
+  assert.strictEqual(ui.segText(s.segs), ' File  Diff ');
+  assert.deepStrictEqual(s.hits, [{ id: 'file', from: 0, to: 5 }, { id: 'diff', from: 6, to: 11 }]);
+});
+
+test('a menu drawn on the right keeps what is left of it', () => {
+  const plain = s => s.replace(/\x1b\[[0-9;]*m/g, '');
+  const row = ui.line([['abcdefghij', ui.fg(ui.C.red)]], 20);
+  const lines = ['', row, row, row, row, row];
+  const menu = new ui.Menu({ title: 'V', items: [{ label: 'A', value: ui.onOff(true) }, null, { label: 'B', key: 's', run: () => 'b' }], at: 1, right: 22 });
+  menu.draw(lines, 22, 24);
+  assert.deepStrictEqual(lines.slice(1).map(plain), ['abcdefghij╭ V ──────╮', 'abcdefghij│ A  ● on │', 'abcdefghij├─────────┤',
+    'abcdefghij│ B  s    │', 'abcdefghij╰─────────╯']);
+  assert.strictEqual(menu.key('s', 24).run(), 'b');
+  assert.strictEqual(menu.key('escape', 24), 'close');
+});
