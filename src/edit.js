@@ -3,13 +3,23 @@
 // The pane closes when the editor exits.
 'use strict';
 const { spawnSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 const { WIN, which, words } = require('./exec');
 
 const file = process.env.EXPLORER_FILE;
 
-// Absolute path of a program, or null when missing.
-const find = name => (WIN ? which(name)
-  : spawnSync('sh', ['-c', 'command -v -- "$1"', 'sh', name], { encoding: 'utf8' }).stdout.trim() || null);
+// Absolute path of a program, or null when missing: found in the absolute folders of PATH only, as every program
+// the plugin runs (an empty or '.' entry of PATH would find one planted in the folder of the pane). A program given
+// with its folder must exist, else the next editor is tried.
+function find(name) {
+  if (!/[\\/]/.test(name)) return which(name);
+  if (!path.isAbsolute(name)) return null;
+  for (const full of WIN && !path.extname(name) ? [name, name + '.exe'] : [name]) {
+    try { if (fs.statSync(full).isFile()) { if (!WIN) fs.accessSync(full, fs.constants.X_OK); return full; } } catch { }
+  }
+  return null;
+}
 
 function editor() {
   for (const v of [process.env.EXPLORER_EDITOR, process.env.VISUAL, process.env.EDITOR]) {

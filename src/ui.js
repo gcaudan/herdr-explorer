@@ -5,6 +5,8 @@
 const fg = rgb => `\x1b[38;2;${rgb.join(';')}m`;
 const bg = rgb => `\x1b[48;2;${rgb.join(';')}m`;
 const glyph = code => String.fromCodePoint(code);
+// The magnifier (Nerd Font) before every find and filter field.
+const SEARCH = glyph(0xf002);
 
 // Colours from the VS Code Dark+ theme (git decorations) and the Seti theme (icons).
 const C = {
@@ -69,6 +71,195 @@ function line(segments, width, back) {
     used += w;
   }
   return s + ' '.repeat(Math.max(0, width - used)) + '\x1b[0m';
+}
+
+// Key hints: each key in bold, its action dimmed, as many pairs as fit in max columns (all without max).
+// pairs: [key, action].
+// segs.zones: the columns of each pair from the start of the segments, [{ x0, x1, key }], to click them.
+function keys(pairs, max = Infinity) {
+  const segs = [];
+  segs.zones = [];
+  let used = 0;
+  for (const [k, action] of pairs) {
+    const lead = segs.length ? '   ' : ' ';
+    const w = textWidth(lead + k + ' ' + action);
+    if (used + w > max) break;
+    segs.push([lead + k, '\x1b[1m' + fg(C.text)], [` ${action}`, fg(C.dim)]);
+    const key = keyOf(k);
+    if (key) segs.zones.push({ x0: used + lead.length, x1: used + w, key });
+    used += w;
+  }
+  return segs;
+}
+
+// The key a click on a hint sends: its first key, by its name for the key handlers; none for a range of keys
+// (↑↓, 1-4) or arrows.
+const SENDS = { '⏎': 'enter', '↵': 'enter', esc: 'escape', del: 'delete', pgup: 'pageup', pgdn: 'pagedown' };
+function keyOf(label) {
+  const k = label.split(' ')[0];
+  return /[↑↓←→]/.test(k) || /^\d-\d$/.test(k) ? null : SENDS[k] || k;
+}
+
+// The key of the hint at column x (0-based) of a line whose hints start at column from, or null.
+const keyAt = (segs, x, from = 0) => ((segs.zones || []).find(z => x >= from + z.x0 && x < from + z.x1) || {}).key || null;
+
+// A key name as shown to the user: arrows and Enter as symbols, the long names shortened.
+const SHORT = { up: '↑', down: '↓', left: '←', right: '→', enter: '⏎', escape: 'esc', pageup: 'pgup', pagedown: 'pgdn' };
+const keyLabel = k => k.replace(/(^|\+)(up|down|left|right|enter|escape|pageup|pagedown)$/, (m, mod, name) => mod + SHORT[name]);
+
+// The key help of a pane (? or f1), over the whole pane: the title, a find field once / is pressed, the keys by group
+// (the keys on the left, what they do on the right), then a rule and the keys of the help. groups: [title, [[key,
+// action]]]. state: { top, find } (find: a Field, null when closed); help() keeps in it the rows the list gets and the
+// pane's size, for helpKey and helpMouse.
+const HELP_KEYS = [['↑↓', 'scroll'], ['/', 'find'], ['esc', 'close']];
+function helpRows(groups, state) {
+  const q = state.find && state.find.value.toLowerCase();
+  const out = [];
+  for (const [g, pairs] of groups) {
+    const kept = pairs.map(([k, a]) => [k.split(' ').map(keyLabel).join(' '), a])
+      .filter(([k, a]) => !q || `${k} ${a}`.toLowerCase().includes(q));
+    if (kept.length) out.push([g], ...kept);
+  }
+  return out;
+}
+function help(lines, W, title, groups, state) {
+  const H = lines.length, rows = helpRows(groups, state);
+  const at = state.find ? 2 : 1, n = Math.max(1, H - at - 2);
+  state.top = Math.max(0, Math.min(state.top || 0, rows.length - n));
+  Object.assign(state, { n, count: rows.length, W, H });
+  // The keys' column: wide enough for most, a longer list of keys cut.
+  const kw = Math.min(11, Math.floor(W / 2), Math.max(6, ...rows.filter(r => r.length === 2).map(([k]) => textWidth(k) + 2)));
+  const out = [line([[' ‹ ', fg(C.dim)], ['Keys', '\x1b[1m'], [title ? ` · ${title}` : '', fg(C.dim)]], W)];
+  if (state.find) {
+    const count = state.find.value ? ` ${rows.filter(r => r.length === 2).length}` : '';
+    const field = state.find.segments(Math.max(1, W - 4 - count.length));
+    out.push(line([[` ${SEARCH} `, fg(C.dim)], ...field, [count.padStart(Math.max(0, W - 3 - segWidth(field))), fg(C.dim)]], W, C.header));
+  }
+  for (const r of rows.slice(state.top, state.top + n)) {
+    if (r.length === 1) { out.push(line([[` ${r[0]}`, '\x1b[1m' + fg(C.blue)]], W)); continue; }
+    const k = ellipsis(r[0], kw - 2);
+    out.push(line([[`  ${k}${' '.repeat(Math.max(1, kw - textWidth(k)))}`, '\x1b[1m' + fg(C.text)], [r[1], fg(C.dim)]], W));
+  }
+  if (!rows.length) out.push(...empty(W, n, 'No match', [['esc', 'clear']]));
+  while (out.length < H - 2) out.push(line([], W));
+  const more = (state.top > 0 ? '▴' : '') + (state.top + n < rows.length ? '▾' : '');
+  out.push(line([['─'.repeat(Math.max(0, W - more.length - 1)) + more, fg(C.dim)]], W));
+  out.push(line(keys(HELP_KEYS, W), W, C.header));
+  out.slice(0, H).forEach((l, i) => { lines[i] = l; });
+}
+
+const helpScroll = (state, by) => { state.top = Math.max(0, Math.min((state.count || 0) - (state.n || 1), (state.top || 0) + by)); };
+
+// Keys of an open help: / opens the find, where characters are typed (Escape closes it); the arrows, page keys,
+// home and end scroll. Returns false when the help is to close: Escape, q, ? or f1.
+function helpKey(k, state) {
+  if (state.find) {
+    if (k === 'escape') { state.find = null; return true; }
+    if (printable(k) || k === 'space' || k === 'backspace' || k === 'delete') { if (state.find.key(k)) state.top = 0; return true; }
+  } else if (k === '/') { state.find = new Field(''); state.top = 0; return true; }
+  else if (['escape', 'q', '?', 'f1'].includes(k)) return false;
+  const page = Math.max(1, (state.n || 10) - 1);
+  const move = { up: -1, k: -1, down: 1, j: 1, pageup: -page, pagedown: page, 'ctrl+u': -Math.ceil(page / 2), 'ctrl+d': Math.ceil(page / 2),
+    home: -Infinity, g: -Infinity, end: Infinity, G: Infinity }[k];
+  if (move) helpScroll(state, move);
+  return true;
+}
+
+// Mouse on an open help: the wheel scrolls, a click on a key hint acts as its key. Returns false when the help is to
+// close: a click on the title, or on esc.
+function helpMouse(m, state) {
+  if (m.wheel) { helpScroll(state, m.wheel * 3); return true; }
+  if (!m.press || m.drag || m.button !== 0) return true;
+  if (m.y === 1) return false;
+  const k = m.y === state.H && keyAt(keys(HELP_KEYS, state.W), m.x - 1);
+  return k ? helpKey(k, state) : true;
+}
+
+// A question in a card over the pane: q: { title, name, where, note, action, tone ('danger', 'go'), focus ('yes',
+// 'no') }. Its title, the name concerned and where it is, a note, then the buttons,
+// the action in red (green for tone 'go'), the focused one lit, the other dimmed. Their columns are kept for clicks
+// (zones).
+const BUTTON = { danger: [138, 47, 42], go: [46, 110, 58] }, BUTTON_ON = [96, 96, 96], BUTTON_OFF = [45, 45, 45];
+const DANGER_TEXT = { danger: [229, 120, 109], go: [111, 191, 142] };
+function confirm(lines, W, H, q) {
+  // No room for the card's edges: keys only.
+  q.zones = null;
+  if (W < 2) return;
+  // A narrow pane: the card takes its width, less a column on each side.
+  const inner = Math.min(44, Math.max(W - 4, Math.min(12, W - 2), 0)), room = Math.max(1, inner - 2);
+  const names = wrap(q.name, room).map(l => [[` ${l}`, '']]);
+  const where = q.where ? [[[` ${ellipsis(q.where, room)}`, fg(C.dim)]]] : [];
+  const note = q.note ? [[[` ${ellipsis(q.note, room)}`, fg(q.tone === 'go' ? C.dim : C.red)]]] : [];
+  // A low pane: the blank lines go first, then where, the name's next lines, the note, the name and the title, so
+  // that the buttons stay in it, under its first line.
+  let gaps = 2, title = true;
+  const rows = () => +title + 1 + gaps + names.length + where.length + note.length, fit = Math.max(1, H - 3);
+  while (rows() > fit && gaps) gaps--;
+  if (rows() > fit) where.length = 0;
+  while (rows() > fit && names.length > 1) names.pop();
+  if (rows() > fit) note.length = 0;
+  if (rows() > fit) names.length = 0;
+  if (rows() > fit) title = false;
+  const text = [...(title ? [[[` ${ellipsis(q.title, room)}`, '\x1b[1m']]] : []), ...(gaps > 1 ? [[]] : []), ...names, ...where, ...note];
+  const yes = ` y ${q.action} `, no = ' n Cancel ';
+  const gap = Math.max(1, Math.min(3, inner - 3 - textWidth(yes) - textWidth(no)));
+  const tone = BUTTON[q.tone] ? q.tone : 'danger', lit = '\x1b[1m' + fg([255, 255, 255]);
+  const yesStyle = q.focus === 'yes' ? lit + bg(BUTTON[tone]) : fg(DANGER_TEXT[tone]) + bg(BUTTON_OFF);
+  const noStyle = q.focus === 'yes' ? fg(C.dim) + bg(BUTTON_OFF) : lit + bg(BUTTON_ON);
+  text.push(...(gaps ? [[]] : []), [['  ', ''], [yes, yesStyle], [' '.repeat(gap), ''], [no, noStyle]]);
+  const h = text.length + 2, x = Math.max(0, Math.floor((W - inner - 2) / 2));
+  const y = Math.max(1, Math.min(H - h, Math.floor((H - h) / 3)));
+  const edge = fg(C.dim), left = ' '.repeat(x), right = ' '.repeat(Math.max(0, W - x - inner - 2));
+  // Rows past the pane's last one are left out.
+  const put = (i, l) => { if (i < H) lines[i] = l; };
+  put(y, left + line([['╭' + '─'.repeat(inner) + '╮', edge]], inner + 2) + right);
+  text.forEach((segs, k) => put(y + 1 + k, left + line([['│', edge], ...segs], inner + 1) + line([['│', edge]], 1) + right));
+  put(y + h - 1, left + line([['╰' + '─'.repeat(inner) + '╯', edge]], inner + 2) + right);
+  // Screen columns from 1: the card's edge, then 2 spaces before the first button; a button cut by the edge is
+  // clickable up to it.
+  const bx = x + 4, end = x + inner + 1, upTo = c => Math.min(c, end);
+  if (y + h - 2 < H) q.zones = { y: y + h - 2, yes: [bx, upTo(bx + textWidth(yes) - 1)], no: [bx + textWidth(yes) + gap, upTo(bx + textWidth(yes) + gap + textWidth(no) - 1)] };
+}
+
+// A key for the question: ← → (and tab, h, l) move between the buttons ('move'), Enter presses the focused one, y
+// confirms ('yes'); any other key cancels ('no').
+function confirmKey(k, q) {
+  if (['left', 'right', 'tab', 'shift+tab', 'h', 'l'].includes(k)) { q.focus = q.focus === 'yes' ? 'no' : 'yes'; return 'move'; }
+  return k === 'y' || (k === 'enter' && q.focus === 'yes') ? 'yes' : 'no';
+}
+// A click: on the action's button 'yes', elsewhere 'no'; null for what is not a click.
+function confirmMouse(m, q) {
+  if (!m.press || m.drag || m.wheel) return null;
+  const z = q.zones;
+  return m.button === 0 && z && m.y - 1 === z.y && m.x >= z.yes[0] && m.x <= z.yes[1] ? 'yes' : 'no';
+}
+
+// An empty area of h lines, width w: what it lacks, dimmed and centred a third of the way down, and under it the
+// keys that go on from there (pairs as for keys).
+function empty(w, h, text, pairs = []) {
+  const keyLine = pairs.length ? keys(pairs) : [];
+  const body = [[[ellipsis(text, w - 2), fg(C.dim)]], ...(pairs.length ? [[], keyLine] : [])];
+  const at = Math.max(0, Math.min(h - body.length, Math.floor((h - body.length) / 3)));
+  const out = [];
+  for (let i = 0; i < h; i++) {
+    const segs = body[i - at];
+    const sw = segs ? segWidth(segs) : 0;
+    out.push(line(segs ? [[' '.repeat(Math.max(0, Math.floor((w - sw) / 2))), ''], ...segs] : [], w));
+  }
+  return out;
+}
+
+// A message after an action, with its mark: ✓ done (the text plain), ✕ error (in red), ⋯ going on (an ellipsis at the
+// end, dimmed), · nothing to do. kind: one of those, else guessed from the text.
+const ERROR = /^(Cannot|Can't|Could not|Not |No (editor|terminal)|Action failed|Update failed|Already exists|VS Code not found)|\b(not found|unavailable)\b|: already bound$/;
+const messageKind = text => (/…$/.test(text) ? 'busy' : ERROR.test(text) ? 'error' : /^(No |Nothing)/.test(text) ? 'info' : 'ok');
+// How long it shows: an error twice as long.
+const messageTime = kind => (kind === 'error' ? 4000 : 2000);
+function message(text, kind = messageKind(text)) {
+  if (kind === 'error') return [[' ✕ ', fg(C.red)], [text, fg(C.red)]];
+  if (kind === 'busy') return [[` ⋯ ${text}`, fg(C.dim)]];
+  if (kind === 'info') return [[' · ', fg(C.dim)], [text, '']];
+  return [[' ✓ ', fg(C.green)], [text, '']];
 }
 
 // Splits a plain text into lines of at most width columns, at spaces when possible.
@@ -264,7 +455,7 @@ const SEQ = {
   '\x1b[1~': 'home', '\x1b[4~': 'end', '\x1b[7~': 'home', '\x1b[8~': 'end', '\x1b[2~': 'insert', '\x1b[3~': 'delete',
   '\x1b[5~': 'pageup', '\x1b[6~': 'pagedown', '\x1b[Z': 'shift+tab', '\x1b[29~': 'menu', '\x1b[21;2~': 'shift+f10',
   '\x1b[1;5A': 'ctrl+up', '\x1b[1;5B': 'ctrl+down', '\x1b[1;5C': 'ctrl+right', '\x1b[1;5D': 'ctrl+left',
-  '\x1b[1;2A': 'shift+up', '\x1b[1;2B': 'shift+down', '\x1b[1;3A': 'alt+up', '\x1b[1;3B': 'alt+down',
+  '\x1b[1;2A': 'shift+up', '\x1b[1;2B': 'shift+down', '\x1b[1;2C': 'shift+right', '\x1b[1;2D': 'shift+left', '\x1b[1;3A': 'alt+up', '\x1b[1;3B': 'alt+down',
   '\x1b[1;3C': 'alt+right', '\x1b[1;3D': 'alt+left', '\x1b[1;5H': 'ctrl+home', '\x1b[1;5F': 'ctrl+end',
   '\x1bOP': 'f1', '\x1bOQ': 'f2', '\x1bOR': 'f3', '\x1bOS': 'f4', '\x1b[11~': 'f1', '\x1b[12~': 'f2', '\x1b[15~': 'f5',
   '\r': 'enter', '\n': 'enter', '\t': 'tab', '\x7f': 'backspace', '\x08': 'backspace', '\x1b': 'escape',
@@ -407,7 +598,7 @@ function restart(env) {
 const size = () => ({ W: process.stdout.columns || 80, H: process.stdout.rows || 24 });
 
 module.exports = {
-  fg, bg, glyph, C, GIT, clean, cleanLine, cols, fit, textWidth, ellipsis, line, wrap,
+  fg, bg, glyph, SEARCH, C, GIT, clean, cleanLine, cols, fit, textWidth, ellipsis, line, keys, keyAt, help, helpKey, helpMouse, wrap, empty, message, messageKind, messageTime, confirm, confirmKey, confirmMouse,
   segWidth, segText, slice, split, mark, Scrollbar,
-  keyName, decode, printable, Field, screen, restart, size,
+  keyName, keyLabel, decode, printable, Field, screen, restart, size,
 };
