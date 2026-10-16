@@ -233,19 +233,19 @@ async function setWidth(pane, { split, left }, want) {
 // of the split. columns(): the pane's width now, without border; get(): the width it keeps (null at first: the
 // width it has); set(width): the width taken; side: 'left' or 'right', the part of its split the pane must be
 // (null: either).
-// The plugin's panes that keep their width, and the file where a pane changing its own width says so, for half a
-// second: the panes it moved are then put back by it, in the same burst (no frame shows them moved), rather than
+// The plugin's panes that keep their width, and the file where a pane changing its own width names the panes it
+// moves, for half a second: those panes are then put back by it, in the same burst (no frame shows them moved), rather than
 // by themselves as well, which would move them twice (herdr resizes by a relative amount).
 const KEEPING = new Set(['Explorer', 'Preview']);
 const RESIZING = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'resizing');
 function resizingElsewhere(pane) {
   try {
-    const { by, at } = JSON.parse(fs.readFileSync(RESIZING, 'utf8'));
-    return by !== pane && Date.now() - at < 500;
+    const { moved, at } = JSON.parse(fs.readFileSync(RESIZING, 'utf8'));
+    return Array.isArray(moved) && moved.includes(pane) && Date.now() - at < 500;
   } catch { return false; }
 }
-function markResizing(pane) {
-  try { fs.writeFileSync(RESIZING, JSON.stringify({ by: pane, at: Date.now() })); } catch { }
+function markResizing(moved) {
+  try { fs.writeFileSync(RESIZING, JSON.stringify({ moved, at: Date.now() })); } catch { }
 }
 
 // The widths (borders included) of the other panes of the layout that keep theirs.
@@ -289,13 +289,15 @@ function widthKeeper(pane, { columns, get, set, side = null }) {
       if (panes && set_ !== panes) setTimeout(() => check(), 500);
       area = layout.area.width; panes = set_; ratio = found.split.ratio;
       if (own || get() === null) return set(now);
+      // Cut down to fit the split, kept as it is: a narrow window does not lower the width wanted back afterwards,
+      // only the pane's own resizing (< >) does, so that a key held down stops adding up at the limit.
       const want = Math.max(10, Math.min(found.split.rect.width - border - 20, get()));
-      if (want !== get()) set(want);
+      if (force && want !== get()) set(want);
       if (now === want) return;
       if (!force && resizingElsewhere(pane)) return;
       // Changing its own width (< >), the pane puts back the others it moves.
       const others = force ? await keptWidths(layout, pane) : null;
-      if (others && others.size) markResizing(pane);
+      if (others && others.size) markResizing([...others.keys()]);
       ratio = await setWidth(pane, found, want + border);
       if (others && others.size) await restoreWidths(pane, others);
     } catch { } finally {
