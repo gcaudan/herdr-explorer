@@ -6,12 +6,12 @@
 if (require('./launch').launch()) return;
 const fs = require('fs');
 const path = require('path');
-const actions = require('./actions');
-const icons = require('./icons');
-const ui = require('./ui');
-const update = require('./update');
+const actions = require('./core/actions');
+const icons = require('./core/icons');
+const ui = require('./core/ui');
+const update = require('./core/update');
 const { run, result, HERDR, GIT: GIT_BIN, gitEnv, WIDTH_FILE, readWidth, readSettings, writeSettings, KEYS_FILE, readKeys,
-  keysTemplate, writeKeys, writePaneState, SETTINGS_FILE } = require('./exec');
+  keysTemplate, writeKeys, writePaneState, SETTINGS_FILE } = require('./core/exec');
 
 const { C, GIT, fg, glyph, line, fit, textWidth } = ui;
 const HOME = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());

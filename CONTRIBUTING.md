@@ -45,6 +45,10 @@ Keep the conventions of the existing code:
 
 ## Project structure
 
+The scripts herdr runs stay at the root of `src/`: the manifest names them, and a self-restart runs the same path
+again. Modules they share go in `src/core/` (terminal, programs, actions, state) and `src/render/` (highlighting,
+Markdown, images, graph).
+
 | File                  | Role                                                                                         |
 | --------------------- | -------------------------------------------------------------------------------------------- |
 | `herdr-plugin.toml`   | manifest: id, version, min herdr version, startup hook, `tab.created` event, panes, actions  |
@@ -52,20 +56,20 @@ Keep the conventions of the existing code:
 | `src/hook.js`         | startup restore, `tab.created`, and the toggle, search and source control actions. Opens and places the explorer |
 | `src/launch.js`       | launcher that keeps the explorer and preview panes alive across self-restarts (exit code 75) |
 | `src/explorer.js`     | explorer pane: tree, git decorations, filter, menus, settings, width, follow, update UI      |
-| `src/actions.js`      | file and pane actions: open, preview, edit, insert, copy, reveal, create, rename, duplicate, trash, stage, unstage, discard; opens the plugin's other panes |
+| `src/core/actions.js` | file and pane actions: open, preview, edit, insert, copy, reveal, create, rename, duplicate, trash, stage, unstage, discard; opens the plugin's other panes |
 | `src/preview.js`      | preview pane: text, Markdown, images, hex dump; find, selection, live reload, request file   |
-| `src/highlight.js`    | table-driven syntax highlighter (VS Code Dark+ colours)                                      |
-| `src/markdown.js`     | Markdown renderer for the terminal, including tables, alerts and Mermaid flowcharts          |
-| `src/image.js`        | image header sniffing and pure-JS decoders (PNG, GIF, BMP, baseline JPEG, ICO), half-block rendering |
+| `src/render/highlight.js` | table-driven syntax highlighter (VS Code Dark+ colours)                                      |
+| `src/render/markdown.js` | Markdown renderer for the terminal, including tables, alerts and Mermaid flowcharts          |
+| `src/render/image.js` | image header sniffing and pure-JS decoders (PNG, GIF, BMP, baseline JPEG, ICO), half-block rendering |
 | `src/search.js`       | Go to file (fuzzy) and Search in files (text/regex, globs) popup                             |
 | `src/scm.js`          | source control pane: changes, commit, branches, remotes, history, stashes, refs, Claude messages |
-| `src/graph.js`        | lanes of the history's branch graph                                                          |
+| `src/render/graph.js` | lanes of the history's branch graph                                                          |
 | `src/diff.js`         | diff parser and renderer (inline, side by side, word highlights), and the Changes pane       |
 | `src/edit.js`         | Editor pane: runs the terminal editor on a file                                              |
-| `src/icons.js`        | Nerd Font icons and VS Code icon theme loading                                               |
-| `src/ui.js`           | terminal helpers: colours, text width, lines, input decoding, text field, scrollbar, screen, restart |
-| `src/exec.js`         | safe program execution, git hardening, settings, pane state, key bindings                    |
-| `src/update.js`       | daily release check, self-update by fast-forward pull, version watch                         |
+| `src/core/icons.js`   | Nerd Font icons and VS Code icon theme loading                                               |
+| `src/core/ui.js`      | terminal helpers: colours, text width, lines, input decoding, text field, scrollbar, screen, restart |
+| `src/core/exec.js`    | safe program execution, git hardening, settings, pane state, key bindings                    |
+| `src/core/update.js`  | daily release check, self-update by fast-forward pull, version watch                         |
 | `hook.js`, `explorer.js`, … | one-line stand-ins for the panes and hooks of a 0.5.x manifest, until its installer is run again; to remove in a later release |
 | `release-please-config.json`, `.release-please-manifest.json` | release automation                       |
 | `test/`               | `node --test` suite: scripts parse, text width, key hints, graph lanes, doc links            |

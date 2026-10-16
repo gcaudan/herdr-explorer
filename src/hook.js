@@ -11,8 +11,8 @@ const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const { PLUGIN, HERDR, result, readWidth, readSettings, PANES_DIR, paneFile, readPaneState } = require('./exec');
-const { sideSplit } = require('./actions');
+const { PLUGIN, HERDR, result, readWidth, readSettings, PANES_DIR, paneFile, readPaneState } = require('./core/exec');
+const { sideSplit } = require('./core/actions');
 const LABEL = 'Explorer';
 // The plugin's panes, by label.
 const OWN = new Set(['Explorer', 'Preview', 'Source Control', 'Changes', 'Editor', 'Search']);
@@ -99,7 +99,7 @@ if (process.argv.includes('--toggle')) {
   } else if (panes.length) open(panes, ctx.tab_id, ctx.workspace_cwd);
 } else if (process.argv.includes('--search') || process.argv.includes('--scm')) {
   // From the tab's explorer when there is one, so that the search opens files in that tab's preview.
-  const actions = require('./actions');
+  const actions = require('./core/actions');
   const panes = ctx.tab_id ? tabPanes(ctx.workspace_id, ctx.tab_id) : [];
   const explorer = panes.find(p => p.label === LABEL);
   const pane = (explorer && explorer.pane_id) || process.env.HERDR_PANE_ID || ctx.pane_id || (panes[0] && panes[0].pane_id);
@@ -122,12 +122,12 @@ if (process.argv.includes('--toggle')) {
   // herdr restores the plugin's panes as plain shells, its session keeping only their label and folder: close
   // them, then reopen the explorer and the preview in the tabs that had them, at what they saved under the same
   // pane id (the preview's file only when it still exists).
-  const actions = require('./actions');
+  const actions = require('./core/actions');
   const exists = (p, dir) => { try { return p && fs.statSync(p).isDirectory() === dir ? p : null; } catch { return null; } };
   const running = p => herdr('pane', 'process-info', '--pane', p.pane_id).process_info.foreground_processes
     .some(f => /^node(\.exe)?$/i.test(path.basename((f.argv && f.argv[0]) || '')));
   // A newer release, looked for alongside (at most once a day).
-  require('./update').check().catch(() => { });
+  require('./core/update').check().catch(() => { });
   (async () => {
     for (const ws of herdr('workspace', 'list').workspaces) {
       const tabs = new Map();
@@ -159,7 +159,7 @@ if (process.argv.includes('--toggle')) {
   })();
 } else {
   // Also here, for a herdr session running for days: the check itself happens once a day at most.
-  require('./update').check().catch(() => { });
+  require('./core/update').check().catch(() => { });
   const ev = JSON.parse(process.env.HERDR_PLUGIN_EVENT_JSON || '{}');
   const tab = ev.data && ev.data.tab;
   if (tab && readSettings().autoOpen) {

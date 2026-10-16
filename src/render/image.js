@@ -3,7 +3,7 @@
 // Files are untrusted: sizes are checked before allocating, every loop is bounded and nothing throws.
 'use strict';
 const zlib = require('zlib');
-const { fg, bg } = require('./ui');
+const { fg, bg } = require('../core/ui');
 
 const FORMATS = new Set('png apng jpg jpeg jpe jfif gif bmp dib ico cur webp svg'.split(' '));
 const MAX_BYTES = 50 * 1024 * 1024;

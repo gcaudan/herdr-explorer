@@ -592,7 +592,7 @@ function restart(env) {
   process.stdin.removeAllListeners('data');
   process.stdin.pause();
   process.stdout.removeAllListeners('resize');
-  process.send({ restart: env }, () => process.exit(require('./launch').RESTART));
+  process.send({ restart: env }, () => process.exit(require('../launch').RESTART));
 }
 
 const size = () => ({ W: process.stdout.columns || 80, H: process.stdout.rows || 24 });

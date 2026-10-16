@@ -5,9 +5,9 @@
 const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
-const ui = require('./ui');
-const actions = require('./actions');
-const { WIN, run, GIT, gitEnv } = require('./exec');
+const ui = require('./core/ui');
+const actions = require('./core/actions');
+const { WIN, run, GIT, gitEnv } = require('./core/exec');
 
 const { C, fg, bg, line, textWidth, ellipsis, Field } = ui;
 const ROOT = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());

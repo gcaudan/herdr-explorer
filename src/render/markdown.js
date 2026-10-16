@@ -2,7 +2,7 @@
 // highlighted by highlight.js, GFM tables and task lists, simple Mermaid flowcharts. A small CommonMark-like
 // parser, not a complete one. Output: lines of [text, style] segments that fit the width, for ui.line().
 'use strict';
-const { fg, bg, cleanLine, textWidth, fit } = require('./ui');
+const { fg, bg, cleanLine, textWidth, fit } = require('../core/ui');
 
 const BOLD = '\x1b[1m', ITALIC = '\x1b[3m', UNDER = '\x1b[4m', STRIKE = '\x1b[9m';
 const COL = {

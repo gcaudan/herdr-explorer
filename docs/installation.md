@@ -137,7 +137,7 @@ Click the `↑`, or press `u` (or click **↑ X.Y.Z available**) in the settings
 
 ### Refusals
 
-The update checks, in this order (`src/update.js`), and stops with the message when a check fails:
+The update checks, in this order (`src/core/update.js`), and stops with the message when a check fails:
 
 | Check | Message |
 |---|---|

@@ -6,8 +6,8 @@
 'use strict';
 const path = require('path');
 const { spawnSync } = require('child_process');
-const ui = require('./ui');
-const { GIT, gitEnv, readSettings, writeSettings } = require('./exec');
+const ui = require('./core/ui');
+const { GIT, gitEnv, readSettings, writeSettings } = require('./core/exec');
 
 const MAX_UNTRACKED = 200;
 const MAX_ROWS = 200000; // beyond, a huge diff would take seconds to lay out at every resize
@@ -320,7 +320,7 @@ function main() {
     ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
   ];
   // Go to file and Search in files from the diff's folder, as from the explorer.
-  const search = mode => require('./actions').search(cwd, process.env.HERDR_PANE_ID, mode);
+  const search = mode => require('./core/actions').search(cwd, process.env.HERDR_PANE_ID, mode);
 
   function scroll(n) { top += n; draw(); }
   // Next or previous hunk: its header comes to the top.

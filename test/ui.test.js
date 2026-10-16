@@ -2,7 +2,7 @@
 // gives it, or it pushes the scrollbar or the border out of place.
 const test = require('node:test');
 const assert = require('node:assert');
-const ui = require('../src/ui');
+const ui = require('../src/core/ui');
 
 const plain = s => s.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '');
 const text = segs => segs.map(([t]) => t).join('');

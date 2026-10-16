@@ -7,12 +7,12 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
-const ui = require('./ui');
+const ui = require('./core/ui');
 const diffs = require('./diff');
-const icons = require('./icons');
-const graph = require('./graph');
-const actions = require('./actions');
-const { WIN, which, GIT, gitEnv, gitOperation, readSettings, writeSettings } = require('./exec');
+const icons = require('./core/icons');
+const graph = require('./render/graph');
+const actions = require('./core/actions');
+const { WIN, which, GIT, gitEnv, gitOperation, readSettings, writeSettings } = require('./core/exec');
 
 const ROOT = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());
 const { C, fg, bg, glyph } = ui;

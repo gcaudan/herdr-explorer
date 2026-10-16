@@ -5,7 +5,7 @@
 const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { WIN, which, words } = require('./exec');
+const { WIN, which, words } = require('./core/exec');
 
 const file = process.env.EXPLORER_FILE;
 

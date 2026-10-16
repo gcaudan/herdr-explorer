@@ -6,10 +6,10 @@
 if (require('./launch').launch()) return;
 const fs = require('fs');
 const path = require('path');
-const ui = require('./ui');
-const actions = require('./actions');
-const update = require('./update');
-const { run, HERDR, readSettings, writeSettings, writePaneState } = require('./exec');
+const ui = require('./core/ui');
+const actions = require('./core/actions');
+const update = require('./core/update');
+const { run, HERDR, readSettings, writeSettings, writePaneState } = require('./core/exec');
 
 const PANE = process.env.HERDR_PANE_ID;
 const REQUEST = process.env.EXPLORER_TAB && actions.requestFile(process.env.EXPLORER_TAB);
@@ -19,7 +19,7 @@ const HEX_BYTES = 64 << 10;
 const { C, fg, bg } = ui;
 
 // Optional renderers: the preview still shows plain text without them.
-const optional = name => { try { return require(`./${name}`); } catch { return null; } };
+const optional = name => { try { return require(`./render/${name}`); } catch { return null; } };
 const highlight = optional('highlight'), markdown = optional('markdown'), image = optional('image');
 
 const settings = readSettings();
