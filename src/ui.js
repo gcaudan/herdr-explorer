@@ -140,7 +140,7 @@ function help(lines, W, title, groups, state) {
     const k = ellipsis(r[0], kw - 2);
     out.push(line([[`  ${k}${' '.repeat(Math.max(1, kw - textWidth(k)))}`, '\x1b[1m' + fg(C.text)], [r[1], fg(C.dim)]], W));
   }
-  if (!rows.length) out.push(line([[' No match', fg(C.dim)]], W));
+  if (!rows.length) out.push(...empty(W, n, 'No match', [['esc', 'clear']]));
   while (out.length < H - 2) out.push(line([], W));
   const more = (state.top > 0 ? '▴' : '') + (state.top + n < rows.length ? '▾' : '');
   out.push(line([['─'.repeat(Math.max(0, W - more.length - 1)) + more, fg(C.dim)]], W));
@@ -173,6 +173,76 @@ function helpMouse(m, state) {
   if (m.y === 1) return false;
   const k = m.y === state.H && keyAt(keys(HELP_KEYS, state.W), m.x - 1);
   return k ? helpKey(k, state) : true;
+}
+
+// A question in a card over the pane: q: { title, name, where, note, action, tone ('danger', 'go'), focus ('yes',
+// 'no') }. Its title, the name concerned and where it is, a note, then the buttons,
+// the action in red (green for tone 'go'), the focused one lit, the other dimmed. Their columns are kept for clicks
+// (zones).
+const BUTTON = { danger: [138, 47, 42], go: [46, 110, 58] }, BUTTON_ON = [96, 96, 96], BUTTON_OFF = [45, 45, 45];
+const DANGER_TEXT = { danger: [229, 120, 109], go: [111, 191, 142] };
+function confirm(lines, W, H, q) {
+  const inner = Math.max(12, Math.min(W - 4, 44)), room = inner - 2;
+  const text = [[[` ${ellipsis(q.title, room)}`, '\x1b[1m']], []];
+  for (const l of wrap(q.name, room)) text.push([[` ${l}`, '']]);
+  if (q.where) text.push([[` ${ellipsis(q.where, room)}`, fg(C.dim)]]);
+  if (q.note) text.push([[` ${ellipsis(q.note, room)}`, fg(q.tone === 'go' ? C.dim : C.red)]]);
+  const yes = ` y ${q.action} `, no = ' n Cancel ';
+  const gap = Math.max(1, Math.min(3, inner - 3 - textWidth(yes) - textWidth(no)));
+  const tone = BUTTON[q.tone] ? q.tone : 'danger', lit = '\x1b[1m' + fg([255, 255, 255]);
+  const yesStyle = q.focus === 'yes' ? lit + bg(BUTTON[tone]) : fg(DANGER_TEXT[tone]) + bg(BUTTON_OFF);
+  const noStyle = q.focus === 'yes' ? fg(C.dim) + bg(BUTTON_OFF) : lit + bg(BUTTON_ON);
+  text.push([], [['  ', ''], [yes, yesStyle], [' '.repeat(gap), ''], [no, noStyle]]);
+  const h = text.length + 2, x = Math.max(0, Math.floor((W - inner - 2) / 2));
+  const y = Math.max(1, Math.min(H - h, Math.floor((H - h) / 3)));
+  const edge = fg(C.dim), left = ' '.repeat(x), right = ' '.repeat(Math.max(0, W - x - inner - 2));
+  lines[y] = left + line([['╭' + '─'.repeat(inner) + '╮', edge]], inner + 2) + right;
+  text.forEach((segs, k) => { lines[y + 1 + k] = left + line([['│', edge], ...segs], inner + 1) + line([['│', edge]], 1) + right; });
+  lines[y + h - 1] = left + line([['╰' + '─'.repeat(inner) + '╯', edge]], inner + 2) + right;
+  // Screen columns from 1: the card's edge, then 2 spaces before the first button.
+  const bx = x + 4;
+  q.zones = { y: y + h - 2, yes: [bx, bx + textWidth(yes) - 1], no: [bx + textWidth(yes) + gap, bx + textWidth(yes) + gap + textWidth(no) - 1] };
+}
+
+// A key for the question: ← → (and tab, h, l) move between the buttons ('move'), Enter presses the focused one, y
+// confirms ('yes'); any other key cancels ('no').
+function confirmKey(k, q) {
+  if (['left', 'right', 'tab', 'shift+tab', 'h', 'l'].includes(k)) { q.focus = q.focus === 'yes' ? 'no' : 'yes'; return 'move'; }
+  return k === 'y' || (k === 'enter' && q.focus === 'yes') ? 'yes' : 'no';
+}
+// A click: on the action's button 'yes', elsewhere 'no'; null for what is not a click.
+function confirmMouse(m, q) {
+  if (!m.press || m.drag || m.wheel) return null;
+  const z = q.zones;
+  return m.button === 0 && z && m.y - 1 === z.y && m.x >= z.yes[0] && m.x <= z.yes[1] ? 'yes' : 'no';
+}
+
+// An empty area of h lines, width w: what it lacks, dimmed and centred a third of the way down, and under it the
+// keys that go on from there (pairs as for keys).
+function empty(w, h, text, pairs = []) {
+  const keyLine = pairs.length ? keys(pairs) : [];
+  const body = [[[ellipsis(text, w - 2), fg(C.dim)]], ...(pairs.length ? [[], keyLine] : [])];
+  const at = Math.max(0, Math.min(h - body.length, Math.floor((h - body.length) / 3)));
+  const out = [];
+  for (let i = 0; i < h; i++) {
+    const segs = body[i - at];
+    const sw = segs ? segWidth(segs) : 0;
+    out.push(line(segs ? [[' '.repeat(Math.max(0, Math.floor((w - sw) / 2))), ''], ...segs] : [], w));
+  }
+  return out;
+}
+
+// A message after an action, with its mark: ✓ done (the text plain), ✕ error (in red), ⋯ going on (an ellipsis at the
+// end, dimmed), · nothing to do. kind: one of those, else guessed from the text.
+const ERROR = /^(Cannot|Can't|Could not|Not |No (editor|terminal)|Action failed|Update failed|Already exists|VS Code not found)|\bnot found\b|: already bound$/;
+const messageKind = text => (/…$/.test(text) ? 'busy' : ERROR.test(text) ? 'error' : /^(No |Nothing)/.test(text) ? 'info' : 'ok');
+// How long it shows: an error twice as long.
+const messageTime = kind => (kind === 'error' ? 4000 : 2000);
+function message(text, kind = messageKind(text)) {
+  if (kind === 'error') return [[' ✕ ', fg(C.red)], [text, fg(C.red)]];
+  if (kind === 'busy') return [[` ⋯ ${text}`, fg(C.dim)]];
+  if (kind === 'info') return [[' · ', fg(C.dim)], [text, '']];
+  return [[' ✓ ', fg(C.green)], [text, '']];
 }
 
 // Splits a plain text into lines of at most width columns, at spaces when possible.
@@ -511,7 +581,7 @@ function restart(env) {
 const size = () => ({ W: process.stdout.columns || 80, H: process.stdout.rows || 24 });
 
 module.exports = {
-  fg, bg, glyph, SEARCH, C, GIT, clean, cleanLine, cols, fit, textWidth, ellipsis, line, keys, keyAt, help, helpKey, helpMouse, wrap,
+  fg, bg, glyph, SEARCH, C, GIT, clean, cleanLine, cols, fit, textWidth, ellipsis, line, keys, keyAt, help, helpKey, helpMouse, wrap, empty, message, messageKind, messageTime, confirm, confirmKey, confirmMouse,
   segWidth, segText, slice, split, mark, Scrollbar,
   keyName, keyLabel, decode, printable, Field, screen, restart, size,
 };

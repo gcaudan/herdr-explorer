@@ -285,28 +285,35 @@ function main() {
   function draw() {
     const { W, H } = ui.size();
     const m = mode || defaultMode(W);
-    const body = H - 1;
+    const body = H - 2;
     // One column narrower when the scrollbar shows (a narrower layout never has fewer rows): kept while it does.
     if (cache !== `${W - 1}:${m}` || rows.length <= body) layout(W, m);
     if (rows.length > body) layout(W - 1, m);
     top = Math.max(0, Math.min(top, rows.length - body));
     const bw = scrollbar.set(rows.length, body, top);
+    // Header: the name and the counts, then the layout switch, the active side underlined (clickable: switches).
     const counts = parsed ? [[` +${parsed.add}`, GREEN], [` −${parsed.del}`, RED]] : [];
-    const head = [[` ${name}`, '\x1b[1m'], ...counts, [`   ${m === 'split' ? 'side by side' : 'inline'}  `, DIM]];
-    hints = ui.keys([['s', 'layout'], ['n N', 'hunks'], ['q', 'close'], ['?', 'keys']], W - ui.segWidth(head));
-    hintsAt = ui.segWidth(head);
-    const lines = [ui.line([...head, ...hints], W, ui.C.header)];
-    if (!parsed) lines.push(ui.line([[' Loading…', DIM]], W));
-    else if (!rows.length) lines.push(ui.line([[' (no changes)', DIM]], W));
+    const ON = '\x1b[1;4m', layouts = [['Inline', m === 'inline' ? ON : DIM], [' · ', DIM], ['Side by side', m === 'split' ? ON : DIM], [' ', '']];
+    const head = [[` ${name}`, '\x1b[1m'], ...counts];
+    const room = W - ui.segWidth(head) - ui.segWidth(layouts) - 1;
+    switchAt = room >= 0 ? W - ui.segWidth(layouts) + 1 : 0;
+    const lines = [ui.line(room >= 0 ? [...head, [' '.repeat(room + 1), ''], ...layouts] : head, W, ui.C.header)];
+    if (!parsed) lines.push(...ui.empty(W, body, 'Loading…'));
+    else if (!rows.length) lines.push(...ui.empty(W, body, 'No changes', [['q', 'close']]));
     rows.slice(top, top + body).forEach((r, k) => lines.push(ui.line(r.segs, W - bw, r.back) + scrollbar.cell(k)));
-    while (lines.length < H) lines.push(ui.line([], W));
-    lines.length = H;
+    while (lines.length < H - 1) lines.push(ui.line([], W));
+    lines.length = H - 1;
+    // Footer: the keys, and how far down the diff is.
+    const pct = rows.length > body ? ` ${Math.round(100 * top / Math.max(1, rows.length - body))}% ` : '';
+    hints = ui.keys([['n N', 'hunks'], ['s', 'layout'], ['q', 'close'], ['?', 'keys']], W - pct.length);
+    lines.push(ui.line([...hints, [pct.padStart(Math.max(0, W - ui.segWidth(hints))), DIM]], W, ui.C.header));
     if (help) ui.help(lines, W, 'Changes', HELP, help);
     paint(lines);
   }
 
-  // The key help (? or f1), over the whole pane (ui.help): { top, find } while it shows. hints: those of the header, from column hintsAt.
-  let help = null, hints = [], hintsAt = 0;
+  // The key help (? or f1), over the whole pane (ui.help): { top, find } while it shows. hints: those of the footer;
+  // switchAt: the column of the header's layout switch (0: not shown).
+  let help = null, hints = [], switchAt = 0;
   const HELP = [
     ['Scroll', [['↑↓ j k', 'line'], ['pgup pgdn', 'page'], ['space', 'page down'], ['ctrl+u/d', 'half page'], ['g G', 'top, bottom']]],
     ['Diff', [['n N', 'next, previous hunk'], ['s', 'inline, side by side']]],
@@ -324,7 +331,7 @@ function main() {
   }
 
   function onKey(k) {
-    const page = ui.size().H - 2;
+    const page = ui.size().H - 3;
     if (k === 'ctrl+c') process.exit(0);
     if (help) { if (!ui.helpKey(k, help)) help = null; return draw(); }
     if (k === '?' || k === 'f1') { help = { top: 0, find: null }; draw(); }
@@ -349,8 +356,15 @@ function main() {
     mouse(m) {
       if (help) { if (!ui.helpMouse(m, help)) help = null; return draw(); }
       if (m.wheel) return scroll(m.wheel * 3);
-      // A click on a hint of the header does what its key does.
-      const k = m.y === 1 && m.press && !m.drag && m.button === 0 && ui.keyAt(hints, m.x - 1, hintsAt);
+      const click = m.press && !m.drag && m.button === 0;
+      // The layout switch: a click on a side chooses it.
+      if (click && m.y === 1 && switchAt && m.x >= switchAt) {
+        const want = m.x < switchAt + 6 ? 'inline' : 'split';
+        if (want !== (mode || defaultMode(ui.size().W))) { mode = want; saveMode(mode); draw(); }
+        return;
+      }
+      // A click on a hint of the footer does what its key does.
+      const k = click && m.y === ui.size().H && ui.keyAt(hints, m.x - 1);
       if (k) return onKey(k);
       scrollbar.mouse(m, m.y - 2, m.x === ui.size().W);
     },

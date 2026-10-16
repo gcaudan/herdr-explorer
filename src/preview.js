@@ -128,14 +128,14 @@ function rows() {
     if (res && res.lines) {
       const pad = Math.max(0, Math.floor((W - res.width) / 2));
       list = res.lines.map(segs => ({ segs: [[' '.repeat(pad), ''], ...segs], src: -1 }));
-    } else list = [{ segs: [[` ${(res && res.info) || 'No preview'}`, fg(C.dim)]], src: -1 }];
+    } else list = [{ empty: (res && res.info) || 'No preview', pairs: [['o', 'open'], ['q', 'close']], src: -1 }];
   } else if (markdownView()) {
     let res;
     try { res = markdown.render(state.text, Math.max(1, Math.min(width - 1, 120)), { highlight }); } catch { res = null; }
     if (res) list = res.lines.map(segs => ({ segs: [[' ', ''], ...segs], src: -1, pad: 1 }));
     else list = state.source.map((segs, i) => ({ segs, src: i, first: true }));
   } else if (state.kind === 'error') {
-    list = [{ segs: [[` ${state.info}`, fg(C.dim)]], src: -1 }];
+    list = [{ empty: state.info, pairs: [['r', 'reload'], ['q', 'close']], src: -1 }];
   } else if (settings.wrap) {
     // off: where the part starts in its line, for the find's matches.
     state.source.forEach((segs, i) => {
@@ -162,7 +162,11 @@ function render() {
   const current = state.find && state.match >= 0 ? state.matches[state.match] : null;
   // Wrapped and rendered rows (see rows()) leave the last column free for the scrollbar.
   const bw = scrollbar.set(list.length, bodyH, state.top);
-  for (let i = state.top; i < Math.min(list.length, state.top + bodyH); i++) {
+  // Nothing to show (an error, an image that cannot be drawn, an empty file): why, centred, and what to do.
+  const none = list.length === 1 && list[0].empty ? list[0] : (state.kind === 'text' || state.kind === 'markdown') && state.text === ''
+    ? { empty: 'Empty file', pairs: [['e', 'edit'], ['q', 'close']] } : null;
+  if (none) lines.push(...ui.empty(W, bodyH, none.empty, none.pairs));
+  for (let i = state.top; !none && i < Math.min(list.length, state.top + bodyH); i++) {
     const r = list[i];
     const num = g ? [[(r.first ? String(r.src + 1) : '').padStart(g - 1) + ' ', fg(r.src + 1 === state.line ? C.text : C.dim)]] : [];
     // The find's matches: every one marked, the current one brighter (in rendered Markdown, matches are by row).
@@ -195,23 +199,35 @@ const HELP = [
   ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
 ];
 
-// Header: file name and details on the left; clickable chips on the right.
+// Header: file name and details on the left; on the right, the view's switches, clickable: Rendered · Raw (the
+// active one bold and underlined), and wrap and lines with ● or ○ as in the explorer's settings.
 function header(W) {
   const name = state.root ? path.relative(state.root, state.file) || path.basename(state.file) : path.basename(state.file);
-  const chips = [];
-  if (state.kind === 'markdown' && markdown) chips.push([state.raw ? ' Raw ' : ' Rendered ', 'raw']);
-  if (state.kind === 'text' || (state.kind === 'markdown' && state.raw)) chips.push([settings.wrap ? ' Wrap ' : ' No wrap ', 'wrap']);
-  chips.push([' ✕ ', 'close']);
-  const right = chips.reduce((w, [t]) => w + ui.textWidth(t) + 1, 0);
+  const ON = '\x1b[1;4m', onOff = (on, text) => (on ? [['●', fg(C.blue)], [` ${text}`, '']] : [[`○ ${text}`, fg(C.dim)]]);
+  // Groups of [segments, id] items, the last ones left out while the name would get less than 20 columns.
+  const groups = [];
+  if (state.kind === 'markdown' && markdown) {
+    groups.push([[[['Rendered', state.raw ? fg(C.dim) : ON]], 'rendered'], [[[' · ', fg(C.dim)]], null], [[['Raw', state.raw ? ON : fg(C.dim)]], 'raw']]);
+  }
+  if (state.kind === 'text' || (state.kind === 'markdown' && state.raw)) {
+    groups.push([[onOff(settings.wrap, 'wrap'), 'wrap']], [[onOff(settings.lineNumbers, 'lines'), 'lines']]);
+  }
+  const width = list => list.reduce((w, g) => w + g.reduce((n, [segs]) => n + ui.segWidth(segs), 0), 0) + (list.length ? 3 * list.length - 1 : 0);
+  while (groups.length && width(groups) > W - 2 - Math.min(20, ui.textWidth(` ${name}`))) groups.pop();
+  const items = groups.flatMap((g, i) => (i ? [[[['   ', '']], null], ...g] : g));
+  const right = width(groups) + (groups.length ? 1 : 0);
   const [left, lw] = ui.fit(` ${name}`, Math.max(1, W - right - 1));
-  const [info, iw] = ui.fit(`  ${state.info}`, Math.max(0, W - right - lw));
+  // The details whole, else their first part (the lines), else none, a column before the switches.
+  const info = [`  ${state.info}`, `  ${String(state.info).split(' · ')[0]}`, ''].find(t => !t || ui.textWidth(t) < W - right - lw);
+  const iw = ui.textWidth(info);
   const segs = [[left, '\x1b[1m'], [info, fg(C.dim)], [' '.repeat(Math.max(0, W - right - lw - iw)), '']];
   let x = W - right + 1;
   state.chips = [];
-  for (const [text, id] of chips) {
-    segs.push([' ', ''], [text, id === 'close' ? fg(C.dim) : bg(C.selectBlur)]);
-    state.chips.push({ id, from: x + 1, to: x + ui.textWidth(text) });
-    x += ui.textWidth(text) + 1;
+  for (const [parts, id] of items) {
+    const w = ui.segWidth(parts);
+    segs.push(...parts);
+    if (id) state.chips.push({ id, from: x, to: x + w - 1 });
+    x += w;
   }
   return ui.line(segs, W, C.header);
 }
@@ -221,7 +237,7 @@ function footer(W) {
     const count = state.find.field.value ? ` ${state.matches.length ? state.match + 1 : 0}/${state.matches.length}` : '';
     return ui.line([[` ${ui.SEARCH} `, fg(C.dim)], ...state.find.field.segments(W - 4 - count.length), [count, fg(C.dim)]], W, C.header);
   }
-  if (state.flash) return ui.line([[` ${state.flash}`, fg(C.yellow)]], W, C.header);
+  if (state.flash) return ui.line(ui.message(state.flash), W, C.header);
   const list = rows(), bodyH = ui.size().H - 2;
   const pos = list.length > bodyH ? ` ${Math.round(100 * Math.min(1, (state.top + bodyH) / list.length))}%` : '';
   const keys = ui.keys(state.kind === 'image' ? [['o', 'open'], ['y', 'copy path'], ['q', 'close'], ['?', 'keys']]
@@ -235,7 +251,7 @@ function flash(text) {
   state.flash = text;
   render();
   clearTimeout(flash.timer);
-  flash.timer = setTimeout(() => { state.flash = null; render(); }, 2500);
+  flash.timer = setTimeout(() => { state.flash = null; render(); }, ui.messageTime(ui.messageKind(text)));
 }
 
 // --- find in file
@@ -420,7 +436,7 @@ function key(k) {
     return;
   }
   const page = ui.size().H - 3;
-  // The help scrolls when it does not fit; any other key closes it.
+  // The key help (ui.helpKey): scrolls, finds with /, closes with esc, q, ? or f1.
   if (state.help && k !== 'ctrl+c') { if (!ui.helpKey(k, state.help)) state.help = null; return render(); }
   switch (k) {
     case '?': case 'f1': state.help = { top: 0, find: null }; return render();
@@ -479,9 +495,9 @@ function mouse(m) {
     endSelection();
     const chip = state.chips.find(c => m.x >= c.from && m.x <= c.to);
     if (!chip) return;
-    if (chip.id === 'close') return process.exit(0);
     if (chip.id === 'wrap') return toggle('wrap');
-    if (chip.id === 'raw') { state.raw = !state.raw; state.rows = null; state.top = 0; return render(); }
+    if (chip.id === 'lines') return toggle('lineNumbers');
+    if ((chip.id === 'raw') !== state.raw) { state.raw = !state.raw; state.rows = null; state.top = 0; render(); }
     return;
   }
   if (m.button !== 0 && !(m.drag && state.select)) return;

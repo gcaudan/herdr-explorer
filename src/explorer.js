@@ -1,6 +1,6 @@
 // File explorer of the space, in a herdr pane: tree folded with the mouse and the keyboard, VS Code-style
 // git status, filter as you type, file operations, automatic refresh. Enter or double-click: preview (or the editor);
-// right-click: action menu (actions.js). Header icons: search, source control, settings, « to close.
+// right-click: action menu (actions.js). Header icon: settings.
 'use strict';
 // The pane's first process only starts the real one (launch.js).
 if (require('./launch').launch()) return;
@@ -59,8 +59,7 @@ let keys = readKeys('explorer', DEFAULT_KEYS);
 if (KEYS_FILE) fs.watchFile(KEYS_FILE, { interval: 1000 }, () => { keys = readKeys('explorer', DEFAULT_KEYS); });
 
 const CHEVRON = [0xeab6, 0xeab4];
-const BRANCH = 0xe0a0;
-const SEARCH = ui.SEARCH.codePointAt(0), SCM = 0xe725, GEAR = 0xf013;
+const SEARCH = ui.SEARCH.codePointAt(0), GEAR = 0xf013;
 let theme = icons.load(settings.icons); // VS Code icon theme; null: the default icons
 // Moved by an update of its extension: its new place saved for the next starts. No longer installed: the default
 // icons saved, rather than searching for it again at every start.
@@ -109,7 +108,7 @@ const state = {
                    // (focus 'yes', moved with ← →), to confirm; any other key to cancel
 };
 const scrollbar = new ui.Scrollbar(top => { state.top = top; render(); });
-const git = { top: null, prefix: '', branch: '', files: new Map(), dirs: new Map(), untracked: new Set(), ignored: new Set() };
+const git = { top: null, prefix: '', files: new Map(), dirs: new Map(), untracked: new Set(), ignored: new Set() };
 const cache = new Map(); // relative folder → sorted entries
 
 // The repository config is read again before each call, as it may change while the explorer runs.
@@ -220,7 +219,7 @@ function setRoot(dir) {
   state.selected = null;
   load();
   cache.clear();
-  Object.assign(git, { top: null, prefix: '', branch: '', files: new Map(), dirs: new Map(), untracked: new Set(), ignored: new Set() });
+  Object.assign(git, { top: null, prefix: '', files: new Map(), dirs: new Map(), untracked: new Set(), ignored: new Set() });
   // Going up: the folder left is selected.
   const back = path.relative(ROOT, from).split(path.sep).join('/');
   if (back && !back.startsWith('..') && !path.isAbsolute(back)) revealRel(back);
@@ -264,12 +263,8 @@ function code(x, y) {
 
 async function refreshGit() {
   if (!git.top) return;
-  const [status, branch] = await Promise.all([
-    gitRun(['status', '--porcelain=v1', '-z', '--ignored=matching', '--ignore-submodules=all', '--', '.']),
-    gitRun(['branch', '--show-current']),
-  ]);
+  const status = await gitRun(['status', '--porcelain=v1', '-z', '--ignored=matching', '--ignore-submodules=all', '--', '.']);
   if (status === null) return;
-  git.branch = (branch || '').trim();
   git.files = new Map(); git.dirs = new Map(); git.untracked = new Set(); git.ignored = new Set();
   const parts = status.split('\0');
   for (let i = 0; i < parts.length; i++) {
@@ -450,7 +445,7 @@ function render() {
   const W = out.columns || WIDTH, H = out.rows || 24;
   const lines = state.settings ? settingsPage().view(W, H) : treeView(W, H);
   if (state.help) ui.help(lines, W, 'Explorer', helpGroups(), state.help);
-  if (state.confirm) drawConfirm(lines, W, H);
+  if (state.confirm) ui.confirm(lines, W, H, state.confirm);
   paint(lines);
 }
 
@@ -468,13 +463,15 @@ function treeView(W, H) {
     const e = shown[i];
     lines.push((e.edit ? editRow(e, W - bw) : row(e.r, W - bw, e.r === selected)) + scrollbar.cell(i - state.top));
   }
-  if (!shown.length) lines.push(line([[state.filter ? ' No match' : ' (empty)', fg(C.dim)]], W));
+  if (!shown.length) {
+    const first = a => ui.keyLabel(keysOf(a)[0] || '');
+    lines.push(...(state.filter ? ui.empty(W, listH, 'No match', [['esc', 'clear']])
+      : ui.empty(W, listH, 'Empty folder', [[first('newFile'), 'new file'], [first('newFolder'), 'folder']].filter(([k]) => k))));
+  }
   while (lines.length < listH + 1) lines.push(line([], W));
   if (state.prompt) lines.push(state.prompt.inline ? line(promptKeys(W), W, C.header) : promptLine(W));
   else if (state.filter) {
-    const count = state.filter.field.value ? ` ${state.rows.filter(r => r.hit).length}` : '';
-    const field = state.filter.active ? state.filter.field.segments(W - 4 - count.length) : [[state.filter.field.value, '']];
-    lines.push(line([[` ${glyph(SEARCH)} `, fg(C.dim)], ...field, [count.padStart(Math.max(0, W - 3 - ui.segWidth(field))), fg(C.dim)]], W, C.header));
+    lines.push(filterLine(W));
   }
   if (state.menu) drawMenu(lines, W);
   while (lines.length < H) lines.push(line([], W));
@@ -519,52 +516,36 @@ function promptLine(W) {
   return line([[label, fg(C.dim)], ...state.prompt.field.segments(W - textWidth(label))], W, C.header);
 }
 
-// The question in a card over the pane: its title, the name concerned and where it is, a note, then the buttons,
-// the action in red (green for tone 'go'), the focused one lit, the other dimmed. Their columns are kept for clicks
-// (zones).
-const BUTTON = { danger: [138, 47, 42], go: [46, 110, 58] }, BUTTON_ON = [96, 96, 96], BUTTON_OFF = [45, 45, 45];
-const DANGER_TEXT = { danger: [229, 120, 109], go: [111, 191, 142] };
-function drawConfirm(lines, W, H) {
-  const q = state.confirm, inner = Math.max(12, Math.min(W - 4, 44)), room = inner - 2;
-  const text = [[[` ${ui.ellipsis(q.title, room)}`, '\x1b[1m']], []];
-  for (const l of ui.wrap(q.name, room)) text.push([[` ${l}`, '']]);
-  if (q.where) text.push([[` ${ui.ellipsis(q.where, room)}`, fg(C.dim)]]);
-  if (q.note) text.push([[` ${ui.ellipsis(q.note, room)}`, fg(q.tone === 'go' ? C.dim : C.red)]]);
-  const yes = ` y ${q.action} `, no = ' n Cancel ';
-  const gap = Math.max(1, Math.min(3, inner - 3 - textWidth(yes) - textWidth(no)));
-  const tone = BUTTON[q.tone] ? q.tone : 'danger', lit = '\x1b[1m' + fg([255, 255, 255]);
-  const yesStyle = q.focus === 'yes' ? lit + ui.bg(BUTTON[tone]) : fg(DANGER_TEXT[tone]) + ui.bg(BUTTON_OFF);
-  const noStyle = q.focus === 'yes' ? fg(C.dim) + ui.bg(BUTTON_OFF) : lit + ui.bg(BUTTON_ON);
-  text.push([], [['  ', ''], [yes, yesStyle], [' '.repeat(gap), ''], [no, noStyle]]);
-  const h = text.length + 2, x = Math.max(0, Math.floor((W - inner - 2) / 2));
-  const y = Math.max(1, Math.min(H - h, Math.floor((H - h) / 3)));
-  const edge = fg(C.dim), left = ' '.repeat(x), right = ' '.repeat(Math.max(0, W - x - inner - 2));
-  lines[y] = left + line([['╭' + '─'.repeat(inner) + '╮', edge]], inner + 2) + right;
-  text.forEach((segs, k) => { lines[y + 1 + k] = left + line([['│', edge], ...segs], inner + 1) + line([['│', edge]], 1) + right; });
-  lines[y + h - 1] = left + line([['╰' + '─'.repeat(inner) + '╯', edge]], inner + 2) + right;
-  // Screen columns from 1: the card's edge, then 2 spaces before the first button.
-  const bx = x + 4;
-  q.zones = { y: y + h - 2, yes: [bx, bx + textWidth(yes) - 1], no: [bx + textWidth(yes) + gap, bx + textWidth(yes) + gap + textWidth(no) - 1] };
-}
-
-// Header: space name, git branch (or an action message), then the icons: ! when the installer must finish an
-// update, else ↑ when a newer release exists (left out while a message shows), search, source control, settings, «.
+// Header: space name (or an action message), then the icons: ! when the installer must finish an
+// update, else ↑ when a newer release exists (left out while a message shows), and the settings gear.
 const showUpdate = () => !state.flash && (finish || (latest && settings.updateCheck && !updating));
 function header(W) {
   const up = !showUpdate() ? [] : finish ? [['! ', fg(C.yellow)]] : [['↑ ', fg(C.green)]];
-  const icons = [...up, [`${glyph(SEARCH)} ${glyph(SCM)} ${glyph(GEAR)} `, fg(C.dim)], ['«', fg(C.dim)]];
-  const room = W - 9 - (up.length ? 2 : 0);
+  const icons = [...up, [`${glyph(GEAR)} `, fg(C.dim)]];
+  const room = W - 3 - (up.length ? 2 : 0);
   if (state.flash) {
-    const [text, w] = fit(` ${state.flash}`, room);
-    return line([[text, fg(C.yellow)], [' '.repeat(Math.max(0, room - w + 1)), ''], ...icons], W);
+    const msg = ui.slice(ui.message(state.flash), 0, room);
+    return line([...msg, [' '.repeat(Math.max(0, room - ui.segWidth(msg) + 1)), ''], ...icons], W);
   }
   const [name, nw] = fit(` ${path.basename(ROOT).toUpperCase() || ROOT}`, room);
-  // A branch too long is cut with an ellipsis; without room for a few letters, it is left out rather than cut
-  // down to its icon.
-  const full = git.branch ? `  ${glyph(BRANCH)} ${git.branch}` : '';
-  const branch = textWidth(full) <= room - nw ? full : room - nw >= 7 ? ui.ellipsis(full, room - nw) : '';
-  const bw = textWidth(branch);
-  return line([[name, ROOT === HOME ? '\x1b[1m' : '\x1b[1;3m'], [branch, fg(C.dim)], [' '.repeat(Math.max(0, room - nw - bw + 1)), ''], ...icons], W);
+  return line([[name, ROOT === HOME ? '\x1b[1m' : '\x1b[1;3m'], [' '.repeat(Math.max(0, room - nw + 1)), ''], ...icons], W);
+}
+
+// The filter's line: while typed, the field and the count on the right; once kept (Enter), the filter in blue, the
+// count, and how to clear it.
+const HIT = '\x1b[1m' + fg([24, 163, 255]);
+function filterLine(W) {
+  const f = state.filter, n = state.rows.filter(r => r.hit).length;
+  const count = f.field.value ? `${n} match${n === 1 ? '' : 'es'}` : '';
+  const lead = [` ${glyph(SEARCH)} `, fg(C.dim)];
+  if (f.active) {
+    const field = f.field.segments(Math.max(1, W - 5 - count.length));
+    return line([lead, ...field, [count.padStart(Math.max(0, W - 4 - ui.segWidth(field))), fg(C.dim)]], W, C.header);
+  }
+  const left = [lead, [f.field.value, fg(C.blue)], [count && `  ${count}`, fg(C.dim)]];
+  const hint = ui.keys([['esc', 'clear']]);
+  const room = W - ui.segWidth(left) - ui.segWidth(hint) - 1;
+  return line(room >= 0 ? [...left, [' '.repeat(room), ''], ...hint] : left, W, C.header);
 }
 
 function row(r, W, selected) {
@@ -578,10 +559,10 @@ function row(r, W, selected) {
   let name = r.name;
   if (textWidth(name) > room) name = fit(name, Math.max(1, room - 1))[0] + '…';
   const pad = Math.max(0, W - indent.length - 4 - textWidth(name) - (badge ? 2 : 0) - 1);
-  // The part matching the filter, underlined and bold.
+  // The part matching the filter in bold blue, as in Go to file; a folder shown only for what it holds, dimmed.
   const parts = r.hit && r.hit[1] <= name.length
-    ? [[name.slice(0, r.hit[0]), color], [name.slice(r.hit[0], r.hit[1]), color + '\x1b[1;4m'], [name.slice(r.hit[1]), color]]
-    : [[name, color]];
+    ? [[name.slice(0, r.hit[0]), color], [name.slice(r.hit[0], r.hit[1]), HIT], [name.slice(r.hit[1]), color]]
+    : [[name, state.filter && state.filter.field.value && !r.hit ? fg(C.dim) : color]];
   return line([
     [indent + chevron + ' ', fg(C.dim)], [glyph(icon[0]) + ' ', fg(deco === '!' ? GIT['!'] : icon[1])],
     ...parts, [' '.repeat(pad) + (badge ? ' ' + badge : ''), color],
@@ -612,7 +593,7 @@ function ask(label, value, done, empty = false, inline = null) {
   render();
 }
 
-// q: { title, name, where, note, action, tone }, see drawConfirm.
+// q: { title, name, where, note, action, tone }, see ui.confirm.
 function confirm(q, yes) {
   state.menu = null;
   state.confirm = { ...q, yes, focus: 'no' };
@@ -788,7 +769,7 @@ function flash(text) {
   state.flash = text;
   render();
   clearTimeout(flash.timer);
-  flash.timer = setTimeout(() => { state.flash = null; render(); }, 2000);
+  flash.timer = setTimeout(() => { state.flash = null; render(); }, ui.messageTime(ui.messageKind(text)));
 }
 
 function moveMenu(dir) {
@@ -848,7 +829,7 @@ const choice = (name, values, shown = v => v) => {
 };
 const dialog = (value, open) => ({ value: [value, fg(C.blue)], change: dir => (dir > 0 ? open() : null) });
 
-// The rows of the settings view: a group title, or a setting with its value and a line of help.
+// The rows of the settings view: a group title, or a setting with its value and its help.
 function settingsRows() {
   const editor = () => ask('Editor', readSettings().editor, cmd => {
     settings.editor = cmd.trim();
@@ -857,26 +838,26 @@ function settingsRows() {
   }, true);
   return [
     { group: 'TREE' },
-    { label: 'Hidden files', help: 'Dot files in the tree', ...onOff('hidden') },
-    { label: 'Git-ignored files', help: 'Shown greyed out', ...onOff('ignored') },
-    { label: 'Follow terminal', help: 'Reveal the terminal folder', ...onOff('follow') },
-    { label: 'Icon theme', help: 'Nerd Font or a VS Code theme',
+    { label: 'Hidden files', help: 'Show dot files in the tree.', ...onOff('hidden') },
+    { label: 'Git-ignored files', help: 'Show the files git ignores, greyed out.', ...onOff('ignored') },
+    { label: 'Follow terminal', help: 'Reveal the folder of the terminal beside the explorer, within the tab folder.', ...onOff('follow') },
+    { label: 'Icon theme', help: 'Nerd Font icons, or a file icon theme installed for VS Code.',
       ...dialog((settings.icons && settings.icons.label) || 'Nerd Font', () => openIconThemes()) },
     { group: 'OPENING' },
-    { label: 'Enter opens', help: 'Enter or double-click on a file', ...choice('open', ['preview', 'editor']) },
-    { label: 'Editor', help: 'Empty: VS Code, else terminal', ...dialog(settings.editor || 'default', editor) },
-    { label: 'Single-click preview', help: 'A click shows the file', ...onOff('singleClick') },
+    { label: 'Enter opens', help: 'Enter and double-click on a text file: show it in the preview or in the editor.', ...choice('open', ['preview', 'editor']) },
+    { label: 'Editor', help: 'Command run with the path. Empty: VS Code if installed, else a terminal editor.', ...dialog(settings.editor || 'default', editor) },
+    { label: 'Single-click preview', help: 'A single click on a file shows it in the preview.', ...onOff('singleClick') },
     { group: 'NEXT TABS' },
-    { label: 'Dock side', help: 'Applies to the next tabs', ...choice('side', ['left', 'right']) },
-    { label: 'Open automatically', help: 'In new tabs with one pane', ...onOff('autoOpen') },
+    { label: 'Dock side', help: 'Where new explorers dock. An open explorer keeps its side.', ...choice('side', ['left', 'right']) },
+    { label: 'Open automatically', help: 'Open the explorer in new tabs that have a single pane. Off: only with prefix+f.', ...onOff('autoOpen') },
     { group: 'PREVIEW' },
-    { label: 'Wrap lines', help: 'Applies to the next previews', ...onOff('wrap') },
-    { label: 'Line numbers', help: 'Applies to the next previews', ...onOff('lineNumbers') },
-    { label: 'Diff layout', help: 'Auto: side by side when wide', ...choice('diffLayout', ['', 'split', 'inline'], v => v || 'auto') },
+    { label: 'Wrap lines', help: 'Wrap long lines in the preview (w). Other previews at their next opening.', ...onOff('wrap') },
+    { label: 'Line numbers', help: 'Line numbers in the preview (L). Other previews at their next opening.', ...onOff('lineNumbers') },
+    { label: 'Diff layout', help: 'Diffs inline or side by side (s). Auto: side by side when the pane is wide enough.', ...choice('diffLayout', ['', 'split', 'inline'], v => v || 'auto') },
     { group: 'GENERAL' },
-    { label: 'Key bindings', help: 'Rebind the explorer keys',
+    { label: 'Key bindings', help: 'Change the explorer keys, saved in keys.json.',
       ...dialog(changedActions().length ? `${changedActions().length} changed` : 'default', () => openKeys()) },
-    { label: 'Check for updates', help: 'Once a day, on GitHub', ...onOff('updateCheck') },
+    { label: 'Check for updates', help: 'Look for a newer release on GitHub, once a day.', ...onOff('updateCheck') },
   ];
 }
 
@@ -895,7 +876,7 @@ function openSettings() {
 // place of the tree: its title (or an action message), a list scrolled with the selection, a rule, what the page
 // shows of the selection, its keys.
 
-const pageTitle = (title, W) => line(state.flash ? [[` ${state.flash}`, fg(C.yellow)]] : [[' ‹ ', fg(C.dim)], [title, '\x1b[1m']], W);
+const pageTitle = (title, W) => line(state.flash ? ui.message(state.flash) : [[' ‹ ', fg(C.dim)], [title, '\x1b[1m']], W);
 
 // The rows a find keeps: those whose label, value or help has the text typed (any case), under their group title.
 function found(list, p) {
@@ -960,7 +941,7 @@ function listLines(list, p, n, W) {
     const back = p.top + k === p.sel ? (state.focused ? C.select : C.selectBlur) : null;
     return line([[`  ${label}${pad}`, ''], [value, r.value[1]]], W, back);
   });
-  if (!list.length) lines.push(line([[' No match', fg(C.dim)]], W));
+  if (!list.length) lines.push(...ui.empty(W, n, 'No match', [['esc', 'clear']]));
   while (lines.length < n) lines.push(line([], W));
   return lines;
 }
@@ -996,16 +977,20 @@ function moves(n) {
 
 // The settings view: the find when open and the update when there is one under the title, the settings, the help of
 // the selected one, the keys, and a prompt. at: screen row of the first setting, n: the rows they get, update: the
-// row of the update (0: none).
-function settingsLayout(H) {
+// row of the update (0: none), detail: the help's lines.
+function settingsLayout(H, W) {
   const find = state.settings.find ? 1 : 0, update = pendingUpdate() ? 1 + find : 0;
-  const at = 1 + find + (update ? 1 : 0);
-  return { at, n: Math.max(1, H - at - 3 - (state.prompt ? 1 : 0)), update };
+  const at = 1 + find + (update ? 1 : 0), detail = detailLines(W);
+  return { at, n: Math.max(1, H - at - 2 - detail - (state.prompt ? 1 : 0)), update, detail };
 }
+// The lines of the longest help at this width, whichever setting is selected, so that the list does not move: from
+// 1 to MAX_DETAIL.
+const MAX_DETAIL = 4;
+const detailLines = W => Math.min(MAX_DETAIL, Math.max(1, ...settingsRows().filter(r => r.help).map(r => ui.wrap(r.help, W - 2).length)));
 const settingsKeys = W => ui.keys([['←→', 'change'], ['/', 'find'], ['esc', 'back']], W);
 
 function settingsView(W, H) {
-  const s = state.settings, list = found(settingsRows(), s), up = pendingUpdate(), { n } = settingsLayout(H);
+  const s = state.settings, list = found(settingsRows(), s), up = pendingUpdate(), { n, detail } = settingsLayout(H, W);
   const lines = [pageTitle('Settings', W)];
   if (s.find) lines.push(findLine(s, list, W));
   if (up) {
@@ -1016,7 +1001,10 @@ function settingsView(W, H) {
   }
   lines.push(...listLines(list, s, n, W), rule(list, s, n, W));
   const r = list[s.sel];
-  lines.push(line([[` ${ui.ellipsis(r && !r.group ? r.help : '', W - 2)}`, fg(C.dim)]], W));
+  // The help wrapped, its last line cut when it needs more.
+  const help = ui.wrap(r && !r.group ? r.help : '', W - 2);
+  if (help.length > detail) help.splice(detail - 1, help.length, ui.ellipsis(help.slice(detail - 1).join(' '), W - 2));
+  for (let i = 0; i < detail; i++) lines.push(line([[` ${help[i] || ''}`, fg(C.dim)]], W));
   lines.push(line(settingsKeys(W), W, C.header));
   if (state.prompt) lines.push(promptLine(W));
   while (lines.length < H) lines.push(line([], W));
@@ -1030,7 +1018,7 @@ function settingsKey(k) {
   const s = state.settings;
   if (findKey(s, k, settingsRows())) return render();
   const list = found(settingsRows(), s), r = list[s.sel], action = keys.get(k), up = pendingUpdate();
-  const move = moves(settingsLayout(out.rows || 24).n), to = ARROWS[k] || action;
+  const move = moves(settingsLayout(out.rows || 24, out.columns || 80).n), to = ARROWS[k] || action;
   if (k === 'escape' || action === 'close' || action === 'settings') state.settings = null;
   else if (k === 'u' && up) return runAction(up[2]);
   else if (to in move) moveIn(list, s, move[to]);
@@ -1043,7 +1031,7 @@ function settingsKey(k) {
 // on a key hint acts as its key; elsewhere, it cancels a prompt.
 function settingsMouse(m) {
   const s = state.settings, list = found(settingsRows(), s), W = out.columns || WIDTH, y = m.y - 1;
-  const { at, n, update } = settingsLayout(out.rows || 24);
+  const { at, n, update } = settingsLayout(out.rows || 24, out.columns || 80);
   if (m.wheel) { moveIn(list, s, m.wheel); return render(); }
   if (!m.press || m.drag || m.button !== 0) return;
   if (state.prompt) { state.prompt = null; return render(); }
@@ -1187,13 +1175,20 @@ function saveKeys(changes) {
   return null;
 }
 
-// The default keys of an action given back, taken from the actions that have them now.
+// The default keys of an action given back, taken from the actions that have them now; the keys it took from other
+// actions given back to them.
 function resetKeys(action) {
   const changes = { [action]: null };
+  const now = a => (a in changes ? changes[a] || DEFAULT_KEYS[a] : keysOf(a));
   for (const k of DEFAULT_KEYS[action]) {
     const owner = keys.get(k);
-    if (owner && owner !== action) changes[owner] = (changes[owner] || keysOf(owner)).filter(x => x !== k);
+    if (owner && owner !== action) changes[owner] = now(owner).filter(x => x !== k);
   }
+  for (const k of keysOf(action)) {
+    const home = Object.keys(DEFAULT_KEYS).find(a => a !== action && DEFAULT_KEYS[a].includes(k));
+    if (home && !now(home).includes(k)) changes[home] = [...now(home), k];
+  }
+  for (const a of Object.keys(changes)) if (changes[a] && sameKeys(changes[a], DEFAULT_KEYS[a])) changes[a] = null;
   return saveKeys(changes);
 }
 
@@ -1285,14 +1280,13 @@ const helpGroups = () => HELP.map(([group, items]) => [group, items.map(([action
 
 // --- keyboard and mouse
 
-// A question: ← → (and tab, h, l) move between its buttons, Enter presses the focused one (Cancel at first), y
-// confirms; any other key cancels.
+// A question (ui.confirmKey), or a prompt.
 function promptKey(k) {
   if (state.confirm) {
-    const q = state.confirm;
-    if (['left', 'right', 'tab', 'shift+tab', 'h', 'l'].includes(k)) { q.focus = q.focus === 'yes' ? 'no' : 'yes'; return render(); }
+    const q = state.confirm, answer = ui.confirmKey(k, q);
+    if (answer === 'move') return render();
     state.confirm = null;
-    if (k === 'y' || (k === 'enter' && q.focus === 'yes')) return runAction(q.yes);
+    if (answer === 'yes') return runAction(q.yes);
     return render();
   }
   const p = state.prompt;
@@ -1399,10 +1393,10 @@ function mouse(m) {
   const H = out.rows || 24, W = out.columns || WIDTH;
   // A question: a click on its first button confirms, any other click cancels.
   if (state.confirm) {
-    if (!m.press || m.drag || m.wheel) return;
-    const { zones, yes } = state.confirm;
+    const q = state.confirm, answer = ui.confirmMouse(m, q);
+    if (!answer) return;
     state.confirm = null;
-    if (m.button === 0 && zones && m.y - 1 === zones.y && m.x >= zones.yes[0] && m.x <= zones.yes[1]) return runAction(yes);
+    if (answer === 'yes') return runAction(q.yes);
     return render();
   }
   if (m.wheel && state.menu) { moveMenu(m.wheel); return render(); }
@@ -1430,11 +1424,8 @@ function mouse(m) {
   if (y === 1) {
     if (btn !== 0) return render();
     // Each icon and the cell after it: a Nerd Font glyph often spills over the next cell.
-    if (x >= W - 1) return close();
-    if (x >= W - 3) return openSettings();
-    if (x >= W - 5) return runAction(() => (git.top ? actions.scm(ROOT, PANE) : 'Not a git repository'));
-    if (x >= W - 7) return runAction(() => actions.search(ROOT, PANE, 'files'));
-    if (x >= W - 9 && showUpdate()) return runAction(finish ? finishUpdate : askUpdate);
+    if (x >= W - 2) return openSettings();
+    if (x >= W - 4 && showUpdate()) return runAction(finish ? finishUpdate : askUpdate);
     return render();
   }
   if (y > bodyHeight() + 1) { if (state.filter) { state.filter.active = true; render(); } return; }

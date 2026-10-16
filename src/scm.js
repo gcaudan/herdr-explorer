@@ -43,7 +43,8 @@ const S = {
   tree: settings.scmTree === true, collapsed: new Set(), cursor: 0, top: 0, selKey: null,
   field: new ui.Field(), editing: false, amend: false, generating: false,
   diff: null,   // { key, title, parsed, top, mode, focus }
-  prompt: null, // { text, field (input) or none (y/N), done(value) }
+  confirm: null, // a question in a card (ui.confirm)
+  inline: null, // a name typed in place: { kind, field, right, keys, done(value, alt) }
   picker: null, // branch picker: { field, typing, sel, top, items }
   flash: null, busy: null, lastClick: null,
   help: false,  // key help overlay (?)
@@ -363,9 +364,8 @@ async function refresh() {
   loading = true;
   try { await load(); } catch { }
   loading = false;
-  if (reveal.file && S.repo) { const f = reveal.file; reveal.file = null; return reveal(f); }
-  draw();
-  follow();
+  if (reveal.file && S.repo) { const f = reveal.file; reveal.file = null; reveal(f); }
+  else { draw(); follow(); }
   if (again) { again = false; schedule(); }
 }
 
@@ -682,17 +682,11 @@ function commitRows(W) {
 }
 
 function status(W) {
-  if (S.prompt) {
-    const p = S.prompt;
-    const segs = p.field ? [[` ${p.text} `, fg(C.yellow)], ...p.field.segments(Math.max(4, W - ui.textWidth(p.text) - 3), fg(C.text))]
-      : [[` ${p.text} `, fg(C.yellow) + BOLD], ['y/N', BOLD]];
-    return ui.line(segs, W, [50, 40, 20]);
-  }
   if (S.busy) return ui.line([[` ${spinner()} ${S.busy}…`, fg(C.blue)]], W, C.header);
   if (S.generating) return ui.line([[' ✧ generating…', fg(C.purple)]], W, C.header);
-  if (S.flash) return ui.line([[` ${S.flash.text}`, fg(S.flash.error ? C.red : C.yellow)]], W, C.header);
+  if (S.flash) return ui.line(ui.message(S.flash.text, S.flash.error ? 'error' : undefined), W, C.header);
   // ? opens the full list wherever a key is not typed into a field.
-  const right = S.picker || S.editing || !S.repo ? [] : [['?', KEY], [W >= 60 ? ' all keys ' : ' ', DIM]];
+  const right = S.picker || S.inline || S.editing || !S.repo ? [] : [['?', KEY], [W >= 60 ? ' all keys ' : ' ', DIM]];
   const rw = ui.segWidth(right);
   const segs = ui.keys(hints(), W - rw - 2);
   // A click on a hint does what its key does.
@@ -704,6 +698,7 @@ function status(W) {
 
 // The keys of the moment, most useful first: as many as fit show in the status line.
 function hints() {
+  if (S.inline) return S.inline.keys;
   if (S.picker) return S.picker.typing ? [['↑↓', 'move'], ['⏎', 'switch'], ['esc', 'clear']]
     : [['⏎', 'switch'], ['n', 'new branch'], ['D', 'delete'], ['/', 'filter'], ['esc', 'close']];
   const commitKey = continues() ? 'continue' : 'commit';
@@ -764,13 +759,24 @@ function diffLines(width, height) {
   d.top = Math.max(0, Math.min(d.top, (d.rows || []).length - body));
   const bw = diffBar.set((d.rows || []).length, body, d.top);
   const counts = d.parsed ? [[`  +${d.parsed.add}`, fg(C.green)], [` −${d.parsed.del}`, fg(ui.GIT.D)]] : [];
-  const lines = [split([[` ${d.title}`, BOLD], [d.tag ? `  ${d.tag}` : '', DIM], ...counts],
-    [[`${mode === 'split' ? 'side by side' : 'inline'} · `, DIM], ['s', KEY], [wide() ? ' ' : '  ✕ ', fg(C.text)]], width, d.focus ? C.select : C.header)];
-  if (!d.parsed) lines.push(ui.line([[' Loading…', DIM]], width));
-  else if (!d.rows.length) lines.push(ui.line([[' (no changes)', DIM]], width));
+  // The layout switch as in the changes pane, the active side underlined (clicks: see draw, d.switchAt).
+  const ON = '\x1b[1;4m', layouts = [['Inline', mode === 'inline' ? ON : DIM], [' · ', DIM], ['Side by side', mode === 'split' ? ON : DIM]];
+  const right = [...layouts, [wide() ? ' ' : '  ✕ ', fg(C.text)]];
+  d.switchAt = width - ui.segWidth(right);
+  const lines = [split([[` ${d.title}`, BOLD], [d.tag ? `  ${d.tag}` : '', DIM], ...counts], right, width, d.focus ? C.select : C.header)];
+  if (!d.parsed) lines.push(...ui.empty(width, body, 'Loading…'));
+  else if (!d.rows.length) lines.push(...ui.empty(width, body, 'No changes'));
   (d.rows || []).slice(d.top, d.top + body).forEach((r, k) => lines.push(ui.line(r.segs, width - bw, r.back) + diffBar.cell(k)));
   while (lines.length < height) lines.push(ui.line([], width));
   return lines.slice(0, height);
+}
+
+// The diff's layout switch, its title row's Inline and Side by side, clickable; x: the diff area's first column.
+function switchHits(x) {
+  const d = S.diff;
+  if (!d || d.compare || d.switchAt === undefined) return;
+  const at = x + d.switchAt, set = mode => () => { if ((d.mode || diffs.defaultMode(ui.size().W - x)) !== mode) { d.mode = mode; diffs.saveMode(mode); draw(); } };
+  hits.push({ y: 1, x0: at, x1: at + 6, fn: set('inline') }, { y: 1, x0: at + 9, x1: at + 21, fn: set('split') });
 }
 
 // A comparison in the diff area: its title row, then its rows (selected commit highlighted).
@@ -782,7 +788,7 @@ function compareLines(d, width, height) {
   const c = d.cmp;
   const state = c && !c.failed ? [[`${c.ahead} ahead · ${c.behind} behind `, c.ahead || c.behind ? fg(C.yellow) : DIM]] : [];
   const lines = [split([[` ${d.title}`, BOLD], ['  ↔  ', DIM], [d.base, BOLD]], state, width, d.focus ? C.select : C.header)];
-  if (!c) lines.push(ui.line([[' Loading…', DIM]], width));
+  if (!c) lines.push(...ui.empty(width, body, 'Loading…'));
   d.rows.slice(d.top, d.top + body).forEach((r, k) => {
     const sel = d.top + k === d.sel ? (d.focus ? C.select : C.selectBlur) : r.back;
     lines.push(ui.line(r.segs, width - bw, sel) + diffBar.cell(k));
@@ -798,13 +804,7 @@ function emptyDiff(width, height) {
     : S.view === 'stashes' ? (S.stashes.length ? 'Select a stash to see it' : 'No stashes')
     : rows[S.cursor] && rows[S.cursor].type === 'branch' ? `${baseName()} is the base: select another branch to compare with it`
     : `Select a branch to compare it with ${baseName()}`;
-  const lines = [ui.line([], width, C.header)];
-  const at = Math.max(2, Math.floor(height / 3));
-  while (lines.length < height) {
-    lines.push(lines.length === at ? ui.line([[' '.repeat(Math.max(0, Math.floor((width - ui.textWidth(text)) / 2))) + text, DIM]], width)
-      : ui.line([], width));
-  }
-  return lines;
+  return [ui.line([], width, C.header), ...ui.empty(width, height - 1, text)];
 }
 
 // Columns of the list beside the diff: at least 30, and 40 left to the diff.
@@ -830,12 +830,11 @@ function draw() {
   hits = [];
   const lines = [header(W)];
   if (!S.repo) {
-    const msg = S.repo === null ? ['Loading…'] : S.noGit ? ['git not found in PATH'] : ['Not a git repository', '', 'Press i to run git init here'];
-    const at = Math.max(1, Math.floor((H - msg.length) / 2) - 1);
-    while (lines.length < at) lines.push(ui.line([], W));
-    for (const m of msg) lines.push(ui.line([[' '.repeat(Math.max(0, Math.floor((W - ui.textWidth(m)) / 2))) + m, m.startsWith('Not') ? BOLD : DIM]], W));
+    lines.push(...(S.repo === null ? ui.empty(W, H - 2, 'Loading…') : S.noGit ? ui.empty(W, H - 2, 'git not found in PATH')
+      : ui.empty(W, H - 2, 'Not a git repository', [['i', 'git init here']])));
   } else if (S.diff && W < SPLIT) {
     lines.push(...diffLines(W, H - 2));
+    switchHits(0);
     hits.push({ y: 1, x0: W - 3, x1: W, fn: closeDiff });
     listW = 0;
   } else {
@@ -851,13 +850,21 @@ function draw() {
     syncCursor();
     S.top = Math.max(0, Math.min(S.top, rows.length - listH));
     const bw = listBar.set(rows.length, listH, S.top);
+    // A list with nothing in it but a note: the sections' titles, then the note centred in the rest (ui.empty).
+    const notes = rows.filter(r => r.type === 'note');
+    const lone = notes.length === 1 && rows.every(r => r.type === 'note' || r.type === 'section') ? notes[0] : null;
     for (let i = S.top; i < Math.min(rows.length, S.top + listH); i++) {
+      if (rows[i] === lone) continue;
       left.push(rowLine(rows[i], LW - bw, listY + i - S.top, i === S.cursor) + listBar.cell(i - S.top));
     }
+    if (lone) left.push(...ui.empty(LW, Math.max(1, H - 2 - left.length), lone.text, lone.text === 'No changes' ? [['ctrl+p', 'go to file'], ['2', 'history']] : []));
+    // The stash being named: a row above the list.
+    if (S.inline && S.inline.kind === 'stash') { left.splice(listY - 1, 0, inlineRow(LW, '  new        ', null)); left.length = Math.min(left.length, H - 2); }
     while (left.length < H - 2) left.push(ui.line([], LW));
     if (LW < W) {
       // The diff stays while there is room for it: no close button.
       const right = S.diff ? diffLines(W - LW - 1, H - 2) : emptyDiff(W - LW - 1, H - 2);
+      if (S.diff) switchHits(LW + 1);
       const bar = (S.resizing ? fg(C.blue) : DIM) + '│\x1b[0m';
       left.forEach((l, i) => lines.push(l + bar + right[i]));
     } else lines.push(...left);
@@ -866,6 +873,7 @@ function draw() {
   while (lines.length < H - 1) lines.push(ui.line([], W));
   lines.length = H - 1;
   lines.push(status(W));
+  if (S.confirm) ui.confirm(lines, W, H, S.confirm);
   if (S.help) ui.help(lines, W, (VIEWS.find(v => v[0] === S.view) || [])[1], helpGroups(), S.help);
   paint(lines);
 }
@@ -892,12 +900,11 @@ function flash(text, error = false) {
   S.flash = { text, error };
   draw();
   clearTimeout(flash.timer);
-  flash.timer = setTimeout(() => { S.flash = null; draw(); }, error ? 6000 : 2500);
+  flash.timer = setTimeout(() => { S.flash = null; draw(); }, ui.messageTime(error ? 'error' : ui.messageKind(text)));
 }
 
-// y/N confirmation in the status line; input: a one-line answer (Enter to accept, Esc to cancel).
-function confirm(text, yes) { S.prompt = { text, done: yes }; draw(); }
-function ask(text, value, done) { S.prompt = { text, field: new ui.Field(value), done }; draw(); }
+// A question in a card over the pane (ui.confirm): q: { title, name, where, note, action, tone }.
+function confirm(q, yes) { S.confirm = { ...q, yes, focus: 'no' }; draw(); }
 
 // --- changes
 
@@ -943,15 +950,18 @@ function discard(items, sec) {
   const what = items.length === 1 ? items[0].path : files(items.length);
   if (sec === 'staged') {
     const added = items.filter(i => i.code === 'A').length;
-    return confirm(`Discard all changes, staged and not, of ${what}${added ? ` (deletes ${files(added)} added since HEAD)` : ''}?`, async () => {
+    return confirm({ title: 'Discard all changes?', name: `${what}, staged and not`, where: added ? `deletes ${files(added)} added since HEAD` : '',
+      note: 'This cannot be undone.', action: 'Discard' }, async () => {
       if (S.repo.hasHead) await op('Discarding', ['restore', '--staged', '--worktree', '--source=HEAD', ...fromFile], { input: nul(items) });
       else await op('Discarding', ['rm', '-f', '-r', '-q', ...fromFile], { input: nul(items) });
     });
   }
   const untracked = items.filter(i => i.untracked), tracked = items.filter(i => !i.untracked);
-  const text = untracked.length ? `Delete ${files(untracked.length)} not tracked by git${tracked.length ? ` and discard changes in ${files(tracked.length)}` : ''}? This cannot be undone.`
-    : `Discard changes in ${what}? This cannot be undone.`;
-  confirm(text, async () => {
+  const q = untracked.length
+    ? { title: `Delete ${files(untracked.length)} not tracked?`, name: untracked.length === 1 ? untracked[0].path : files(untracked.length),
+      where: tracked.length ? `and discard the changes in ${files(tracked.length)}` : '', action: 'Delete' }
+    : { title: 'Discard the changes?', name: what, action: 'Discard' };
+  confirm({ ...q, note: 'This cannot be undone.' }, async () => {
     if (tracked.length) await op('Discarding', ['restore', '--worktree', ...fromFile], { input: nul(tracked) });
     let failed = 0;
     for (const it of untracked) {
@@ -991,7 +1001,7 @@ async function commit() {
   if (r.conflicts.length) return flash('Resolve the merge conflicts and stage the files first', true);
   if (!r.staged.length && !S.amend && !r.state) {
     if (!r.changes.length) return flash('Nothing to commit');
-    return confirm(`Nothing staged: stage all ${files(r.changes.length)} and commit?`, async () => {
+    return confirm({ title: 'Nothing staged', name: `Stage all ${files(r.changes.length)} and commit?`, action: 'Stage and commit', tone: 'go' }, async () => {
       if (await op('Staging all', ['add', '-A'])) { await loadStatus(); doCommit(msg); }
     });
   }
@@ -1053,7 +1063,7 @@ function abort() {
   const o = ongoing();
   if (!o) return flash(S.repo && S.repo.state === 'APPLYING' ? 'git am in progress: continue or abort it in the terminal'
     : 'No merge, rebase, cherry-pick or revert in progress');
-  confirm(`Abort the ${o.name} and go back to the state before it?`, async () => {
+  confirm({ title: `Abort the ${o.name}?`, name: `Back to the state before the ${o.name}.`, note: 'Its changes are lost.', action: 'Abort' }, async () => {
     if (await op('Aborting', o.abort)) { S.field.set(''); S.editing = false; S.amend = false; flash(`${o.name[0].toUpperCase()}${o.name.slice(1)} aborted`); }
   });
 }
@@ -1148,7 +1158,7 @@ function openPicker() {
   S.picker = { field: new ui.Field(), typing: false, sel: 1, top: 0, all: [], items: [] };
   filterPicker();
   draw();
-  loadPicker().then(() => { if (S.picker) { S.picker.sel = Math.min(1, S.picker.items.length - 1); draw(); } });
+  loadPicker().then(() => { if (S.picker && !S.inline) { S.picker.sel = Math.min(1, S.picker.items.length - 1); draw(); } });
 }
 
 function drawPicker(lines, W, H) {
@@ -1165,7 +1175,8 @@ function drawPicker(lines, W, H) {
     const b = p.items[i];
     if (!b) { box.push(ui.line([], w, [30, 30, 30])); continue; }
     const back = i === p.sel ? C.select : [30, 30, 30];
-    if (b.create) box.push(ui.line([[' + ', fg(C.green)], [b.name, fg(C.green)]], w, back));
+    if (b.create && S.inline && S.inline.kind === 'branch') box.push(inlineRow(w, ' + ', [30, 30, 30]));
+    else if (b.create) box.push(ui.line([[' + ', fg(C.green)], [b.name, fg(C.green)]], w, back));
     else {
       box.push(split([[b.current ? ' ● ' : '   ', fg(C.green)], [b.name, b.remote ? fg(C.purple) : b.current ? BOLD : ''],
         [`  ${b.subject}`, DIM]], [[` ${b.date} `, DIM]], w, back));
@@ -1219,14 +1230,46 @@ async function checkout(b) {
   if (await op(`Switching to ${local}`, args)) flash(`Switched to ${local}`);
 }
 
+// The new branch named on the picker's first row, from the filter, else the current branch's prefix (feat/).
+// Enter creates it and switches to it, alt+Enter only creates it.
 function newBranch(value) {
-  S.picker = null;
-  ask('New branch name:', value.replace(/\s+/g, '-'), async name => {
-    name = name.trim();
-    if (!name) return;
-    if (name.startsWith('-')) return flash('A branch name cannot start with "-"', true);
-    if (await op(`Creating ${name}`, ['switch', '-c', name])) flash(`Switched to new branch ${name}`);
-  });
+  const cur = (S.repo && S.repo.branch) || '';
+  const start = value ? value.replace(/\s+/g, '-') : cur.includes('/') ? cur.slice(0, cur.lastIndexOf('/') + 1) : '';
+  if (!S.picker) openPicker();
+  if (!S.picker) return;
+  S.picker.sel = 0; S.picker.top = 0;
+  inline('branch', start, `from ${cur || 'HEAD'}`, [['⏎', 'create and switch'], ['alt+⏎', 'create only'], ['esc', 'cancel']],
+    async (name, alt) => {
+      name = name.trim();
+      if (!name) return;
+      if (name.startsWith('-')) return flash('A branch name cannot start with "-"', true);
+      S.picker = null;
+      if (alt) { if (await op(`Creating ${name}`, ['branch', name])) flash(`Created branch ${name}`); }
+      else if (await op(`Creating ${name}`, ['switch', '-c', name])) flash(`Switched to new branch ${name}`);
+    });
+}
+
+// A name typed in place, on its row (the picker's first one, or the list's first one): S.inline { kind, field,
+// right (dimmed on the right), keys (the status line's), done(value, alt) }. Enter or alt+Enter gives the value,
+// Escape cancels.
+function inline(kind, value, right, keys, done) {
+  S.inline = { kind, field: new ui.Field(value), right, keys, done };
+  draw();
+}
+function inlineKey(k) {
+  const it = S.inline;
+  if (k === 'escape' || k === 'ctrl+c') { S.inline = null; return draw(); }
+  if (k === 'enter' || k === 'alt+enter') { S.inline = null; draw(); return it.done(it.field.value, k === 'alt+enter'); }
+  it.field.key(k);
+  draw();
+}
+// The row of the name being typed, width w, on back.
+function inlineRow(w, lead, back) {
+  const it = S.inline, right = ` ${it.right} `, FIELD = [60, 60, 60];
+  const fw = Math.max(4, w - ui.textWidth(lead) - ui.textWidth(right) - 1);
+  const field = it.field.segments(fw - 1).map(([t, st]) => [t, bg(FIELD) + (st || '')]);
+  return ui.line([[lead, DIM], [' ', bg(FIELD)], ...field, [' '.repeat(Math.max(0, fw - 1 - ui.segWidth(field))), bg(FIELD)],
+    [' '.repeat(Math.max(1, w - ui.textWidth(lead) - fw - ui.textWidth(right))), ''], [right, DIM]], w, back);
 }
 
 function deleteBranch(b) {
@@ -1234,11 +1277,16 @@ function deleteBranch(b) {
   if (b.name === S.repo.branch) return flash('Cannot delete the current branch', true);
   if (b.name.startsWith('-')) return;
   S.picker = null;
-  confirm(`Delete branch ${b.name}?`, async () => {
+  confirm({ title: 'Delete the branch?', name: b.name, action: 'Delete' }, async () => {
     const res = await op(`Deleting ${b.name}`, ['branch', '-d', b.name], { quiet: true });
     if (res && res.code === 0) return flash(`Deleted ${b.name}`);
     if (res && /not fully merged/.test(res.err)) {
-      return confirm(`${b.name} is not fully merged: its commits will be lost. Delete anyway (-D)?`, async () => {
+      // The commits lost: those of the branch on no other branch (--exclude takes the name without refs/heads/).
+      const n = await git(['rev-list', '--count', `refs/heads/${b.name}`, '--not', `--exclude=${b.name}`, '--branches', '--remotes', '--'])
+        .then(r => (r.code === 0 ? +r.out.trim() : 0)).catch(() => 0);
+      const lost = n ? `its ${n} commit${n > 1 ? 's' : ''} will be lost` : 'its commits will be lost';
+      return confirm({ title: 'Not fully merged', name: b.name, where: `${lost[0].toUpperCase()}${lost.slice(1)} (git branch -D).`,
+        note: 'This cannot be undone.', action: 'Delete anyway' }, async () => {
         if (await op(`Deleting ${b.name}`, ['branch', '-D', b.name])) flash(`Deleted ${b.name}`);
       });
     }
@@ -1279,8 +1327,11 @@ async function push() {
 
 function newStash() {
   if (!S.repo) return;
-  ask('Stash message (optional):', '', async msg => {
-    const res = await op('Stashing', ['stash', 'push', '-u', ...(msg.trim() ? ['-m', msg.trim()] : [])]);
+  const n = S.repo.staged.length + S.repo.changes.length;
+  if (S.view !== 'stashes') setView('stashes');
+  // Enter stashes the untracked files too, as before; alt+Enter leaves them.
+  inline('stash', '', `${n} file${n === 1 ? '' : 's'}`, [['⏎', 'stash'], ['alt+⏎', 'keep untracked files'], ['esc', 'cancel']], async (msg, alt) => {
+    const res = await op('Stashing', ['stash', 'push', ...(alt ? [] : ['-u']), ...(msg.trim() ? ['-m', msg.trim()] : [])]);
     if (res) flash(res.out.trim().split('\n')[0] || 'Stashed');
   });
 }
@@ -1289,7 +1340,8 @@ function stashAction(s, action) {
   if (!s) return;
   const run = async () => { if (await op(`${action[0].toUpperCase() + action.slice(1)} ${s.ref}`, ['stash', action, s.ref])) flash(`${s.ref}: ${action} done`); };
   if (action === 'apply') return run();
-  confirm(action === 'drop' ? `Drop ${s.ref} (${s.subject})? This cannot be undone.` : `Pop ${s.ref}: apply it, then drop it?`, run);
+  confirm(action === 'drop' ? { title: 'Drop the stash?', name: s.subject, where: s.ref, note: 'This cannot be undone.', action: 'Drop' }
+    : { title: 'Pop the stash?', name: s.subject, where: `${s.ref}: applied, then dropped`, action: 'Pop', tone: 'go' }, run);
 }
 
 // --- diffs
@@ -1538,19 +1590,6 @@ function toggle(row, open = !row.open) {
 
 function quit() { process.exit(0); }
 
-function promptKey(k) {
-  const p = S.prompt;
-  if (p.field) {
-    if (k === 'enter') { S.prompt = null; draw(); return p.done(p.field.value); }
-    if (k === 'escape' || k === 'ctrl+c') { S.prompt = null; return draw(); }
-    p.field.key(k);
-    return draw();
-  }
-  S.prompt = null;
-  draw();
-  if (k === 'y') p.done();
-}
-
 function fieldKey(k) {
   if (k === 'enter') return commit();
   if (k === 'escape' || k === 'tab') { S.editing = false; return draw(); }
@@ -1563,19 +1602,25 @@ function fieldKey(k) {
 }
 
 async function key(k) {
-  if (S.prompt) return promptKey(k);
+  if (S.confirm) {
+    const q = S.confirm, answer = ui.confirmKey(k, q);
+    if (answer !== 'move') S.confirm = null;
+    draw();
+    if (answer === 'yes') return q.yes();
+    return;
+  }
+  if (S.inline) return inlineKey(k);
   if (S.picker) return pickerKey(k);
   if (S.editing && S.repo) return fieldKey(k);
   if (k === 'ctrl+c') return quit();
-  // Any key closes the help.
-  // The help scrolls when it does not fit; any other key closes it.
+  // The key help (ui.helpKey): scrolls, finds with /, closes with esc, q, ? or f1.
   if (S.help) { if (!ui.helpKey(k, S.help)) S.help = null; return draw(); }
   if ((k === '?' || k === 'f1') && S.repo) { S.help = { top: 0, find: null }; return draw(); }
   if (S.diff && (S.diff.focus || ui.size().W < SPLIT)) return diffKey(k);
   if (!S.repo) {
     if (k === 'q' || k === 'escape') return quit();
     if (k === 'i' && S.repo === false && !S.noGit) {
-      return confirm(`Run git init in ${ROOT}?`, async () => {
+      return confirm({ title: 'Create a repository?', name: ROOT, where: 'git init', action: 'Create', tone: 'go' }, async () => {
         const res = await exec(GIT, ['init'], { cwd: ROOT, env: english(await gitEnv(ROOT)) });
         flash(res.code === 0 ? 'Repository created' : `git init failed: ${errorOf(res)}`, res.code !== 0);
         schedule();
@@ -1663,6 +1708,14 @@ function viewKey(k, row) {
 function mouse(m) {
   const { W } = ui.size();
   const x = m.x - 1, y = m.y - 1;
+  if (S.confirm) {
+    const q = S.confirm, answer = ui.confirmMouse(m, q);
+    if (!answer) return;
+    S.confirm = null;
+    draw();
+    if (answer === 'yes') q.yes();
+    return;
+  }
   if (S.help) { if (!ui.helpMouse(m, S.help)) S.help = null; return draw(); }
   if (m.wheel) {
     if (S.picker) { S.picker.sel = Math.max(0, Math.min(S.picker.sel + m.wheel, S.picker.items.length - 1)); return draw(); }
@@ -1685,7 +1738,7 @@ function mouse(m) {
   if (S.diff && !S.picker && diffBar.mouse(m, y - 2, x === W - 1)) return;
   if (listW && !S.picker && listBar.mouse(m, y - listY, x === listW - 1)) return;
   if (!m.press || m.drag || m.button !== 0) return;
-  if (S.prompt) { S.prompt = null; return draw(); }
+  if (S.inline) { S.inline = null; return draw(); }
   if (S.picker) {
     const b = S.picker.box;
     const i = S.picker.top + y - b.y - 2;
@@ -1723,7 +1776,7 @@ function mouse(m) {
 paint = ui.screen({
   key, mouse,
   paste(text) {
-    const f = S.prompt && S.prompt.field ? S.prompt.field : S.picker ? S.picker.field : S.editing ? S.field : null;
+    const f = S.inline ? S.inline.field : S.picker ? S.picker.field : S.editing ? S.field : null;
     if (f) { f.insert(text); if (S.picker && f === S.picker.field) { S.picker.typing = true; filterPicker(); } draw(); }
   },
   focus(on) { if (on) schedule(); },
