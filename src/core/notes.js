@@ -65,10 +65,19 @@ function where(n, dir) {
   return n.from ? `${ref}:${n.from}${n.to > n.from ? `-${n.to}` : ''}` : ref;
 }
 
-// One line for the agent, the notes in file and line order: "Review notes: src/a.js:12-14 (fix): rename it; …".
-function format(list, dir) {
-  const sorted = [...list].sort((a, b) => a.file.localeCompare(b.file) || a.from - b.from || a.t - b.t);
-  return `Review notes: ${sorted.map(n => `${clean(where(n, dir))}${n.kind ? ` (${n.kind})` : ''}: ${clean(n.text)}`).join('; ')} `;
+// Each note as "src/a.js:12-14 (fix): rename it", in file and line order.
+const items = (list, dir) => [...list].sort((a, b) => a.file.localeCompare(b.file) || a.from - b.from || a.t - b.t)
+  .map(n => `${clean(where(n, dir))}${n.kind ? ` (${n.kind})` : ''}: ${clean(n.text)}`);
+
+// One line for the agent: "Review notes: src/a.js:12-14 (fix): rename it; …".
+const format = (list, dir) => `Review notes: ${items(list, dir).join('; ')} `;
+
+// For the clipboard, one note per line under a title, the files relative to dir; the notes are kept.
+function copy(tab, dir) {
+  const list = read(tab);
+  if (!list.length) return Promise.resolve('No note to copy');
+  return actions.copy(`Review notes:\n${items(list, dir).map(i => `- ${i}`).join('\n')}\n`,
+    `${list.length} note${list.length > 1 ? 's' : ''} copied`);
 }
 
 // Types every note of the tab into the terminal next to the explorer, then clears them.
@@ -91,4 +100,4 @@ function watch(tab, fn) {
   return () => fs.unwatchFile(file, fn);
 }
 
-module.exports = { KINDS, real, read, add, undo, send, where, format, watch };
+module.exports = { KINDS, real, read, add, undo, send, copy, where, format, watch };

@@ -377,7 +377,7 @@ const HELP = [
   ['File', [['e', 'edit in the terminal'], ['o', 'open in the editor (media: in its app)'], ['O', 'open with the system'], ['y', 'copy path'],
     ['Y', 'copy relative path, with the selected lines'], ['H', 'history of the file']]],
   ['Review', [['a', 'note on the selected lines (or the file)'], ['tab', 'kind of note, while typing'], ['A', 'send the notes to the agent'],
-    ['u', 'remove the last note']]],
+    ['C', 'copy the notes'], ['u', 'remove the last note']]],
   ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
 ];
 
@@ -662,6 +662,7 @@ function key(k) {
     case 'H': return act(actions.scm(state.root || path.dirname(state.file), PANE, state.file, true));
     case 'a': return startNote();
     case 'A': return act(notes.send(TAB, PANE));
+    case 'C': return act(notes.copy(TAB, state.root || path.dirname(state.file)));
     case 'u': return act(Promise.resolve(notes.undo(TAB)));
     case 'z': if (PANE) herdr('pane', 'zoom', PANE, '--toggle'); return;
     case '<': case '>': return widen(k === '<' ? -4 : 4);

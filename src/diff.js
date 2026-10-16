@@ -382,7 +382,7 @@ function main() {
     ['Move', [['↑↓ j k', 'line'], ['pgup pgdn', 'page'], ['space', 'page down'], ['ctrl+u/d', 'half page'], ['g G', 'top, bottom']]],
     ['Diff', [['n N', 'next, previous hunk'], ['s', 'inline, side by side'], ['b', 'compare with HEAD or the default branch']]],
     ['Review', [['a', 'note on the line (hunk, file)'], ['tab', 'kind of note, while typing'], ['A', 'send the notes to the agent'],
-      ['u', 'remove the last note'], ['y', 'copy path:line']]],
+      ['C', 'copy the notes'], ['u', 'remove the last note'], ['y', 'copy path:line']]],
     ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
   ];
   // Go to file and Search in files from the diff's folder, as from the explorer.
@@ -473,6 +473,7 @@ function main() {
     else if (k === 'b') switchBase();
     else if (k === 'a') startNote();
     else if (k === 'A') act(notes.send(tab, FROM));
+    else if (k === 'C') act(notes.copy(tab, top));
     else if (k === 'u') say(notes.undo(tab));
     else if (k === 'y') copyReference();
   }
