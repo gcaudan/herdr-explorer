@@ -168,7 +168,7 @@ async function insert(abs, pane) {
 // The terminal next to the explorer and its side: on the right of an explorer docked on the left, on the left of
 // one docked on the right. Both are tried, as the setting may have changed since the explorer opened. The plugin's
 // own panes are passed over: docked on the right, the preview sits between the terminal and the explorer.
-const OWN = new Set(['Explorer', 'Preview', 'Source Control', 'Changes', 'Editor']);
+const OWN = new Set(['Explorer', 'Preview', 'Source Control', 'Changes', 'Editor', 'Search']);
 async function terminalOf(pane) {
   const order = readSettings().side === 'right' ? ['left', 'right'] : ['right', 'left'];
   for (const side of order) {
@@ -245,7 +245,10 @@ function resizingElsewhere(pane) {
   } catch { return false; }
 }
 function markResizing(moved) {
-  try { fs.writeFileSync(RESIZING, JSON.stringify({ moved, at: Date.now() })); } catch { }
+  if (!RESIZING) return;
+  // Written to a temporary file then renamed, as the other panes read it at any time.
+  const tmp = `${RESIZING}.${process.pid}`;
+  try { fs.writeFileSync(tmp, JSON.stringify({ moved, at: Date.now() })); fs.renameSync(tmp, RESIZING); } catch { try { fs.unlinkSync(tmp); } catch { } }
 }
 
 // The widths (borders included) of the other panes of the layout that keep theirs.
