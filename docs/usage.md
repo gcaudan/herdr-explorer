@@ -466,7 +466,7 @@ the explorer and the preview, `y` / `Y` copy its absolute / relative path, `e` e
 editor and `o` opens it in the editor.
 
 **Stashes view**: `n` new stash, named on a row above the list (the message is optional): `enter`
-stashes the untracked files too, `alt+enter` leaves them. `a` apply, `o` pop, `d` drop.
+stashes the untracked files too, `alt+enter` or `ctrl+o` leaves them. `a` apply, `o` pop, `d` drop.
 
 **History view**: the graph of the branches, then the subject, the branches and remote branches pointing
 at the commit (in the colour of their lane) and its tags (yellow); the author (from 90 columns), the age and
@@ -500,7 +500,7 @@ the diff).
 (`k`/`j`), `pageup`/`pagedown`, `enter` switch, `n` new branch, `D` delete, `/` or typing filters,
 `escape` clears the filter then closes, `q` closes. A new branch is named on the picker's first row,
 from the filter or else the current branch's prefix (`feat/`): `enter` creates it and switches to it,
-`alt+enter` only creates it, `escape` cancels.
+`alt+enter` or `ctrl+o` only creates it, `escape` cancels.
 
 **Questions**: discarding, deleting a branch, aborting an operation, popping or dropping a stash, staging
 everything to commit and `git init` ask in a card over the pane, as in the explorer: `left`/`right` move
