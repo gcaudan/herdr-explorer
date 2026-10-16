@@ -531,7 +531,7 @@ function header(W) {
   return line([[name, ROOT === HOME ? '\x1b[1m' : '\x1b[1;3m'], [' '.repeat(Math.max(0, room - nw + 1)), ''], ...icons], W);
 }
 
-// The filter's line: while typed, the field and the count on the right; once kept (Enter), the filter in blue, the
+// The filter's line: while typed, the field and the count on the right; once kept (Tab), the filter in blue, the
 // count, and how to clear it.
 const HIT = '\x1b[1m' + fg([24, 163, 255]);
 function filterLine(W) {
@@ -787,14 +787,15 @@ function closeMenu() {
 // Escape always closes the menu, whatever the bindings; the key of an item runs it.
 function menuKey(k) {
   const m = state.menu, action = keys.get(k);
-  if (action === 'up') moveMenu(-1);
+  if (k === 'escape') closeMenu();
+  else if (action === 'up') moveMenu(-1);
   else if (action === 'down') moveMenu(1);
   else if (action === 'open' || action === 'expand') return runAction(m.items[m.sel][1]);
-  else if (k === 'escape' || ['close', 'collapse', 'menu', 'settings'].includes(action)) closeMenu();
   else {
-    // The key shown beside an item runs it.
+    // The key shown beside an item runs it (Settings… on ,); the others close the menu.
     const item = action && m.items.find(it => it && it[2] === action);
     if (item) return runAction(item[1]);
+    if (['close', 'collapse', 'menu', 'settings'].includes(action)) closeMenu();
   }
   render();
 }
@@ -1031,7 +1032,7 @@ function settingsKey(k) {
 // on a key hint acts as its key; elsewhere, it cancels a prompt.
 function settingsMouse(m) {
   const s = state.settings, list = found(settingsRows(), s), W = out.columns || WIDTH, y = m.y - 1;
-  const { at, n, update } = settingsLayout(out.rows || 24, out.columns || 80);
+  const { at, n, update, detail } = settingsLayout(out.rows || 24, out.columns || 80);
   if (m.wheel) { moveIn(list, s, m.wheel); return render(); }
   if (!m.press || m.drag || m.button !== 0) return;
   if (state.prompt) { state.prompt = null; return render(); }
@@ -1042,7 +1043,8 @@ function settingsMouse(m) {
     s.sel = s.top + y - at;
     return runAction(() => r.change(1));
   }
-  const k = y === at + n + 2 && ui.keyAt(settingsKeys(W), m.x - 1);
+  // The keys come after the list, its rule and the help lines.
+  const k = y === at + n + 1 + detail && ui.keyAt(settingsKeys(W), m.x - 1);
   if (k) settingsKey(k);
 }
 
@@ -1297,11 +1299,13 @@ function promptKey(k) {
 }
 
 // While filtering, typed characters go to the filter; arrows and Enter act on the list.
+const FILTER_EDIT = new Set(['backspace', 'delete', 'ctrl+u', 'ctrl+d']);
 function filterKey(k) {
   const f = state.filter;
   if (k === 'escape') return closeFilter();
-  // Bound keys that are not characters (arrows, Enter, ctrl+…) act on the list; characters go to the filter.
-  if (keys.has(k) && !ui.printable(k) && k !== 'backspace' && k !== 'delete') return listKey(k);
+  // Bound keys that are not characters (arrows, Enter, ctrl+…) act on the list; characters and the field's editing
+  // keys go to the filter (ctrl+u and ctrl+d move half a page in the tree only).
+  if (keys.has(k) && !ui.printable(k) && !FILTER_EDIT.has(k)) return listKey(k);
   if (k === 'tab') { f.active = false; return render(); }
   if (f.field.key(k)) {
     state.selected = null;
@@ -1347,6 +1351,7 @@ function listAction(action) {
     case 'halfPageUp': select(state.cursor - Math.ceil(page / 2)); break;
     case 'halfPageDown': select(state.cursor + Math.ceil(page / 2)); break;
     case 'help': return openHelp();
+    case 'close': return close();
     case 'top': select(0); break;
     case 'bottom': select(state.rows.length - 1); break;
     case 'open':
