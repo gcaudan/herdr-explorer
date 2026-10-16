@@ -10,13 +10,16 @@ const { spawn } = require('child_process');
 const ui = require('./ui');
 const diffs = require('./diff');
 const icons = require('./icons');
-const { WIN, which, GIT, gitEnv, gitOperation, readSettings } = require('./exec');
+const graph = require('./graph');
+const actions = require('./actions');
+const { WIN, which, GIT, gitEnv, gitOperation, readSettings, writeSettings } = require('./exec');
 
 const ROOT = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());
 const { C, fg, bg, glyph } = ui;
 const DIM = fg(C.dim), BOLD = '\x1b[1m';
 const CHEVRON = [glyph(0xeab6), glyph(0xeab4)], BRANCH = glyph(0xe0a0);
-const theme = icons.load(readSettings().icons); // the explorer's icon theme
+const settings = readSettings();
+const theme = icons.load(settings.icons); // the explorer's icon theme
 const SPLIT = 100;      // columns from which the diff opens on the right of the list
 const MAX_PROMPT = 60000; // characters of diff sent to Claude
 const NET_TIMEOUT = 120000;
@@ -25,14 +28,33 @@ const CODE = { M: 'M', T: 'M', A: 'A', D: 'D', R: 'R', C: 'A' };
 const CONFLICT = { DD: 'both deleted', AU: 'added by us', UD: 'deleted by them', UA: 'added by them', DU: 'deleted by us',
   AA: 'both added', UU: 'both modified' };
 
+// Share of the width taken by the list beside the diff, per view ({ changes: 0.3, history: 0.6 }); a view left out
+// has the default width.
+function shares(saved) {
+  const out = {};
+  if (saved && typeof saved === 'object') {
+    for (const [id] of VIEWS) if (typeof saved[id] === 'number' && saved[id] > 0 && saved[id] < 1) out[id] = saved[id];
+  }
+  return out;
+}
+
 const S = {
   view: 'changes', repo: null, // repo: null until loaded, false outside a repository
-  tree: false, collapsed: new Set(), cursor: 0, top: 0, selKey: null,
+  tree: settings.scmTree === true, collapsed: new Set(), cursor: 0, top: 0, selKey: null,
   field: new ui.Field(), editing: false, amend: false, generating: false,
   diff: null,   // { key, title, parsed, top, mode, focus }
-  prompt: null, // { text, field (input) or none (y/N), done(value) }
+  confirm: null, // a question in a card (ui.confirm)
+  inline: null, // a name typed in place: { kind, field, right, keys, done(value, alt) }
   picker: null, // branch picker: { field, typing, sel, top, items }
   flash: null, busy: null, lastClick: null,
+  help: false,  // key help overlay (?)
+  pulse: null,  // { keys, until }: rows just staged or unstaged, briefly highlighted
+  netOp: null,  // fetch, pull or push running: its header button spins
+  // Share of the width taken by the list beside the diff, per view, set by dragging the separator or with < and >.
+  listShare: shares(settings.scmListShare),
+  resizing: false, // the separator is being dragged
+  compareBase: null, // Refs: the branch the others are compared with, null for the current one
+  allBranches: settings.scmGraphAll !== false, // History: every branch and remote branch, or the current one
   history: [], stashes: [], refs: null,
 };
 let hits = [];  // clickable areas of the last frame: { y, x0, x1, fn }
@@ -150,7 +172,9 @@ function errorOf(res) {
 async function op(label, args, opts = {}) {
   if (S.busy) { flash(`Busy: ${S.busy}`, true); return null; }
   S.busy = label; draw();
+  const spin = setInterval(draw, 100); // the spinner of the status line and of the header's button
   const res = await git(args, { safe: true, ...opts });
+  clearInterval(spin);
   S.busy = null;
   if (res.code !== 0) { if (!opts.quiet) flash(`${label} failed: ${errorOf(res)}`, true); schedule(); return opts.quiet ? res : null; }
   schedule();
@@ -176,8 +200,11 @@ async function net(label, args) {
   const keys = await repoNetworkKeys();
   if (keys.length) { flash(`${label.split(' ')[0]} refused: the repository sets ${keys[0]}; use the terminal`, true); return null; }
   // Only the usual transports: no remote helper (git-remote-<name>), local path or ext:: command.
+  if (S.busy) { flash(`Busy: ${S.busy}`, true); return null; }
+  S.netOp = args[0];
   const res = await op(label, args, { detached: true, timeout: NET_TIMEOUT,
     env: { GIT_TERMINAL_PROMPT: '0', GIT_ALLOW_PROTOCOL: 'https:http:ssh:git' } });
+  S.netOp = null;
   // On Windows, ssh may still have asked for a passphrase or a host key on the pane's console, over the screen.
   paint.again();
   draw();
@@ -219,12 +246,42 @@ async function loadStatus() {
 }
 
 async function loadHistory() {
-  const res = await git(['log', '--no-show-signature', '-n', '500', '--format=%H%x1f%h%x1f%s%x1f%an%x1f%ar%x1f%D%x1f%P']);
+  // Children before their parents, by date, as the graph needs.
+  const revs = S.allBranches ? [...(S.repo.hasHead ? ['HEAD'] : []), '--branches', '--remotes'] : [];
+  const res = await git(['log', '--no-show-signature', '--decorate=full', '--date-order', '-n', '500',
+    '--format=%H%x1f%h%x1f%s%x1f%an%x1f%at%x1f%D%x1f%P', ...revs, '--']);
   S.history = res.code !== 0 ? [] : res.out.split('\n').filter(Boolean).map(l => {
-    const [hash, short, subject, author, date, refs, parents] = l.split('\x1f');
-    return { hash, short, subject, author, date, refs, merge: (parents || '').includes(' ') };
+    const [hash, short, subject, author, time, refs, parents] = l.split('\x1f');
+    return { hash, short, subject, author, date: ago(+time), refs: refList(refs), head: /(^|, )HEAD($|,| ->)/.test(refs),
+      parents: (parents || '').split(' ').filter(Boolean) };
   });
+  graph.layout(S.history).forEach((g, i) => Object.assign(S.history[i], { graph: g.cells, lane: g.color, node: node(g) }));
 }
+
+// Short age of a commit: "5 min", "3 h", "2 d", "4 mo", "1 y".
+function ago(time) {
+  const s = Math.max(0, Date.now() / 1000 - time);
+  return s < 3600 ? `${Math.max(1, Math.floor(s / 60))} min` : s < 86400 ? `${Math.floor(s / 3600)} h`
+    : s < 30 * 86400 ? `${Math.floor(s / 86400)} d` : s < 365 * 86400 ? `${Math.floor(s / (30 * 86400))} mo` : `${Math.floor(s / (365 * 86400))} y`;
+}
+
+// Decorations of a commit (%D with full names): branches, remote branches (without their HEAD) and tags.
+function refList(D) {
+  const out = [];
+  for (let r of (D || '').split(', ').filter(Boolean)) {
+    r = r.replace(/^HEAD -> /, '');
+    const m = /^(?:tag: )?refs\/(heads|remotes|tags)\/(.+)$/.exec(r);
+    if (r === 'HEAD') out.push({ name: 'HEAD', kind: 'heads' });
+    else if (m && !(m[1] === 'remotes' && /\/HEAD$/.test(m[2]))) out.push({ name: m[2], kind: m[1] });
+  }
+  return out;
+}
+
+// The commit in the graph: its lane crossed by a heavy bar. Box-drawing characters reach the top and bottom of the
+// cell in every terminal, so the commits of a lane join up from one row to the next (● and the Nerd Font circles
+// do not, where the terminal keeps glyphs at their size). A branch tip has no line above, the first commit none
+// below.
+const node = g => (g.above && g.below ? '┿' : g.below ? '┯' : g.above ? '┷' : '━');
 
 async function loadStashes() {
   const res = await git(['stash', 'list', '--format=%gd%x1f%s%x1f%cr']);
@@ -307,8 +364,29 @@ async function refresh() {
   loading = true;
   try { await load(); } catch { }
   loading = false;
-  draw();
+  if (reveal.file && S.repo) { const f = reveal.file; reveal.file = null; reveal(f); }
+  else { draw(); follow(); }
   if (again) { again = false; schedule(); }
+}
+
+// The file or folder selected in the explorer, selected here once the changes are loaded: the file, else the first
+// changed file of the folder.
+reveal.file = process.env.EXPLORER_FILE || null;
+function reveal(abs) {
+  const real = p => {
+    try { return fs.realpathSync(p); } catch { const up = path.dirname(p); return up === p ? p : path.join(real(up), path.basename(p)); }
+  };
+  const rel = path.relative(real(S.repo.top), real(abs)).split(path.sep).join('/');
+  const r = S.repo, inside = p => !rel || p === rel || p.startsWith(rel + '/');
+  const it = rel.startsWith('..') ? null : [...r.conflicts, ...r.staged, ...r.changes].find(i => inside(i.path));
+  if (!it) { draw(); return flash(`No changes in ${base(rel) || 'the repository'}`); }
+  // Its section and folders unfolded.
+  S.collapsed.delete(it.sec);
+  for (const k of [...S.collapsed]) if (k.startsWith(`${it.sec}:`) && it.path.startsWith(k.slice(it.sec.length + 1))) S.collapsed.delete(k);
+  // Drawn first, so that the list's height is known (none before the first load) and select scrolls to the row.
+  draw();
+  select(rows.findIndex(x => x.key === `${it.sec}:${it.path}`));
+  draw();
 }
 
 // --- rows of the views
@@ -363,8 +441,10 @@ function treeRows(out, sec, items) {
 function refRows() {
   const R = S.refs, out = [];
   if (!R) return [{ type: 'note', key: 'loading', text: 'Loading…', depth: 1 }];
-  const current = S.repo.branch;
+  const current = S.repo.branch, empty = [];
+  // Empty sections are named together on one line at the end.
   const section = (key, title, list, row) => {
+    if (!list.length) { empty.push(title.toLowerCase()); return; }
     const open = !S.collapsed.has(`refs:${key}`);
     out.push({ type: 'section', key: `refs:${key}`, title, items: list, open });
     if (open) list.forEach(x => out.push({ key: `${key}:${x.name || x.path}`, depth: 1, ...row(x) }));
@@ -374,6 +454,10 @@ function refRows() {
   section('tags', 'Tags', R.tags, t => ({ type: 'tag', ref: t }));
   section('urls', 'Remotes', R.urls, u => ({ type: 'remote', ref: u }));
   section('worktrees', 'Worktrees', R.worktrees, w => ({ type: 'worktree', ref: w }));
+  if (empty.length) {
+    const names = empty.length > 1 ? `${empty.slice(0, -1).join(', ')} or ${empty[empty.length - 1]}` : empty[0];
+    out.push({ type: 'note', key: 'empty', text: `No ${names}`, depth: 1 });
+  }
   return out;
 }
 
@@ -381,7 +465,9 @@ function viewRows() {
   if (!S.repo) return [];
   if (S.view === 'changes') return changeRows();
   if (S.view === 'history') {
-    return S.history.length ? S.history.map(c => ({ type: 'commit', key: c.hash, commit: c }))
+    const authorW = Math.min(20, Math.max(0, ...S.history.map(c => ui.textWidth(c.author))));
+    const graphW = Math.min(MAX_GRAPH, Math.max(1, ...S.history.map(c => c.graph.length)));
+    return S.history.length ? S.history.map(c => ({ type: 'commit', key: c.hash, commit: c, authorW, graphW }))
       : [{ type: 'note', key: 'none', text: S.repo.hasHead ? 'Loading…' : 'No commits yet', depth: 1 }];
   }
   if (S.view === 'stashes') {
@@ -395,6 +481,28 @@ function viewRows() {
 
 const SELECT = () => (S.diff && S.diff.focus ? C.selectBlur : C.select);
 const badgeColor = code => fg(ui.GIT[code] || C.text);
+const KEY = BOLD + fg(C.text);
+const UNDERLINE = '\x1b[4m\x1b[58;2;55;148;255m'; // the active tab, underlined in blue where the terminal can
+const PRIMARY = bg([14, 99, 156]) + fg([255, 255, 255]) + BOLD; // the main button of the header and the commit box
+const PILLS = { heads: [[32, 58, 40], C.green], remotes: [[28, 50, 68], C.blue], tags: [[58, 54, 26], C.yellow] };
+const pill = (name, kind, style = '') => [` ${name} `, bg(PILLS[kind][0]) + fg(PILLS[kind][1]) + style];
+// Colours of the graph's lanes, in turn; a branch's pill takes the colour of its lane, on a darker shade of it.
+const LANES = [C.blue, C.green, C.purple, C.orange, C.yellow, [86, 182, 194], [224, 108, 117]];
+const laneRgb = n => LANES[n % LANES.length];
+const shade = rgb => rgb.map(v => Math.round(30 + (v - 30) * 0.25));
+const lanePill = (name, n, style = '') => [` ${name} `, bg(shade(laneRgb(n))) + fg(laneRgb(n)) + style];
+const MAX_GRAPH = 24; // columns of the graph at most: lanes further right are cut
+const PULSE = [32, 58, 40]; // rows just staged or unstaged
+const SPIN = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏';
+const spinner = () => SPIN[Math.floor(Date.now() / 100) % SPIN.length];
+const wide = () => ui.size().W >= SPLIT;
+const pad = (text, w) => { const t = ui.ellipsis(text, w); return t + ' '.repeat(Math.max(0, w - ui.textWidth(t))); };
+// Windows paths ignore case, and git gives them with '/'.
+const samePath = (a, b) => (WIN ? a.toLowerCase() === b.toLowerCase() : a === b);
+const tilde = p => {
+  const h = os.homedir(), abs = path.resolve(p);
+  return samePath(abs, h) || samePath(abs.slice(0, h.length + 1), h + path.sep) ? `~${abs.slice(h.length)}` : p;
+};
 
 // A line made of a left part, cut to fit, and a right part kept whole (buttons, counts).
 function split(left, right, width, back) {
@@ -410,26 +518,29 @@ function split(left, right, width, back) {
   return ui.line([...segs, [' '.repeat(Math.max(0, room - used)), ''], ...right], width, back);
 }
 
-// Buttons shown on the selected row, from the right: [label, action], registered as clickable.
-function buttons(list, y, width, rightAfter) {
+// Buttons [label, action, style] from column x, registered as clickable.
+function place(list, y, x) {
   const segs = [];
-  let x = width - rightAfter - list.reduce((n, [l]) => n + ui.textWidth(l) + 2, 0);
-  for (const [label, fn] of list) {
+  for (const [label, fn, style] of list) {
     hits.push({ y, x0: x, x1: x + ui.textWidth(label) + 2, fn });
-    segs.push([` ${label} `, fg(C.text) + BOLD]);
+    segs.push([` ${label} `, style || KEY]);
     x += ui.textWidth(label) + 2;
   }
   return segs;
 }
 
+// Buttons shown on the right of a line, rightAfter columns before its end.
+function buttons(list, y, width, rightAfter) {
+  return place(list, y, width - rightAfter - list.reduce((n, [l]) => n + ui.textWidth(l) + 2, 0));
+}
+
 function rowLine(row, width, y, selected) {
-  const back = selected ? SELECT() : null;
+  const back = selected ? SELECT() : S.pulse && S.pulse.has(row.key) ? PULSE : null;
   const indent = ' '.repeat(row.depth ? row.depth * 2 : 0);
   const act = selected && S.view === 'changes' ? rowButtons(row) : [];
   if (row.type === 'section') {
-    const count = ` ${row.items.length} `;
-    return split([[` ${CHEVRON[row.open ? 1 : 0]} `, DIM], [row.title.toUpperCase(), BOLD]],
-      [...buttons(act, y, width, count.length + 1), [count, bg([60, 60, 60]) + fg(C.text)], [' ', '']], width, back);
+    return split([[` ${CHEVRON[row.open ? 1 : 0]} `, DIM], [row.title.toUpperCase(), BOLD], [`  ${row.items.length}`, DIM]],
+      [...buttons(act, y, width, 1), [' ', '']], width, back);
   }
   if (row.type === 'folder') {
     // A chain of folders shown as one ("src/lib"): the icon of the last.
@@ -439,17 +550,25 @@ function rowLine(row, width, y, selected) {
   }
   if (row.type === 'file') {
     const it = row.item, color = badgeColor(it.code) + (it.code === 'D' ? '\x1b[9m' : '');
+    const [code, rgb] = icons.icon(theme, base(it.path), false);
     const name = S.tree ? base(it.path) : it.orig ? `${it.orig} → ${it.path}` : base(it.path);
     const dir = S.tree ? (it.orig ? ` ← ${base(it.orig)}` : '') : it.orig ? '' : dirOf(it.path);
     const letter = it.code === 'C' ? '!' : it.code;
-    return split([[S.tree ? indent + '  ' : indent, ''], [name, color], [dir ? `  ${dir}` : '', DIM], [it.label ? `  ${it.label}` : '', DIM]],
-      [...buttons(act, y, width, 3), [` ${letter} `, badgeColor(it.code)]], width, back);
+    return split([[S.tree ? indent + '  ' : indent + ' ', ''], [`${glyph(code)} `, fg(rgb)], [name, color], [dir ? `  ${dir}` : '', DIM],
+      [it.label ? `  ${it.label}` : '', DIM]], [...buttons(act, y, width, 3), [` ${letter} `, badgeColor(it.code)]], width, back);
   }
   if (row.type === 'commit') {
+    // Subject first, so that subjects line up; author, age and hash in columns on the right.
     const c = row.commit;
-    const refs = c.refs ? ` ${c.refs.replace(/HEAD -> /, '⮕ ')} ` : '';
-    return split([[` ${c.merge ? '◉' : '●'} `, fg(C.blue)], [c.short + ' ', fg(C.yellow)],
-      [refs, fg(C.green)], [refs ? ' ' : '', ''], [c.subject, '']], [[` ${c.author} · ${c.date} `, DIM]], width, back);
+    const pills = c.refs.flatMap((r, i) => [[i ? ' ' : '  ', ''],
+      r.kind === 'tags' ? pill(r.name, 'tags') : lanePill(r.name, c.lane, c.head && r.kind === 'heads' ? BOLD : '')]);
+    const author = row.authorW && width >= 90 ? [[` ${pad(c.author, row.authorW)} `, DIM]] : [];
+    // The graph, cut at MAX_GRAPH columns and padded so that subjects line up; the commit checked out in bold.
+    const cells = c.graph.slice(0, row.graphW).map(([ch, n]) => (ch === '●' ? [c.node, fg(laneRgb(n)) + (c.head ? BOLD : '')]
+      : [ch, n === null ? '' : fg(laneRgb(n))]));
+    while (cells.length < row.graphW) cells.push([' ', '']);
+    return split([[' ', ''], ...cells, ['  ', ''], [c.subject, c.head ? BOLD : ''], ...pills],
+      [...author, [`${c.date.padStart(6)}  `, DIM], [`${c.short} `, fg(C.yellow)]], width, back);
   }
   if (row.type === 'stash') {
     const s = row.stash;
@@ -457,13 +576,21 @@ function rowLine(row, width, y, selected) {
   }
   if (row.type === 'branch') {
     const b = row.ref;
+    if (row.current) {
+      const track = b.upstream ? `${b.upstream}${b.track ? ` ${b.track}` : ''}` : 'not published';
+      return split([[indent + ' ', ''], pill(b.name, 'heads', BOLD), [`  current · ${track}`, DIM], [`  ${b.subject}`, DIM]],
+        [[` ${b.date} `, DIM]], width, back);
+    }
     const track = b.upstream ? ` ${b.upstream}${b.track ? ' ' + b.track : ''}` : '';
-    return split([[indent, ''], [row.current ? '● ' : '  ', fg(C.green)], [b.name, row.current ? BOLD : ''],
-      [track ? `  ${track}` : '', DIM], [`  ${b.subject}`, DIM]], [[` ${b.date} `, DIM]], width, back);
+    return split([[indent + '  ', ''], [b.name, ''], [track ? `  ${track}` : '', DIM], [`  ${b.subject}`, DIM]], [[` ${b.date} `, DIM]], width, back);
   }
   if (row.type === 'tag') return split([[indent + '  ', ''], [row.ref.name, fg(C.yellow)], [`  ${row.ref.subject}`, DIM]], [[` ${row.ref.date} `, DIM]], width, back);
   if (row.type === 'remote') return split([[indent + '  ', ''], [row.ref.name, BOLD], [`  ${row.ref.url}`, DIM]], [], width, back);
-  if (row.type === 'worktree') return split([[indent + '  ', ''], [row.ref.path, ''], [`  ${row.ref.branch}`, DIM]], [], width, back);
+  if (row.type === 'worktree') {
+    const w = row.ref, here = samePath(path.resolve(w.path), S.repo.top);
+    return split([[indent + '  ', ''], [path.basename(w.path), ''], [here ? '  this folder' : '', DIM], [`  ${w.branch}`, fg(C.blue)],
+      [`  ${tilde(w.path)}`, DIM]], [], width, back);
+  }
   if (row.type === 'action') return split([[` ${row.text}`, fg(C.blue)]], [], width, back);
   return split([[`${indent}${row.text}`, DIM]], [], width, back);
 }
@@ -478,114 +605,230 @@ function rowButtons(row) {
   return [['↶', () => discard(row.items, row.sec)], ['+', () => stage(row.items)]];
 }
 
-// Header: repository, branch (opens the picker), ahead and behind, and the buttons.
+// The header's main button: what the branch needs (publish, pull, push), none when it is up to date.
+function syncButton(r, short) {
+  const spin = (op, label) => (S.netOp === op ? `${spinner()}${label.slice(1)}` : label);
+  if (r.detached || !r.hasHead) return null;
+  if (!r.upstream) return [spin('push', short ? '↑ Publish' : '↑ Publish branch'), push, PRIMARY];
+  if (r.behind) return [spin('pull', r.ahead ? `⇅ ↓${r.behind} ↑${r.ahead}` : `↓ Pull ${r.behind}`), pull, PRIMARY];
+  if (r.ahead) return [spin('push', `↑ Push ${r.ahead}`), push, PRIMARY];
+  return null;
+}
+
+// Header: repository, branch (opens the picker), its state against the upstream, and the buttons.
 function header(W) {
-  const r = S.repo;
+  const r = S.repo, short = W < 80;
   const left = [[` ${path.basename(r ? r.top : ROOT)} `, BOLD]];
-  const btns = W >= 80 ? [['⇣ Fetch', fetch], ['↓ Pull', pull], ['↑ Push', push], ['↻', () => { flash('Refreshed'); schedule(); }], ['✕', quit]]
-    : [['⇣', fetch], ['↓', pull], ['↑', push], ['↻', schedule], ['✕', quit]];
-  if (!r) {
-    btns.splice(0, btns.length - 1);
-  } else {
+  const btns = [];
+  if (r) {
     const name = r.detached ? `detached ${r.oid.slice(0, 7)}` : r.branch;
-    const x0 = ui.textWidth(left[0][0]);
+    const x0 = ui.textWidth(left[0][0]) + 1;
     const label = ` ${BRANCH} ${name} `;
     hits.push({ y: 0, x0, x1: x0 + ui.textWidth(label), fn: openPicker });
-    left.push([label, fg(C.blue)]);
-    if (r.upstream) left.push([` ↑${r.ahead} ↓${r.behind}`, r.ahead || r.behind ? fg(C.yellow) : DIM]);
-    else if (r.hasHead && !r.detached) left.push([' (not published)', DIM]);
+    left.push([' ', ''], [label, bg(PILLS.remotes[0]) + fg(C.blue)]);
+    if (r.upstream) left.push(r.ahead || r.behind ? [`  ↑${r.ahead} ↓${r.behind}`, fg(C.yellow)] : ['  up to date', DIM]);
+    else if (!r.hasHead) left.push(['  no commits yet', DIM]);
+    else if (!r.detached) left.push(['  not published', DIM]);
     if (r.state) left.push([`  ${r.state}`, fg(C.orange) + BOLD]);
+    const main = syncButton(r, short);
+    if (main) btns.push(main);
+    const fetchLabel = S.netOp === 'fetch' ? spinner() : '⇣';
+    btns.push([short ? fetchLabel : `${fetchLabel} Fetch`, fetch], ['↻', () => { flash('Refreshed'); schedule(); }]);
   }
+  btns.push(['✕', quit]);
   return split(left, buttons(btns, 0, W, 0), W, C.header);
 }
 
 function tabs(W) {
   const segs = [], r = S.repo;
   let x = 0;
-  VIEWS.forEach(([id, label], i) => {
+  VIEWS.forEach(([id, label]) => {
     const n = id === 'changes' ? r.conflicts.length + r.staged.length + r.changes.length : id === 'stashes' && S.stashes.length ? S.stashes.length : 0;
-    const text = ` ${i + 1} ${label}${n ? ` ${n}` : ''} `;
-    hits.push({ y: 1, x0: x, x1: x + ui.textWidth(text), fn: () => setView(id) });
-    segs.push([text, id === S.view ? BOLD + fg(C.text) + bg(C.select) : DIM], [' ', '']);
-    x += ui.textWidth(text) + 1;
+    const count = n ? ` ${n}` : '', w = ui.textWidth(label + count) + 2;
+    hits.push({ y: 1, x0: x, x1: x + w, fn: () => setView(id) });
+    segs.push([' ', ''], [label, id === S.view ? BOLD + fg(C.text) + UNDERLINE : DIM], [count, DIM], ['  ', '']);
+    x += w + 1;
   });
-  const right = S.view === 'changes' ? buttons([[S.tree ? '⊞ Tree' : '≡ List', toggleTree]], 1, W, 0) : [];
+  const right = S.view === 'changes' ? buttons([[S.tree ? '⊞ Tree' : '≡ List', toggleTree, DIM]], 1, W, 0) : [];
   return split(segs, right, W);
 }
 
-// Commit box: message field, ✧ (message written by Claude), amend toggle, commit button (Continue during a rebase,
-// cherry-pick or revert), Abort during one of them or a merge.
-function commitRow(W) {
-  const o = ongoing();
-  const btns = [['✧', generate], [S.amend ? '☑ amend' : '☐ amend', toggleAmend],
-    [S.amend ? '✓ Amend' : continues() ? '✓ Continue' : '✓ Commit', commit], ...(o ? [['✕ Abort', abort]] : [])];
-  const right = buttons(btns, 2, W, 0);
-  const fw = Math.max(4, W - ui.textWidth(right.map(s => s[0]).join('')) - 2);
-  hits.push({ y: 2, x0: 0, x1: fw + 1, fn: () => { S.editing = true; } });
+// What the commit button does: commit what is staged (or everything), amend, continue or conclude an operation.
+function commitLabel(short) {
+  const r = S.repo, o = ongoing();
+  if (S.amend) return '✓ Amend';
+  if (continues()) return short ? '✓ Continue' : `✓ Continue ${o.name}`;
+  if (o) return short ? '✓ Commit' : `✓ Commit ${o.name}`;
+  if (r.staged.length) return short ? '✓ Commit' : `✓ Commit ${r.staged.length} staged`;
+  if (r.changes.length) return short ? '✓ Commit all' : `✓ Commit all ${r.changes.length}`;
+  return '✓ Commit';
+}
+
+// Commit box, on two lines: the message field, then the commit button, ✧ (message written by Claude), the amend
+// toggle and, during a merge, rebase, cherry-pick or revert, Abort.
+function commitRows(W) {
+  const o = ongoing(), fw = Math.max(4, W - 2);
+  hits.push({ y: 2, x0: 0, x1: W, fn: () => { S.editing = true; } });
   const box = bg([49, 49, 49]);
-  let field;
   const cut = text => ui.ellipsis(text, fw - 1);
+  let field;
   if (S.generating) field = [[cut('✧ generating…'), fg(C.purple) + box]];
   else if (S.editing) field = S.field.segments(fw - 1, box + fg(C.text));
   else if (!S.field.value) {
-    const text = S.amend ? 'Message (empty: keep the last one) · c'
-      : o && S.repo.state === 'REBASING' ? 'Rebase in progress · c, Enter: continue · X: abort'
-      : o ? `Message (empty: git's) · c, Enter: ${o.cont ? 'continue' : 'commit'} · X: abort`
-      : 'Message · c to type, Enter to commit';
+    const text = S.amend ? 'Message (empty: keep the last one)'
+      : o && S.repo.state === 'REBASING' ? 'Rebase in progress: continue, or X to abort'
+      : o ? 'Message (empty: the one git prepared)' : 'Message  (c)';
     field = [[cut(text), DIM + box]];
-  }
-  else field = [[cut(S.field.value), fg(C.text) + box]];
+  } else field = [[cut(S.field.value), fg(C.text) + box]];
   const used = ui.textWidth(field.map(s => s[0]).join(''));
-  return ui.line([[' ', ''], [' ', box], ...field, [' '.repeat(Math.max(0, fw - 1 - used)), box], ...right], W);
+  const fieldLine = ui.line([[' ', ''], [' ', box], ...field, [' '.repeat(Math.max(0, fw - 1 - used)), box]], W);
+  const list = short => [[commitLabel(short), commit, PRIMARY], [short ? '✧' : '✧ Claude', generate, fg(C.purple)],
+    [S.amend ? '☑ Amend' : '☐ Amend', toggleAmend, S.amend ? fg(C.text) : DIM], ...(o ? [['✕ Abort', abort, fg(C.red)]] : [])];
+  const fits = l => l.reduce((n, [t]) => n + ui.textWidth(t) + 2, 1) <= W;
+  const btns = fits(list(false)) ? list(false) : list(true);
+  return [fieldLine, ui.line([[' ', ''], ...place(btns, 3, 1)], W)];
 }
 
 function status(W) {
-  if (S.prompt) {
-    const p = S.prompt;
-    const segs = p.field ? [[` ${p.text} `, fg(C.yellow)], ...p.field.segments(Math.max(4, W - ui.textWidth(p.text) - 3), fg(C.text))]
-      : [[` ${p.text} `, fg(C.yellow) + BOLD], ['y/N', BOLD]];
-    return ui.line(segs, W, [50, 40, 20]);
-  }
-  if (S.busy) return ui.line([[` ⟳ ${S.busy}…`, fg(C.blue)]], W, C.header);
+  if (S.busy) return ui.line([[` ${spinner()} ${S.busy}…`, fg(C.blue)]], W, C.header);
   if (S.generating) return ui.line([[' ✧ generating…', fg(C.purple)]], W, C.header);
-  if (S.flash) return ui.line([[` ${S.flash.text}`, fg(S.flash.error ? C.red : C.yellow)]], W, C.header);
-  return ui.line([[' ' + hints(), DIM]], W, C.header);
+  if (S.flash) return ui.line(ui.message(S.flash.text, S.flash.error ? 'error' : undefined), W, C.header);
+  // ? opens the full list wherever a key is not typed into a field.
+  const right = S.picker || S.inline || S.editing || !S.repo ? [] : [['?', KEY], [W >= 60 ? ' all keys ' : ' ', DIM]];
+  const rw = ui.segWidth(right);
+  const segs = ui.keys(hints(), W - rw - 2);
+  // A click on a hint does what its key does.
+  const y = ui.size().H - 1;
+  for (const z of segs.zones) hits.push({ y, x0: z.x0, x1: z.x1, fn: () => key(z.key) });
+  if (rw) hits.push({ y, x0: W - rw, x1: W, fn: () => key('?') });
+  return ui.line([...segs, [' '.repeat(Math.max(0, W - ui.segWidth(segs) - rw)), ''], ...right], W, C.header);
 }
 
+// The keys of the moment, most useful first: as many as fit show in the status line.
 function hints() {
-  if (S.picker) return S.picker.typing ? 'type to filter · ↑↓ · Enter: switch · Esc: clear' : 'Enter: switch · n: new branch · D: delete · /: filter · Esc: close';
-  if (S.editing) return `Enter: ${continues() ? 'continue' : 'commit'} · Esc: leave · ctrl+g: ✧ write with Claude · alt+a: amend`;
-  if (S.diff && (S.diff.focus || ui.size().W < SPLIT)) return '↑↓ PgUp PgDn: scroll · n/N: hunks · s: inline/side by side · Tab: list · q: back';
-  const common = 'b: branch · f p P: fetch push pull · r · q: quit';
-  if (!S.repo) return S.noGit ? 'q: quit' : 'i: git init · q: quit';
+  if (S.inline) return S.inline.keys;
+  if (S.picker) return S.picker.typing ? [['↑↓', 'move'], ['⏎', 'switch'], ['esc', 'clear']]
+    : [['⏎', 'switch'], ['n', 'new branch'], ['D', 'delete'], ['/', 'filter'], ['esc', 'close']];
+  const commitKey = continues() ? 'continue' : 'commit';
+  if (S.editing) return [['⏎', commitKey], ['esc', 'leave'], ['ctrl+g', '✧ Claude'], ['alt+a', 'amend']];
+  if (S.diff && S.diff.compare && (S.diff.focus || !wide())) return [['↑↓', 'select'], ['⏎', 'show commit'], ['tab', 'list'], ['q', 'back']];
+  if (S.diff && S.diff.back && (S.diff.focus || !wide())) return [['↑↓', 'scroll'], ['n N', 'hunks'], ['q', 'back to the comparison']];
+  if (S.diff && (S.diff.focus || !wide())) return [['↑↓', 'scroll'], ['n N', 'hunks'], ['s', 'inline or side by side'], ['tab', 'list'], ['q', 'back']];
+  if (!S.repo) return S.noGit ? [['q', 'quit']] : [['i', 'git init'], ['q', 'quit']];
+  const common = [['b', 'branch'], ['f', 'fetch'], ['P', 'push'], ['L', 'pull'], ['q', 'quit']];
   if (S.view === 'changes') {
-    const o = ongoing();
-    return `s/Space: stage · u: unstage · a/A: all · d: discard · Enter: diff · c: ${continues() ? 'continue' : 'commit'}${o ? ' · X: abort' : ''} · ^G: ✧ · t: tree · ${common}`;
+    return [['space', 'stage'], ['u', 'unstage'], ['d', 'discard'], ['c', commitKey], ...(ongoing() ? [['X', 'abort']] : []),
+      ['⏎', wide() ? 'focus diff' : 'diff'], ['ctrl+g', '✧ Claude'], ['t', 'tree'], ...common];
   }
-  if (S.view === 'history') return `Enter: show commit · 1-4: views · ${common}`;
-  if (S.view === 'stashes') return `Enter: show · n: stash · a: apply · o: pop · d: drop · ${common}`;
-  return `Enter: checkout · D: delete branch · ${common}`;
+  if (S.view === 'history') return [['⏎', wide() ? 'focus commit' : 'show commit'], ['a', S.allBranches ? 'current branch' : 'all branches'], ...common];
+  if (S.view === 'stashes') return [['n', 'stash'], ['a', 'apply'], ['o', 'pop'], ['d', 'drop'], ['⏎', 'show'], ...common];
+  return [['⏎', 'checkout'], ['=', 'compare'], ['B', 'compare base'], ['D', 'delete branch'], ...common];
+}
+
+// Every key, for the help overlay (?): the view's own first.
+function helpGroups() {
+  const g = [];
+  if (S.view === 'changes') {
+    g.push(['Files', [['space s', 'stage'], ['u', 'unstage'], ['a A', 'stage, unstage all'], ['d', 'discard'], ['t', 'list or tree'],
+      ['y', 'copy path'], ['Y', 'copy relative path'], ['e', 'edit in the terminal'], ['o', 'open in the editor']]],
+      ['Commit', [['c', 'type the message'], ['⏎', 'commit, when typing'], ['ctrl+g', '✧ write with Claude'], ['alt+a', 'amend'],
+        ['X', 'abort the operation']]]);
+  }
+  if (S.view === 'history') g.push(['History', [['⏎', 'show the commit'], ['a', 'all branches or current']]]);
+  if (S.view === 'stashes') g.push(['Stashes', [['n', 'stash all changes'], ['a', 'apply'], ['o', 'pop'], ['d', 'drop'], ['⏎', 'show']]]);
+  if (S.view === 'refs') {
+    g.push(['Refs', [['⏎', 'check out'], ['=', 'compare with the base'], ['B', 'set as compare base'], ['D', 'delete the branch']]],
+      ['Comparison', [['↑↓', 'select a commit'], ['⏎', 'show the commit'], ['q', 'back']]]);
+  }
+  g.push(['Repository', [['f', 'fetch'], ['L', 'pull'], ['P', 'push or publish'], ['b', 'branches'], ['r', 'refresh']]],
+    ['Move', [['↑↓ j k', 'move'], ['← → h l', 'fold, unfold'], ['pgup pgdn', 'page'], ['ctrl+u/d', 'half page'], ['g G', 'first, last'],
+      ['1-4', 'switch view']]],
+    ['Diff', [['tab', 'focus the diff'], ['n N', 'next, previous hunk'], ['s', 'inline, side by side'], ['< >', 'narrower, wider list'], ['shift+← →', 'move the separator'],
+      ['q', 'back to the list']]],
+    ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]]);
+  return g;
 }
 
 // The diff area: a title row and the rows of diff.js, rendered for its width and cached.
 function diffLines(width, height) {
   const d = S.diff;
+  if (d.compare) return compareLines(d, width, height);
   const mode = d.mode || diffs.defaultMode(width);
-  const layout = w => { if (d.parsed && d.cache !== `${w}:${mode}`) { d.rows = diffs.render(d.parsed, w, mode); d.cache = `${w}:${mode}`; } };
+  // While the separator is dragged, the rows laid out for the old width are cut or padded: laying out a long
+  // diff again at each column would make the separator lag behind the mouse. The release lays it out.
+  const layout = w => {
+    if (S.resizing && d.rows && d.rows.length) return;
+    if (d.parsed && d.cache !== `${w}:${mode}`) { d.rows = diffs.render(d.parsed, w, mode, !!d.item); d.cache = `${w}:${mode}`; }
+  };
   const body = height - 1;
   // One column narrower when the scrollbar shows (a narrower layout never has fewer rows): kept while it does.
   if (d.cache !== `${width - 1}:${mode}` || d.rows.length <= body) layout(width);
   if ((d.rows || []).length > body) layout(width - 1);
   d.top = Math.max(0, Math.min(d.top, (d.rows || []).length - body));
   const bw = diffBar.set((d.rows || []).length, body, d.top);
-  const counts = d.parsed ? [[` +${d.parsed.add}`, fg(C.green)], [` −${d.parsed.del}`, fg(ui.GIT.D)]] : [];
-  const lines = [split([[` ${d.title}`, BOLD], ...counts, [`  ${mode === 'split' ? 'side by side' : 'inline'}`, DIM]],
-    [[' ✕ ', fg(C.text)]], width, d.focus ? C.select : C.header)];
-  if (!d.parsed) lines.push(ui.line([[' Loading…', DIM]], width));
-  else if (!d.rows.length) lines.push(ui.line([[' (no changes)', DIM]], width));
+  const counts = d.parsed ? [[`  +${d.parsed.add}`, fg(C.green)], [` −${d.parsed.del}`, fg(ui.GIT.D)]] : [];
+  // The layout switch as in the changes pane, the active side underlined (clicks: see draw, d.switchAt).
+  const ON = '\x1b[1;4m', layouts = [['Inline', mode === 'inline' ? ON : DIM], [' · ', DIM], ['Side by side', mode === 'split' ? ON : DIM]];
+  const right = [...layouts, [wide() ? ' ' : '  ✕ ', fg(C.text)]];
+  d.switchAt = width - ui.segWidth(right);
+  const lines = [split([[` ${d.title}`, BOLD], [d.tag ? `  ${d.tag}` : '', DIM], ...counts], right, width, d.focus ? C.select : C.header)];
+  if (!d.parsed) lines.push(...ui.empty(width, body, 'Loading…'));
+  else if (!d.rows.length) lines.push(...ui.empty(width, body, 'No changes'));
   (d.rows || []).slice(d.top, d.top + body).forEach((r, k) => lines.push(ui.line(r.segs, width - bw, r.back) + diffBar.cell(k)));
   while (lines.length < height) lines.push(ui.line([], width));
   return lines.slice(0, height);
+}
+
+// The diff's layout switch, its title row's Inline and Side by side, clickable; x: the diff area's first column.
+function switchHits(x) {
+  const d = S.diff;
+  if (!d || d.compare || d.switchAt === undefined) return;
+  const at = x + d.switchAt, set = mode => () => { if ((d.mode || diffs.defaultMode(ui.size().W - x)) !== mode) { d.mode = mode; diffs.saveMode(mode); draw(); } };
+  hits.push({ y: 1, x0: at, x1: at + 6, fn: set('inline') }, { y: 1, x0: at + 9, x1: at + 21, fn: set('split') });
+}
+
+// A comparison in the diff area: its title row, then its rows (selected commit highlighted).
+function compareLines(d, width, height) {
+  const body = height - 1;
+  if (!S.resizing && d.cache !== `${width}`) { d.rows = compareRows(d, width - 1); d.cache = `${width}`; }
+  d.top = Math.max(0, Math.min(d.top, d.rows.length - body));
+  const bw = diffBar.set(d.rows.length, body, d.top);
+  const c = d.cmp;
+  const state = c && !c.failed ? [[`${c.ahead} ahead · ${c.behind} behind `, c.ahead || c.behind ? fg(C.yellow) : DIM]] : [];
+  const lines = [split([[` ${d.title}`, BOLD], ['  ↔  ', DIM], [d.base, BOLD]], state, width, d.focus ? C.select : C.header)];
+  if (!c) lines.push(...ui.empty(width, body, 'Loading…'));
+  d.rows.slice(d.top, d.top + body).forEach((r, k) => {
+    const sel = d.top + k === d.sel ? (d.focus ? C.select : C.selectBlur) : r.back;
+    lines.push(ui.line(r.segs, width - bw, sel) + diffBar.cell(k));
+  });
+  while (lines.length < height) lines.push(ui.line([], width));
+  return lines.slice(0, height);
+}
+
+// The diff area with nothing to show: what to select for it.
+function emptyDiff(width, height) {
+  const text = S.view === 'changes' ? (rows.some(r => r.type === 'file') ? 'Select a file to see its changes' : 'No changes')
+    : S.view === 'history' ? 'Select a commit to see it'
+    : S.view === 'stashes' ? (S.stashes.length ? 'Select a stash to see it' : 'No stashes')
+    : rows[S.cursor] && rows[S.cursor].type === 'branch' ? `${baseName()} is the base: select another branch to compare with it`
+    : `Select a branch to compare it with ${baseName()}`;
+  return [ui.line([], width, C.header), ...ui.empty(width, height - 1, text)];
+}
+
+// Columns of the list beside the diff: at least 30, and 40 left to the diff.
+const MIN_LIST = 30, MIN_DIFF = 40;
+function listWidth(W) {
+  const share = S.listShare[S.view];
+  const w = share === undefined ? Math.max(34, Math.min(70, Math.round(W * 0.38))) : Math.round(W * share);
+  return Math.max(MIN_LIST, Math.min(W - 1 - MIN_DIFF, w));
+}
+
+// Sets the list's width in columns and keeps it as a share of the width; saved unless a drag is still going on.
+function resizeList(cols, save = true) {
+  const { W } = ui.size();
+  S.listShare[S.view] = Math.round(Math.max(MIN_LIST, Math.min(W - 1 - MIN_DIFF, cols)) / W * 1000) / 1000;
+  if (save) writeSettings({ ...readSettings(), scmListShare: { ...shares(readSettings().scmListShare), [S.view]: S.listShare[S.view] } });
+  draw();
 }
 
 let paint = null;
@@ -595,37 +838,51 @@ function draw() {
   hits = [];
   const lines = [header(W)];
   if (!S.repo) {
-    const msg = S.repo === null ? ['Loading…'] : S.noGit ? ['git not found in PATH'] : ['Not a git repository', '', 'Press i to run git init here'];
-    const at = Math.max(1, Math.floor((H - msg.length) / 2) - 1);
-    while (lines.length < at) lines.push(ui.line([], W));
-    for (const m of msg) lines.push(ui.line([[' '.repeat(Math.max(0, Math.floor((W - ui.textWidth(m)) / 2))) + m, m.startsWith('Not') ? BOLD : DIM]], W));
+    lines.push(...(S.repo === null ? ui.empty(W, H - 2, 'Loading…') : S.noGit ? ui.empty(W, H - 2, 'git not found in PATH')
+      : ui.empty(W, H - 2, 'Not a git repository', [['i', 'git init here']])));
   } else if (S.diff && W < SPLIT) {
     lines.push(...diffLines(W, H - 2));
+    switchHits(0);
     hits.push({ y: 1, x0: W - 3, x1: W, fn: closeDiff });
     listW = 0;
   } else {
-    const LW = S.diff ? Math.max(34, Math.min(70, Math.round(W * 0.38))) : W;
+    // From SPLIT columns, the diff of the selection always shows on the right.
+    const LW = W >= SPLIT ? listWidth(W) : W;
     const left = [tabs(LW)];
-    if (S.view === 'changes') left.push(commitRow(LW));
+    if (S.view === 'changes') {
+      left.push(...commitRows(LW));
+      if (H >= 20) left.push(ui.line([], LW));
+    }
     listY = 1 + left.length; listH = Math.max(1, H - 1 - listY); listW = LW;
     rows = viewRows();
     syncCursor();
     S.top = Math.max(0, Math.min(S.top, rows.length - listH));
     const bw = listBar.set(rows.length, listH, S.top);
+    // A list with nothing in it but a note: the sections' titles, then the note centred in the rest (ui.empty).
+    const notes = rows.filter(r => r.type === 'note');
+    const lone = notes.length === 1 && rows.every(r => r.type === 'note' || r.type === 'section') ? notes[0] : null;
     for (let i = S.top; i < Math.min(rows.length, S.top + listH); i++) {
+      if (rows[i] === lone) continue;
       left.push(rowLine(rows[i], LW - bw, listY + i - S.top, i === S.cursor) + listBar.cell(i - S.top));
     }
+    if (lone) left.push(...ui.empty(LW, Math.max(1, H - 2 - left.length), lone.text, lone.text === 'No changes' ? [['ctrl+p', 'go to file'], ['2', 'history']] : []));
+    // The stash being named: a row above the list.
+    if (S.inline && S.inline.kind === 'stash') { left.splice(listY - 1, 0, inlineRow(LW, '  new        ', null)); left.length = Math.min(left.length, H - 2); }
     while (left.length < H - 2) left.push(ui.line([], LW));
-    if (S.diff) {
-      const right = diffLines(W - LW - 1, H - 2);
-      hits.push({ y: 1, x0: W - 3, x1: W, fn: closeDiff });
-      left.forEach((l, i) => lines.push(l + DIM + '│\x1b[0m' + right[i]));
+    if (LW < W) {
+      // The diff stays while there is room for it: no close button.
+      const right = S.diff ? diffLines(W - LW - 1, H - 2) : emptyDiff(W - LW - 1, H - 2);
+      if (S.diff) switchHits(LW + 1);
+      const bar = (S.resizing ? fg(C.blue) : DIM) + '│\x1b[0m';
+      left.forEach((l, i) => lines.push(l + bar + right[i]));
     } else lines.push(...left);
   }
   if (S.picker) drawPicker(lines, W, H);
   while (lines.length < H - 1) lines.push(ui.line([], W));
   lines.length = H - 1;
   lines.push(status(W));
+  if (S.confirm) ui.confirm(lines, W, H, S.confirm);
+  if (S.help) ui.help(lines, W, (VIEWS.find(v => v[0] === S.view) || [])[1], helpGroups(), S.help);
   paint(lines);
 }
 
@@ -644,38 +901,52 @@ function select(i) {
   S.selKey = rows[S.cursor] ? rows[S.cursor].key : null;
   if (S.cursor < S.top) S.top = S.cursor;
   if (S.cursor >= S.top + listH) S.top = S.cursor - listH + 1;
-  // With the diff on the right, it follows the selection.
-  if (S.diff && ui.size().W >= SPLIT) { clearTimeout(select.timer); select.timer = setTimeout(() => openRow(rows[S.cursor], true), 120); }
+  follow();
 }
 
 function flash(text, error = false) {
   S.flash = { text, error };
   draw();
   clearTimeout(flash.timer);
-  flash.timer = setTimeout(() => { S.flash = null; draw(); }, error ? 6000 : 2500);
+  flash.timer = setTimeout(() => { S.flash = null; draw(); }, ui.messageTime(error ? 'error' : ui.messageKind(text)));
 }
 
-// y/N confirmation in the status line; input: a one-line answer (Enter to accept, Esc to cancel).
-function confirm(text, yes) { S.prompt = { text, done: yes }; draw(); }
-function ask(text, value, done) { S.prompt = { text, field: new ui.Field(value), done }; draw(); }
+// A question in a card over the pane (ui.confirm): q: { title, name, where, note, action, tone }.
+function confirm(q, yes) { S.confirm = { ...q, yes, focus: 'no' }; draw(); }
 
 // --- changes
 
 async function stage(items) {
   if (!items.length) return;
   const conflict = items[0].sec === 'conflicts';
-  await op('Staging', ['add', ...(conflict ? [] : ['-A']), ...fromFile], { input: nul(items) });
+  if (await op('Staging', ['add', ...(conflict ? [] : ['-A']), ...fromFile], { input: nul(items) })) pulse(items, 'staged');
 }
 
 async function unstage(items) {
   if (!items.length) return;
   const args = S.repo.hasHead ? ['restore', '--staged', ...fromFile] : ['rm', '--cached', '-r', '-q', ...fromFile];
-  await op('Unstaging', args, { input: nul(items) });
+  if (await op('Unstaging', args, { input: nul(items) })) pulse(items, 'changes');
 }
 
-const stageAll = () => (S.repo.changes.length || S.repo.conflicts.length ? op('Staging all', ['add', '-A']) : flash('Nothing to stage'));
-const unstageAll = () => (!S.repo.staged.length ? flash('Nothing staged')
-  : S.repo.hasHead ? op('Unstaging all', ['reset', '-q']) : op('Unstaging all', ['rm', '--cached', '-r', '-q', '--', '.']));
+// Rows just moved to the other section, highlighted for a moment where they land.
+function pulse(items, sec) {
+  S.pulse = new Set(items.map(i => `${sec}:${i.path}`));
+  clearTimeout(pulse.timer);
+  pulse.timer = setTimeout(() => { S.pulse = null; draw(); }, 900);
+}
+
+async function stageAll() {
+  const items = [...S.repo.conflicts, ...S.repo.changes];
+  if (!items.length) return flash('Nothing to stage');
+  if (await op('Staging all', ['add', '-A'])) pulse(items, 'staged');
+}
+
+async function unstageAll() {
+  const items = S.repo.staged;
+  if (!items.length) return flash('Nothing staged');
+  const args = S.repo.hasHead ? ['reset', '-q'] : ['rm', '--cached', '-r', '-q', '--', '.'];
+  if (await op('Unstaging all', args)) pulse(items, 'changes');
+}
 
 const files = n => `${n} file${n > 1 ? 's' : ''}`;
 
@@ -687,15 +958,18 @@ function discard(items, sec) {
   const what = items.length === 1 ? items[0].path : files(items.length);
   if (sec === 'staged') {
     const added = items.filter(i => i.code === 'A').length;
-    return confirm(`Discard all changes, staged and not, of ${what}${added ? ` (deletes ${files(added)} added since HEAD)` : ''}?`, async () => {
+    return confirm({ title: 'Discard all changes?', name: `${what}, staged and not`, where: added ? `deletes ${files(added)} added since HEAD` : '',
+      note: 'This cannot be undone.', action: 'Discard' }, async () => {
       if (S.repo.hasHead) await op('Discarding', ['restore', '--staged', '--worktree', '--source=HEAD', ...fromFile], { input: nul(items) });
       else await op('Discarding', ['rm', '-f', '-r', '-q', ...fromFile], { input: nul(items) });
     });
   }
   const untracked = items.filter(i => i.untracked), tracked = items.filter(i => !i.untracked);
-  const text = untracked.length ? `Delete ${files(untracked.length)} not tracked by git${tracked.length ? ` and discard changes in ${files(tracked.length)}` : ''}? This cannot be undone.`
-    : `Discard changes in ${what}? This cannot be undone.`;
-  confirm(text, async () => {
+  const q = untracked.length
+    ? { title: `Delete ${files(untracked.length)} not tracked?`, name: untracked.length === 1 ? untracked[0].path : files(untracked.length),
+      where: tracked.length ? `and discard the changes in ${files(tracked.length)}` : '', action: 'Delete' }
+    : { title: 'Discard the changes?', name: what, action: 'Discard' };
+  confirm({ ...q, note: 'This cannot be undone.' }, async () => {
     if (tracked.length) await op('Discarding', ['restore', '--worktree', ...fromFile], { input: nul(tracked) });
     let failed = 0;
     for (const it of untracked) {
@@ -735,7 +1009,7 @@ async function commit() {
   if (r.conflicts.length) return flash('Resolve the merge conflicts and stage the files first', true);
   if (!r.staged.length && !S.amend && !r.state) {
     if (!r.changes.length) return flash('Nothing to commit');
-    return confirm(`Nothing staged: stage all ${files(r.changes.length)} and commit?`, async () => {
+    return confirm({ title: 'Nothing staged', name: `Stage all ${files(r.changes.length)} and commit?`, action: 'Stage and commit', tone: 'go' }, async () => {
       if (await op('Staging all', ['add', '-A'])) { await loadStatus(); doCommit(msg); }
     });
   }
@@ -797,7 +1071,7 @@ function abort() {
   const o = ongoing();
   if (!o) return flash(S.repo && S.repo.state === 'APPLYING' ? 'git am in progress: continue or abort it in the terminal'
     : 'No merge, rebase, cherry-pick or revert in progress');
-  confirm(`Abort the ${o.name} and go back to the state before it?`, async () => {
+  confirm({ title: `Abort the ${o.name}?`, name: `Back to the state before the ${o.name}.`, note: 'Its changes are lost.', action: 'Abort' }, async () => {
     if (await op('Aborting', o.abort)) { S.field.set(''); S.editing = false; S.amend = false; flash(`${o.name[0].toUpperCase()}${o.name.slice(1)} aborted`); }
   });
 }
@@ -892,7 +1166,7 @@ function openPicker() {
   S.picker = { field: new ui.Field(), typing: false, sel: 1, top: 0, all: [], items: [] };
   filterPicker();
   draw();
-  loadPicker().then(() => { if (S.picker) { S.picker.sel = Math.min(1, S.picker.items.length - 1); draw(); } });
+  loadPicker().then(() => { if (S.picker && !S.inline) { S.picker.sel = Math.min(1, S.picker.items.length - 1); draw(); } });
 }
 
 function drawPicker(lines, W, H) {
@@ -904,12 +1178,13 @@ function drawPicker(lines, W, H) {
   p.box = { x, y, w, h, body };
   const box = [];
   box.push(ui.line([[' Switch branch', BOLD], ['  (local, then remote)', DIM]], w, C.header));
-  box.push(ui.line([[' › ', fg(C.blue)], ...(p.typing ? p.field.segments(w - 4) : [[p.field.value || 'type / to filter', DIM]])], w, [49, 49, 49]));
+  box.push(ui.line([[` ${ui.SEARCH} `, DIM], ...(p.typing ? p.field.segments(w - 4) : [[p.field.value || 'type / to filter', DIM]])], w, [49, 49, 49]));
   for (let i = p.top; i < p.top + body; i++) {
     const b = p.items[i];
     if (!b) { box.push(ui.line([], w, [30, 30, 30])); continue; }
     const back = i === p.sel ? C.select : [30, 30, 30];
-    if (b.create) box.push(ui.line([[' + ', fg(C.green)], [b.name, fg(C.green)]], w, back));
+    if (b.create && S.inline && S.inline.kind === 'branch') box.push(inlineRow(w, ' + ', [30, 30, 30]));
+    else if (b.create) box.push(ui.line([[' + ', fg(C.green)], [b.name, fg(C.green)]], w, back));
     else {
       box.push(split([[b.current ? ' ● ' : '   ', fg(C.green)], [b.name, b.remote ? fg(C.purple) : b.current ? BOLD : ''],
         [`  ${b.subject}`, DIM]], [[` ${b.date} `, DIM]], w, back));
@@ -963,14 +1238,46 @@ async function checkout(b) {
   if (await op(`Switching to ${local}`, args)) flash(`Switched to ${local}`);
 }
 
+// The new branch named on the picker's first row, from the filter, else the current branch's prefix (feat/).
+// Enter creates it and switches to it, alt+Enter or ctrl+O only creates it.
 function newBranch(value) {
-  S.picker = null;
-  ask('New branch name:', value.replace(/\s+/g, '-'), async name => {
-    name = name.trim();
-    if (!name) return;
-    if (name.startsWith('-')) return flash('A branch name cannot start with "-"', true);
-    if (await op(`Creating ${name}`, ['switch', '-c', name])) flash(`Switched to new branch ${name}`);
-  });
+  const cur = (S.repo && S.repo.branch) || '';
+  const start = value ? value.replace(/\s+/g, '-') : cur.includes('/') ? cur.slice(0, cur.lastIndexOf('/') + 1) : '';
+  if (!S.picker) openPicker();
+  if (!S.picker) return;
+  S.picker.sel = 0; S.picker.top = 0;
+  inline('branch', start, `from ${cur || 'HEAD'}`, [['⏎', 'create and switch'], ['ctrl+o', 'create only'], ['esc', 'cancel']],
+    async (name, alt) => {
+      name = name.trim();
+      if (!name) return;
+      if (name.startsWith('-')) return flash('A branch name cannot start with "-"', true);
+      S.picker = null;
+      if (alt) { if (await op(`Creating ${name}`, ['branch', name])) flash(`Created branch ${name}`); }
+      else if (await op(`Creating ${name}`, ['switch', '-c', name])) flash(`Switched to new branch ${name}`);
+    });
+}
+
+// A name typed in place, on its row (the picker's first one, or the list's first one): S.inline { kind, field,
+// right (dimmed on the right), keys (the status line's), done(value, alt) }. Enter gives the value, alt+Enter or
+// ctrl+O too, with alt (Windows Terminal keeps alt+Enter for full screen). Escape cancels.
+function inline(kind, value, right, keys, done) {
+  S.inline = { kind, field: new ui.Field(value), right, keys, done };
+  draw();
+}
+function inlineKey(k) {
+  const it = S.inline;
+  if (k === 'escape' || k === 'ctrl+c') { S.inline = null; return draw(); }
+  if (k === 'enter' || k === 'alt+enter' || k === 'ctrl+o') { S.inline = null; draw(); return it.done(it.field.value, k !== 'enter'); }
+  it.field.key(k);
+  draw();
+}
+// The row of the name being typed, width w, on back.
+function inlineRow(w, lead, back) {
+  const it = S.inline, right = ` ${it.right} `, FIELD = [60, 60, 60];
+  const fw = Math.max(4, w - ui.textWidth(lead) - ui.textWidth(right) - 1);
+  const field = it.field.segments(fw - 1).map(([t, st]) => [t, bg(FIELD) + (st || '')]);
+  return ui.line([[lead, DIM], [' ', bg(FIELD)], ...field, [' '.repeat(Math.max(0, fw - 1 - ui.segWidth(field))), bg(FIELD)],
+    [' '.repeat(Math.max(1, w - ui.textWidth(lead) - fw - ui.textWidth(right))), ''], [right, DIM]], w, back);
 }
 
 function deleteBranch(b) {
@@ -978,11 +1285,16 @@ function deleteBranch(b) {
   if (b.name === S.repo.branch) return flash('Cannot delete the current branch', true);
   if (b.name.startsWith('-')) return;
   S.picker = null;
-  confirm(`Delete branch ${b.name}?`, async () => {
+  confirm({ title: 'Delete the branch?', name: b.name, action: 'Delete' }, async () => {
     const res = await op(`Deleting ${b.name}`, ['branch', '-d', b.name], { quiet: true });
     if (res && res.code === 0) return flash(`Deleted ${b.name}`);
     if (res && /not fully merged/.test(res.err)) {
-      return confirm(`${b.name} is not fully merged: its commits will be lost. Delete anyway (-D)?`, async () => {
+      // The commits lost: those of the branch on no other branch (--exclude takes the name without refs/heads/).
+      const n = await git(['rev-list', '--count', `refs/heads/${b.name}`, '--not', `--exclude=${b.name}`, '--branches', '--remotes', '--'])
+        .then(r => (r.code === 0 ? +r.out.trim() : 0)).catch(() => 0);
+      const lost = n ? `its ${n} commit${n > 1 ? 's' : ''} will be lost` : 'its commits will be lost';
+      return confirm({ title: 'Not fully merged', name: b.name, where: `${lost[0].toUpperCase()}${lost.slice(1)} (git branch -D).`,
+        note: 'This cannot be undone.', action: 'Delete anyway' }, async () => {
         if (await op(`Deleting ${b.name}`, ['branch', '-D', b.name])) flash(`Deleted ${b.name}`);
       });
     }
@@ -999,6 +1311,9 @@ async function fetch() {
 async function pull() {
   if (!S.repo) return;
   if (!S.repo.upstream) return flash('No upstream branch to pull from', true);
+  if (S.repo.ahead && S.repo.behind) {
+    return flash(`${S.repo.branch} and ${S.repo.upstream} have diverged (↑${S.repo.ahead} ↓${S.repo.behind}): merge or rebase in the terminal`, true);
+  }
   if (await net('Pulling', ['pull', '--no-rebase', '--ff-only'])) flash('Pulled');
 }
 
@@ -1020,8 +1335,11 @@ async function push() {
 
 function newStash() {
   if (!S.repo) return;
-  ask('Stash message (optional):', '', async msg => {
-    const res = await op('Stashing', ['stash', 'push', '-u', ...(msg.trim() ? ['-m', msg.trim()] : [])]);
+  const n = S.repo.staged.length + S.repo.changes.length;
+  if (S.view !== 'stashes') setView('stashes');
+  // Enter stashes the untracked files too, as before; alt+Enter or ctrl+O leaves them.
+  inline('stash', '', `${n} file${n === 1 ? '' : 's'}`, [['⏎', 'stash'], ['ctrl+o', 'keep untracked files'], ['esc', 'cancel']], async (msg, alt) => {
+    const res = await op('Stashing', ['stash', 'push', ...(alt ? [] : ['-u']), ...(msg.trim() ? ['-m', msg.trim()] : [])]);
     if (res) flash(res.out.trim().split('\n')[0] || 'Stashed');
   });
 }
@@ -1030,14 +1348,119 @@ function stashAction(s, action) {
   if (!s) return;
   const run = async () => { if (await op(`${action[0].toUpperCase() + action.slice(1)} ${s.ref}`, ['stash', action, s.ref])) flash(`${s.ref}: ${action} done`); };
   if (action === 'apply') return run();
-  confirm(action === 'drop' ? `Drop ${s.ref} (${s.subject})? This cannot be undone.` : `Pop ${s.ref}: apply it, then drop it?`, run);
+  confirm(action === 'drop' ? { title: 'Drop the stash?', name: s.subject, where: s.ref, note: 'This cannot be undone.', action: 'Drop' }
+    : { title: 'Pop the stash?', name: s.subject, where: `${s.ref}: applied, then dropped`, action: 'Pop', tone: 'go' }, run);
 }
 
 // --- diffs
 
-async function showDiff(key, title, args, item) {
-  const d = S.diff && S.diff.key === key ? S.diff : { key, title, top: 0, mode: S.diff ? S.diff.mode : null, focus: S.diff ? S.diff.focus : false };
-  d.item = item; d.title = title;
+// --- branch comparison (Refs)
+
+// Full names: a branch called like an option, or like a commit, stays a branch for git.
+const fullRef = b => `refs/${b.remote ? 'remotes' : 'heads'}/${b.name}`;
+const baseRef = () => (S.compareBase ? fullRef(S.compareBase) : 'HEAD');
+const baseName = () => (S.compareBase ? S.compareBase.name : S.repo.detached ? 'HEAD' : S.repo.branch);
+const MAX_COMPARE = 300; // commits listed on each side
+
+// The commits only on the branch, those only on the base (= when the same change is on both sides, as after a
+// cherry-pick), and the files changed on the branch since it left the base.
+async function compare(row) {
+  const b = row.ref, range = `${baseRef()}...${fullRef(b)}`;
+  const d = { key: row.key, compare: true, title: b.name, base: baseName(), top: 0, sel: -1, rows: [], cache: '',
+    focus: S.diff ? S.diff.focus : false };
+  S.diff = d;
+  draw();
+  const side = only => git(['log', '--no-show-signature', '--no-ext-diff', '--no-textconv', only, '--cherry-mark', '-n', String(MAX_COMPARE),
+    '--format=%m%x1f%h%x1f%H%x1f%s%x1f%at', range, '--']);
+  const [count, mine, theirs, stat] = await Promise.all([git(['rev-list', '--left-right', '--count', range, '--']),
+    side('--right-only'), side('--left-only'), git(['diff', ...diffs.DIFF_OPTS, '--numstat', '-M', range, '--'])]);
+  if (S.diff !== d) return;
+  const list = res => res.out.split('\n').filter(Boolean).map(l => {
+    const [mark, short, hash, subject, time] = l.split('\x1f');
+    return { same: mark === '=', short, hash, subject, date: ago(+time) };
+  });
+  const [behind, ahead] = count.out.trim().split(/\s+/).map(Number);
+  const files = stat.out.split('\n').filter(Boolean).map(l => { const [add, del, ...p] = l.split('\t'); return { add, del, path: p.join('\t') }; });
+  d.cmp = { ahead: ahead || 0, behind: behind || 0, mine: list(mine), theirs: list(theirs), files,
+    failed: count.code !== 0 && errorOf(count) };
+  d.cache = '';
+  draw();
+}
+
+// The rows of a comparison for a width; the commit rows can be selected (Enter shows them).
+function compareRows(d, width) {
+  const c = d.cmp, out = [];
+  if (!c) return out;
+  if (c.failed) return [{ segs: [[` ${c.failed}`, fg(C.red)]] }];
+  const SECTION = [30, 36, 44];
+  const section = (title, n) => out.push({ segs: [[` ${title}`, BOLD], [`  ${n}`, DIM]], back: SECTION });
+  const commits = (list, total) => {
+    if (!list.length) out.push({ segs: [['   none', DIM]] });
+    for (const x of list) {
+      const date = ` ${x.date.padStart(6)} `, room = Math.max(1, width - date.length - 13);
+      out.push({ commit: x, segs: [[x.same ? '   = ' : '     ', DIM], [`${x.short}  `, fg(C.yellow)],
+        [pad(x.subject, room), x.same ? DIM : ''], [date, DIM]] });
+    }
+    if (total > list.length) out.push({ segs: [[`   … and ${total - list.length} more`, DIM]] });
+    out.push({ segs: [] });
+  };
+  section(`Only on ${d.title}`, c.ahead);
+  commits(c.mine, c.ahead);
+  section(`Only on ${d.base}`, c.behind);
+  commits(c.theirs, c.behind);
+  const n = v => (v === '-' ? 0 : +v);
+  section('Files changed', `${c.files.length}  +${c.files.reduce((t, f) => t + n(f.add), 0)} −${c.files.reduce((t, f) => t + n(f.del), 0)}`);
+  if (!c.files.length) out.push({ segs: [['   none', DIM]] });
+  for (const f of c.files) {
+    const counts = f.add === '-' ? ' binary ' : ` +${f.add} −${f.del} `;
+    out.push({ segs: [['   ', ''], [pad(f.path, Math.max(1, width - counts.length - 3)), ''],
+      ...(f.add === '-' ? [[counts, DIM]] : [[` +${f.add}`, fg(C.green)], [` −${f.del} `, fg(ui.GIT.D)]])] });
+  }
+  return out;
+}
+
+// Keys of a focused comparison: the selection moves over the commits, Enter shows the selected one.
+function compareKey(k, d, page) {
+  const at = (d.rows || []).map((r, i) => (r.commit ? i : -1)).filter(i => i >= 0);
+  if (!at.length) return false;
+  const pos = Math.max(0, at.indexOf(d.sel));
+  const move = i => {
+    d.sel = at[Math.max(0, Math.min(i, at.length - 1))];
+    const body = ui.size().H - 3;
+    if (d.sel < d.top + 1) d.top = Math.max(0, d.sel - 1);
+    if (d.sel >= d.top + body) d.top = d.sel - body + 1;
+    draw();
+    return true;
+  };
+  if (k === 'up' || k === 'k') return move(d.sel < 0 ? 0 : pos - 1);
+  if (k === 'down' || k === 'j') return move(d.sel < 0 ? 0 : pos + 1);
+  if (k === 'pageup') return move(pos - page);
+  if (k === 'pagedown') return move(pos + page);
+  if (k === 'home' || k === 'g') return move(0);
+  if (k === 'end' || k === 'G') return move(at.length - 1);
+  if (k === 'enter' && d.sel >= 0) {
+    const c = d.rows[d.sel].commit;
+    showDiff(`commit:${c.hash}`, `${c.short} ${c.subject}`,
+      ['show', ...diffs.DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', '--format=fuller', c.hash]);
+    S.diff.back = d;
+    S.diff.focus = true;
+    return true;
+  }
+  return false;
+}
+
+// B on a branch: the base of the comparisons, again B on it: back to the current branch.
+function setBase(row) {
+  const same = S.compareBase && fullRef(S.compareBase) === fullRef(row.ref);
+  S.compareBase = same || (row.current && !row.ref.remote) ? null : row.ref;
+  flash(`Branches compared with ${baseName()}`);
+  S.diff = null;
+  follow();
+}
+
+async function showDiff(key, title, args, item, tag) {
+  const d = S.diff && S.diff.key === key ? S.diff : { key, title, top: 0, mode: S.diff ? S.diff.mode : diffs.savedMode(), focus: S.diff ? S.diff.focus : false };
+  d.item = item; d.title = title; d.tag = tag;
   S.diff = d;
   draw();
   const res = await git(args);
@@ -1054,7 +1477,7 @@ async function openItemDiff(it, quiet) {
       : it.sec === 'conflicts' && S.repo.hasHead ? [...D, 'HEAD', '--', it.path] : [...D, '--', it.path];
   const key = `${it.sec}:${it.path}`;
   if (quiet && S.diff && S.diff.key !== key) return;
-  return showDiff(key, `${it.path}${it.sec === 'staged' ? ' (staged)' : it.untracked ? ' (untracked)' : ''}`, args, it);
+  return showDiff(key, it.path, args, it, it.sec === 'staged' ? 'staged' : it.untracked ? 'untracked' : it.sec === 'conflicts' ? 'conflict' : '');
 }
 
 function openRow(row, follow) {
@@ -1068,7 +1491,7 @@ function openRow(row, follow) {
     return showDiff(row.key, `${row.stash.ref} ${row.stash.subject}`, ['stash', 'show', ...diffs.DIFF_OPTS, '--stat', '-p', '--include-untracked', row.stash.ref]);
   }
   if (row.type === 'tag') return showDiff(row.key, `tag ${row.ref.name}`, ['show', ...diffs.DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', `refs/tags/${row.ref.name}`]);
-  if (follow) return;
+  if (follow) return comparable(row) ? compare(row) : undefined;
   if (row.type === 'section' || row.type === 'folder') return toggle(row);
   if (row.type === 'branch') return checkout(row.ref.remote ? row.ref : { ...row.ref, current: row.current });
   if (row.type === 'action') return row.fn();
@@ -1076,20 +1499,47 @@ function openRow(row, follow) {
 
 function closeDiff() { S.diff = null; draw(); }
 
+// From SPLIT columns, the diff shows the selected file, commit, stash or tag (shortly after, when moving fast).
+// A branch other than the base shows its comparison with the base.
+const comparable = row => !!row && row.type === 'branch' && baseRef() !== fullRef(row.ref) && !(row.current && !S.compareBase);
+const diffable = row => !!row && (['file', 'commit', 'stash', 'tag'].includes(row.type) || comparable(row));
+// The diff on the right of the list stands for this row: its own, or a commit opened from its comparison.
+const showing = row => !!S.diff && (S.diff.key === row.key || (!!S.diff.back && S.diff.back.key === row.key));
+function follow() {
+  clearTimeout(follow.timer);
+  follow.timer = setTimeout(() => {
+    if (!S.repo || !wide()) return;
+    const row = rows[S.cursor];
+    if (diffable(row)) {
+      // showDiff sets S.diff before it waits for git.
+      if (!showing(row)) { openRow(row, true); if (S.diff && S.diff.key === row.key) S.diff.auto = true; }
+    } else if (S.diff) closeDiff();
+  }, 120);
+}
+
 function diffKey(k) {
   const d = S.diff, page = ui.size().H - 4;
   const scroll = n => { d.top += n; draw(); };
-  if (k === 'q' || k === 'escape') return closeDiff();
-  if (k === 'tab' || k === 'shift+tab') { d.focus = false; return draw(); }
+  // A commit shown from a comparison: q and Escape go back to the comparison.
+  if (d.back && (k === 'q' || k === 'escape')) { S.diff = d.back; S.diff.focus = true; return draw(); }
+  if (d.compare && compareKey(k, d, page)) return;
+  if (k === 'q' || k === 'escape' || k === 'tab' || k === 'shift+tab') {
+    // Beside the list, the diff stays: the list takes the keys back.
+    if (wide()) { d.focus = false; return draw(); }
+    if (k === 'q' || k === 'escape') return closeDiff();
+  }
   if (k === 'up' || k === 'k') return scroll(-1);
   if (k === 'down' || k === 'j' || k === 'enter') return scroll(1);
-  if (k === 'pageup' || k === 'b') return scroll(-page);
+  if (k === 'pageup') return scroll(-page);
   if (k === 'pagedown' || k === 'space') return scroll(page);
+  if (k === 'ctrl+u') return scroll(-Math.ceil(page / 2));
+  if (k === 'ctrl+d') return scroll(Math.ceil(page / 2));
   if (k === 'home' || k === 'g') { d.top = 0; return draw(); }
   if (k === 'end' || k === 'G') { d.top = Infinity; return draw(); }
   if (k === 's') {
     const width = ui.size().W < SPLIT ? ui.size().W : ui.size().W - listW - 1;
     d.mode = (d.mode || diffs.defaultMode(width)) === 'split' ? 'inline' : 'split';
+    diffs.saveMode(d.mode);
     return draw();
   }
   if (k === 'n' || k === 'N') {
@@ -1097,6 +1547,25 @@ function diffKey(k) {
     const i = k === 'n' ? r.findIndex((x, j) => j > d.top && x.hunk) : r.map((x, j) => (j < d.top && x.hunk ? j : -1)).filter(j => j >= 0).pop();
     if (i !== undefined && i >= 0) { d.top = i; draw(); }
   }
+}
+
+// Go to file and Search in files, as from the explorer: the files open in the tab's preview.
+async function search(mode) {
+  const msg = await actions.search(S.repo ? S.repo.top : ROOT, process.env.EXPLORER_PANE || process.env.HERDR_PANE_ID, mode);
+  if (msg) flash(msg, true);
+}
+
+// y Y e o on a file of Changes, as in the explorer and the preview: copy its path or relative path, edit it in
+// the terminal, open it in the editor.
+async function fileAction(k, row) {
+  if (!row || row.type !== 'file') return flash('Select a file first');
+  const rel = row.item.path, abs = path.join(S.repo.top, rel);
+  if ((k === 'e' || k === 'o') && !fs.existsSync(abs)) return flash(`${rel} is deleted`, true);
+  const pane = process.env.HERDR_PANE_ID;
+  const msg = k === 'y' ? await actions.copy(abs) : k === 'Y' ? await actions.copy(rel, 'Relative path copied')
+    : k === 'e' ? await actions.edit(abs, pane) : await actions.open(abs, pane);
+  // The actions' messages tell success from failure (ui.messageKind), as in the explorer.
+  if (msg) flash(msg);
 }
 
 // --- views and keys
@@ -1108,7 +1577,20 @@ function setView(id) {
   schedule();
 }
 
-function toggleTree() { S.tree = !S.tree; draw(); }
+// History of every branch or of the current one, kept for the next panes.
+function toggleAllBranches() {
+  S.allBranches = !S.allBranches;
+  writeSettings({ ...readSettings(), scmGraphAll: S.allBranches });
+  flash(S.allBranches ? 'All branches' : 'Current branch only');
+  schedule();
+}
+
+// Kept for the next source control panes.
+function toggleTree() {
+  S.tree = !S.tree;
+  writeSettings({ ...readSettings(), scmTree: S.tree });
+  draw();
+}
 
 function toggle(row, open = !row.open) {
   if (open) S.collapsed.delete(row.key); else S.collapsed.add(row.key);
@@ -1116,19 +1598,6 @@ function toggle(row, open = !row.open) {
 }
 
 function quit() { process.exit(0); }
-
-function promptKey(k) {
-  const p = S.prompt;
-  if (p.field) {
-    if (k === 'enter') { S.prompt = null; draw(); return p.done(p.field.value); }
-    if (k === 'escape' || k === 'ctrl+c') { S.prompt = null; return draw(); }
-    p.field.key(k);
-    return draw();
-  }
-  S.prompt = null;
-  draw();
-  if (k === 'y') p.done();
-}
 
 function fieldKey(k) {
   if (k === 'enter') return commit();
@@ -1141,16 +1610,26 @@ function fieldKey(k) {
   draw();
 }
 
-function key(k) {
-  if (S.prompt) return promptKey(k);
+async function key(k) {
+  if (S.confirm) {
+    const q = S.confirm, answer = ui.confirmKey(k, q);
+    if (answer !== 'move') S.confirm = null;
+    draw();
+    if (answer === 'yes') return q.yes();
+    return;
+  }
+  if (S.inline) return inlineKey(k);
   if (S.picker) return pickerKey(k);
   if (S.editing && S.repo) return fieldKey(k);
   if (k === 'ctrl+c') return quit();
+  // The key help (ui.helpKey): scrolls, finds with /, closes with esc, q, ? or f1.
+  if (S.help) { if (!ui.helpKey(k, S.help)) S.help = null; return draw(); }
+  if ((k === '?' || k === 'f1') && S.repo) { S.help = { top: 0, find: null }; return draw(); }
   if (S.diff && (S.diff.focus || ui.size().W < SPLIT)) return diffKey(k);
   if (!S.repo) {
     if (k === 'q' || k === 'escape') return quit();
     if (k === 'i' && S.repo === false && !S.noGit) {
-      return confirm(`Run git init in ${ROOT}?`, async () => {
+      return confirm({ title: 'Create a repository?', name: ROOT, where: 'git init', action: 'Create', tone: 'go' }, async () => {
         const res = await exec(GIT, ['init'], { cwd: ROOT, env: english(await gitEnv(ROOT)) });
         flash(res.code === 0 ? 'Repository created' : `git init failed: ${errorOf(res)}`, res.code !== 0);
         schedule();
@@ -1163,7 +1642,7 @@ function key(k) {
   const page = Math.max(1, listH - 1);
   switch (k) {
     case 'q': return quit();
-    case 'escape': return S.diff ? closeDiff() : quit();
+    case 'escape': return quit();
     case 'up': case 'k': select(S.cursor - 1); break;
     case 'down': case 'j': select(S.cursor + 1); break;
     case 'pageup': select(S.cursor - page); break;
@@ -1178,13 +1657,26 @@ function key(k) {
       if (row && row.open === false) return toggle(row, true);
       break;
     case 'tab': if (S.diff) S.diff.focus = true; break;
-    case 'enter': return openRow(row);
+    case 'enter':
+      // Beside the list, the diff already shows the selection: Enter goes into it.
+      if (wide() && diffable(row) && row.type !== 'branch') {
+        if (!S.diff || S.diff.key !== row.key) await openRow(row);
+        if (S.diff && S.diff.key === row.key) { S.diff.focus = true; S.diff.auto = false; }
+        break;
+      }
+      return openRow(row);
     case '1': case '2': case '3': case '4': return setView(VIEWS[+k - 1][0]);
     case 'r': flash('Refreshed'); return schedule();
     case 'f': return fetch();
-    case 'p': return push();
-    case 'P': return pull();
+    case 'P': return push();
+    case 'L': return pull();
+    case 'ctrl+u': select(S.cursor - Math.ceil(page / 2)); break;
+    case 'ctrl+d': select(S.cursor + Math.ceil(page / 2)); break;
+    case 'ctrl+p': return search('files');
+    case 'ctrl+f': return search('content');
     case 'b': return openPicker();
+    case '<': case '>': if (wide()) resizeList(listW + (k === '<' ? -4 : 4)); break;
+    case 'shift+left': case 'shift+right': if (wide()) resizeList(listW + (k === 'shift+left' ? -4 : 4)); break;
     case 'c': if (S.view !== 'changes') setView('changes'); S.editing = true; break;
     case 'ctrl+g': if (S.view !== 'changes') setView('changes'); return generate();
     case 'alt+a': return toggleAmend();
@@ -1202,6 +1694,9 @@ function viewKey(k, row) {
     if (k === 'd') return row && row.items && discard(row.items, row.sec);
     if (k === 't') return toggleTree();
     if (k === 'X') return abort();
+    if (['y', 'Y', 'e', 'o'].includes(k)) return fileAction(k, row);
+  } else if (S.view === 'history') {
+    if (k === 'a') return toggleAllBranches();
   } else if (S.view === 'stashes') {
     if (k === 'n') return newStash();
     if (row && row.type === 'stash') {
@@ -1211,23 +1706,51 @@ function viewKey(k, row) {
     }
   } else if (S.view === 'refs') {
     if (k === 'D' && row && row.type === 'branch') return deleteBranch(row.ref);
+    if (k === '=' && row && row.type === 'branch') {
+      if (!comparable(row)) return flash(`${row.ref.name} is the base of the comparisons: select another branch`);
+      return compare(row).then(() => { if (S.diff) { S.diff.focus = true; draw(); } });
+    }
+    if (k === 'B' && row && row.type === 'branch') return setBase(row);
   }
 }
 
 function mouse(m) {
   const { W } = ui.size();
   const x = m.x - 1, y = m.y - 1;
+  if (S.confirm) {
+    const q = S.confirm, answer = ui.confirmMouse(m, q);
+    if (!answer) return;
+    S.confirm = null;
+    draw();
+    if (answer === 'yes') q.yes();
+    return;
+  }
+  if (S.help) { if (!ui.helpMouse(m, S.help)) S.help = null; return draw(); }
   if (m.wheel) {
     if (S.picker) { S.picker.sel = Math.max(0, Math.min(S.picker.sel + m.wheel, S.picker.items.length - 1)); return draw(); }
     if (S.diff && (W < SPLIT || x > listW)) { S.diff.top += m.wheel * 3; return draw(); }
     S.top = Math.max(0, Math.min(S.top + m.wheel * 3, rows.length - listH));
     return draw();
   }
+  // The separator between the list and the diff: dragged to resize them, saved at the release.
+  // A motion without the button means its release was not reported (outside the pane).
+  if (S.resizing) {
+    if (m.drag && m.button === 0) return resizeList(x, false);
+    S.resizing = false;
+    return resizeList(listW);
+  }
+  if (W >= SPLIT && listW < W && x === listW && y >= 1 && y < ui.size().H - 1 && m.press && !m.drag && m.button === 0 && !S.picker && !S.help) {
+    S.resizing = true;
+    return draw();
+  }
   // The diff's scrollbar in the last column, the list's in the last column of the list.
   if (S.diff && !S.picker && diffBar.mouse(m, y - 2, x === W - 1)) return;
   if (listW && !S.picker && listBar.mouse(m, y - listY, x === listW - 1)) return;
   if (!m.press || m.drag || m.button !== 0) return;
-  if (S.prompt) { S.prompt = null; return draw(); }
+  // A key of the status line acts as that key, also while a name is typed or the branch picker is open.
+  const hint = (S.inline || S.picker) && y === ui.size().H - 1 && hits.find(h => h.y === y && x >= h.x0 && x < h.x1);
+  if (hint) { hint.fn(); return draw(); }
+  if (S.inline) { S.inline = null; return draw(); }
   if (S.picker) {
     const b = S.picker.box;
     const i = S.picker.top + y - b.y - 2;
@@ -1241,10 +1764,12 @@ function mouse(m) {
   }
   const hit = hits.find(h => h.y === y && x >= h.x0 && x < h.x1);
   const wasEditing = S.editing;
-  if (!(hit && y === 2)) S.editing = false;
+  // The message field, its buttons and the hints (which then act on the message) keep it being typed.
+  if (!(hit && (y === 2 || y === 3 || y === ui.size().H - 1))) S.editing = false;
   if (hit) { hit.fn(); return draw(); }
   if (wasEditing) draw();
   if (S.diff && (W < SPLIT || x > listW)) { S.diff.focus = true; return draw(); }
+  if (W >= SPLIT && x >= listW) return; // the diff side, empty
   if (y < listY || y >= listY + listH) return;
   const i = S.top + y - listY;
   if (i >= rows.length) return;
@@ -1263,11 +1788,12 @@ function mouse(m) {
 paint = ui.screen({
   key, mouse,
   paste(text) {
-    const f = S.prompt && S.prompt.field ? S.prompt.field : S.picker ? S.picker.field : S.editing ? S.field : null;
+    const f = S.inline ? S.inline.field : S.picker ? S.picker.field : S.editing ? S.field : null;
     if (f) { f.insert(text); if (S.picker && f === S.picker.field) { S.picker.typing = true; filterPicker(); } draw(); }
   },
   focus(on) { if (on) schedule(); },
-  resize: draw,
+  // Below SPLIT columns, a diff the selection opened by itself would hide the list.
+  resize() { if (S.diff && S.diff.auto && !wide()) S.diff = null; draw(); follow(); },
 }, { motion: true });
 draw();
 refresh();

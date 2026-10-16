@@ -12,6 +12,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { PLUGIN, HERDR, result, readWidth, readSettings, PANES_DIR, paneFile, readPaneState } = require('./exec');
+const { sideSplit } = require('./actions');
 const LABEL = 'Explorer';
 // The plugin's panes, by label.
 const OWN = new Set(['Explorer', 'Preview', 'Source Control', 'Changes', 'Editor', 'Search']);
@@ -60,9 +61,29 @@ function open(panes, tabId, root, tree) {
   // The swap leaves focus on the left, so give it back to the terminal, which displays this tab;
   // then return to the tab the user was viewing.
   if (!RIGHT) herdr('pane', 'swap', '--source-pane', explorer, '--target-pane', target.pane_id);
+  try { settlePreview(panes, tabId, explorer); } catch { }
   herdr('pane', 'focus', '--direction', RIGHT ? 'left' : 'right', '--pane', explorer);
   if (before && before !== tabId) herdr('tab', 'focus', before);
   return explorer;
+}
+
+// Opened in a tab that already has a preview, the explorer shares a split with the pane it split, on one side of the
+// split whose other side is the preview: dragging the preview's border then resizes the explorer too, herdr keeping
+// each split's ratio. The preview moved out of the tab and back beside the terminal (herdr does not move a pane
+// within its tab), at the same width, leaves the explorer a split of its own, at the side of the tab.
+function settlePreview(panes, tabId, explorer) {
+  const preview = panes.find(p => p.label === 'Preview');
+  const terminals = panes.filter(p => !p.label);
+  if (!preview || terminals.length !== 1) return;
+  const layout = herdr('pane', 'layout', '--pane', explorer).layout;
+  const found = sideSplit(layout, explorer);
+  if (!found || found.split.rect.width === layout.area.width) return;
+  const p = layout.panes.find(r => r.pane_id === preview.pane_id);
+  const t = layout.panes.find(r => r.pane_id === terminals[0].pane_id);
+  if (!p || !t) return;
+  herdr('pane', 'move', preview.pane_id, '--new-tab', '--no-focus');
+  herdr('pane', 'move', preview.pane_id, '--tab', tabId, '--target-pane', t.pane_id, '--split', 'right',
+    '--ratio', (t.rect.width / (t.rect.width + p.rect.width)).toFixed(4), '--no-focus');
 }
 
 const ctx = JSON.parse(process.env.HERDR_PLUGIN_CONTEXT_JSON || '{}');
@@ -71,8 +92,11 @@ if (process.argv.includes('--toggle')) {
   if (!ctx.tab_id) process.exit(0);
   const panes = tabPanes(ctx.workspace_id, ctx.tab_id);
   const explorer = panes.find(p => p.label === LABEL);
-  if (explorer) herdr('pane', 'close', explorer.pane_id);
-  else if (panes.length) open(panes, ctx.tab_id, ctx.workspace_cwd);
+  if (explorer) {
+    // The preview closes with the explorer (see close in explorer.js).
+    for (const p of panes) if (p.label === 'Preview') herdr('pane', 'close', p.pane_id);
+    herdr('pane', 'close', explorer.pane_id);
+  } else if (panes.length) open(panes, ctx.tab_id, ctx.workspace_cwd);
 } else if (process.argv.includes('--search') || process.argv.includes('--scm')) {
   // From the tab's explorer when there is one, so that the search opens files in that tab's preview.
   const actions = require('./actions');

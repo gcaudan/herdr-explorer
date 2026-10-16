@@ -7,34 +7,31 @@
 | Explorer filter   | reads at most 20,000 entries. Git-ignored folders are not searched                            |
 | Explorer refresh  | at most one refresh every 250 ms, plus a full rescan every 30 s                               |
 | Explorer watch    | recursive, except when the root is `$HOME`, one of its parents or the filesystem root (top level only, and the 30 s rescan covers the rest) |
-| Preview           | reads the first 8 MB of a file (*start only* in the header)                                   |
+| Preview           | reads the first 8 MB of a file (*start only* in the header); images up to 50 MB              |
 | Preview           | syntax highlighting up to 1 MB. Lines longer than 2,000 characters stay plain                 |
 | Preview           | binary when a NUL byte is in the first 8,000 bytes. Hex dump of the first 64 KB               |
 | Preview Markdown  | rendered at most 120 columns wide. Paragraphs over 20,000 characters lose inline styles       |
-| Preview images    | only the first 8 MB are read, so larger images are usually not drawn. 50 million pixels, 256 MB of decompressed PNG data (the decoder also caps files at 50 MB). GIF: first frame. JPEG: baseline and extended sequential only. WebP and SVG: format and size only |
+| Preview images    | 50 MB per file, 50 million pixels, 256 MB of decompressed PNG data                            |
 | Go to file        | 1,000 results shown. Without git (or with **hidden**), the walk stops at 50,000 files         |
 | Search in files   | files over 2 MB are skipped, as are binary files (NUL in the first 8 KB)                      |
 | Search in files   | 5,000 matches in all. Lines over 1,000 characters are cut around the first match |
-| Search popup      | side preview from 100 columns. 30 file previews kept in memory                                |
+| Search popup      | 30 file previews kept in memory                                                               |
 | Changes pane      | 200 untracked files shown in full, then a count. 200,000 diff rows, then *diff too long, truncated* |
-| Diffs             | side by side by default from 120 columns (Changes pane, and the diff area in source control)  |
-| Source control    | diff on the right of the list from 100 columns. History: last 500 commits                     |
-| Source control    | fetch, pull and push time out after 120 s. Refresh every 5 s                                  |
+| Source control    | History: last 500 commits. Comparison: 300 commits per side. Fetch, pull and push time out after 120 s |
 | Claude message    | 60,000 characters of diff sent (then *[diff truncated]*), at most 20 untracked files, 90 s timeout, 200-character message |
 | Update            | check once a day, 3 s timeout. Pull timeout 60 s. Lock taken over after 2 min                 |
 | Program output    | 64 MB read from any git command                                                               |
 
 ## Limitations
 
-- **Narrow windows**: herdr enforces a minimum of 10 % of the width per pane, so in a narrow window the explorer is
-  wider than requested. This is also why it closes instead of collapsing into a narrow strip.
+- **Narrow windows**: herdr enforces a minimum of 10 % of the width per pane, so the explorer is then wider than
+  requested; this is also why it closes instead of collapsing into a narrow strip.
 - **Opening a tab**: the split shows half-and-half for a few tens of milliseconds before taking its width, since
   `herdr plugin pane open` cannot set the size at creation.
 - **Several panes**: in a tab with several panes, `prefix+f` places the explorer next to the top-left (or top-right)
   pane, which may not span the full height.
-- **After a herdr restart**, only the explorer and the preview come back: source control, diffs, the editor and the
-  search popup stay closed. An explorer with nothing saved opens at the tab terminal's folder; a preview whose file
-  is gone stays closed.
+- **After a herdr restart**, only the explorer and the preview come back. An explorer with nothing saved opens at
+  the tab terminal's folder; a preview whose file is gone stays closed.
 - **Remotes**: source control cannot fetch, pull or push with a remote that is a local folder or uses a remote helper
   (`hg::`, `codecommit::`…), see [Security](../SECURITY.md#network-fetch-pull-push): use the terminal for those. It
   cannot ask for a password either: use an SSH agent or a credential helper. A partial clone cannot fetch its
@@ -52,26 +49,27 @@
   `&`, `|`, `<`, `>`, `^` or `%` could still run a command once `Enter` is pressed.
 - ***Open in app*** opens HTML and SVG files in the browser, and Office documents in Office, which asks before
   enabling macros.
-- **Updates** from the explorer need the plugin folder to be a git clone on `main`, without changes to tracked files.
-  Installed from the herdr plugin index, they go through `herdr plugin update`, and the open panes keep the old code
-  until reopened.
+- **Updates** from the explorer need a git clone on `main` without changes to tracked files (see
+  [Refusals](installation.md#refusals)).
 - **Old panes**: an explorer or preview started by a version without the launcher (0.4.0 and earlier) keeps its old
   waiting `node` processes after updating, until it is closed. Close and reopen it (`prefix+f` twice for the
   explorer) to start from the launcher.
 
 ## Common problems
 
-- **Nothing opens at all**: `node` is not on the `PATH` that herdr gives plugins. The hooks also exit silently when
-  they cannot find `herdr` (set `HERDR_BIN_PATH` to its path).
-- **The explorer does not open in new tabs**: it opens only in a tab that has a single pane, and only when *Open in
-  new tabs* is on. Press `prefix+f` to open it by hand.
+- **Nothing opens at all, or a pane closes right after opening**: `node` is not on the `PATH` that herdr gives
+  plugins. The hooks also exit silently when they cannot find `herdr` (set `HERDR_BIN_PATH` to its path).
+- **No git colours, no source control**: `git` is not on `PATH`, or the folder is not inside a repository.
+- **The explorer does not open in new tabs**: it opens only in a tab that has a single pane, and only when *Open
+  automatically* is on. Press `prefix+f` to open it by hand.
 - **`prefix+f`, `prefix+a` or `prefix+d` do nothing**: check the `[[keys.command]]` blocks in `config.toml` (a plugin
-  index install does not add them, see [From the herdr plugin index](../README.md#from-the-herdr-plugin-index)), run
+  index install does not add them, see [From the herdr plugin index](installation.md#from-the-herdr-plugin-index)), run
   `herdr server reload-config`, and check that `herdr plugin list` shows `gcaudan.explorer`. From a git clone, run
   the install script again.
 - **Explorer panes show a shell after a herdr restart**: herdr did not run the startup hook, usually because the
   plugin was linked before the hook existed. Run `herdr plugin link .` in the plugin folder, then restart herdr
-  (`herdr server stop`, then `herdr`). `herdr plugin log` shows whether the hook ran, and its errors.
+  (`herdr server stop`, then `herdr`). `herdr plugin log list --plugin gcaudan.explorer` shows whether the hook
+  ran, and its errors.
 - **Agents not resumed after a herdr restart** (`claude --resume <id>` shown at the top of the pane, but a plain
   prompt below): herdr types the resume command into a new shell, and a program run at shell startup that reads the
   terminal swallows it. On Bazzite and other Universal Blue systems, the login banner (`ublue-motd`, drawn by
@@ -85,19 +83,17 @@
 - **Icons show as boxes or question marks**: the terminal font is not a Nerd Font (v3). A VS Code icon theme still
   needs one for the chevrons and header icons.
 - **The explorer does not refresh**: press `r`. With your home folder (or above it) as the root, or when a folder
-  of the tree cannot be read, only the top level is watched and deeper changes show within 30 s. Source control
-  does not watch the working tree: it polls every 5 s.
+  of the tree cannot be read, deeper changes show within 30 s (see [Limits](#limits)).
 - **Copy says `Clipboard unavailable` or `(OSC 52)`**: on Linux, install `wl-copy` (Wayland) or `xclip`. Without a
   clipboard tool (over SSH, for example), the plugin asks the outer terminal to set its clipboard with OSC 52, which
   works only if herdr and your terminal pass it on.
-- **Delete asks to delete for good**: no trash was available. Install `gio` (GLib) or `trash-cli` (`trash-put`) on
-  Linux.
 - **VS Code or another graphical editor opens behind the terminal** (KDE Wayland): KWin's focus stealing prevention
   keeps a window started from a terminal in the background, as with `code <file>` typed in Konsole. Lower *Focus
   stealing prevention* in the KWin window behavior settings, or switch to the window by hand.
 - **No `↑` although a release is out**: `updateCheck` is off, the check already ran today, or the clone is ahead of
   the release. Delete `update.json` to check again at the next tab creation.
-- **The update is refused**: see [Refusals](installation.md#refusals).
+- **A setting edited by hand has no effect**: some are read only when a pane starts (see
+  [Settings](configuration.md#settings)): close and reopen the explorer.
 
 ## Messages
 
@@ -105,38 +101,40 @@
 
 | Message                                          | Meaning and fix                                                                    |
 | ------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| `Not a git repository`                           | source control needs a repository. Open source control and press `i` to run `git init` |
-| `No trash: delete … for good?`                   | no trash tool was found. Install `gio` or `trash-put` (Linux) to keep deletions recoverable |
+| `Not a git repository`                           | source control (`s`) needs a repository. `prefix+d` opens it anyway, and there `i` runs `git init` |
+| `No trash: delete for good?`                     | no trash tool was found. Install `gio` (GLib) or `trash-put` (`trash-cli`) on Linux to keep deletions recoverable |
 | `No terminal next to the explorer`               | **Insert into terminal** found no terminal pane beside the explorer               |
 | `Not inserted: control character in name`        | the path contains a control character and is never typed into a terminal          |
 | `Cannot insert`                                  | `herdr pane send-text` failed                                                      |
 | `Not opened: file type not allowed`              | **Open in app** accepts only documents, media and `txt md csv log json xml html htm` |
 | `Cannot open`                                    | `xdg-open` / `open` / `explorer.exe` could not start                               |
-| `File manager not found`                         | install `xdg-open` (Linux)                                                         |
+| `File manager not found`                         | `xdg-open`, `open -R` or `explorer.exe` could not start. On Linux, install `xdg-open` |
 | `<cmd> not found` / `<cmd> not found (an .exe is needed)` | fix the editor command in the settings. On Windows, give an `.exe`        |
 | `VS Code not found`                              | the editor command is `code` but VS Code was not found                             |
-| `No editor: set one in the settings`             | opening a folder needs an external editor. Set **Editor command…**                 |
-| `No terminal editor found: set $EDITOR.`         | (Editor pane) no `nano`/`nvim`/`vim`/`vi` found. Set `$EDITOR` or the editor command |
+| `No editor: set one in the settings`             | opening a folder needs an external editor. Set **Editor**                          |
+| `No terminal editor found: set $EDITOR.`         | (Editor pane) no `nano`/`nvim`/`vim`/`vi` found (`edit`/`nvim`/`vim`/`nano` on Windows). Set `$EDITOR` or the editor command |
 | `Cannot start <editor>: <code>`                  | (Editor pane) the editor could not start                                           |
-| `Cannot open the editor` / `the preview` / `the search` / `source control`, `Cannot show changes`, `Cannot preview` | herdr refused to open the pane. Check that herdr is running and up to date (0.9.3+) |
+| `Cannot open the editor` / `the preview` / `the search` / `source control`, `Cannot show changes`, `Cannot preview` | herdr refused to open the pane: check that it runs and is 0.9.3 or later |
 | `Invalid name`                                   | empty, absolute, containing a control character, or leaving the folder (`..`)     |
 | `Already exists`                                 | choose another name                                                                |
 | `Cannot create` / `rename` / `duplicate` / `delete: <code>` | file system error (`EACCES`, `EPERM`…)                                  |
 | `N untracked files kept: no trash`               | **Discard changes** could not trash untracked files. Install a trash tool          |
 | `Cannot stage` / `Cannot unstage` / `Cannot discard` | the git command failed. Try in a terminal to see git's error                   |
 | `<theme>: not found`                             | the icon theme was uninstalled. Choose another one                                 |
-| `No config folder`                               | herdr gave no config folder, so `keys.json` cannot be created                      |
+| `<key>: already bound`, `<key> taken from <action>` | (Key bindings) the key already had that action, or moved from another one |
+| `No config folder`, `Cannot write keys.json`     | herdr gave no config folder, or `keys.json` cannot be written (fix or delete an unreadable file) |
 | `Action failed`                                  | unexpected error in an action                                                      |
 | `File deleted`, `Folder`, `Not a regular file`, `Cannot read: <code>` | (Preview) the file is gone, is a folder, a pipe or device, or unreadable |
-| `<format> W×H (… no preview)`, `(too large for preview)`, `Unknown image format (…)`, `Empty file` | (Preview) image over a limit, in an unsupported format or encoding (for example `progressive, no preview`), or empty |
+| `No preview`, `<format> W×H (… no preview)`, `(too large for preview)`, `Unknown image format (…)`, `Empty file` | (Preview) image over a limit, in an unsupported format or encoding (for example `progressive, no preview`), or empty. `o` opens it |
 
 ### Updates
 
 | Message                                     | Meaning and fix                                                           |
 | ------------------------------------------- | ------------------------------------------------------------------------- |
 | `Update command copied`                     | installed by herdr: run `herdr plugin update gcaudan.explorer`            |
-| `<git error>: update command copied`        | the pull failed. Run the copied `git … pull` in a terminal               |
-| `Updated to X.Y.Z: rerun the installer`     | click the `!` (or **Finish the update…**) and run the copied command      |
+| `<git error>: update command copied`        | the pull failed (`Update failed` when git said nothing). Run the copied `git … pull` in a terminal |
+| `Already up to date`, `Updated to X.Y.Z`    | done; the explorer and preview restart on the new code                   |
+| `Updated to X.Y.Z: rerun the installer`     | click the `!` (or **! Finish the update**) and run the copied command     |
 | `Installer command copied`                  | run it in a terminal                                                      |
 | refusals                                    | see [installation.md](installation.md#refusals)                           |
 
@@ -147,6 +145,7 @@
 | `indexing…`                   | the file list is loading                                   |
 | `(first 50000 files only)`    | the folder walk hit its cap. Narrow the root               |
 | `Invalid regex: …`            | fix the regular expression, or turn **.\*** off            |
+| `No results`                  | `alt+h` also searches ignored and dot files                 |
 | `(file too large)`, `(binary file)`, `(not a file)`, `(cannot read)` | side preview not available for that file |
 
 ### Source control
@@ -159,6 +158,8 @@
 | `timed out or not run`                                             | the command could not start, or hit its time limit                  |
 | `<fetch/pull/push> refused: the repository sets <key>; use the terminal` | the repository's own config sets network settings (`http.*`, `url.*.insteadOf`, `remote.*.proxy`, `remote.*.vcs`, `core.alternateRefsCommand`). Check them, then run the command in a terminal |
 | `No upstream branch to pull from`                                  | push first (publishes the branch), or set an upstream               |
+| `<branch> and <upstream> have diverged (…): merge or rebase in the terminal` | pull only fast-forwards                                  |
+| `Could not delete N files`                                         | discarding could not delete these untracked files                 |
 | `Detached HEAD: switch to a branch to push`                        | check out a branch                                                  |
 | `No remote: add one with git remote add`                           | add a remote                                                        |
 | `Invalid remote name: …`                                           | a remote name starting with `-` is refused                          |
@@ -168,6 +169,9 @@
 | `Continue refused: the <op> would run <…>; check it and continue in the terminal` | the rebase todo has `exec` lines, or a non-builtin merge strategy is set |
 | `Stopped on a new conflict: resolve it, stage it, then continue`   | normal during a rebase                                              |
 | `git am in progress: continue or abort it in the terminal`         | `git am` is not handled by the pane                                 |
+| `No merge, rebase, cherry-pick or revert in progress`              | nothing to abort                                                    |
+| `<branch> is the base of the comparisons: select another branch`   | `B` on another branch changes the base                              |
+| `<file> is deleted`                                                | `e` and `o` need the file on disk                                   |
 | `Claude not available: message from the file names`               | the `claude` CLI is missing or failed. The fallback message is used |
 | `Branch name starting with "-": not switched`, `A branch name cannot start with "-"` | rename the branch in a terminal                  |
 | `Remote branches are not deleted from here`, `Cannot delete the current branch` | use a terminal, or switch first                        |

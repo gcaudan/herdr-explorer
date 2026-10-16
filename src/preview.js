@@ -54,12 +54,15 @@ function load(keepScroll) {
     if (stat.isDirectory()) return setError('Folder');
     // A named pipe or a device would block the read, and the whole pane with it.
     if (!stat.isFile()) return setError('Not a regular file');
+    // An image is read whole, up to the decoder's limit and one byte more, so that a larger one is reported as too
+    // large rather than decoded from its start.
+    const limit = image && image.FORMATS.has(ext(file)) ? image.MAX_BYTES + 1 : MAX_BYTES;
     const fd = fs.openSync(file, 'r');
     try {
-      buf = Buffer.alloc(Math.min(stat.size, MAX_BYTES));
+      buf = Buffer.alloc(Math.min(stat.size, limit));
       fs.readSync(fd, buf, 0, buf.length, 0);
     } finally { fs.closeSync(fd); }
-    state.info = size(stat.size) + (stat.size > MAX_BYTES ? ' (start only)' : '');
+    state.info = size(stat.size) + (stat.size > limit ? ' (start only)' : '');
   } catch (e) { return setError(e.code === 'ENOENT' ? 'File deleted' : `Cannot read: ${e.code || e.message}`); }
 
   const top = state.top, left = state.left;
@@ -128,16 +131,20 @@ function rows() {
     if (res && res.lines) {
       const pad = Math.max(0, Math.floor((W - res.width) / 2));
       list = res.lines.map(segs => ({ segs: [[' '.repeat(pad), ''], ...segs], src: -1 }));
-    } else list = [{ segs: [[` ${(res && res.info) || 'No preview'}`, fg(C.dim)]], src: -1 }];
+    } else list = [{ empty: (res && res.info) || 'No preview', pairs: [['o', 'open'], ['q', 'close']], src: -1 }];
   } else if (markdownView()) {
     let res;
     try { res = markdown.render(state.text, Math.max(1, Math.min(width - 1, 120)), { highlight }); } catch { res = null; }
     if (res) list = res.lines.map(segs => ({ segs: [[' ', ''], ...segs], src: -1, pad: 1 }));
     else list = state.source.map((segs, i) => ({ segs, src: i, first: true }));
   } else if (state.kind === 'error') {
-    list = [{ segs: [[` ${state.info}`, fg(C.dim)]], src: -1 }];
+    list = [{ empty: state.info, pairs: [['r', 'reload'], ['q', 'close']], src: -1 }];
   } else if (settings.wrap) {
-    state.source.forEach((segs, i) => ui.split(segs, width).forEach((part, k) => list.push({ segs: part, src: i, first: !k })));
+    // off: where the part starts in its line, for the find's matches.
+    state.source.forEach((segs, i) => {
+      let off = 0;
+      ui.split(segs, width).forEach((part, k) => { list.push({ segs: part, src: i, first: !k, off }); off += ui.segText(part).length; });
+    });
   } else list = state.source.map((segs, i) => ({ segs, src: i, first: true }));
   list.width = width; list.height = H;
   return (state.rows = list);
@@ -154,13 +161,24 @@ function render() {
   state.top = Math.max(0, Math.min(state.top, list.length - bodyH));
   const lines = [header(W)];
   const g = gutter();
-  const ranges = matchRanges();
+  const ranges = matchRanges(), md = markdownView();
+  const current = state.find && state.match >= 0 ? state.matches[state.match] : null;
   // Wrapped and rendered rows (see rows()) leave the last column free for the scrollbar.
   const bw = scrollbar.set(list.length, bodyH, state.top);
-  for (let i = state.top; i < Math.min(list.length, state.top + bodyH); i++) {
+  // Nothing to show (an error, an image that cannot be drawn, an empty file): why, centred, and what to do.
+  const none = list.length === 1 && list[0].empty ? list[0] : (state.kind === 'text' || state.kind === 'markdown') && state.text === ''
+    ? { empty: 'Empty file', pairs: [['e', 'edit'], ['q', 'close']] } : null;
+  if (none) lines.push(...ui.empty(W, bodyH, none.empty, none.pairs));
+  for (let i = state.top; !none && i < Math.min(list.length, state.top + bodyH); i++) {
     const r = list[i];
     const num = g ? [[(r.first ? String(r.src + 1) : '').padStart(g - 1) + ' ', fg(r.src + 1 === state.line ? C.text : C.dim)]] : [];
-    let segs = r.src >= 0 && ranges.has(r.src) && r.first && !settings.wrap ? ui.mark(r.segs, ranges.get(r.src), bg(C.find)) : r.segs;
+    // The find's matches: every one marked, the current one brighter (in rendered Markdown, matches are by row).
+    const at = md ? i : r.src, off = r.off || 0;
+    let segs = r.segs;
+    if ((md || r.src >= 0) && ranges.has(at)) {
+      segs = ui.mark(segs, ranges.get(at).map(([a, b]) => [a - off, b - off]), bg(C.find));
+      if (current && current[0] === at) segs = ui.mark(segs, [[current[1] - off, current[2] - off]], bg(CURRENT) + '\x1b[1m');
+    }
     const sel = selectedRange(i);
     // A selection going on past the end of the row shows one more cell, as an editor shows the line break.
     if (sel) segs = [...ui.mark(segs, [sel], bg(C.select)), ...(sel[2] ? [[' ', bg(C.select)]] : [])];
@@ -170,41 +188,67 @@ function render() {
   }
   while (lines.length < H - 1) lines.push(ui.line([], W));
   lines.push(footer(W));
+  if (state.help) ui.help(lines, W, path.basename(state.file || ''), HELP, state.help);
   paint(lines);
 }
 
-// Header: file name and details on the left; clickable chips on the right.
+// The key help (? or f1), over the whole pane (ui.help); state.help: { top, find } while it shows.
+const HELP = [
+  ['Scroll', [['↑↓ j k', 'line'], ['pgup pgdn', 'page'], ['space', 'page down'], ['ctrl+u/d', 'half page'], ['g G', 'top, bottom'],
+    ['← → h l', 'left, right']]],
+  ['Find', [['/', 'find in the file'], ['n N', 'next, previous match'], ['esc', 'stop finding']]],
+  ['View', [['w', 'wrap'], ['L', 'line numbers'], ['m', 'Markdown source'], ['z', 'zoom the pane'], ['< >', 'narrower, wider'], ['shift+← →', 'move the border'], ['r', 'reload']]],
+  ['File', [['e', 'edit in the terminal'], ['o', 'open in the editor (media: in its app)'], ['O', 'open with the system'], ['y', 'copy path'], ['Y', 'copy relative path']]],
+  ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
+];
+
+// Header: file name and details on the left; on the right, the view's switches, clickable: Rendered · Raw (the
+// active one bold and underlined), and wrap and lines with ● or ○ as in the explorer's settings.
 function header(W) {
   const name = state.root ? path.relative(state.root, state.file) || path.basename(state.file) : path.basename(state.file);
-  const chips = [];
-  if (state.kind === 'markdown' && markdown) chips.push([state.raw ? ' Raw ' : ' Rendered ', 'raw']);
-  if (state.kind === 'text' || (state.kind === 'markdown' && state.raw)) chips.push([settings.wrap ? ' Wrap ' : ' No wrap ', 'wrap']);
-  chips.push([' ✕ ', 'close']);
-  const right = chips.reduce((w, [t]) => w + ui.textWidth(t) + 1, 0);
+  const ON = '\x1b[1;4m', onOff = (on, text) => (on ? [['●', fg(C.blue)], [` ${text}`, '']] : [[`○ ${text}`, fg(C.dim)]]);
+  // Groups of [segments, id] items, the last ones left out while the name would get less than 20 columns.
+  const groups = [];
+  if (state.kind === 'markdown' && markdown) {
+    groups.push([[[['Rendered', state.raw ? fg(C.dim) : ON]], 'rendered'], [[[' · ', fg(C.dim)]], null], [[['Raw', state.raw ? ON : fg(C.dim)]], 'raw']]);
+  }
+  if (state.kind === 'text' || (state.kind === 'markdown' && state.raw)) {
+    groups.push([[onOff(settings.wrap, 'wrap'), 'wrap']], [[onOff(settings.lineNumbers, 'lines'), 'lines']]);
+  }
+  const width = list => list.reduce((w, g) => w + g.reduce((n, [segs]) => n + ui.segWidth(segs), 0), 0) + (list.length ? 3 * list.length - 1 : 0);
+  while (groups.length && width(groups) > W - 2 - Math.min(20, ui.textWidth(` ${name}`))) groups.pop();
+  const items = groups.flatMap((g, i) => (i ? [[[['   ', '']], null], ...g] : g));
+  const right = width(groups) + (groups.length ? 1 : 0);
   const [left, lw] = ui.fit(` ${name}`, Math.max(1, W - right - 1));
-  const [info, iw] = ui.fit(`  ${state.info}`, Math.max(0, W - right - lw));
+  // The details whole, else their first part (the lines), else none, a column before the switches.
+  const info = [`  ${state.info}`, `  ${String(state.info).split(' · ')[0]}`, ''].find(t => !t || ui.textWidth(t) < W - right - lw);
+  const iw = ui.textWidth(info);
   const segs = [[left, '\x1b[1m'], [info, fg(C.dim)], [' '.repeat(Math.max(0, W - right - lw - iw)), '']];
   let x = W - right + 1;
   state.chips = [];
-  for (const [text, id] of chips) {
-    segs.push([' ', ''], [text, id === 'close' ? fg(C.dim) : bg(C.selectBlur)]);
-    state.chips.push({ id, from: x + 1, to: x + ui.textWidth(text) });
-    x += ui.textWidth(text) + 1;
+  for (const [parts, id] of items) {
+    const w = ui.segWidth(parts);
+    segs.push(...parts);
+    if (id) state.chips.push({ id, from: x, to: x + w - 1 });
+    x += w;
   }
   return ui.line(segs, W, C.header);
 }
 
 function footer(W) {
+  // The keys shown, for clicks: none while the find or a message takes the line.
+  state.hints = null;
   if (state.find && state.find.active) {
     const count = state.find.field.value ? ` ${state.matches.length ? state.match + 1 : 0}/${state.matches.length}` : '';
-    return ui.line([[' Find: ', fg(C.dim)], ...state.find.field.segments(W - 8 - count.length), [count, fg(C.dim)]], W, C.header);
+    return ui.line([[` ${ui.SEARCH} `, fg(C.dim)], ...state.find.field.segments(W - 4 - count.length), [count, fg(C.dim)]], W, C.header);
   }
-  if (state.flash) return ui.line([[` ${state.flash}`, fg(C.yellow)]], W, C.header);
+  if (state.flash) return ui.line(ui.message(state.flash), W, C.header);
   const list = rows(), bodyH = ui.size().H - 2;
   const pos = list.length > bodyH ? ` ${Math.round(100 * Math.min(1, (state.top + bodyH) / list.length))}%` : '';
-  const keys = state.kind === 'image' ? 'o open · y copy path · q close'
-    : '/ find · e edit · o editor · w wrap · z zoom · q close';
-  return ui.line([[` ${keys}`, fg(C.dim)], [pos.padStart(Math.max(0, W - keys.length - 1)), fg(C.dim)]], W, C.header);
+  const keys = ui.keys(state.kind === 'image' ? [['o', 'open'], ['y', 'copy path'], ['q', 'close'], ['?', 'keys']]
+    : [['/', 'find'], ['e', 'edit'], ['o', 'editor'], ['w', 'wrap'], ['z', 'zoom'], ['q', 'close'], ['?', 'keys']], W - pos.length - 1);
+  state.hints = keys;
+  return ui.line([...keys, [pos.padStart(Math.max(0, W - ui.segWidth(keys))), fg(C.dim)]], W, C.header);
 }
 
 function flash(text) {
@@ -212,7 +256,7 @@ function flash(text) {
   state.flash = text;
   render();
   clearTimeout(flash.timer);
-  flash.timer = setTimeout(() => { state.flash = null; render(); }, 2500);
+  flash.timer = setTimeout(() => { state.flash = null; render(); }, ui.messageTime(ui.messageKind(text)));
 }
 
 // --- find in file
@@ -232,9 +276,11 @@ function search(jump = true) {
   if (jump) next(1, true);
 }
 
+// Matches by line (by row in rendered Markdown): [[start, end)].
+const CURRENT = [200, 140, 30]; // the current match, over C.find for the others
 function matchRanges() {
   const map = new Map();
-  if (markdownView() || !state.matches.length) return map;
+  if (!state.matches.length) return map;
   for (const [i, a, b] of state.matches) map.set(i, [...(map.get(i) || []), [a, b]]);
   return map;
 }
@@ -257,7 +303,8 @@ function next(dir, fromTop) {
     const col = ui.textWidth(state.plain[l].slice(0, a));
     if (col < state.left || col >= state.left + width) state.left = Math.max(0, col - 8);
   }
-  if (md) state.line = 0; else state.line = l + 1;
+  // The match itself is marked: no line highlight.
+  state.line = 0;
   render();
 }
 
@@ -394,14 +441,17 @@ function key(k) {
     return;
   }
   const page = ui.size().H - 3;
+  // The key help (ui.helpKey): scrolls, finds with /, closes with esc, q, ? or f1.
+  if (state.help && k !== 'ctrl+c') { if (!ui.helpKey(k, state.help)) state.help = null; return render(); }
   switch (k) {
+    case '?': case 'f1': state.help = { top: 0, find: null }; return render();
     case 'q': case 'escape': case 'ctrl+c':
       if (k === 'escape' && state.select) { state.select = null; return render(); }
       if (state.find) { state.find = null; state.matches = []; return render(); }
       return process.exit(0);
     case 'up': case 'k': return scroll(-1);
     case 'down': case 'j': case 'enter': return scroll(1);
-    case 'pageup': case 'b': return scroll(-page);
+    case 'pageup': return scroll(-page);
     case 'pagedown': case 'space': return scroll(page);
     case 'ctrl+u': return scroll(-Math.floor(page / 2));
     case 'ctrl+d': return scroll(Math.floor(page / 2));
@@ -409,7 +459,7 @@ function key(k) {
     case 'end': case 'G': state.top = Infinity; return render();
     case 'left': case 'h': state.left = Math.max(0, state.left - 8); return render();
     case 'right': case 'l': if (!settings.wrap) state.left += 8; return render();
-    case '/': case 'ctrl+f': state.find = { field: new ui.Field(), active: true }; return render();
+    case '/': state.find = { field: new ui.Field(), active: true }; return render();
     case 'n': return next(1);
     case 'N': return next(-1);
     case 'w': return toggle('wrap');
@@ -422,13 +472,23 @@ function key(k) {
     case 'y': return act(actions.copy(state.file));
     case 'Y': return act(actions.copy(state.root ? path.relative(state.root, state.file) : state.file));
     case 'z': if (PANE) herdr('pane', 'zoom', PANE, '--toggle'); return;
+    case '<': case '>': return widen(k === '<' ? -4 : 4);
+    // The inner border pushed: on the left of a preview that is the right part of its split, as it is most often.
+    case 'shift+left': case 'shift+right': return widen((k === 'shift+left') === (keeper.left() === true) ? -4 : 4);
     case 'ctrl+p': return act(actions.search(state.root || path.dirname(state.file), PANE, 'files'));
+    case 'ctrl+f': return act(actions.search(state.root || path.dirname(state.file), PANE, 'content'));
   }
 }
 
 let lastClick = { time: 0, x: 0, y: 0, count: 0 };
 
 function mouse(m) {
+  if (state.help) { if (!ui.helpMouse(m, state.help)) state.help = null; return render(); }
+  // A click on a hint of the footer does what its key does.
+  if (m.y === ui.size().H && m.press && !m.drag && !m.wheel && m.button === 0 && state.hints) {
+    const k = ui.keyAt(state.hints, m.x - 1);
+    if (k) return key(k);
+  }
   // The wheel scrolls under a selection, which may still be dragged: the button state is unknown here.
   if (m.wheel) return scroll(m.wheel * 3);
   const { W, H } = ui.size();
@@ -440,9 +500,9 @@ function mouse(m) {
     endSelection();
     const chip = state.chips.find(c => m.x >= c.from && m.x <= c.to);
     if (!chip) return;
-    if (chip.id === 'close') return process.exit(0);
     if (chip.id === 'wrap') return toggle('wrap');
-    if (chip.id === 'raw') { state.raw = !state.raw; state.rows = null; state.top = 0; return render(); }
+    if (chip.id === 'lines') return toggle('lineNumbers');
+    if ((chip.id === 'raw') !== state.raw) { state.raw = !state.raw; state.rows = null; state.top = 0; render(); }
     return;
   }
   if (m.button !== 0 && !(m.drag && state.select)) return;
@@ -490,8 +550,20 @@ const paint = ui.screen({
   key, mouse,
   focus: f => { state.focused = f; if (!f) endSelection(); },
   paste: text => { if (state.find && state.find.active) { state.find.field.insert(text); search(); } },
-  resize: () => { state.rows = null; render(); },
+  resize: () => { state.rows = null; render(); keeper.check(); },
 }, { motion: true });
+
+// The preview keeps its width when another resize moves it (actions.widthKeeper): the width herdr gave it at first,
+// then the one set by dragging its border or with < >. Checked at each resize, so that it goes back while another
+// pane's border is still being dragged.
+let width = null;
+const keeper = actions.widthKeeper(PANE, { columns: () => ui.size().W, get: () => width, set: w => { width = w; } });
+// < and >: 4 columns narrower or wider, from the width asked for last, so that a key held down adds up.
+function widen(cols) {
+  width = (width ?? ui.size().W) + cols;
+  keeper.check(true);
+}
+keeper.check();
 
 // The file shown, reopened by the startup hook after a herdr restart.
 const saveFile = () => writePaneState(PANE, { file: state.file, root: state.root, line: state.line });
