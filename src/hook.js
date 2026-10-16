@@ -6,6 +6,7 @@
 //   node hook.js --restore startup hook: reopens the explorer and preview panes that herdr restored as shells
 //   node hook.js --search  key binding action: Go to file popup of the current tab's folder
 //   node hook.js --scm     key binding action: source control of the current tab's folder
+// Each run also saves the state folder for peek.js.
 'use strict';
 const { execFileSync } = require('child_process');
 const fs = require('fs');
@@ -17,6 +18,16 @@ const LABEL = 'Explorer';
 // The plugin's panes, by label.
 const OWN = new Set(['Explorer', 'Preview', 'Source Control', 'Changes', 'Editor', 'Search']);
 if (!HERDR) process.exit(0);
+
+// The state folder, saved in the config folder for peek.js, which runs outside the plugin (from an agent's pane) and
+// can find the config folder only (herdr plugin config-dir).
+const { HERDR_PLUGIN_STATE_DIR: STATE, HERDR_PLUGIN_CONFIG_DIR: CONFIG } = process.env;
+if (STATE && CONFIG) {
+  const file = path.join(CONFIG, 'state-dir');
+  try { if (fs.readFileSync(file, 'utf8') !== STATE) throw 0; } catch {
+    try { fs.mkdirSync(CONFIG, { recursive: true }); fs.writeFileSync(file, STATE); } catch { }
+  }
+}
 
 const herdr = (...args) => result(execFileSync(HERDR, args, { encoding: 'utf8' }));
 const workspacePanes = workspaceId => herdr('pane', 'list', '--workspace', workspaceId).panes;
