@@ -182,26 +182,43 @@ function helpMouse(m, state) {
 const BUTTON = { danger: [138, 47, 42], go: [46, 110, 58] }, BUTTON_ON = [96, 96, 96], BUTTON_OFF = [45, 45, 45];
 const DANGER_TEXT = { danger: [229, 120, 109], go: [111, 191, 142] };
 function confirm(lines, W, H, q) {
-  const inner = Math.max(12, Math.min(W - 4, 44)), room = inner - 2;
-  const text = [[[` ${ellipsis(q.title, room)}`, '\x1b[1m']], []];
-  for (const l of wrap(q.name, room)) text.push([[` ${l}`, '']]);
-  if (q.where) text.push([[` ${ellipsis(q.where, room)}`, fg(C.dim)]]);
-  if (q.note) text.push([[` ${ellipsis(q.note, room)}`, fg(q.tone === 'go' ? C.dim : C.red)]]);
+  // No room for the card's edges: keys only.
+  q.zones = null;
+  if (W < 2) return;
+  // A narrow pane: the card takes its width, less a column on each side.
+  const inner = Math.min(44, Math.max(W - 4, Math.min(12, W - 2), 0)), room = Math.max(1, inner - 2);
+  const names = wrap(q.name, room).map(l => [[` ${l}`, '']]);
+  const where = q.where ? [[[` ${ellipsis(q.where, room)}`, fg(C.dim)]]] : [];
+  const note = q.note ? [[[` ${ellipsis(q.note, room)}`, fg(q.tone === 'go' ? C.dim : C.red)]]] : [];
+  // A low pane: the blank lines go first, then where, the name's next lines, the note, the name and the title, so
+  // that the buttons stay in it, under its first line.
+  let gaps = 2, title = true;
+  const rows = () => +title + 1 + gaps + names.length + where.length + note.length, fit = Math.max(1, H - 3);
+  while (rows() > fit && gaps) gaps--;
+  if (rows() > fit) where.length = 0;
+  while (rows() > fit && names.length > 1) names.pop();
+  if (rows() > fit) note.length = 0;
+  if (rows() > fit) names.length = 0;
+  if (rows() > fit) title = false;
+  const text = [...(title ? [[[` ${ellipsis(q.title, room)}`, '\x1b[1m']]] : []), ...(gaps > 1 ? [[]] : []), ...names, ...where, ...note];
   const yes = ` y ${q.action} `, no = ' n Cancel ';
   const gap = Math.max(1, Math.min(3, inner - 3 - textWidth(yes) - textWidth(no)));
   const tone = BUTTON[q.tone] ? q.tone : 'danger', lit = '\x1b[1m' + fg([255, 255, 255]);
   const yesStyle = q.focus === 'yes' ? lit + bg(BUTTON[tone]) : fg(DANGER_TEXT[tone]) + bg(BUTTON_OFF);
   const noStyle = q.focus === 'yes' ? fg(C.dim) + bg(BUTTON_OFF) : lit + bg(BUTTON_ON);
-  text.push([], [['  ', ''], [yes, yesStyle], [' '.repeat(gap), ''], [no, noStyle]]);
+  text.push(...(gaps ? [[]] : []), [['  ', ''], [yes, yesStyle], [' '.repeat(gap), ''], [no, noStyle]]);
   const h = text.length + 2, x = Math.max(0, Math.floor((W - inner - 2) / 2));
   const y = Math.max(1, Math.min(H - h, Math.floor((H - h) / 3)));
   const edge = fg(C.dim), left = ' '.repeat(x), right = ' '.repeat(Math.max(0, W - x - inner - 2));
-  lines[y] = left + line([['╭' + '─'.repeat(inner) + '╮', edge]], inner + 2) + right;
-  text.forEach((segs, k) => { lines[y + 1 + k] = left + line([['│', edge], ...segs], inner + 1) + line([['│', edge]], 1) + right; });
-  lines[y + h - 1] = left + line([['╰' + '─'.repeat(inner) + '╯', edge]], inner + 2) + right;
-  // Screen columns from 1: the card's edge, then 2 spaces before the first button.
-  const bx = x + 4;
-  q.zones = { y: y + h - 2, yes: [bx, bx + textWidth(yes) - 1], no: [bx + textWidth(yes) + gap, bx + textWidth(yes) + gap + textWidth(no) - 1] };
+  // Rows past the pane's last one are left out.
+  const put = (i, l) => { if (i < H) lines[i] = l; };
+  put(y, left + line([['╭' + '─'.repeat(inner) + '╮', edge]], inner + 2) + right);
+  text.forEach((segs, k) => put(y + 1 + k, left + line([['│', edge], ...segs], inner + 1) + line([['│', edge]], 1) + right));
+  put(y + h - 1, left + line([['╰' + '─'.repeat(inner) + '╯', edge]], inner + 2) + right);
+  // Screen columns from 1: the card's edge, then 2 spaces before the first button; a button cut by the edge is
+  // clickable up to it.
+  const bx = x + 4, end = x + inner + 1, upTo = c => Math.min(c, end);
+  if (y + h - 2 < H) q.zones = { y: y + h - 2, yes: [bx, upTo(bx + textWidth(yes) - 1)], no: [bx + textWidth(yes) + gap, upTo(bx + textWidth(yes) + gap + textWidth(no) - 1)] };
 }
 
 // A key for the question: ← → (and tab, h, l) move between the buttons ('move'), Enter presses the focused one, y
@@ -234,7 +251,7 @@ function empty(w, h, text, pairs = []) {
 
 // A message after an action, with its mark: ✓ done (the text plain), ✕ error (in red), ⋯ going on (an ellipsis at the
 // end, dimmed), · nothing to do. kind: one of those, else guessed from the text.
-const ERROR = /^(Cannot|Can't|Could not|Not |No (editor|terminal)|Action failed|Update failed|Already exists|VS Code not found)|\bnot found\b|: already bound$/;
+const ERROR = /^(Cannot|Can't|Could not|Not |No (editor|terminal)|Action failed|Update failed|Already exists|VS Code not found)|\b(not found|unavailable)\b|: already bound$/;
 const messageKind = text => (/…$/.test(text) ? 'busy' : ERROR.test(text) ? 'error' : /^(No |Nothing)/.test(text) ? 'info' : 'ok');
 // How long it shows: an error twice as long.
 const messageTime = kind => (kind === 'error' ? 4000 : 2000);
