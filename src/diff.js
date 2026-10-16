@@ -241,12 +241,61 @@ function splitRows(rows, b, width, nw) {
 
 const defaultMode = width => (width >= SPLIT_MIN ? 'split' : 'inline');
 
-// The layout chosen with s, kept in the settings for the next diffs (source control included): 'inline', 'split',
-// or null to choose by width.
-const savedMode = () => { const m = readSettings().diffLayout; return m === 'inline' || m === 'split' ? m : null; };
-const saveMode = m => writeSettings({ ...readSettings(), diffLayout: m });
+// The changes to show, as git diff writes them: of a commit, the staged ones only, or those of the working tree
+// compared with base, 'head' (the last commit) or 'branch' (where the branch left the default one, so every change of
+// the branch, committed or not), untracked files in full. file: a file or folder to limit them to. Returns
+// { text, top, baseName }: top, the repository's folder, which the diff's paths are relative to; baseName, the default
+// branch ('' when none was found, or when compared with it but no common commit).
+async function collect({ cwd, file = '', commit = '', staged = false, base = 'head' }) {
+  const env = { ...await gitEnv(cwd), GIT_LITERAL_PATHSPECS: '1' }; // a file named '*' or '[id]' means itself
+  const target = file ? ['--', file] : [];
+  // stdout even on a non-zero exit code: diff --no-index returns 1 when the files differ.
+  const git = (...args) => (GIT && spawnSync(GIT, ['-c', 'core.quotePath=false', ...args],
+    { cwd, env, encoding: 'utf8', maxBuffer: 64 << 20, windowsHide: true }).stdout) || '';
+  const diff = (...args) => git('diff', ...DIFF_OPTS, ...args);
+  const top = git('rev-parse', '--show-toplevel').trim() || cwd;
+  let baseName = '';
+  // A revision that would read as an option is refused; --end-of-options for the others.
+  if (commit) {
+    return { top, baseName, text: /^-|[\x00-\x20]/.test(commit) ? ''
+      : git('show', ...DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', '--end-of-options', commit, ...target) };
+  }
+  if (staged) return { top, baseName, text: diff('--cached', ...target) };
+  let from = git('rev-parse', '--verify', '-q', 'HEAD').trim() ? 'HEAD' : null;
+  // The default branch, named whatever the base, for the switch: the remote's HEAD, else main or master.
+  if (from) {
+    baseName = git('rev-parse', '--abbrev-ref', '-q', '--verify', 'refs/remotes/origin/HEAD').trim()
+      || ['main', 'master', 'origin/main', 'origin/master'].find(b => git('rev-parse', '--verify', '-q', `${b}^{commit}`).trim()) || '';
+  }
+  if (from && base === 'branch') {
+    const fork = baseName && git('merge-base', 'HEAD', baseName).trim();
+    if (fork) from = fork; else baseName = '';
+  }
+  // Without any commit, compare with the empty tree: staged changes, then unstaged ones.
+  let text = from ? diff(from, ...target) : diff('--cached', ...target) + diff(...target);
+  const untracked = git('ls-files', '--others', '--exclude-standard', '-z', ...target).split('\0').filter(Boolean);
+  for (const f of untracked.slice(0, MAX_UNTRACKED)) text += diff('--no-index', '--', '/dev/null', f);
+  if (untracked.length > MAX_UNTRACKED) text += `\n… and ${untracked.length - MAX_UNTRACKED} more untracked files\n`;
+  return { text, top, baseName };
+}
 
-module.exports = { DIFF_OPTS, MAX_UNTRACKED, SPLIT_MIN, parse, render, defaultMode, savedMode, saveMode, unquote, main };
+// The layout chosen with s, kept in the settings for the next diffs (source control and the preview included), by
+// width: one for narrow diffs (under SPLIT_MIN columns, as a preview beside the terminal) and one for wide ones (a
+// zoomed preview, the Changes pane), so that each keeps its own. diffLayout: { narrow, wide }, each 'inline' or
+// 'split', unset to choose by width; a single value, from older versions, holds for both until one is chosen.
+const sizeOf = width => (width >= SPLIT_MIN ? 'wide' : 'narrow');
+function savedMode(width) {
+  const m = readSettings().diffLayout, v = m && typeof m === 'object' ? m[sizeOf(width)] : m;
+  return v === 'inline' || v === 'split' ? v : null;
+}
+function saveMode(width, mode) {
+  const s = readSettings(), old = s.diffLayout;
+  writeSettings({ ...s, diffLayout: { ...(old && typeof old === 'object' ? old : {}), [sizeOf(width)]: mode } });
+}
+// The layout of a diff of that width: the one chosen for its size, else by width.
+const layoutOf = width => savedMode(width) || defaultMode(width);
+
+module.exports = { DIFF_OPTS, MAX_UNTRACKED, SPLIT_MIN, parse, render, collect, defaultMode, savedMode, saveMode, layoutOf, unquote, main };
 
 // --- pane
 
@@ -257,7 +306,6 @@ function main() {
   const cwd = process.env.EXPLORER_ROOT || (file ? path.dirname(file) : process.cwd());
   const commit = process.env.EXPLORER_COMMIT;
   const staged = process.env.EXPLORER_STAGED === '1';
-  const target = file ? ['--', file] : [];
   const PANE = process.env.HERDR_PANE_ID;
   // The explorer's pane, whose terminal the notes go to; this pane's own when opened without it.
   const FROM = process.env.EXPLORER_PANE || PANE;
@@ -268,38 +316,15 @@ function main() {
   let base = 'head', top = cwd, baseName = '';
 
   async function changes() {
-    const env = { ...await gitEnv(cwd), GIT_LITERAL_PATHSPECS: '1' }; // a file named '*' or '[id]' means itself
-    // stdout even on a non-zero exit code: diff --no-index returns 1 when the files differ.
-    const git = (...args) => (GIT && spawnSync(GIT, ['-c', 'core.quotePath=false', ...args],
-      { cwd, env, encoding: 'utf8', maxBuffer: 64 << 20, windowsHide: true }).stdout) || '';
-    const diff = (...args) => git('diff', ...DIFF_OPTS, ...args);
-    top = git('rev-parse', '--show-toplevel').trim() || cwd;
-    // A revision that would read as an option is refused; --end-of-options for the others.
-    if (commit) {
-      return /^-|[\x00-\x20]/.test(commit) ? ''
-        : git('show', ...DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', '--end-of-options', commit, ...target);
-    }
-    if (staged) return diff('--cached', ...target);
-    let from = git('rev-parse', '--verify', '-q', 'HEAD').trim() ? 'HEAD' : null;
-    if (from && base === 'branch') {
-      // The default branch: the remote's HEAD, else main or master.
-      baseName = git('rev-parse', '--abbrev-ref', '-q', '--verify', 'refs/remotes/origin/HEAD').trim()
-        || ['main', 'master', 'origin/main', 'origin/master'].find(b => git('rev-parse', '--verify', '-q', `${b}^{commit}`).trim()) || '';
-      const fork = baseName && git('merge-base', 'HEAD', baseName).trim();
-      if (fork) from = fork; else baseName = '';
-    }
-    // Without any commit, compare with the empty tree: staged changes, then unstaged ones.
-    let text = from ? diff(from, ...target) : diff('--cached', ...target) + diff(...target);
-    const untracked = git('ls-files', '--others', '--exclude-standard', '-z', ...target).split('\0').filter(Boolean);
-    for (const f of untracked.slice(0, MAX_UNTRACKED)) text += diff('--no-index', '--', '/dev/null', f);
-    if (untracked.length > MAX_UNTRACKED) text += `\n… and ${untracked.length - MAX_UNTRACKED} more untracked files\n`;
-    return text;
+    const res = await collect({ cwd, file, commit, staged, base });
+    top = res.top; baseName = res.baseName;
+    return res.text;
   }
 
   const title = () => (commit ? `commit ${commit}${file ? ` · ${path.relative(cwd, file) || path.basename(file)}` : ''}`
     : `${file ? path.relative(cwd, file) || path.basename(file) : path.basename(cwd)}${staged ? ' (staged)' : ''}`);
   // cur: the row of the cursor, which notes and references take; note: { field, kind, ref } while one is typed.
-  let parsed = null, rows = [], mode = savedMode(), cache = '', top0 = 0, cur = -1, note = null, flash = null, tab = null, tabNotes = [];
+  let parsed = null, rows = [], cache = '', top0 = 0, cur = -1, note = null, flash = null, tab = null, tabNotes = [];
   const scrollbar = new ui.Scrollbar(t => { top0 = t; draw(); });
 
   function layout(width, m) {
@@ -322,7 +347,7 @@ function main() {
 
   function draw() {
     const { W, H } = ui.size();
-    const m = mode || defaultMode(W);
+    const m = layoutOf(W);
     const body = H - 2;
     // The first column holds the cursor's bar, the last the scrollbar when it shows (a narrower layout never has
     // fewer rows): one column narrower then, kept while it shows.
@@ -330,14 +355,23 @@ function main() {
     if (rows.length > body) layout(W - 2, m);
     top0 = Math.max(0, Math.min(top0, rows.length - body));
     const bw = scrollbar.set(rows.length, body, top0);
-    // Header: the name and the counts, the base, then the layout switch, the active side underlined (clickable).
+    // Header: the name and the counts, then the switches of the base (HEAD or the default branch) and the layout,
+    // the active choice filled (clickable), the base's left out when they do not fit.
     const counts = parsed ? [[` +${parsed.add}`, GREEN], [` −${parsed.del}`, RED]] : [];
-    const against = !commit && !staged ? [[base === 'branch' && baseName ? `  vs ${baseName}` : '  vs HEAD', DIM]] : [];
-    const ON = '\x1b[1;4m', layouts = [['Inline', m === 'inline' ? ON : DIM], [' · ', DIM], ['Side by side', m === 'split' ? ON : DIM], [' ', '']];
-    const head = [[` ${title()}`, '\x1b[1m'], ...counts, ...against];
-    const room = W - ui.segWidth(head) - ui.segWidth(layouts) - 1;
-    switchAt = room >= 0 ? W - ui.segWidth(layouts) + 1 : 0;
-    const lines = [ui.line(room >= 0 ? [...head, [' '.repeat(room + 1), ''], ...layouts] : head, W, ui.C.header)];
+    const head = [[` ${title()}`, '\x1b[1m'], ...counts];
+    const switches = [...(!commit && !staged ? [ui.segmented([['head', 'HEAD'], ['branch', baseName || 'main']], base)] : []),
+      ui.segmented([['inline', 'Inline'], ['split', 'Split']], m)];
+    const width = () => switches.reduce((w, s) => w + s.width + 1, 0);
+    while (switches.length && W - ui.segWidth(head) - width() < 1) switches.shift();
+    chips = [];
+    let x = W - width() + 1;
+    const segs = [...head, [' '.repeat(Math.max(0, W - ui.segWidth(head) - width())), '']];
+    for (const s of switches) {
+      segs.push(...s.segs, [' ', '']);
+      for (const h of s.hits) chips.push({ id: h.id, from: x + h.from, to: x + h.to });
+      x += s.width + 1;
+    }
+    const lines = [ui.line(segs, W, ui.C.header)];
     if (!parsed) lines.push(...ui.empty(W, body, 'Loading…'));
     else if (!rows.length) lines.push(...ui.empty(W, body, 'No changes', [...(commit || staged ? [] : [['b', 'base']]), ['q', 'close']]));
     // The cursor's row and the noted ones: a bar in the first column.
@@ -363,7 +397,8 @@ function main() {
     const body = ui.size().H - 2;
     const pct = rows.length > body ? ` ${Math.round(100 * top0 / Math.max(1, rows.length - body))}% ` : '';
     const send = tabNotes.length ? [['A', `send ${tabNotes.length} note${tabNotes.length > 1 ? 's' : ''}`]] : [];
-    hints = ui.keys([...send, ['a', 'note'], ['n N', 'hunks'], ...(commit || staged ? [] : [['b', 'base']]), ['s', 'layout'], ['q', 'close'], ['?', 'keys']], W - pct.length);
+    // b and s are left out: the header's switches show them (their keys in the help).
+    hints = ui.keys([...send, ['a', 'note'], ['n N', 'hunks'], ['q', 'close'], ['?', 'keys']], W - pct.length);
     return ui.line([...hints, [pct.padStart(Math.max(0, W - ui.segWidth(hints))), DIM]], W, ui.C.header);
   }
 
@@ -376,11 +411,11 @@ function main() {
   }
 
   // The key help (? or f1), over the whole pane (ui.help): { top, find } while it shows. hints: those of the footer;
-  // switchAt: the column of the header's layout switch (0: not shown).
-  let help = null, hints = [], switchAt = 0;
+  // chips: the choices of the header's switches, { id, from, to } in columns from 1.
+  let help = null, hints = [], chips = [];
   const HELP = [
     ['Move', [['↑↓ j k', 'line'], ['pgup pgdn', 'page'], ['space', 'page down'], ['ctrl+u/d', 'half page'], ['g G', 'top, bottom']]],
-    ['Diff', [['n N', 'next, previous hunk'], ['s', 'inline, side by side'], ['b', 'compare with HEAD or the default branch']]],
+    ['Diff', [['n N', 'next, previous hunk'], ['s', 'inline, split (side by side)'], ['b', 'compare with HEAD or the default branch']]],
     ['Review', [['a', 'note on the line (hunk, file)'], ['tab', 'kind of note, while typing'], ['A', 'send the notes to the agent'],
       ['C', 'copy the notes'], ['u', 'remove the last note'], ['y', 'copy path:line']]],
     ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
@@ -469,7 +504,7 @@ function main() {
     else if (k === 'end' || k === 'G') { move(rows.length); top0 = rows.length; draw(); }
     else if (k === 'n') jump(1);
     else if (k === 'N') jump(-1);
-    else if (k === 's') { mode = (mode || defaultMode(ui.size().W)) === 'split' ? 'inline' : 'split'; saveMode(mode); draw(); }
+    else if (k === 's') { const W = ui.size().W; saveMode(W, layoutOf(W) === 'split' ? 'inline' : 'split'); draw(); }
     else if (k === 'b') switchBase();
     else if (k === 'a') startNote();
     else if (k === 'A') act(notes.send(tab, FROM));
@@ -485,10 +520,11 @@ function main() {
       if (help) { if (!ui.helpMouse(m, help)) help = null; return draw(); }
       if (m.wheel) return scroll(m.wheel * 3);
       const click = m.press && !m.drag && m.button === 0;
-      // The layout switch: a click on a side chooses it.
-      if (click && m.y === 1 && switchAt && m.x >= switchAt) {
-        const want = m.x < switchAt + 6 ? 'inline' : 'split';
-        if (want !== (mode || defaultMode(ui.size().W))) { mode = want; saveMode(mode); draw(); }
+      // The header's switches: a click on a choice takes it.
+      const chip = click && m.y === 1 && chips.find(c => m.x >= c.from && m.x <= c.to);
+      if (chip) {
+        if ((chip.id === 'inline' || chip.id === 'split') && chip.id !== layoutOf(ui.size().W)) { saveMode(ui.size().W, chip.id); draw(); }
+        if ((chip.id === 'head' || chip.id === 'branch') && chip.id !== base) switchBase();
         return;
       }
       // A click on a hint of the footer does what its key does.

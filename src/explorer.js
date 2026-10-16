@@ -39,7 +39,7 @@ const DEFAULT_KEYS = {
   menu: ['m', 'menu', 'shift+f10'], refresh: ['r'], filter: ['/'], goToFile: ['ctrl+p'], searchInFiles: ['ctrl+f'],
   sourceControl: ['s'], settings: [','], toggleHidden: ['.'], toggleIgnored: ['i'], newFile: ['n'], newFolder: ['N'],
   rename: ['R', 'f2'], delete: ['delete'], edit: ['e'], openInEditor: ['o'], openInApp: ['O'], preview: ['p'], copyPath: ['y'],
-  copyRelativePath: ['Y'], parentRoot: ['backspace'], changedOnly: ['c'], nextChange: [']'], previousChange: ['['], fileHistory: ['H'], narrower: ['>', INNER === 'right' ? 'shift+left' : 'shift+right'],
+  copyRelativePath: ['Y'], parentRoot: ['backspace'], changedOnly: ['c'], viewChanges: ['d'], nextChange: [']'], previousChange: ['['], fileHistory: ['H'], narrower: ['>', INNER === 'right' ? 'shift+left' : 'shift+right'],
   wider: ['<', INNER === 'right' ? 'shift+right' : 'shift+left'], halfPageUp: ['ctrl+u'], halfPageDown: ['ctrl+d'], help: ['?', 'f1'],
 };
 // The key help (help action), by group, with the keys bound now: [group, [[action, description]]].
@@ -47,7 +47,7 @@ const HELP = [
   ['Move', [['up', 'up'], ['down', 'down'], ['pageUp', 'page up'], ['pageDown', 'page down'], ['halfPageUp', 'half page up'],
     ['halfPageDown', 'half page down'], ['top', 'first'], ['bottom', 'last'], ['expand', 'unfold'], ['collapse', 'fold, parent'],
     ['filter', 'filter']]],
-  ['Review', [['changedOnly', 'changed files only'], ['nextChange', 'next changed file'], ['previousChange', 'previous changed file'],
+  ['Review', [['changedOnly', 'changed files only'], ['viewChanges', 'changes in the preview'], ['nextChange', 'next changed file'], ['previousChange', 'previous changed file'],
     ['fileHistory', 'history of the file']]],
   ['Open', [['open', 'open, fold'], ['preview', 'preview'], ['edit', 'edit (terminal)'], ['openInEditor', 'open in editor'], ['openInApp', 'open in app'],
     ['copyPath', 'copy path'], ['copyRelativePath', 'copy relative path']]],
@@ -624,13 +624,17 @@ function row(r, W, selected) {
 
 // --- opening
 
+// The changes of an entry: a file's in the preview's Diff view, a folder's in the Changes pane (the whole tab).
+const viewChanges = r => (r.dir ? actions.diff(absOf(r.rel), ROOT, PANE)
+  : actions.preview(absOf(r.rel), ROOT, PANE, 0, false, true, { view: 'diff' }));
+
 // Enter and double-click: documents and media other than images with their application, the rest in the preview
 // (or the editor, depending on the settings).
 async function openFile(r) {
   if (!r || r.dir) return;
   const abs = absOf(r.rel);
   // A deleted file: what it held, in its diff.
-  if (r.gone) return runAction(() => actions.diff(abs, ROOT, PANE));
+  if (r.gone) return runAction(() => viewChanges(r));
   if (settings.open === 'preview' && actions.canPreview(abs)) return runAction(() => actions.preview(abs, ROOT, PANE));
   return runAction(() => actions.open(abs, PANE));
 }
@@ -708,7 +712,7 @@ function menuItems(r) {
   if (r && r.gone) {
     // A deleted entry: its changes and history, or back with Discard.
     const abs = absOf(r.rel);
-    items.push(['View changes', () => actions.diff(abs, ROOT, PANE)]);
+    items.push(['View changes', () => viewChanges(r), 'viewChanges']);
     if (!r.dir) items.push(['File history', () => actions.scm(ROOT, PANE, abs, true), 'fileHistory']);
     items.push(null, ['Stage', () => actions.stage(abs, ROOT)], ['Unstage', () => actions.unstage(abs, ROOT)],
       ['Discard changes…', () => confirm({ title: 'Restore it?', name: r.name + (r.dir ? '/' : ''), where: whereOf(r.rel),
@@ -736,7 +740,7 @@ function menuItems(r) {
     if (git.top && deco !== '!') {
       const changed = deco && deco !== '!';
       items.push(null);
-      if (changed) items.push(['View changes', () => actions.diff(abs, ROOT, PANE)]);
+      if (changed) items.push(['View changes', () => viewChanges(r), 'viewChanges']);
       if (!r.dir && deco !== 'U') items.push(['File history', () => actions.scm(ROOT, PANE, abs, true), 'fileHistory']);
       if (changed) items.push(['Stage', () => actions.stage(abs, ROOT)]);
       items.push(['Unstage', () => actions.unstage(abs, ROOT)]);
@@ -889,7 +893,7 @@ function setSetting(name, value) {
 // The value of a setting and its change(dir): the next value (1: enter, → or a click) or the previous one (-1: ←),
 // or the setting's dialog (left alone by ←); change returns a message or null.
 const onOff = name => ({
-  value: settings[name] ? ['● on', fg(C.green)] : ['○ off', fg(C.dim)],
+  value: ui.onOff(settings[name]),
   change: () => setSetting(name, !settings[name]),
 });
 const choice = (name, values, shown = v => v) => {
@@ -1445,11 +1449,9 @@ function nextChange(dir) {
   }
   render();
   const abs = absOf(rel);
-  if (git.gone.includes(rel)) {
-    flash('Deleted · enter: its changes');
-    // The preview, when open, leaves the file it showed (it tells the file is deleted).
-    actions.preview(abs, ROOT, PANE, 0, false, false).catch(() => { });
-  } else if (actions.canPreview(abs)) runAction(() => actions.preview(abs, ROOT, PANE));
+  // Among the changed files, and for a deleted one, the preview shows the changes.
+  if (state.changed) runAction(() => actions.preview(abs, ROOT, PANE, 0, false, true, { view: 'diff' }));
+  else if (actions.canPreview(abs)) runAction(() => actions.preview(abs, ROOT, PANE));
 }
 
 function closeFilter() {
@@ -1484,7 +1486,7 @@ function followSelection() {
   following = setTimeout(() => {
     const r = state.rows[state.cursor];
     if (!r || r.dir || !actions.canPreview(absOf(r.rel))) return;
-    actions.preview(absOf(r.rel), ROOT, PANE, 0, false, false).then(flash, () => { });
+    actions.preview(absOf(r.rel), ROOT, PANE, 0, false, false, { view: state.changed ? 'diff' : 'file' }).then(flash, () => { });
   }, 150);
 }
 
@@ -1541,6 +1543,9 @@ function listAction(action) {
     case 'copyRelativePath': if (r) runAction(() => actions.copy(r.rel)); return;
     case 'parentRoot': return setRoot(path.dirname(ROOT));
     case 'changedOnly': return showChanged(!state.changed);
+    case 'viewChanges':
+      if (r) runAction(() => (git.top ? viewChanges(r) : 'Not a git repository'));
+      return;
     case 'nextChange': return nextChange(1);
     case 'previousChange': return nextChange(-1);
     case 'fileHistory':
@@ -1605,7 +1610,9 @@ function mouse(m) {
   select(i);
   if (r.dir) toggle(r);
   else if (double) return openFile(r);
-  else if (settings.singleClick && actions.canPreview(absOf(r.rel))) return runAction(() => actions.preview(absOf(r.rel), ROOT, PANE));
+  else if (settings.singleClick && actions.canPreview(absOf(r.rel))) {
+    return runAction(() => actions.preview(absOf(r.rel), ROOT, PANE, 0, false, true, { view: state.changed ? 'diff' : 'file' }));
+  }
   render();
 }
 

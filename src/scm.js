@@ -676,7 +676,9 @@ function tabs(W) {
     segs.push([' ', ''], [label, id === S.view ? BOLD + fg(C.text) + UNDERLINE : DIM], [count, DIM], ['  ', '']);
     x += w + 1;
   });
-  const right = S.view === 'changes' ? buttons([[S.tree ? '⊞ Tree' : '≡ List', toggleTree, DIM]], 1, W, 0)
+  // List · Tree, the active one filled (ui.segmented's look); a click on the other switches.
+  const right = S.view === 'changes' ? buttons([['List', () => S.tree && toggleTree(), ui.switchStyle(!S.tree)],
+    ['Tree', () => !S.tree && toggleTree(), ui.switchStyle(S.tree)]], 1, W, 0)
     : S.view === 'history' && S.histFile ? buttons([[`${ui.ellipsis(histName() + renamed(), Math.max(8, W - x - 8))} ✕`, allFiles, fg(C.blue)]], 1, W, 0) : [];
   return split(segs, right, W);
 }
@@ -741,12 +743,12 @@ function hints() {
   if (S.editing) return [['⏎', commitKey], ['esc', 'leave'], ['ctrl+g', '✧ Claude'], ['alt+a', 'amend']];
   if (S.diff && S.diff.compare && (S.diff.focus || !wide())) return [['↑↓', 'select'], ['⏎', 'show commit'], ['tab', 'list'], ['q', 'back']];
   if (S.diff && S.diff.back && (S.diff.focus || !wide())) return [['↑↓', 'scroll'], ['n N', 'hunks'], ['q', 'back to the comparison']];
-  if (S.diff && (S.diff.focus || !wide())) return [['↑↓', 'scroll'], ['n N', 'hunks'], ['s', 'inline or side by side'], ['tab', 'list'], ['q', 'back']];
+  if (S.diff && (S.diff.focus || !wide())) return [['↑↓', 'scroll'], ['n N', 'hunks'], ['tab', 'list'], ['q', 'back']];
   if (!S.repo) return S.noGit ? [['q', 'quit']] : [['i', 'git init'], ['q', 'quit']];
   const common = [['b', 'branch'], ['f', 'fetch'], ['P', 'push'], ['L', 'pull'], ['q', 'quit']];
   if (S.view === 'changes') {
     return [['space', 'stage'], ['u', 'unstage'], ['d', 'discard'], ['c', commitKey], ...(ongoing() ? [['X', 'abort']] : []),
-      ['⏎', wide() ? 'focus diff' : 'diff'], ['ctrl+g', '✧ Claude'], ['t', 'tree'], ...common];
+      ['⏎', wide() ? 'focus diff' : 'diff'], ['ctrl+g', '✧ Claude'], ...common];
   }
   if (S.view === 'history') {
     return [['⏎', wide() ? 'focus commit' : 'show commit'], ...(S.histFile ? [['x', 'every file']] : []),
@@ -774,7 +776,7 @@ function helpGroups() {
   g.push(['Repository', [['f', 'fetch'], ['L', 'pull'], ['P', 'push or publish'], ['b', 'branches'], ['r', 'refresh']]],
     ['Move', [['↑↓ j k', 'move'], ['← → h l', 'fold, unfold'], ['pgup pgdn', 'page'], ['ctrl+u/d', 'half page'], ['g G', 'first, last'],
       ['1-4', 'switch view']]],
-    ['Diff', [['tab', 'focus the diff'], ['n N', 'next, previous hunk'], ['s', 'inline, side by side'], ['< >', 'narrower, wider list'], ['shift+← →', 'move the separator'],
+    ['Diff', [['tab', 'focus the diff'], ['n N', 'next, previous hunk'], ['s', 'inline, split (side by side)'], ['< >', 'narrower, wider list'], ['shift+← →', 'move the separator'],
       ['q', 'back to the list']]],
     ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]]);
   return g;
@@ -784,7 +786,7 @@ function helpGroups() {
 function diffLines(width, height) {
   const d = S.diff;
   if (d.compare) return compareLines(d, width, height);
-  const mode = d.mode || diffs.defaultMode(width);
+  const mode = diffs.layoutOf(width);
   // While the separator is dragged, the rows laid out for the old width are cut or padded: laying out a long
   // diff again at each column would make the separator lag behind the mouse. The release lays it out.
   const layout = w => {
@@ -798,10 +800,10 @@ function diffLines(width, height) {
   d.top = Math.max(0, Math.min(d.top, (d.rows || []).length - body));
   const bw = diffBar.set((d.rows || []).length, body, d.top);
   const counts = d.parsed ? [[`  +${d.parsed.add}`, fg(C.green)], [` −${d.parsed.del}`, fg(ui.GIT.D)]] : [];
-  // The layout switch as in the changes pane, the active side underlined (clicks: see draw, d.switchAt).
-  const ON = '\x1b[1;4m', layouts = [['Inline', mode === 'inline' ? ON : DIM], [' · ', DIM], ['Side by side', mode === 'split' ? ON : DIM]];
-  const right = [...layouts, [wide() ? ' ' : '  ✕ ', fg(C.text)]];
-  d.switchAt = width - ui.segWidth(right);
+  // The layout switch as in the Changes pane, the active choice filled (clicks: see switchHits, d.switchAt).
+  const sw = ui.segmented([['inline', 'Inline'], ['split', 'Split']], mode);
+  const right = [...sw.segs, [wide() ? ' ' : '  ✕ ', fg(C.text)]];
+  d.switchAt = width - ui.segWidth(right); d.switchHits = sw.hits; d.width = width;
   const lines = [split([[` ${d.title}`, BOLD], [d.tag ? `  ${d.tag}` : '', DIM], ...counts], right, width, d.focus ? C.select : C.header)];
   if (!d.parsed) lines.push(...ui.empty(width, body, 'Loading…'));
   else if (!d.rows.length) lines.push(...ui.empty(width, body, 'No changes'));
@@ -810,12 +812,12 @@ function diffLines(width, height) {
   return lines.slice(0, height);
 }
 
-// The diff's layout switch, its title row's Inline and Side by side, clickable; x: the diff area's first column.
+// The diff's layout switch, its title row's Inline and Split, clickable; x: the diff area's first column.
 function switchHits(x) {
   const d = S.diff;
   if (!d || d.compare || d.switchAt === undefined) return;
-  const at = x + d.switchAt, set = mode => () => { if ((d.mode || diffs.defaultMode(ui.size().W - x)) !== mode) { d.mode = mode; diffs.saveMode(mode); draw(); } };
-  hits.push({ y: 1, x0: at, x1: at + 6, fn: set('inline') }, { y: 1, x0: at + 9, x1: at + 21, fn: set('split') });
+  const set = mode => () => { if (diffs.layoutOf(d.width) !== mode) { diffs.saveMode(d.width, mode); draw(); } };
+  for (const h of d.switchHits) hits.push({ y: 1, x0: x + d.switchAt + h.from, x1: x + d.switchAt + h.to + 1, fn: set(h.id) });
 }
 
 // A comparison in the diff area: its title row, then its rows (selected commit highlighted).
@@ -1490,7 +1492,7 @@ function setBase(row) {
 }
 
 async function showDiff(key, title, args, item, tag) {
-  const d = S.diff && S.diff.key === key ? S.diff : { key, title, top: 0, mode: S.diff ? S.diff.mode : diffs.savedMode(), focus: S.diff ? S.diff.focus : false };
+  const d = S.diff && S.diff.key === key ? S.diff : { key, title, top: 0, focus: S.diff ? S.diff.focus : false };
   d.item = item; d.title = title; d.tag = tag;
   S.diff = d;
   draw();
@@ -1570,8 +1572,7 @@ function diffKey(k) {
   if (k === 'end' || k === 'G') { d.top = Infinity; return draw(); }
   if (k === 's') {
     const width = ui.size().W < SPLIT ? ui.size().W : ui.size().W - listW - 1;
-    d.mode = (d.mode || diffs.defaultMode(width)) === 'split' ? 'inline' : 'split';
-    diffs.saveMode(d.mode);
+    diffs.saveMode(width, diffs.layoutOf(width) === 'split' ? 'inline' : 'split');
     return draw();
   }
   if (k === 'n' || k === 'N') {

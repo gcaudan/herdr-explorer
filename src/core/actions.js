@@ -365,11 +365,12 @@ const requestFile = tab => process.env.HERDR_PLUGIN_STATE_DIR
 
 // Shows a file in the tab's preview pane, opened next to the terminal when there is none: explorer | terminal |
 // preview. line: 1-based line to scroll to. focus: give the focus to the preview. open: false to only update a
-// preview already open, doing nothing without one.
-async function preview(abs, root, pane, line = 0, focus = false, open = true) {
+// preview already open, doing nothing without one. marks: the parts to highlight, [{ from, to, a, b }] (1-based lines,
+// and columns a to b included, 0 for whole lines). view: 'diff' to show the file's git changes rather than the file.
+async function preview(abs, root, pane, line = 0, focus = false, open = true, { marks = [], view = 'file' } = {}) {
   const tab = pane && await tabOf(pane);
   if (!tab) return 'Cannot preview';
-  const request = { file: abs, root, line, t: Date.now() };
+  const request = { file: abs, root, line, marks, view, t: Date.now() };
   const existing = tab.panes.find(p => p.label === 'Preview');
   if (existing) {
     try { fs.writeFileSync(requestFile(tab.me.tab_id), JSON.stringify(request)); } catch { return 'Cannot preview'; }
@@ -380,6 +381,7 @@ async function preview(abs, root, pane, line = 0, focus = false, open = true) {
   const target = (await terminalOf(pane))[0] || pane;
   const res = await openPane('preview', 'split', target, {
     EXPLORER_FILE: abs, EXPLORER_ROOT: root, EXPLORER_LINE: line, EXPLORER_TAB: tab.me.tab_id,
+    ...(marks.length ? { EXPLORER_MARKS: JSON.stringify(marks) } : {}), ...(view === 'diff' ? { EXPLORER_VIEW: 'diff' } : {}),
   }, ['--direction', 'right', focus ? '--focus' : '--no-focus']);
   return res ? null : 'Cannot open the preview';
 }

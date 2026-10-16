@@ -600,8 +600,109 @@ function restart(env) {
 
 const size = () => ({ W: process.stdout.columns || 80, H: process.stdout.rows || 24 });
 
+// --- segmented switch and menu
+
+// Two or more ways to see the same thing, the active one filled: [id, label] choices. Returns { segs, width, hits },
+// hits: the columns of each choice from 0, { id, from, to }, for clicks.
+const SWITCH = [58, 58, 62];
+// An option's value as the explorer's settings show it.
+const onOff = on => (on ? ['● on', fg(C.green)] : ['○ off', fg(C.dim)]);
+const switchStyle = on => (on ? bg(C.select) + fg(C.text) + '\x1b[1m' : bg(SWITCH) + fg(C.dim));
+function segmented(choices, active) {
+  const segs = [], hits = [];
+  let x = 0;
+  for (const [id, label] of choices) {
+    const on = id === active, text = ` ${label} `;
+    segs.push([text, switchStyle(on)]);
+    hits.push({ id, from: x, to: x + textWidth(text) - 1 });
+    x += textWidth(text);
+  }
+  return { segs, width: x, hits };
+}
+
+// The first n columns of a drawn line (ui.line's output), its colours kept, padded with spaces when shorter: the part
+// of a line left of something drawn over it.
+function head(text, n) {
+  let out = '', w = 0, prev;
+  for (const tok of text.match(/\x1b\[[0-9;?]*[A-Za-z]|[\s\S]/gu) || []) {
+    if (tok[0] === '\x1b') { out += tok; continue; }
+    const c = cols(tok, prev);
+    if (w + c > n) break;
+    out += tok; w += c; prev = tok;
+  }
+  return `${out}\x1b[0m${' '.repeat(Math.max(0, n - w))}`;
+}
+
+// A menu in a frame over a pane, as the explorer's: items { label, run, key, value, danger }, or null for a rule. key:
+// the key that does the same outside the menu, dimmed after the label; value: [text, style] on the right, as in the
+// explorer's settings (onOff gives ● on / ○ off). at: the screen line (from 0) of its top border; right: its right
+// edge's column (from 1), else it starts at the left.
+class Menu {
+  constructor({ title, items, at = 0, right = 0 }) {
+    Object.assign(this, { title, items, at, right, sel: Math.max(0, items.findIndex(Boolean)), off: 0, x: 1, inner: 0 });
+  }
+  rows(H) { return Math.max(1, Math.min(this.items.length, H - 2 - this.at)); }
+  draw(lines, W, H) {
+    const n = this.rows(H), edge = fg(C.dim);
+    const side = it => (it.key ? textWidth(it.key) + 2 : 0) + (it.value ? textWidth(it.value[0]) + 2 : 0);
+    const want = Math.max(textWidth(this.title) + 4, ...this.items.map(it => (it ? textWidth(it.label) + side(it) + 2 : 0)));
+    const inner = this.inner = Math.min(W - 3, want);
+    // From its left column x (from 1): the frame takes inner + 2 columns after a space.
+    const x = this.x = this.right ? Math.max(1, this.right - inner - 2) : 1;
+    // Left of the frame, what the line showed; right of it, blank.
+    const rest = ' '.repeat(Math.max(0, W - x - inner - 2));
+    let pad = '';
+    const keep = i => { pad = x > 1 ? head(lines[i] || '', x - 1) : ''; };
+    const border = (l, r, t, more) => `${pad}${line([[`${l}${t}${'─'.repeat(Math.max(0, inner - textWidth(t) - (more ? 2 : 0)))}${more ? more + '─' : ''}${r}`, edge]], inner + 2)}${rest}`;
+    keep(this.at);
+    lines[this.at] = border('╭', '╮', ` ${ellipsis(this.title, Math.max(1, inner - 4))} `, this.off > 0 && '▴');
+    this.items.slice(this.off, this.off + n).forEach((it, k) => {
+      keep(this.at + 1 + k);
+      if (!it) { lines[this.at + 1 + k] = `${pad}${line([['├' + '─'.repeat(inner) + '┤', edge]], inner + 2)}${rest}`; return; }
+      const key = it.key ? `  ${it.key}` : '', [value, style] = it.value || ['', ''];
+      const label = ellipsis(it.label, Math.max(1, inner - 3 - textWidth(key) - (value ? textWidth(value) + 1 : 0)));
+      const gap = ' '.repeat(Math.max(1, inner - 2 - textWidth(label) - textWidth(key) - textWidth(value)));
+      const segs = [[` ${label}`, it.danger ? fg(C.red) : ''], [key, fg(C.dim)], [gap, ''], [`${value} `, style]];
+      lines[this.at + 1 + k] = `${pad}${edge}│\x1b[39m${line(segs, inner, this.off + k === this.sel ? C.select : C.selectBlur)}${edge}│\x1b[0m${rest}`;
+    });
+    keep(this.at + n + 1);
+    lines[this.at + n + 1] = border('╰', '╯', '', this.off + n < this.items.length && '▾');
+  }
+  move(dir, H) {
+    if (!this.items.some(Boolean)) return;
+    do this.sel = (this.sel + dir + this.items.length) % this.items.length; while (!this.items[this.sel]);
+    const n = this.rows(H);
+    if (this.sel < this.off) this.off = this.sel;
+    if (this.sel >= this.off + n) this.off = this.sel - n + 1;
+  }
+  // A key: up and down (and k j) move, enter, space, left and right (h l) run the selection, the key shown beside an
+  // item runs it; escape, q and , (which opens the menus of the panes) close. Returns { run } for an item to run, 'close', or null when the menu took the key. The menu stays
+  // open after a run when keep is set on the item (an option changed in place).
+  key(k, H) {
+    if (k === 'escape' || k === 'q' || k === ',') return 'close';
+    // ← → change the selected option, as in the explorer's settings.
+    if (['left', 'right', 'h', 'l'].includes(k)) return this.items[this.sel] ? { run: this.items[this.sel].run, keep: this.items[this.sel].keep } : null;
+    if (k === 'up' || k === 'k') { this.move(-1, H); return null; }
+    if (k === 'down' || k === 'j') { this.move(1, H); return null; }
+    if (k === 'enter' || k === 'space') return this.items[this.sel] ? { run: this.items[this.sel].run, keep: this.items[this.sel].keep } : null;
+    const it = this.items.find(i => i && i.key && i.key === k);
+    return it ? { run: it.run, keep: it.keep } : null;
+  }
+  // A click: on an item, { run }; elsewhere, 'close'. The wheel moves the selection.
+  mouse(m, H) {
+    if (m.wheel) { this.move(m.wheel, H); return null; }
+    if (!m.press || m.drag) return null;
+    const k = m.y - 2 - this.at;
+    if (m.button === 0 && k >= 0 && k < this.rows(H) && m.x > this.x && m.x <= this.x + this.inner + 1) {
+      const it = this.items[this.off + k];
+      return it ? { run: it.run, keep: it.keep } : null;
+    }
+    return 'close';
+  }
+}
+
 module.exports = {
   fg, bg, glyph, SEARCH, C, GIT, clean, cleanLine, cols, fit, textWidth, ellipsis, line, keys, keyAt, help, helpKey, helpMouse, wrap, empty, message, messageKind, messageTime, confirm, confirmKey, confirmMouse,
-  segWidth, segText, slice, split, mark, Scrollbar,
+  segWidth, segText, slice, split, mark, Scrollbar, segmented, switchStyle, onOff, Menu,
   keyName, keyLabel, decode, printable, Field, screen, restart, size,
 };
