@@ -734,4 +734,4 @@ function render(buffer, cols, rows, { background = [30, 30, 30] } = {}) {
   }
 }
 
-module.exports = { FORMATS, info, decode, render };
+module.exports = { FORMATS, MAX_BYTES, info, decode, render };

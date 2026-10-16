@@ -135,7 +135,11 @@ const DEFAULTS = {
   icons: '',          // explorer icon theme: { id, label, file } of a VS Code one; empty: Nerd Font icons
   wrap: false,        // preview: wrap long lines
   lineNumbers: true,  // preview: line number gutter
+  diffLayout: '',     // diffs 'inline' or 'split' (side by side); empty: side by side when the pane is wide enough
   updateCheck: true,  // check GitHub once a day for a newer release
+  scmTree: false,     // source control: the changes as a folder tree rather than a list
+  scmGraphAll: true,  // source control history: every branch, or only the current one
+  scmListShare: {},   // source control: the list's share of the width beside the diff, by view
 };
 const SETTINGS_FILE = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'settings.json');
 function readSettings() {
@@ -190,13 +194,36 @@ function keysTemplate(pane, defaults) {
   const keys = { ...defaults, ...(all[pane] || {}) };
   if (JSON.stringify(all[pane]) === JSON.stringify(keys)) return KEYS_FILE;
   all[pane] = keys;
+  saveKeys(all);
+  return KEYS_FILE;
+}
+
+// Bindings changed from a pane: each action of changes given its keys, or its default ones (null). An unreadable
+// file is left alone, for its owner to fix. Returns false when nothing could be written.
+function writeKeys(pane, changes) {
+  if (!KEYS_FILE) return false;
+  let all = {};
+  try { all = JSON.parse(fs.readFileSync(KEYS_FILE, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') return false; }
+  const own = { ...(all[pane] || {}) };
+  for (const [action, keys] of Object.entries(changes)) if (keys === null) delete own[action]; else own[action] = keys;
+  all[pane] = own;
+  return saveKeys(all);
+}
+
+// keys.json written with one action per line, through a temporary file renamed, so that a pane never reads it
+// half-written.
+function saveKeys(all) {
   const lines = Object.entries(all).map(([p, actions]) => `  ${JSON.stringify(p)}: {\n`
     + Object.entries(actions).map(([a, k]) => `    ${JSON.stringify(a)}: ${JSON.stringify(k)}`).join(',\n') + '\n  }');
-  try { fs.mkdirSync(path.dirname(KEYS_FILE), { recursive: true }); fs.writeFileSync(KEYS_FILE, `{\n${lines.join(',\n')}\n}\n`); } catch { }
-  return KEYS_FILE;
+  const tmp = `${KEYS_FILE}.${process.pid}`;
+  try {
+    fs.mkdirSync(path.dirname(KEYS_FILE), { recursive: true });
+    fs.writeFileSync(tmp, `{\n${lines.join(',\n')}\n}\n`); fs.renameSync(tmp, KEYS_FILE);
+    return true;
+  } catch { try { fs.unlinkSync(tmp); } catch { } return false; }
 }
 
 module.exports = {
   WIN, PLUGIN, pathDirs, which, words, run, result, HERDR, GIT, gitEnv, gitOperation, version, newer, WIDTH_FILE, readWidth,
-  SETTINGS_FILE, readSettings, writeSettings, PANES_DIR, paneFile, readPaneState, writePaneState, KEYS_FILE, readKeys, keysTemplate,
+  SETTINGS_FILE, readSettings, writeSettings, PANES_DIR, paneFile, readPaneState, writePaneState, KEYS_FILE, readKeys, keysTemplate, writeKeys,
 };

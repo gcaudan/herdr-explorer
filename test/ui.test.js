@@ -45,3 +45,34 @@ test('random text keeps its width', () => {
     assert.ok(ui.segWidth(ui.slice(segs, from, width)) <= width, `slice over ${width}: ${JSON.stringify(segs)}`);
   }
 });
+
+test('key hints keep the pairs that fit, whole', () => {
+  const pairs = [['s', 'stage'], ['d', 'discard'], ['q', 'quit']];
+  assert.strictEqual(text(ui.keys(pairs)), ' s stage   d discard   q quit');
+  assert.strictEqual(text(ui.keys(pairs, 20)), ' s stage   d discard');
+  assert.strictEqual(ui.keys(pairs)[0][1].includes('\x1b[1m'), true);
+});
+
+test('a click on a hint gives its key', () => {
+  const segs = ui.keys([['⏎', 'open'], ['↑↓', 'move'], ['space s', 'stage']]);
+  // " ⏎ open   ↑↓ move   space s stage"
+  assert.strictEqual(ui.keyAt(segs, 1), 'enter');
+  assert.strictEqual(ui.keyAt(segs, 11), null);
+  assert.strictEqual(ui.keyAt(segs, 21), 'space');
+  assert.strictEqual(ui.keyAt(segs, 0), null);
+  assert.strictEqual(ui.keyAt(segs, 22, 1), 'space');
+});
+
+test('a question card fits the pane, buttons included', () => {
+  const plain = l => l.replace(/[[0-9;]*m/g, '');
+  for (const [W, H] of [[80, 30], [26, 12], [12, 8], [10, 5], [30, 4], [30, 3], [2, 10], [1, 10]]) {
+    const lines = Array.from({ length: H }, () => ' '.repeat(W));
+    const q = { title: 'Move to the trash?', name: 'a name long enough to wrap on a few lines.txt', where: 'in src/',
+      note: 'This cannot be undone.', action: 'Move', focus: 'no' };
+    ui.confirm(lines, W, H, q);
+    assert.strictEqual(lines.length, H, `${W}×${H}: rows`);
+    for (const l of lines) assert.strictEqual(ui.textWidth(plain(l)), W, `${W}×${H}: ${plain(l)}`);
+    if (W < 2) assert.strictEqual(q.zones, null, `${W}×${H}: no card`);
+    else assert.ok(q.zones.y < H, `${W}×${H}: buttons out of the pane`);
+  }
+});

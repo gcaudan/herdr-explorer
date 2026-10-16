@@ -400,15 +400,21 @@ function fileRow(r, W) {
     }
     return segs;
   };
-  return [[' ', ''], ...part(b, rel.length, ''), ['  ', ''], ...part(0, Math.max(0, b - 1), DIM)];
+  // The name, and its folder on the right (cut from the left when long).
+  const name = part(b, rel.length, ''), nw = ui.segWidth(name);
+  let dir = part(0, Math.max(0, b - 1), DIM), dw = ui.segWidth(dir);
+  const room = W - 1 - nw - 3;
+  if (dw > room) { dir = room > 1 ? [['…', DIM], ...ui.slice(dir, dw - room + 1, room - 1)] : []; dw = ui.segWidth(dir); }
+  return [[' ', ''], ...name, [' '.repeat(Math.max(2, W - 1 - nw - dw - 1)), ''], ...dir, [' ', '']];
 }
 
 function contentRow(r, W) {
   const { g, m } = r;
   if (!m) {
     const b = g.rel.lastIndexOf('/') + 1;
-    return [[g.collapsed ? ' ▸ ' : ' ▾ ', DIM], [g.rel.slice(b), '\x1b[1m'], ['  ' + g.rel.slice(0, Math.max(0, b - 1)), DIM],
-      [`  ${g.count}`, fg(C.blue)]];
+    const left = [[g.collapsed ? ' ▸ ' : ' ▾ ', DIM], [g.rel.slice(b), '\x1b[1m'], ['  ' + g.rel.slice(0, Math.max(0, b - 1)), DIM]];
+    const count = ` ${g.count} `;
+    return [...left, [' '.repeat(Math.max(1, W - ui.segWidth(left) - count.length)), ''], [count, DIM]];
   }
   const num = `   ${String(m.n).padStart(5)}  `;
   // Leading blanks removed, then the start cut so that the first match shows within the room left.
@@ -475,7 +481,9 @@ function bar(y, parts, W, back) {
   return line(parts, W, back);
 }
 const width = parts => parts.reduce((w, [t]) => w + textWidth(t), 0);
-const chip = (label, on, fn) => [` ${label} `, on ? bg(C.select) + fg([255, 255, 255]) : DIM, fn];
+const FIELD = [60, 60, 60], CHIP_OFF = [45, 45, 45];
+// An option: blue when on, grey when off.
+const chip = (label, on, fn) => [` ${label} `, on ? bg(C.select) + fg([255, 255, 255]) : bg(CHIP_OFF) + DIM, fn];
 
 // The visible part of a field, the cursor shown only in the focused one; restored text shown selected:
 // typing replaces it.
@@ -499,7 +507,7 @@ function render() {
 
   // Tabs, and the space folder on the right.
   const tab = (label, mode) => [` ${label} `, state.mode === mode ? '\x1b[1m' + bg(C.select) + fg([255, 255, 255]) : DIM, () => setMode(mode)];
-  const tabs = [[' ', ''], tab('Go to file  ctrl+p', 'files'), [' ', ''], tab('Search in files  ctrl+f', 'content')];
+  const tabs = [[' ', ''], tab('Go to file', 'files'), [' ', ''], tab('Search in files', 'content')];
   const name = ellipsis(path.basename(ROOT), Math.max(0, W - width(tabs) - 2));
   lines.push(bar(0, [...tabs, [' '.repeat(Math.max(0, W - width(tabs) - textWidth(name) - 1)), ''], [name, DIM]], W, C.header));
 
@@ -509,25 +517,29 @@ function render() {
     ? [chip('Aa', state.opts.case, toggle('case')), chip('ab', state.opts.word, toggle('word')), chip('.*', state.opts.regex, toggle('regex')), [' ', '']]
     : [];
   chips.push(chip('hidden', state.opts.hidden, toggle('hidden')), [' ', '']);
-  const prompt = [' ❯ ', fg(C.blue), () => focus('query')];
-  const qw = Math.max(1, W - 3 - width(chips) - 1);
+  // Go to file: the count on the right of the field.
+  const count = !content && state.files ? [`${state.fields.files.value ? `${state.results.length}${state.results.length >= MAX_ROWS ? '+' : ''} of ` : ''}${state.files.length}  `, DIM] : ['', ''];
+  const prompt = [` ${ui.SEARCH} `, DIM, () => focus('query')];
+  const qw = Math.max(1, W - 3 - width(chips) - width([count]) - 1);
   const qparts = fieldParts(queryField(), qw, !content || state.focus === 'query').map(p => [...p, () => focus('query')]);
-  lines.push(bar(1, [prompt, ...qparts, [' '.repeat(Math.max(0, W - 3 - width(qparts) - width(chips))), '', () => focus('query')], ...chips], W));
+  lines.push(bar(1, [prompt, ...qparts, [' '.repeat(Math.max(0, W - 3 - width(qparts) - width(chips) - width([count]))), '', () => focus('query')],
+    count, ...chips], W));
 
   // Include and exclude globs.
   if (content) {
     const half = Math.floor(W / 2);
+    // Each glob a field on a lighter background, after its label.
     const globField = (label, k, w) => {
-      const l = [label, DIM, () => focus(k)];
-      const parts = fieldParts(state.fields[k], Math.max(1, w - textWidth(label) - 1), state.focus === k).map(p => [...p, () => focus(k)]);
-      return [l, ...parts, [' '.repeat(Math.max(0, w - textWidth(label) - width(parts))), '', () => focus(k)]];
+      const l = [label, DIM, () => focus(k)], fw = Math.max(1, w - textWidth(label) - 2);
+      const parts = fieldParts(state.fields[k], fw - 1, state.focus === k).map(([t, st]) => [t, bg(FIELD) + (st || ''), () => focus(k)]);
+      return [l, [' ', bg(FIELD), () => focus(k)], ...parts, [' '.repeat(Math.max(0, fw - 1 - width(parts))), bg(FIELD), () => focus(k)], [' ', '']];
     };
-    lines.push(bar(2, [...globField('   include ', 'include', half), ...globField(' exclude ', 'exclude', W - half)], W));
+    lines.push(bar(2, [...globField('   in ', 'include', half), ...globField('  not in ', 'exclude', W - half)], W));
   }
 
   // Status.
   let status, style = DIM;
-  if (state.flash) { status = state.flash; style = fg(C.yellow); } else if (!state.files) status = 'indexing…';
+  if (!state.files) status = 'indexing…';
   else if (content && state.error) { status = state.error; style = fg(C.red); } else if (content) {
     const n = state.total, m = state.groups.length;
     status = state.fields.content.value ? `${n}${n >= MAX_MATCHES ? '+' : ''} result${n === 1 ? '' : 's'} in ${m} file${m === 1 ? '' : 's'}` : 'type to search';
@@ -536,7 +548,11 @@ function render() {
     status = `${state.fields.files.value ? `${state.results.length}${state.results.length >= MAX_ROWS ? '+' : ''} of ` : ''}${state.files.length} file${state.files.length === 1 ? '' : 's'}`;
   }
   if (state.capped && !state.flash) status += `  (first ${MAX_FILES} files only)`;
-  lines.push(line([[' ' + status, style]], W));
+  // A rule above the results, with the status in it; Go to file has its count beside the field.
+  const said = state.flash ? ui.message(state.flash) : content || !state.files ? [[status, style]]
+    : state.capped ? [[`first ${MAX_FILES} files only`, DIM]] : [];
+  const head = said.length ? [['── ', DIM], ...said, [' ', '']] : [];
+  lines.push(line([...head, ['─'.repeat(Math.max(0, W - ui.segWidth(head))), DIM]], W));
 
   // Results, and the preview on the right.
   const list = rows();
@@ -547,20 +563,40 @@ function render() {
   const LW = listW = W >= 100 ? Math.floor(W / 2) : W;
   const right = LW < W ? previewLines(target(list[state.cursor]), W - LW - 1, h) : [];
   const bw = scrollbar.set(list.length, h, state.top), RW = LW - bw;
+  // Nothing to list: what to type, or what to try instead.
+  const none = !state.files || list.length ? null : content && !state.fields.content.value ? ui.empty(RW, h, 'Type to search')
+    : ui.empty(RW, h, 'No results', content ? (state.opts.hidden ? [['ctrl+p', 'go to file']] : [['alt+h', 'include hidden files']])
+      : [['ctrl+f', 'search in files']]);
   for (let k = 0; k < h; k++) {
     const i = state.top + k, r = list[i];
     let l = r ? line(content ? contentRow(r, RW) : fileRow(r, RW), RW, i === state.cursor ? C.select : null) : line([], RW);
-    if (!r && !k && state.files && !list.length) l = line([[content && !state.fields.content.value ? '' : '  no results', DIM]], RW);
+    if (none) l = none[k];
     l += scrollbar.cell(k);
     if (LW < W) l += DIM + '│\x1b[0m' + (right[k] || line([], W - LW - 1));
     lines.push(l);
   }
 
   // Keys.
-  const keys = '↵ open  ctrl+o editor  ctrl+t insert  ctrl+y copy path' + (content ? '  tab fields  alt+←→ fold' : '') + '  esc close';
-  lines.push(line([[' ' + keys, DIM]], W, C.header));
+  const keys = [['↵', 'open'], content ? ['ctrl+p', 'go to file'] : ['ctrl+f', 'search in files'], ['ctrl+o', 'editor'], ['ctrl+t', 'insert'], ['ctrl+y', 'copy path'],
+    ...(content ? [['tab', 'fields'], ['alt+←→', 'fold']] : []), ['esc', 'close'], ['f1', 'keys']];
+  while (lines.length < H - 1) lines.push(line([], W));
+  lines.length = H - 1;
+  state.hints = ui.keys(keys, W);
+  lines.push(line(state.hints, W, C.header));
+  if (state.help) ui.help(lines, W, state.mode === 'content' ? 'Search in files' : 'Go to file', HELP, state.help);
   paint(lines.slice(0, H));
 }
+
+// The key help (f1: ? is typed in the fields), over the whole pane (ui.help); state.help: { top, find } while it shows.
+const HELP = [
+  ['Results', [['↑↓', 'select'], ['ctrl+n', 'next'], ['ctrl+k', 'previous'], ['pgup pgdn', 'page'], ['ctrl+home', 'first'],
+    ['ctrl+end', 'last'], ['alt+← →', 'fold, unfold a file']]],
+  ['Open', [['⏎', 'in the preview'], ['ctrl+o', 'in the editor'], ['alt+⏎', 'in the editor'], ['ctrl+t', 'insert in terminal'],
+    ['ctrl+y', 'copy the path']]],
+  ['Search', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['tab', 'next field'], ['alt+c', 'match case'],
+    ['alt+w', 'whole word'], ['alt+r', 'regular expression'], ['alt+h', 'hidden files']]],
+  ['Pane', [['f1', 'keys'], ['esc', 'close']]],
+];
 
 function paintSoon() {
   if (!paintTimer) paintTimer = setTimeout(render, 50);
@@ -571,7 +607,7 @@ function flash(text) {
   state.flash = text;
   render();
   clearTimeout(flash.timer);
-  flash.timer = setTimeout(() => { state.flash = null; render(); }, 2500);
+  flash.timer = setTimeout(() => { state.flash = null; render(); }, ui.messageTime(ui.messageKind(text)));
 }
 
 // --- actions
@@ -641,7 +677,9 @@ function fold(collapsed) {
 
 function key(k) {
   const page = listHeight() - 1;
+  if (state.help && k !== 'ctrl+c') { if (!ui.helpKey(k, state.help)) state.help = null; return render(); }
   switch (k) {
+    case 'f1': state.help = { top: 0, find: null }; return render();
     case 'escape': case 'ctrl+c': return process.exit(0);
     case 'ctrl+p': return setMode('files');
     case 'ctrl+f': return setMode('content');
@@ -695,6 +733,12 @@ function paste(text) {
 }
 
 function mouse({ button, x, y, press, wheel, drag }) {
+  if (state.help) { if (!ui.helpMouse({ button, x, y, press, wheel, drag }, state.help)) state.help = null; return render(); }
+  // A click on a hint of the footer does what its key does.
+  if (y === ui.size().H && press && !drag && !wheel && button === 0) {
+    const k = ui.keyAt(state.hints, x - 1);
+    if (k) return key(k);
+  }
   if (wheel) {
     state.top = Math.max(0, Math.min(state.top + wheel * 3, rows().length - listHeight()));
     return render();
