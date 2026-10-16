@@ -57,6 +57,7 @@ const S = {
   allBranches: settings.scmGraphAll !== false, // History: every branch and remote branch, or the current one
   // History: the commits of one file only (its absolute path), from the explorer's or the preview's File history.
   histFile: process.env.EXPLORER_HISTORY || null,
+  histNames: [],   // the names the file had, from git log --follow, its current one first
   history: [], stashes: [], refs: null,
 };
 let hits = [];  // clickable areas of the last frame: { y, x0, x1, fn }
@@ -248,11 +249,19 @@ async function loadStatus() {
 }
 
 async function loadHistory() {
+  // One file: every name it had (--follow sees its renames, but on one line of commits only, without the graph), whose
+  // commits the log below then lists.
+  if (S.histFile) {
+    const name = histName();
+    const res = await git(['log', '--follow', '--name-only', '-z', '--format=', '-n', '2000', 'HEAD', '--', name]);
+    const names = res.code === 0 ? res.out.split(/[\0\n]/).filter(Boolean) : [];
+    S.histNames = [...new Set([name, ...names])];
+  }
   // Children before their parents, by date, as the graph needs. For one file, --parents links each commit to the
   // previous one that changed it, so that the graph joins them up.
   const revs = S.allBranches ? [...(S.repo.hasHead ? ['HEAD'] : []), '--branches', '--remotes'] : [];
   const res = await git(['log', '--no-show-signature', '--decorate=full', '--date-order', '-n', '500',
-    '--format=%H%x1f%h%x1f%s%x1f%an%x1f%at%x1f%D%x1f%P', ...(S.histFile ? ['--parents'] : []), ...revs, '--', ...(S.histFile ? [histName()] : [])]);
+    '--format=%H%x1f%h%x1f%s%x1f%an%x1f%at%x1f%D%x1f%P', ...(S.histFile ? ['--parents'] : []), ...revs, '--', ...(S.histFile ? S.histNames : [])]);
   S.history = res.code !== 0 ? [] : res.out.split('\n').filter(Boolean).map(l => {
     const [hash, short, subject, author, time, refs, parents] = l.split('\x1f');
     return { hash, short, subject, author, date: ago(+time), refs: refList(refs), head: /(^|, )HEAD($|,| ->)/.test(refs),
@@ -265,9 +274,11 @@ async function loadHistory() {
 // The file whose history is shown, relative to the repository (git runs there), through symbolic links (/home and
 // /var/home).
 const histName = () => path.relative(realPath(S.repo.top), realPath(S.histFile)).split(path.sep).join('/');
+// The file's former names, shown after its name: " ← old.js", " ← 2 names".
+const renamed = () => (S.histNames.length < 2 ? '' : S.histNames.length === 2 ? ` ← ${path.posix.basename(S.histNames[1])}` : ` ← ${S.histNames.length - 1} names`);
 // Back to the history of every file.
 function allFiles() {
-  S.histFile = null; S.histLoaded = false; S.cursor = 0; S.top = 0; S.selKey = null; S.diff = null;
+  S.histFile = null; S.histNames = []; S.histLoaded = false; S.cursor = 0; S.top = 0; S.selKey = null; S.diff = null;
   flash('History of every file');
   schedule();
 }
@@ -666,7 +677,7 @@ function tabs(W) {
     x += w + 1;
   });
   const right = S.view === 'changes' ? buttons([[S.tree ? '⊞ Tree' : '≡ List', toggleTree, DIM]], 1, W, 0)
-    : S.view === 'history' && S.histFile ? buttons([[`${ui.ellipsis(histName(), Math.max(8, W - x - 8))} ✕`, allFiles, fg(C.blue)]], 1, W, 0) : [];
+    : S.view === 'history' && S.histFile ? buttons([[`${ui.ellipsis(histName() + renamed(), Math.max(8, W - x - 8))} ✕`, allFiles, fg(C.blue)]], 1, W, 0) : [];
   return split(segs, right, W);
 }
 
@@ -1506,7 +1517,7 @@ function openRow(row, follow) {
   if (row.type === 'commit') {
     return showDiff(row.key, `${row.commit.short} ${row.commit.subject}`,
       ['show', ...diffs.DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', '--format=fuller', row.commit.hash,
-        ...(S.histFile ? ['--', histName()] : [])]);
+        ...(S.histFile ? ['--', ...S.histNames] : [])]);
   }
   if (row.type === 'stash') {
     return showDiff(row.key, `${row.stash.ref} ${row.stash.subject}`, ['stash', 'show', ...diffs.DIFF_OPTS, '--stat', '-p', '--include-untracked', row.stash.ref]);
