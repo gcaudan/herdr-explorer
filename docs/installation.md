@@ -15,6 +15,8 @@ updates are fast-forward pulls.
 | VS Code or another graphical editor (optional) | the external editor (see [Editor command](configuration.md#editor-command)) |
 | A terminal editor (optional) | the [Editor pane](usage.md#editor-pane) |
 | The [Claude Code](https://claude.com/claude-code) CLI, `claude` (optional) | commit messages written by Claude |
+| `dwebp`, from libwebp (optional) | WebP images in the preview (`webp` package on Linux, `brew install webp` on macOS) |
+| A terminal with the Kitty graphics protocol (optional) | sharp images in the preview, with **Settings → Images** (Kitty, Ghostty, WezTerm, Konsole…, with herdr's `terminal.kitty_graphics`, on by default); half blocks otherwise, see [Sharp images](usage.md#sharp-images) |
 
 ### Platform tools
 

@@ -13,13 +13,14 @@ The pane where a setting changes applies it at once; the last column says when t
 | `ignored` | `true` | Git-ignored files | show git-ignored files, greyed out | at their next opening |
 | `open` | `"preview"` | Enter opens | what `Enter` and a double-click do on a text file: `"preview"` or `"editor"` | at their next opening |
 | `editor` | `""` | Editor | external editor command, see below | at once (read at each use) |
-| `singleClick` | `false` | Single-click preview | a single click on a file shows it in the preview | at their next opening |
-| `follow` | `false` | Follow terminal | reveal the folder of the terminal next to the explorer, within the tab's folder | within 2 s |
+| `singleClick` | `false` | Preview follows selection | a file selected by a click or the arrow keys shows in the preview; the arrow keys only update a preview already open | at their next opening |
+| `follow` | `false` | Follow terminal | reveal the folder of the terminal next to the explorer, moving the root when it leaves the tree | within 2 s |
 | `side` | `"left"` | Dock side | `"left"` or `"right"`: where new explorers dock; an open explorer keeps its side | new tabs only |
 | `autoOpen` | `true` | Open automatically | open the explorer in every new tab that has a single pane; off: only with `prefix+f` | new tabs only |
 | `icons` | `""` | Icon theme | `""` for the Nerd Font icons, or `{ "id", "label", "file" }` of a VS Code icon theme | explorers within a second; source control at its next opening |
 | `wrap` | `false` | Wrap lines; preview `w`, Wrap chip | wrap long lines in the preview | other previews at their next opening |
 | `lineNumbers` | `true` | Line numbers; preview `L` | line number gutter in the preview | other previews at their next opening |
+| `images` | `"auto"` | Images; preview `p` (that pane only), the line under a pixelated image | `"blocks"` (pixelated), `"auto"` (sharp when the terminal has the Kitty graphics protocol) or `"pixels"` (always sharp), see [Sharp images](usage.md#sharp-images) | previews within a second |
 | `diffLayout` | `""` (unset) | Diff layout; diff `s` (source control and diff pane) | `"inline"` or `"split"` (side by side); `""` chooses by width | other diffs at their next opening |
 | `scmListShare` | `{}` | source control: drag the separator, `<` `>`, `shift+left` `shift+right` | share of the width taken by the list beside the diff, per view: `{ "changes": 0.3, "history": 0.6 }`; a view left out: 38 %, from 34 to 70 columns | other source control panes at their next opening |
 | `scmGraphAll` | `true` | source control History `a` | show every local and remote branch in History, or only the current one | other source control panes at their next opening |

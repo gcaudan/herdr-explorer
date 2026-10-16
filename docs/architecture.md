@@ -71,10 +71,35 @@ Inputs reach a pane through `--env` variables of `herdr plugin pane open`:
 | `EXPLORER_LINE` | preview | the line to scroll to (1-based) |
 | `EXPLORER_TAB` | preview | the tab id, which names its request file |
 | `EXPLORER_SEEN` | preview | the last request handled, across a restart |
-| `EXPLORER_PANE` | search, scm | the pane to act from |
+| `EXPLORER_PANE` | search, scm, diff | the pane to act from (the diff's notes go to the terminal next to it) |
+| `EXPLORER_HISTORY` | scm | a file whose history to show, in place of `EXPLORER_FILE` |
 | `EXPLORER_MODE`, `EXPLORER_QUERY` | search | `files` or `content`, and the first query |
 | `EXPLORER_EDITOR` | edit | the terminal editor command of the settings |
 | `EXPLORER_COMMIT`, `EXPLORER_STAGED` | diff | a commit, or the staged changes only (no caller sets them yet) |
+
+## Review notes
+
+The notes of a tab are kept in `notes-<tab id>.json` in the state folder, written to a temporary file then renamed:
+a list of `{ file, from, to, kind, text, t }`, the file absolute and the lines 1-based (0 for the whole file). The
+preview and the Changes pane add to it and poll it every 500 ms (`fs.watchFile`), so that a note taken in one shows
+in the other. Sending (`notes.send`) finds the terminal next to the explorer as **Insert into terminal** does,
+builds one line with the paths relative to that terminal's folder, types it with `herdr pane send-text` (no newline,
+so nothing is submitted, and control characters are removed from the notes), then removes the notes sent. The diff
+pane finds its tab with `herdr pane get`.
+
+## Images
+
+The preview asks the terminal, at start, whether it handles the Kitty graphics protocol (`a=q` query) and the size of
+a cell in pixels (`CSI 16 t`); `ui.decode` passes the answers to a `reply` handler instead of reading them as keys.
+herdr answers for the outer terminal. The `images` setting chooses: pixels when the terminal answered (`auto`, the
+default: until the answer, or for 500 ms, an image is not drawn), half blocks (`blocks`), or pixels without waiting
+(`pixels`); `p` overrides it in one pane, and each preview polls `settings.json` every second for a new value. The
+explorer sends the same query, only to tell in its settings whether the terminal has the protocol. In pixels, the
+image is decoded, scaled to the pane's size in pixels (box filter), sent once as zlib-compressed RGBA in 4096-byte
+chunks (`a=t`, image id `0x4846`), then placed over blank rows (`a=p`, `C=1` so that the cursor stays); it is placed
+again when its place changes, and deleted when another file shows, under the key help and at exit. Without the
+protocol, it is drawn with half blocks. WebP files go through `dwebp <absolute path> -o -`, whose PNG output is then
+decoded like any PNG.
 
 ## Preview requests
 

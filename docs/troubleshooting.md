@@ -125,7 +125,7 @@
 | `No config folder`, `Cannot write keys.json`     | herdr gave no config folder, or `keys.json` cannot be written (fix or delete an unreadable file) |
 | `Action failed`                                  | unexpected error in an action                                                      |
 | `File deleted`, `Folder`, `Not a regular file`, `Cannot read: <code>` | (Preview) the file is gone, is a folder, a pipe or device, or unreadable |
-| `No preview`, `<format> W×H (… no preview)`, `(too large for preview)`, `Unknown image format (…)`, `Empty file` | (Preview) image over a limit, in an unsupported format or encoding (for example `progressive, no preview`), or empty. `o` opens it |
+| `No preview`, `<format> W×H (… no preview)`, `(too large for preview)`, `Unknown image format (…)`, `Empty file` | (Preview) image over a limit, in an unsupported format or encoding (for example `arithmetic, no preview`), or empty. `o` opens it |
 
 ### Updates
 

@@ -25,17 +25,21 @@ Plugin id `gcaudan.explorer` · herdr 0.9.3 or later · Linux, macOS and Windows
 - **Explorer**: a file tree docked on the left (or right) of every new tab, without taking the focus: VS Code git
   decorations, filter as you type, file actions (new, rename, duplicate, trash, stage, discard), *Set as root*, and
   an optional mode that follows the terminal's folder.
+- **Review**: the changed files only, `]` and `[` to step through them in the preview, and review notes on lines of
+  the preview or the diff, typed together into the agent's prompt (`src/app.js:12-14 (fix): …`) without submitting
+  it.
 - **Insert into terminal**: types a file's path, relative and quoted, into the terminal next to the explorer;
   prefixed with `@` when an agent such as Claude Code runs there.
 - **Preview**: one pane per tab, reused for every file: syntax highlighting for 27 languages and formats, rendered
-  Markdown (GFM tables, task lists, alerts, simple Mermaid flowcharts), images drawn with half blocks, a hex dump for
-  binary files. Reloads as soon as the file changes on disk. Find, wrap, zoom, and mouse selection copied to the
-  clipboard.
+  Markdown (GFM tables, task lists, alerts, simple Mermaid flowcharts, local images), images in real pixels where the
+  terminal has the Kitty graphics protocol (else half blocks), WebP and TIFF included, a hex dump for binary files.
+  Reloads as soon as the file changes on disk. Find, wrap, zoom, and mouse selection copied to the clipboard.
 - **Search**: fuzzy *Go to file* (`path:line` supported) and *Search in files* (case, whole word, regex, globs),
   with a preview of the selected result on wide screens.
-- **Source control**: stage, unstage, discard, commit or amend (with an optional message written by Claude), fetch, pull,
-  push, branches, stashes and refs; a history with a branch graph, branch comparisons; continue or abort a merge,
-  rebase, cherry-pick or revert. Inline or side-by-side diffs with word-level highlights.
+- **Source control**: stage, unstage, discard, commit or amend (with an optional message written by Claude), fetch,
+  pull, push, branches, stashes and refs; a history with a branch graph, also for a single file, branch comparisons;
+  continue or abort a merge, rebase, cherry-pick or revert. Inline or side-by-side diffs with word-level highlights,
+  compared with HEAD or with where the branch started.
 - **Editors**: your graphical editor (VS Code by default), a terminal editor in a full-tab pane, or the system's
   application for documents and media. Executables and scripts are never run.
 - **Icons**: Nerd Font icons, or the colours of any VS Code icon theme you have installed.

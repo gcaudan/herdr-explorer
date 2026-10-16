@@ -80,10 +80,13 @@ The last column is the action's name in [`keys.json`](configuration.md#config-fo
 | `p`                      | preview the file and focus the preview                                         | `preview` |
 | `y` / `Y`                | copy the absolute / relative path                                              | `copyPath` / `copyRelativePath` |
 | `backspace`              | make the parent folder the tree root                                           | `parentRoot` |
+| `c`                      | changed files only (see [Reviewing changes](#reviewing-changes))               | `changedOnly` |
+| `]` / `[`                | next / previous changed file, previewed                                        | `nextChange` / `previousChange` |
+| `H`                      | history of the selected file, in source control                               | `fileHistory` |
 
 ### Mouse
 
-- **Click** a folder to fold or unfold it, a file to select it (and preview it, with **Single-click preview**
+- **Click** a folder to fold or unfold it, a file to select it (and preview it, with **Preview follows selection**
   on). **Double-click** a file (within 400 ms) to open it.
 - **Right-click** a row for its action menu, below the last row for the root menu: in this pane, right-clicks go
   to the explorer instead of herdr's menu.
@@ -102,6 +105,16 @@ and folders cannot be folded while filtering.
 - `tab` leaves the field and keeps the filter, so the single-letter keys work again; the bottom line then shows the
   filter in blue and `esc clear`. Click it to type again.
 - `escape` closes the filter and reveals the selected entry in the full tree.
+
+### Reviewing changes
+
+`c` keeps in the tree only the changed files (the git badges `M`, `A`, `U`, `R`, `D`, `!`) and the folders holding
+them, all unfolded; the bottom line shows `● Changes` and their count, and `escape` (or `c` again) brings the whole
+tree back with the selected entry shown. The filter (`/`) then searches the changed files only.
+
+`]` and `[` move to the next and previous changed file in the tree's order, unfolding its folders, and show it in the
+preview; past the last one, they start again from the first. They work in the whole tree too. Files deleted from
+the disk are not in the tree: see them in source control.
 
 ### Prompts
 
@@ -160,6 +173,7 @@ Source control asks the same way.
 | Copy path                | all                               | absolute path                                                |
 | Copy relative path       | all                               | relative to the tree root                                    |
 | View changes             | changed entries in a repository   | Changes pane                                                 |
+| File history             | files in a repository, not untracked | source control's History, limited to the file             |
 | Stage                    | changed entries                   | `git add -A` on the path                                     |
 | Unstage                  | entries in a repository, not ignored | restore the index from HEAD                               |
 | Discard changes…         | changed entries                   | after confirmation, see below                                |
@@ -190,9 +204,9 @@ setting. The settings are shared by every explorer. See [configuration.md](confi
 | Group     | Settings                                                      |
 | --------- | ------------------------------------------------------------- |
 | Tree      | Hidden files, Git-ignored files, Follow terminal, Icon theme  |
-| Opening   | Enter opens (preview or editor), Editor, Single-click preview |
+| Opening   | Enter opens (preview or editor), Editor, Preview follows selection |
 | Next tabs | Dock side (left or right), Open automatically                 |
-| Preview   | Wrap lines, Line numbers, Diff layout (auto, split, inline)   |
+| Preview   | Wrap lines, Line numbers, Images, Diff layout (auto, split, inline) |
 | General   | Key bindings, Check for updates                               |
 
 `up`/`down` (and their bound keys, page and first/last included) move, `/` finds a setting, `right`/`l` and
@@ -259,7 +273,8 @@ its border. A click runs an item; a click elsewhere closes the menu.
   tree root.
 - **Follow the terminal folder**: when on, the explorer checks every 2 s the folder of the terminal next to it
   (that of its running program when herdr knows it) and reveals it. A folder outside the tree root but inside the
-  tab's folder brings the root back to the tab's folder; a folder outside the tab's folder is not followed.
+  tab's folder brings the root back to the tab's folder; a folder outside the tab's folder becomes the root, except
+  `$HOME`, one of its parents or the filesystem root, which are not followed.
 
 ## Preview
 
@@ -287,16 +302,37 @@ lists the main keys, which a click runs, and the scroll percentage.
 | `w`                          | toggle line wrap (saved)                                 |
 | `L`                          | toggle line numbers (saved)                              |
 | `m`                          | Markdown: rendered / source                              |
+| `p`                          | image: sharp / pixelated, in this pane only (see [Sharp images](#sharp-images)) |
 | `r`                          | reload                                                   |
 | `e`                          | edit in the terminal editor                              |
 | `o`                          | open (system application for documents and media, else the editor) |
 | `O`                          | open in app (allowed types only)                         |
-| `y` / `Y`                    | copy the absolute / relative path                        |
+| `y` / `Y`                    | copy the absolute / relative path; `Y` adds the selected lines (`src/app.js:12-14`) |
+| `H`                          | history of the file, in source control                   |
+| `a`                          | take a review note, see [Review notes](#review-notes)    |
+| `A` / `u`                    | send the notes to the agent / remove the last note       |
 | `z`                          | zoom the pane (toggle)                                   |
 | `<` / `>`                    | 4 columns narrower / wider (hold to repeat)              |
 | `shift+left` `shift+right`   | move the inner border 4 columns that way                 |
 | `ctrl+p`                     | Go to file                                               |
 | `ctrl+f`                     | Search in files                                          |
+
+### Review notes
+
+Notes are remarks on lines of a file, gathered while reading, then typed together into the agent's prompt. They
+belong to the tab: the preview and the [Changes pane](#changes-diff-pane) of a tab share them.
+
+- `a` opens a field in the footer for a note on the selected lines (select them with the mouse), else on the line
+  the preview was opened at (a search result), else on the whole file. `tab` (`shift+tab` backwards) gives it a
+  kind, `fix`, `question`, `nit` or `verify`, shown before the text; `enter` saves it, `escape` cancels.
+- Each note shows in yellow under the last line it covers, whose numbers turn yellow; notes on the whole file, and
+  every note in rendered Markdown, show at the top.
+- `A` types the tab's notes, sorted by file and line, into the terminal next to the explorer, on one line, without
+  submitting it, then clears them: `Review notes: src/app.js:12-14 (fix): rename it; README.md: add an example`. The
+  paths are relative to the terminal's folder. The footer shows `A send N notes` while there are some.
+- `u` removes the last note taken.
+
+The notes live in the plugin's state folder until they are sent, so they survive closing the preview.
 
 ### Find
 
@@ -318,6 +354,8 @@ Every match is highlighted, the current one brighter, also in wrapped lines and 
   spaces.
 - Released outside the pane, the selection is copied at the next click or when the pane loses focus. Selection
   works everywhere but in images.
+- Under a pixelated image, a click on **p sharp** shows it sharp, on **sharp by default** sets **Images** to
+  *sharp if possible*, and on **Sharp images ↗** opens [Sharp images](#sharp-images) in the browser.
 - The **wheel** scrolls 3 lines, and the header switches change the rendering, wrap or line numbers.
 
 ### What it shows
@@ -327,10 +365,38 @@ Every match is highlighted, the current one brighter, also in wrapped lines and 
   Makefile.
 - **Markdown** (`md markdown mdx mkd`): headings, inline styles, lists, quotes, highlighted code
   blocks, GFM tables and task lists, alerts, and simple Mermaid flowcharts.
-- **Images** (`png apng jpg jpeg jpe jfif gif bmp dib ico cur webp svg`): PNG, GIF (first frame), BMP,
-  baseline JPEG and ICO/CUR are drawn with half blocks. For other formats, such as WebP, SVG or
-  progressive JPEG, the preview shows the format and size only.
+- **Markdown images**: a local image of a paragraph (Markdown image syntax, or `<img src>`), relative to the Markdown file,
+  is drawn with half blocks under it, 60 columns and 20 rows at most. Links to the web are never fetched.
+- **Images** (`png apng jpg jpeg jpe jfif gif bmp dib ico cur webp tif tiff svg`): PNG, GIF (first frame), BMP,
+  JPEG (baseline and progressive), TIFF and ICO/CUR are decoded by the plugin, WebP by `dwebp` when it is installed
+  (libwebp, see [Requirements](installation.md#requirements)). When herdr can show images (the Kitty graphics
+  protocol), the image is drawn in real pixels, fitted to the pane; otherwise with half blocks (see
+  [Sharp images](#sharp-images)). For other formats, such as SVG or a lossless or
+  arithmetic-coded JPEG, the preview shows the format and size only. TIFF: strips (not tiles), one plane,
+  uncompressed, PackBits, LZW or Deflate.
 - **Binary** (a NUL byte in the first 8000 bytes): a hex dump.
+
+### Sharp images
+
+Images are drawn either pixelated, with half blocks (two coloured squares per cell), which works in any terminal, or
+sharp, in real pixels with the Kitty graphics protocol. By default, they are sharp when the terminal has the
+protocol, which needs two things: herdr running in a terminal
+that has it, such as [Kitty](https://sw.kovidgoyal.net/kitty/), [Ghostty](https://ghostty.org/),
+[WezTerm](https://wezterm.org/) or Konsole, and herdr's `terminal.kitty_graphics` left on (its default). The
+plugin cannot install a terminal: install one of them, then start herdr in it.
+
+**Settings → Images** chooses for every preview:
+
+| Value | Images |
+|---|---|
+| sharp if possible (default) | in pixels when the terminal answers the protocol's query, else half blocks |
+| pixelated | half blocks |
+| always sharp | in pixels without waiting for the answer, for a terminal that has the protocol but does not answer; nothing shows where it does not have it |
+
+The setting tells whether this terminal answered. `p` switches the image shown between sharp and pixelated, in
+this pane only, until the setting changes. Under a pixelated image, a line tells how to see it sharp: `p` and
+**sharp by default** when the terminal has the protocol, else a link to this section. Images in rendered Markdown
+are always pixelated.
 
 ## Search popup
 
@@ -469,6 +535,11 @@ and `o` opens it in the editor.
 **Stashes view**: `n` new stash, named on a row above the list (the message is optional): `enter`
 stashes the untracked files too, `alt+enter` or `ctrl+o` leaves them. `a` apply, `o` pop, `d` drop.
 
+**File history**: from the explorer (`H` or **File history**) or the preview (`H`), the History view shows only the
+commits that changed the file, each linked to the previous one in the graph, and a commit's diff is limited to the
+file. The file's path shows on the right of the tabs: a click on it, or `x`, goes back to every file. Renames are not
+followed.
+
 **History view**: the branch graph, the subject, the branches and remote branches at the commit (in their lane's
 colour) and its tags (yellow); on the right, the author (from 90 columns), the age and the short hash. Each branch
 has its own lane and colour, linked to the commit it started from and to the merge that brought it back; its
@@ -523,13 +594,26 @@ working-tree edits.
 
 Opened by **View changes**. For a file or folder, it compares tracked files with HEAD (index and working tree;
 before the first commit, the staged then the unstaged changes) and shows untracked files in full, up to 200. The
-header shows the name, the added and removed line counts, and the clickable layout switch **Inline · Side by
-side**; the footer, the keys and how far down the diff is. The diff is inline, or side by side from 120 columns,
-with changed words highlighted.
+header shows the name, the added and removed line counts, what the changes are compared with, and the clickable
+layout switch **Inline · Side by side**; the footer, the keys and how far down the diff is. The diff is inline, or
+side by side from 120 columns, with changed words highlighted.
 
-Its keys are those of a focused diff in source control (see **Diff focused** above), plus `q` `escape` `ctrl+c`
-to close, `ctrl+p` / `ctrl+f` for Go to file / Search in files and `?` `f1` for all the keys. The wheel scrolls 3
-rows.
+A cursor, a blue bar in the first column, moves over the rows: `up` `k` / `down` `j` `enter`, `pageup` /
+`pagedown` `space`, `ctrl+u` / `ctrl+d`, `home` `g` / `end` `G`, or a click on a row; the view follows it, and the
+wheel scrolls 3 rows. `n`/`N` put it on the next or previous hunk.
+
+| Key        | Action                                                                                         |
+| ---------- | ---------------------------------------------------------------------------------------------- |
+| `a`        | a [review note](#review-notes) on the cursor's line (a removed line: the line now in its place), on the whole hunk from its `@@` row, on the whole file from its name |
+| `A` / `u`  | send the tab's notes to the agent / remove the last note                                       |
+| `y`        | copy the cursor's line as `path:line`, relative to the pane's folder                           |
+| `b`        | compare with HEAD, or with the point where the branch left the default branch (the remote's `HEAD`, else `main` or `master`): every change of the branch, committed or not |
+| `s`        | inline / side by side (kept for the next diffs)                                                |
+| `q` `escape` `ctrl+c` | close                                                                               |
+| `ctrl+p` / `ctrl+f` | Go to file / Search in files                                                          |
+| `?` `f1`   | all the keys                                                                                   |
+
+Lines with a note have a yellow bar in the first column.
 
 ## Editor pane
 

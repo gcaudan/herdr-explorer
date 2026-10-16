@@ -9,7 +9,7 @@ hostile repository cannot run code, leak credentials or take over your terminal 
 - **No shell**. Every program runs with an argument list (`execFile`, `spawn`), never through a shell command line.
   The one exception is an npm-installed `claude.cmd` on Windows, which can only run through `cmd`, with fixed
   arguments.
-- **Absolute paths**. `git`, `herdr`, `claude`, a graphical editor command, and on Windows every program, run from
+- **Absolute paths**. `git`, `herdr`, `claude`, `dwebp`, a graphical editor command, and on Windows every program, run from
   their absolute path, looked up in the absolute folders of `PATH` only. On Windows, a bare program name is first
   looked up in the working directory, and elsewhere an empty or `.` entry of `PATH` means that folder too: a
   repository could plant a `git` there. On Linux and macOS, the clipboard, trash and file manager tools and the
@@ -100,6 +100,13 @@ contains spaces or control characters is refused; the others pass after `--end-o
   they hold anything but plain characters (quoting valid in POSIX shells and in PowerShell, where typographic quotes
   are escaped too). For an agent, a path with spaces is quoted, so its end is clear and the rest cannot read as
   instructions.
+- **Review notes** are typed on one line, without submitting it: control characters are removed from the note texts
+  when they are saved and again when they are sent, and the line is refused if one remains. The text goes into the
+  agent's prompt as you typed it, so a note asking for something is a request like any other you type there.
+- **Kitty graphics**: the preview sends images as pixels it decoded itself, never a file path for the terminal to
+  read; the terminal's answers to its queries are read apart from the keys. **Settings → Images** can keep them pixelated,
+  drawn with characters only. The link under a pixelated image opens one fixed `https://` page of
+  this documentation in the browser, never an address taken from a file.
 
 ## Commit messages from Claude
 
@@ -122,7 +129,9 @@ Files are untrusted input:
 - The preview reads at most 8 MB, highlights files up to 1 MB and lines up to 2,000 characters, and dumps the first
   64 KB of a binary file.
 - Images are decoded in JavaScript, with their size checked before anything is allocated (50 MB, 50 megapixels,
-  256 MB of inflated PNG data), and every loop bounded.
+  256 MB of inflated PNG or TIFF data), and every loop bounded. WebP is decoded by `dwebp` (libwebp), run on the
+  absolute path of the file, for 20 s at most; its output is checked to be a PNG and decoded like one.
+- Images in rendered Markdown are only local files, read like the preview's images; a URL is never fetched.
 - The Markdown renderer limits nested inline spans to 16 levels and drops inline markup in paragraphs over 20,000
   characters.
 - Search skips files that are not regular, binary files and files over 2 MB, stops at 5,000 matches and walks at most
