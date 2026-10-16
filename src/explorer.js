@@ -111,7 +111,8 @@ const state = {
                    // (focus 'yes', moved with ← →), to confirm; any other key to cancel
 };
 const scrollbar = new ui.Scrollbar(top => { state.top = top; render(); });
-const git = { top: null, prefix: '', files: new Map(), dirs: new Map(), untracked: new Set(), ignored: new Set() };
+// gone: the deleted files no longer on disk, which the tree shows only among the changed files.
+const git = { top: null, prefix: '', files: new Map(), dirs: new Map(), untracked: new Set(), ignored: new Set(), gone: [] };
 const cache = new Map(); // relative folder → sorted entries
 
 // The repository config is read again before each call, as it may change while the explorer runs.
@@ -120,6 +121,9 @@ const parentOf = rel => (rel === '' ? null : rel.includes('/') ? rel.slice(0, re
 const absOf = rel => path.join(ROOT, rel);
 
 // --- tree
+
+// Folders first, then names, numbers in their order.
+const ENTRY_ORDER = (a, b) => (b.dir - a.dir) || a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
 
 function readDir(rel) {
   if (cache.has(rel)) return cache.get(rel);
@@ -132,7 +136,7 @@ function readDir(rel) {
         if (e.isSymbolicLink()) try { dir = fs.statSync(path.join(ROOT, rel, e.name)).isDirectory(); } catch { }
         return { name: e.name, dir, rel: rel ? `${rel}/${e.name}` : e.name };
       })
-      .sort((a, b) => (b.dir - a.dir) || a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+      .sort(ENTRY_ORDER);
   } catch { }
   cache.set(rel, entries);
   return entries;
@@ -145,6 +149,19 @@ const visible = rel => readDir(rel).filter(e => (settings.hidden || !e.name.star
 // A changed entry: a file with a git change, or a folder holding one.
 const isChanged = e => { const d = decoration(e); return !!d && d !== '!'; };
 
+// The entries of a folder among the changed files: those on disk, and the deleted files and folders no longer there
+// (gone), in the tree's order.
+function withGone(rel) {
+  const list = visible(rel), here = new Set(list.map(e => e.name)), pre = rel ? `${rel}/` : '', gone = new Map();
+  for (const g of git.gone) {
+    if (!g.startsWith(pre)) continue;
+    const rest = g.slice(pre.length), i = rest.indexOf('/'), name = i < 0 ? rest : rest.slice(0, i);
+    if (!here.has(name) && (settings.hidden || !name.startsWith('.'))) gone.set(name, i >= 0);
+  }
+  if (!gone.size) return list;
+  return [...list, ...[...gone].map(([name, dir]) => ({ name, dir, rel: pre + name, gone: true }))].sort(ENTRY_ORDER);
+}
+
 function buildRows() {
   const rows = [];
   const query = state.filter && state.filter.field.value.toLowerCase();
@@ -153,7 +170,7 @@ function buildRows() {
     let budget = FILTER_BUDGET;
     const walk = (rel, depth) => {
       const found = [];
-      for (const e of visible(rel)) {
+      for (const e of state.changed ? withGone(rel) : visible(rel)) {
         if (--budget < 0) break;
         if (state.changed && !isChanged(e)) continue;
         const at = e.name.toLowerCase().indexOf(query);
@@ -167,7 +184,7 @@ function buildRows() {
     // Only the changed entries, every folder unfolded, within the filter's budget.
     let budget = FILTER_BUDGET;
     const walk = (rel, depth) => {
-      for (const e of visible(rel)) {
+      for (const e of withGone(rel)) {
         if (--budget < 0) return;
         if (!isChanged(e)) continue;
         rows.push({ ...e, depth, open: e.dir });
@@ -238,7 +255,7 @@ function setRoot(dir) {
   state.selected = null;
   load();
   cache.clear();
-  Object.assign(git, { top: null, prefix: '', files: new Map(), dirs: new Map(), untracked: new Set(), ignored: new Set() });
+  Object.assign(git, { top: null, prefix: '', files: new Map(), dirs: new Map(), untracked: new Set(), ignored: new Set(), gone: [] });
   // Going up: the folder left is selected.
   const back = path.relative(ROOT, from).split(path.sep).join('/');
   if (back && !back.startsWith('..') && !path.isAbsolute(back)) revealRel(back);
@@ -304,6 +321,7 @@ async function refreshGit() {
       if (!git.dirs.has(a) || RANK[c] > RANK[git.dirs.get(a)]) git.dirs.set(a, c);
     }
   }
+  git.gone = [...git.files].filter(([rel, c]) => c === 'D' && !fs.existsSync(absOf(rel))).map(([rel]) => rel);
 }
 
 // Decoration of an entry: that of an ignored or untracked folder extends to all its contents.
@@ -584,7 +602,8 @@ function changedLine(W) {
 
 function row(r, W, selected) {
   const deco = decoration(r);
-  const color = deco ? fg(GIT[deco]) : '';
+  // A deleted entry no longer on disk: struck through.
+  const color = (deco ? fg(GIT[deco]) : '') + (r.gone ? '\x1b[9m' : '');
   const icon = icons.icon(theme, r.name, r.dir, r.open);
   const indent = ' '.repeat(1 + r.depth * 2);
   const chevron = r.dir ? glyph(CHEVRON[r.open ? 1 : 0]) : ' ';
@@ -610,6 +629,8 @@ function row(r, W, selected) {
 async function openFile(r) {
   if (!r || r.dir) return;
   const abs = absOf(r.rel);
+  // A deleted file: what it held, in its diff.
+  if (r.gone) return runAction(() => actions.diff(abs, ROOT, PANE));
   if (settings.open === 'preview' && actions.canPreview(abs)) return runAction(() => actions.preview(abs, ROOT, PANE));
   return runAction(() => actions.open(abs, PANE));
 }
@@ -684,7 +705,16 @@ function deleteEntry(r) {
 function menuItems(r) {
   const items = [];
   const dirRel = r ? (r.dir ? r.rel : parentOf(r.rel)) : '';
-  if (r) {
+  if (r && r.gone) {
+    // A deleted entry: its changes and history, or back with Discard.
+    const abs = absOf(r.rel);
+    items.push(['View changes', () => actions.diff(abs, ROOT, PANE)]);
+    if (!r.dir) items.push(['File history', () => actions.scm(ROOT, PANE, abs, true), 'fileHistory']);
+    items.push(null, ['Stage', () => actions.stage(abs, ROOT)], ['Unstage', () => actions.unstage(abs, ROOT)],
+      ['Discard changes…', () => confirm({ title: 'Restore it?', name: r.name + (r.dir ? '/' : ''), where: whereOf(r.rel),
+        note: 'Its changes are discarded.', action: 'Restore' }, () => runAction(() => actions.discard(abs, ROOT))), null, true],
+      null, ['Copy relative path', () => actions.copy(r.rel), 'copyRelativePath']);
+  } else if (r) {
     const abs = absOf(r.rel);
     const deco = decoration(r);
     if (!r.dir) {
@@ -1373,7 +1403,7 @@ function changedFiles() {
   const out = [];
   let budget = FILTER_BUDGET;
   const walk = rel => {
-    for (const e of visible(rel)) {
+    for (const e of withGone(rel)) {
       if (--budget < 0) return;
       if (!isChanged(e)) continue;
       if (e.dir) walk(e.rel); else out.push(e.rel);
@@ -1407,10 +1437,19 @@ function nextChange(dir) {
   else if (dir > 0) { i = list.findIndex(f => treeBefore(r.rel, r.dir, f, false)); if (i < 0) i = 0; }
   else { i = list.findLastIndex(f => treeBefore(f, false, r.rel, r.dir)); if (i < 0) i = list.length - 1; }
   const rel = list[i];
-  revealRel(rel);
+  if (!git.gone.includes(rel)) revealRel(rel);
+  else {
+    // A deleted file shows only among the changed files, every folder unfolded there.
+    state.changed = true; state.selected = rel;
+    buildRows(); reveal();
+  }
   render();
   const abs = absOf(rel);
-  if (actions.canPreview(abs)) runAction(() => actions.preview(abs, ROOT, PANE));
+  if (git.gone.includes(rel)) {
+    flash('Deleted · enter: its changes');
+    // The preview, when open, leaves the file it showed (it tells the file is deleted).
+    actions.preview(abs, ROOT, PANE, 0, false, false).catch(() => { });
+  } else if (actions.canPreview(abs)) runAction(() => actions.preview(abs, ROOT, PANE));
 }
 
 function closeFilter() {
@@ -1449,11 +1488,15 @@ function followSelection() {
   }, 150);
 }
 
+// The actions that need the entry on disk, refused on a deleted one.
+const ON_DISK = new Set(['rename', 'delete', 'edit', 'openInEditor', 'openInApp', 'preview', 'copyPath', 'newFile', 'newFolder', 'searchInFiles']);
+
 // An action of the tree, from its key.
 function listAction(action) {
   const r = state.rows[state.cursor];
   const page = bodyHeight() - 1;
   const dirOf = () => (r ? (r.dir ? r.rel : parentOf(r.rel)) : '');
+  if (r && r.gone && ON_DISK.has(action)) return flash('Deleted: Discard changes in the menu restores it');
   switch (action) {
     case 'up': select(state.cursor - 1); break;
     case 'down': select(state.cursor + 1); break;
