@@ -373,7 +373,9 @@ async function refresh() {
 // changed file of the folder.
 reveal.file = process.env.EXPLORER_FILE || null;
 function reveal(abs) {
-  const real = p => { try { return fs.realpathSync(p); } catch { return path.join(real(path.dirname(p)), path.basename(p)); } };
+  const real = p => {
+    try { return fs.realpathSync(p); } catch { const up = path.dirname(p); return up === p ? p : path.join(real(up), path.basename(p)); }
+  };
   const rel = path.relative(real(S.repo.top), real(abs)).split(path.sep).join('/');
   const r = S.repo, inside = p => !rel || p === rel || p.startsWith(rel + '/');
   const it = rel.startsWith('..') ? null : [...r.conflicts, ...r.staged, ...r.changes].find(i => inside(i.path));
@@ -494,7 +496,12 @@ const SPIN = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏';
 const spinner = () => SPIN[Math.floor(Date.now() / 100) % SPIN.length];
 const wide = () => ui.size().W >= SPLIT;
 const pad = (text, w) => { const t = ui.ellipsis(text, w); return t + ' '.repeat(Math.max(0, w - ui.textWidth(t))); };
-const tilde = p => { const h = os.homedir(); return p === h || p.startsWith(h + path.sep) ? `~${p.slice(h.length)}` : p; };
+// Windows paths ignore case, and git gives them with '/'.
+const samePath = (a, b) => (WIN ? a.toLowerCase() === b.toLowerCase() : a === b);
+const tilde = p => {
+  const h = os.homedir(), abs = path.resolve(p);
+  return samePath(abs, h) || samePath(abs.slice(0, h.length + 1), h + path.sep) ? `~${abs.slice(h.length)}` : p;
+};
 
 // A line made of a left part, cut to fit, and a right part kept whole (buttons, counts).
 function split(left, right, width, back) {
@@ -579,7 +586,7 @@ function rowLine(row, width, y, selected) {
   if (row.type === 'tag') return split([[indent + '  ', ''], [row.ref.name, fg(C.yellow)], [`  ${row.ref.subject}`, DIM]], [[` ${row.ref.date} `, DIM]], width, back);
   if (row.type === 'remote') return split([[indent + '  ', ''], [row.ref.name, BOLD], [`  ${row.ref.url}`, DIM]], [], width, back);
   if (row.type === 'worktree') {
-    const w = row.ref, here = path.resolve(w.path) === S.repo.top;
+    const w = row.ref, here = samePath(path.resolve(w.path), S.repo.top);
     return split([[indent + '  ', ''], [path.basename(w.path), ''], [here ? '  this folder' : '', DIM], [`  ${w.branch}`, fg(C.blue)],
       [`  ${tilde(w.path)}`, DIM]], [], width, back);
   }
@@ -1231,14 +1238,14 @@ async function checkout(b) {
 }
 
 // The new branch named on the picker's first row, from the filter, else the current branch's prefix (feat/).
-// Enter creates it and switches to it, alt+Enter only creates it.
+// Enter creates it and switches to it, alt+Enter or ctrl+O only creates it.
 function newBranch(value) {
   const cur = (S.repo && S.repo.branch) || '';
   const start = value ? value.replace(/\s+/g, '-') : cur.includes('/') ? cur.slice(0, cur.lastIndexOf('/') + 1) : '';
   if (!S.picker) openPicker();
   if (!S.picker) return;
   S.picker.sel = 0; S.picker.top = 0;
-  inline('branch', start, `from ${cur || 'HEAD'}`, [['⏎', 'create and switch'], ['alt+⏎', 'create only'], ['esc', 'cancel']],
+  inline('branch', start, `from ${cur || 'HEAD'}`, [['⏎', 'create and switch'], ['ctrl+o', 'create only'], ['esc', 'cancel']],
     async (name, alt) => {
       name = name.trim();
       if (!name) return;
@@ -1250,8 +1257,8 @@ function newBranch(value) {
 }
 
 // A name typed in place, on its row (the picker's first one, or the list's first one): S.inline { kind, field,
-// right (dimmed on the right), keys (the status line's), done(value, alt) }. Enter or alt+Enter gives the value,
-// Escape cancels.
+// right (dimmed on the right), keys (the status line's), done(value, alt) }. Enter gives the value, alt+Enter or
+// ctrl+O too, with alt (Windows Terminal keeps alt+Enter for full screen). Escape cancels.
 function inline(kind, value, right, keys, done) {
   S.inline = { kind, field: new ui.Field(value), right, keys, done };
   draw();
@@ -1259,7 +1266,7 @@ function inline(kind, value, right, keys, done) {
 function inlineKey(k) {
   const it = S.inline;
   if (k === 'escape' || k === 'ctrl+c') { S.inline = null; return draw(); }
-  if (k === 'enter' || k === 'alt+enter') { S.inline = null; draw(); return it.done(it.field.value, k === 'alt+enter'); }
+  if (k === 'enter' || k === 'alt+enter' || k === 'ctrl+o') { S.inline = null; draw(); return it.done(it.field.value, k !== 'enter'); }
   it.field.key(k);
   draw();
 }
@@ -1329,8 +1336,8 @@ function newStash() {
   if (!S.repo) return;
   const n = S.repo.staged.length + S.repo.changes.length;
   if (S.view !== 'stashes') setView('stashes');
-  // Enter stashes the untracked files too, as before; alt+Enter leaves them.
-  inline('stash', '', `${n} file${n === 1 ? '' : 's'}`, [['⏎', 'stash'], ['alt+⏎', 'keep untracked files'], ['esc', 'cancel']], async (msg, alt) => {
+  // Enter stashes the untracked files too, as before; alt+Enter or ctrl+O leaves them.
+  inline('stash', '', `${n} file${n === 1 ? '' : 's'}`, [['⏎', 'stash'], ['ctrl+o', 'keep untracked files'], ['esc', 'cancel']], async (msg, alt) => {
     const res = await op('Stashing', ['stash', 'push', ...(alt ? [] : ['-u']), ...(msg.trim() ? ['-m', msg.trim()] : [])]);
     if (res) flash(res.out.trim().split('\n')[0] || 'Stashed');
   });
