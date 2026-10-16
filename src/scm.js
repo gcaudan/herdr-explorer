@@ -383,7 +383,8 @@ function reveal(abs) {
   // Its section and folders unfolded.
   S.collapsed.delete(it.sec);
   for (const k of [...S.collapsed]) if (k.startsWith(`${it.sec}:`) && it.path.startsWith(k.slice(it.sec.length + 1))) S.collapsed.delete(k);
-  rows = viewRows();
+  // Drawn first, so that the list's height is known (none before the first load) and select scrolls to the row.
+  draw();
   select(rows.findIndex(x => x.key === `${it.sec}:${it.path}`));
   draw();
 }
@@ -1369,10 +1370,10 @@ async function compare(row) {
     focus: S.diff ? S.diff.focus : false };
   S.diff = d;
   draw();
-  const side = only => git(['log', '--no-show-signature', only, '--cherry-mark', '-n', String(MAX_COMPARE),
+  const side = only => git(['log', '--no-show-signature', '--no-ext-diff', '--no-textconv', only, '--cherry-mark', '-n', String(MAX_COMPARE),
     '--format=%m%x1f%h%x1f%H%x1f%s%x1f%at', range, '--']);
   const [count, mine, theirs, stat] = await Promise.all([git(['rev-list', '--left-right', '--count', range, '--']),
-    side('--right-only'), side('--left-only'), git(['diff', '--numstat', '-M', range, '--'])]);
+    side('--right-only'), side('--left-only'), git(['diff', ...diffs.DIFF_OPTS, '--numstat', '-M', range, '--'])]);
   if (S.diff !== d) return;
   const list = res => res.out.split('\n').filter(Boolean).map(l => {
     const [mark, short, hash, subject, time] = l.split('\x1f');
@@ -1563,7 +1564,8 @@ async function fileAction(k, row) {
   const pane = process.env.HERDR_PANE_ID;
   const msg = k === 'y' ? await actions.copy(abs) : k === 'Y' ? await actions.copy(rel, 'Relative path copied')
     : k === 'e' ? await actions.edit(abs, pane) : await actions.open(abs, pane);
-  if (msg) flash(msg, !/copied/i.test(msg));
+  // The actions' messages tell success from failure (ui.messageKind), as in the explorer.
+  if (msg) flash(msg);
 }
 
 // --- views and keys
@@ -1745,6 +1747,9 @@ function mouse(m) {
   if (S.diff && !S.picker && diffBar.mouse(m, y - 2, x === W - 1)) return;
   if (listW && !S.picker && listBar.mouse(m, y - listY, x === listW - 1)) return;
   if (!m.press || m.drag || m.button !== 0) return;
+  // A key of the status line acts as that key, also while a name is typed or the branch picker is open.
+  const hint = (S.inline || S.picker) && y === ui.size().H - 1 && hits.find(h => h.y === y && x >= h.x0 && x < h.x1);
+  if (hint) { hint.fn(); return draw(); }
   if (S.inline) { S.inline = null; return draw(); }
   if (S.picker) {
     const b = S.picker.box;
