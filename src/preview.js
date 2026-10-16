@@ -54,12 +54,15 @@ function load(keepScroll) {
     if (stat.isDirectory()) return setError('Folder');
     // A named pipe or a device would block the read, and the whole pane with it.
     if (!stat.isFile()) return setError('Not a regular file');
+    // An image is read whole, up to the decoder's limit and one byte more, so that a larger one is reported as too
+    // large rather than decoded from its start.
+    const limit = image && image.FORMATS.has(ext(file)) ? image.MAX_BYTES + 1 : MAX_BYTES;
     const fd = fs.openSync(file, 'r');
     try {
-      buf = Buffer.alloc(Math.min(stat.size, MAX_BYTES));
+      buf = Buffer.alloc(Math.min(stat.size, limit));
       fs.readSync(fd, buf, 0, buf.length, 0);
     } finally { fs.closeSync(fd); }
-    state.info = size(stat.size) + (stat.size > MAX_BYTES ? ' (start only)' : '');
+    state.info = size(stat.size) + (stat.size > limit ? ' (start only)' : '');
   } catch (e) { return setError(e.code === 'ENOENT' ? 'File deleted' : `Cannot read: ${e.code || e.message}`); }
 
   const top = state.top, left = state.left;
@@ -195,7 +198,7 @@ const HELP = [
     ['← → h l', 'left, right']]],
   ['Find', [['/', 'find in the file'], ['n N', 'next, previous match'], ['esc', 'stop finding']]],
   ['View', [['w', 'wrap'], ['L', 'line numbers'], ['m', 'Markdown source'], ['z', 'zoom the pane'], ['< >', 'narrower, wider'], ['shift+← →', 'move the border'], ['r', 'reload']]],
-  ['File', [['e', 'edit in the terminal'], ['o', 'open in the editor'], ['O', 'open with the system'], ['y', 'copy path'], ['Y', 'copy relative path']]],
+  ['File', [['e', 'edit in the terminal'], ['o', 'open in the editor (media: in its app)'], ['O', 'open with the system'], ['y', 'copy path'], ['Y', 'copy relative path']]],
   ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
 ];
 
@@ -233,6 +236,8 @@ function header(W) {
 }
 
 function footer(W) {
+  // The keys shown, for clicks: none while the find or a message takes the line.
+  state.hints = null;
   if (state.find && state.find.active) {
     const count = state.find.field.value ? ` ${state.matches.length ? state.match + 1 : 0}/${state.matches.length}` : '';
     return ui.line([[` ${ui.SEARCH} `, fg(C.dim)], ...state.find.field.segments(W - 4 - count.length), [count, fg(C.dim)]], W, C.header);
@@ -480,7 +485,7 @@ let lastClick = { time: 0, x: 0, y: 0, count: 0 };
 function mouse(m) {
   if (state.help) { if (!ui.helpMouse(m, state.help)) state.help = null; return render(); }
   // A click on a hint of the footer does what its key does.
-  if (m.y === ui.size().H && m.press && !m.drag && !m.wheel && m.button === 0 && !(state.find && state.find.active)) {
+  if (m.y === ui.size().H && m.press && !m.drag && !m.wheel && m.button === 0 && state.hints) {
     const k = ui.keyAt(state.hints, m.x - 1);
     if (k) return key(k);
   }
