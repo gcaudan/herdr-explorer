@@ -107,6 +107,9 @@ contains spaces or control characters is refused; the others pass after `--end-o
   read; the terminal's answers to its queries are read apart from the keys. **Settings → Images** can keep them pixelated,
   drawn with characters only. The link under a pixelated image opens one fixed `https://` page of
   this documentation in the browser, never an address taken from a file.
+- **`peek.js`** shows, in the preview, a regular file the caller names: anything the user can read, as the preview
+  already does, never a folder or a device. An agent calling it changes what you see, not what is run. It writes the
+  request file of the state folder only, whose path it reads from `state-dir` in the plugin's config folder.
 
 ## Commit messages from Claude
 

@@ -56,11 +56,13 @@ Markdown, images, graph).
 | `src/hook.js`         | startup restore, `tab.created`, and the toggle, search and source control actions. Opens and places the explorer |
 | `src/launch.js`       | launcher that keeps the explorer and preview panes alive across self-restarts (exit code 75) |
 | `src/explorer.js`     | explorer pane: tree, git decorations, filter, menus, settings, width, follow, update UI      |
-| `src/preview.js`      | preview pane: text, Markdown, images (Kitty graphics or half blocks), hex dump; find, selection, review notes, live reload, request file |
+| `src/preview.js`      | preview pane: text, Markdown, images (Kitty graphics or half blocks), hex dump, Diff view; find, selection, review notes, live reload, request file |
 | `src/search.js`       | Go to file (fuzzy) and Search in files (text/regex, globs) popup                             |
 | `src/scm.js`          | source control pane: changes, commit, branches, remotes, history, stashes, refs, Claude messages |
-| `src/diff.js`         | diff parser and renderer (inline, side by side, word highlights), and the Changes pane: cursor, notes, base |
+| `src/diff.js`         | diff collection (`collect`), parser and renderer (inline, side by side, word highlights), shared with the preview's Diff view; and the Changes pane: cursor, notes, base |
 | `src/edit.js`         | Editor pane: runs the terminal editor on a file                                              |
+| `src/peek.js`         | shows a file in the tab's preview from outside the plugin (an agent's pane) and the peek action |
+| `skills/herdr-preview/` | Claude Code skill that calls `src/peek.js`                                                 |
 | `src/core/actions.js` | file and pane actions: open, preview, edit, insert, copy, reveal, create, rename, duplicate, trash, stage, unstage, discard; opens the plugin's other panes |
 | `src/core/notes.js`   | review notes of a tab: stored in the state folder, typed into the agent's prompt             |
 | `src/core/icons.js`   | Nerd Font icons and VS Code icon theme loading                                               |

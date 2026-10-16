@@ -69,8 +69,11 @@ Keep the clone where it is, on `main`: herdr runs the plugin from that folder, a
 4. Append one `[[keys.command]]` block per action (see [Key bindings](#key-bindings)), unless the config already
    mentions that action. A binding you already changed, for example to another key, is left alone.
 5. Run `herdr server reload-config`, ignoring errors.
+6. When Claude Code is installed (a `~/.claude` folder), link the [herdr-preview skill](usage.md#show-a-file-from-an-agent-or-a-script)
+   into `~/.claude/skills/herdr-preview` (a junction on Windows), so that Claude Code can show you files in the
+   preview. A link of that name is replaced; a folder that is not a link is left alone.
 
-The script prints the plugin folder and each key it added.
+The script prints the plugin folder, each key it added and the skill's link.
 
 herdr keeps its own copy of the manifest: after pulling a version that changes it, run the script again (or
 `herdr plugin link .`) so that herdr picks up new hooks, such as the startup hook. The update tells you when (see
@@ -100,6 +103,17 @@ description = "source control"
 
 `prefix+f` means `ctrl+b`, then `f`, with herdr's default prefix. To use other keys, edit the `key` lines, then run
 `herdr server reload-config`.
+
+The install script leaves out the **peek** action, which shows the changed file written last in the preview (see
+[Show a file from an agent or a script](usage.md#show-a-file-from-an-agent-or-a-script)). To bind it too:
+
+```toml
+[[keys.command]]
+key = "prefix+v"
+type = "plugin_action"
+command = "gcaudan.explorer.peek"
+description = "preview the last changed file"
+```
 
 ### Adding the explorer to existing tabs
 
@@ -186,5 +200,6 @@ run the current code.
    `herdr plugin uninstall gcaudan.explorer` for a plugin index install.
 2. Delete the `[[keys.command]]` blocks whose `command` starts with `gcaudan.explorer.` from your
    herdr `config.toml`, then run `herdr server reload-config`.
-3. Optionally, delete the clone and the plugin's state and config folders (see
+3. Delete the skill's link, `~/.claude/skills/herdr-preview`, if the install script made it.
+4. Optionally, delete the clone and the plugin's state and config folders (see
    [Files](configuration.md#files)).

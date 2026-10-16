@@ -5,10 +5,10 @@ The plugin has six panes:
 | Pane            | Opens as                     | Opened by                                                     |
 | --------------- | ---------------------------- | ------------------------------------------------------------- |
 | Explorer        | split, left or right of tab  | new tab, `prefix+f`                                           |
-| Preview         | split, right of the terminal | `Enter`/double-click on a file, `p`, search results           |
+| Preview         | split, right of the terminal | `Enter`/double-click on a file, `p`, `d` (its diff), search results |
 | Search          | popup, 80% × 80%             | `ctrl+p`, `ctrl+f`, `prefix+a`                                |
 | Source Control  | full tab (zoomed)            | `s`, `prefix+d`                                               |
-| Changes         | full tab (zoomed)            | menu **View changes**                                         |
+| Changes         | full tab (zoomed)            | **View changes** on a folder                                  |
 | Editor          | full tab (zoomed)            | `e`, **Edit in terminal**, `o` with a terminal editor         |
 
 Key names below are those of [configuration.md](configuration.md#key-names). Only the explorer's
@@ -81,6 +81,7 @@ The last column is the action's name in [`keys.json`](configuration.md#config-fo
 | `y` / `Y`                | copy the absolute / relative path                                              | `copyPath` / `copyRelativePath` |
 | `backspace`              | make the parent folder the tree root                                           | `parentRoot` |
 | `c`                      | changed files only (see [Reviewing changes](#reviewing-changes))               | `changedOnly` |
+| `d`                      | changes of the file in the preview ([Diff view](#diff-view)); of a folder in the Changes pane | `viewChanges` |
 | `]` / `[`                | next / previous changed file, previewed                                        | `nextChange` / `previousChange` |
 | `H`                      | history of the selected file, in source control                               | `fileHistory` |
 
@@ -113,7 +114,8 @@ them, all unfolded; the bottom line shows `● Changes` and their count, and `es
 tree back with the selected entry shown. The filter (`/`) then searches the changed files only.
 
 `]` and `[` move to the next and previous changed file in the tree's order, unfolding its folders, and show it in the
-preview; past the last one, they start again from the first. They work in the whole tree too.
+preview; past the last one, they start again from the first. Among the changed files, the preview shows each one's
+changes ([Diff view](#diff-view)), as **Preview follows selection** does there; in the whole tree, the file itself.
 
 Files and folders deleted from the disk show only among the changed files, struck through with the `D` badge; `]`
 and `[` reaching one switch to that view. `enter` or a double-click shows what it held in its diff, and its menu keeps
@@ -176,7 +178,7 @@ Source control asks the same way.
 | Open folder (Reveal in Explorer on Windows) | all            | Windows and macOS select the entry in File Explorer or Finder; on Linux, the file manager opens the folder holding it |
 | Copy path                | all                               | absolute path                                                |
 | Copy relative path       | all                               | relative to the tree root                                    |
-| View changes             | changed entries in a repository   | Changes pane                                                 |
+| View changes             | changed entries in a repository   | a file: its Diff view in the preview; a folder: the Changes pane |
 | File history             | files in a repository, not untracked | source control's History, limited to the file             |
 | Stage                    | changed entries                   | `git add -A` on the path                                     |
 | Unstage                  | entries in a repository, not ignored | restore the index from HEAD                               |
@@ -285,10 +287,22 @@ its border. A click runs an item; a click elsewhere closes the menu.
 The preview shows one file per tab: opening another file from the explorer or the search reuses it. It reloads
 by itself when the file changes on disk, keeping its scroll position.
 
-Header: the file path relative to the root, then details (lines, size, image format and size). On the right,
-clickable switches: **Rendered · Raw** for Markdown, the active one underlined, and **wrap** and **lines** (line
-numbers) for text, `●` on and `○` off. A narrow pane drops the switches from the right, then the size. The footer
-lists the main keys, which a click runs, and the scroll percentage.
+Header: the file path relative to the root, then details (lines, size, image format and size; in the Diff view, the
+added and removed lines). On the right:
+
+- in the Diff view, what the changes are compared with, dimmed: `vs HEAD` or `vs main` (the rest shows in the content
+  itself);
+- the **File · Diff** switch, the active choice filled: a click on the other one switches ([Diff view](#diff-view));
+- `⚙` (or `,`, as the explorer's settings), which opens the **View** menu of the view's options, as the explorer's settings show them: a choice
+  in blue, or `● on` / `○ off`. **Markdown** (rendered or raw, `m`), **Wrap lines** (`w`) and **Line numbers** (`L`)
+  for text, **Image** (sharp or pixelated, `p`); in the Diff view, **Layout** (inline or split, `s`) and **Compare
+  with** (HEAD or the default branch, `b`). The key beside each does the same outside the menu. `left` / `right`,
+  `enter`, `space` or a click changes the option in place, the menu staying open; `up` / `down` move, `escape`, `q`,
+  `,` or a click elsewhere close it. The footer's actions are not repeated there, and the footer leaves out what the
+  header's controls do (`d`, `,`): the key help (`?`) lists every key.
+
+A narrow pane drops the reminder, then the switch, then the details; `⚙` stays. The footer lists the main keys, which
+a click runs, and the scroll percentage.
 
 ### Keys
 
@@ -302,7 +316,10 @@ lists the main keys, which a click runs, and the scroll percentage.
 | `home` `g` / `end` `G`       | top / bottom                                             |
 | `left` `h` / `right` `l`     | scroll 8 columns sideways (when not wrapping)            |
 | `/`                          | find in file                                             |
-| `n` / `N`                    | next / previous match                                    |
+| `n` / `N`                    | next / previous match; without a find, next / previous mark of [`peek.js`](#show-a-file-from-an-agent-or-a-script), else hunk in the Diff view |
+| `d`                          | the file or its changes ([Diff view](#diff-view))        |
+| `b` / `s`                    | Diff view: compare with HEAD or where the branch started / inline or split (saved by width) |
+| `,`                          | the View menu of the view's options (or `⚙`)            |
 | `w`                          | toggle line wrap (saved)                                 |
 | `L`                          | toggle line numbers (saved)                              |
 | `m`                          | Markdown: rendered / source                              |
@@ -362,7 +379,21 @@ Every match is highlighted, the current one brighter, also in wrapped lines and 
   works everywhere but in images.
 - Under a pixelated image, a click on **p sharp** shows it sharp, on **sharp by default** sets **Images** to
   *sharp if possible*, and on **Sharp images ↗** opens [Sharp images](#sharp-images) in the browser.
-- The **wheel** scrolls 3 lines, and the header switches change the rendering, wrap or line numbers.
+- The **wheel** scrolls 3 lines. In the header, **File · Diff** switches the view and `⚙` opens the View menu.
+
+### Diff view
+
+`d` (or **File · Diff** in the header) shows the file's git changes in place of the file, as the Changes pane does:
+compared with HEAD, staged and unstaged together, an untracked file in full, a deleted one as removed lines. The
+header shows the added and removed line counts and `vs HEAD` or `vs main`; the View menu (`⚙`, `,`) chooses the **Layout**, inline or split
+(side by side, `s`), and what to **Compare with**, HEAD or the default branch (`b`). The layout is saved for every
+diff, one for narrow diffs and one for wide ones: inline beside the terminal and split once zoomed (`z`), for
+example. `n` and `N` jump
+between hunks, `a` notes the lines of the rows selected with the mouse (or of the top row), and it reloads with the
+file. Find (`/`) works in the file only.
+
+The explorer opens it with `d` and **View changes** on a file, and among the changed files with `]`, `[` and the
+selection; `peek.js --diff` too.
 
 ### What it shows
 
@@ -478,7 +509,7 @@ its icon spins while it runs. Then come **⇣ Fetch**, **↻** (refresh) and **�
 80 columns.
 
 Tabs: **Changes**, **History**, **Stashes**, **Refs** (keys `1` to `4`), the active one underlined, Changes and
-Stashes with their count. In Changes, a **≡ List / ⊞ Tree** button switches the layout.
+Stashes with their count. In Changes, a **List · Tree** switch, the active choice filled, changes the layout.
 
 From 100 columns, the diff of the selected file, commit, stash or tag always shows on the right of the list
 (otherwise it takes the whole pane); with a section or a branch selected, that side says what to select. Drag the
@@ -600,10 +631,13 @@ working-tree edits.
 
 ## Changes (diff pane)
 
-Opened by **View changes**. For a file or folder, it compares tracked files with HEAD (index and working tree;
+Opened by **View changes** on a folder (a file's changes show in the preview's [Diff view](#diff-view)). For a file or
+folder, it compares tracked files with HEAD (index and working tree;
 before the first commit, the staged then the unstaged changes) and shows untracked files in full, up to 200. The
-header shows the name, the added and removed line counts, what the changes are compared with, and the clickable
-layout switch **Inline · Side by side**; the footer, the keys and how far down the diff is. The diff is inline, or
+header shows the name and the added and removed line counts, then two switches, the active choice filled, which a
+click changes: **HEAD · main** (what the changes are compared with, `b`) and **Inline · Split** (`s`, saved for the
+diffs of that width, see [`diffLayout`](configuration.md#settings)); the footer, the keys and how far down the diff
+is. The diff is inline, or
 side by side from 120 columns, with changed words highlighted.
 
 A cursor, a blue bar in the first column, moves over the rows: `up` `k` / `down` `j` `enter`, `pageup` /
@@ -622,6 +656,41 @@ wheel scrolls 3 rows. `n`/`N` put it on the next or previous hunk.
 | `?` `f1`   | all the keys                                                                                   |
 
 Lines with a note have a yellow bar in the first column.
+
+## Show a file from an agent or a script
+
+`src/peek.js` shows a file in the preview of the tab it runs in, scrolled to a line, opening the preview next to the
+terminal when there is none, without taking the focus. Run it from a herdr pane, such as the terminal of an agent:
+
+```sh
+dir=$(dirname "$(herdr plugin list --plugin gcaudan.explorer --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).result.plugins[0].manifest_path))')")
+node "$dir/src/peek.js" src/app.js:42
+```
+
+- The argument is `file`, or `file:places`, relative to the current folder or absolute. Places are separated by
+  commas: a line (`42`), lines (`12-14`) or columns of a line (`42:5-18`, counted in characters from 1, both included);
+  `42:5`, as compilers write it, is line 42. The preview scrolls to the first place and highlights them all: whole
+  lines on the line highlight's colour, columns on the selection's. `n` and `N` go from one to the next (when no
+  find is open), `escape` clears them; a Markdown file shows as source, so that they match its lines.
+- `--last` shows the changed file of the repository (modified, added or untracked) written last.
+- `--diff` before the file shows its changes ([Diff view](#diff-view)) rather than the file: the view goes to the
+  first place, and the rows of the new version's lines the places cover carry a blue bar (whole lines only). A
+  deleted file is accepted there.
+- It prints `Preview: src/app.js:12-14,42:5-18`, or the reason on stderr with exit code 1 (2 for a wrong argument or
+  place).
+- `herdr plugin list` gives the plugin's folder (`manifest_path`) whether it was installed from the index or from a
+  clone, so the command works in both cases.
+
+**Peek action**: `gcaudan.explorer.peek` runs `peek.js --last` for the focused tab, in the folder of its focused
+terminal: bind it to a key to see what an agent just wrote (see [Key bindings](installation.md#key-bindings)).
+
+**Claude Code skill**: [`skills/herdr-preview`](../skills/herdr-preview/SKILL.md) tells Claude Code when and how to
+call it, to show you the code it talks about or a file it just wrote. The install script links it into
+`~/.claude/skills`; installed from the plugin index, link it yourself:
+
+```sh
+ln -s "$dir/skills/herdr-preview" ~/.claude/skills/herdr-preview
+```
 
 ## Editor pane
 

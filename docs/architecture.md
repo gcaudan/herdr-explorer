@@ -105,13 +105,23 @@ decoded like any PNG.
 ## Preview requests
 
 Each tab has at most one preview, reused for every file. To show a file, the explorer or the search
-looks for a pane labelled *Preview* in the tab. If there is one, it writes `{ file, root, line, t }` to
+looks for a pane labelled *Preview* in the tab. If there is one, it writes `{ file, root, line, marks, view, t }` to
 `preview-<tab id>.json` in the state folder, which the preview polls every 200 ms (`fs.watchFile`), loading each
-new request at its line; otherwise it opens a new preview pane with the file in its environment.
+new request at its line; otherwise it opens a new preview pane with the file in its environment. `marks`, from
+`peek.js` only, are the parts to highlight, `{ from, to, a, b }` (lines, and columns, 0 for whole lines): the preview
+keeps at most 200 well-formed ones (`EXPLORER_MARKS` for a new pane). `view: 'diff'` opens the Diff view
+(`EXPLORER_VIEW`), whose changes come from `diff.collect`, the function the Changes pane uses too, run from the
+nearest folder of the file still on disk.
 
 The preview watches the folder of the file it shows rather than the file itself, because editors and
 agents often replace a file by renaming a new one over it. It reloads 80 ms after a change, keeping
 the scroll position.
+
+`peek.js` (an agent's call, or the **peek** action) makes the same request from outside the plugin. It runs in the
+agent's pane, where herdr gives `HERDR_PANE_ID` but not the plugin's state folder: it reads that folder's path from
+`state-dir` in the config folder (`herdr plugin config-dir`), which every hook run saves, else takes herdr's usual
+place. As the action, it takes the focused pane of the tab from `HERDR_PLUGIN_CONTEXT_JSON`, or the tab's first
+terminal when the focus is on one of the plugin's panes.
 
 ## Restore after a herdr restart
 
