@@ -84,8 +84,9 @@ a list of `{ file, from, to, kind, text, t }`, the file absolute and the lines 1
 preview and the Changes pane add to it and poll it every 500 ms (`fs.watchFile`), so that a note taken in one shows
 in the other. Sending (`notes.send`) finds the terminal next to the explorer as **Insert into terminal** does,
 builds one line with the paths relative to that terminal's folder, types it with `herdr pane send-text` (no newline,
-so nothing is submitted, and control characters are removed from the notes), then removes the notes sent. The diff
-pane finds its tab with `herdr pane get`.
+so nothing is submitted, and control characters are removed from the notes), then removes the notes sent. Copying
+(`notes.copy`) puts them on the clipboard, one per line, and keeps them. The diff pane finds its tab with
+`herdr pane get`.
 
 ## Images
 

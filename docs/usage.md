@@ -113,8 +113,12 @@ them, all unfolded; the bottom line shows `● Changes` and their count, and `es
 tree back with the selected entry shown. The filter (`/`) then searches the changed files only.
 
 `]` and `[` move to the next and previous changed file in the tree's order, unfolding its folders, and show it in the
-preview; past the last one, they start again from the first. They work in the whole tree too. Files deleted from
-the disk are not in the tree: see them in source control.
+preview; past the last one, they start again from the first. They work in the whole tree too.
+
+Files and folders deleted from the disk show only among the changed files, struck through with the `D` badge; `]`
+and `[` reaching one switch to that view. `enter` or a double-click shows what it held in its diff, and its menu keeps
+**View changes**, **File history**, **Stage**, **Unstage**, **Discard changes…** (which restores it) and **Copy
+relative path**; the actions that need the file on disk tell how to restore it instead.
 
 ### Prompts
 
@@ -310,7 +314,7 @@ lists the main keys, which a click runs, and the scroll percentage.
 | `y` / `Y`                    | copy the absolute / relative path; `Y` adds the selected lines (`src/app.js:12-14`) |
 | `H`                          | history of the file, in source control                   |
 | `a`                          | take a review note, see [Review notes](#review-notes)    |
-| `A` / `u`                    | send the notes to the agent / remove the last note       |
+| `A` / `C` / `u`              | send the notes to the agent / copy them / remove the last note |
 | `z`                          | zoom the pane (toggle)                                   |
 | `<` / `>`                    | 4 columns narrower / wider (hold to repeat)              |
 | `shift+left` `shift+right`   | move the inner border 4 columns that way                 |
@@ -330,6 +334,8 @@ belong to the tab: the preview and the [Changes pane](#changes-diff-pane) of a t
 - `A` types the tab's notes, sorted by file and line, into the terminal next to the explorer, on one line, without
   submitting it, then clears them: `Review notes: src/app.js:12-14 (fix): rename it; README.md: add an example`. The
   paths are relative to the terminal's folder. The footer shows `A send N notes` while there are some.
+- `C` copies the tab's notes instead, one per line under `Review notes:`, the paths relative to the preview's folder,
+  and keeps them.
 - `u` removes the last note taken.
 
 The notes live in the plugin's state folder until they are sent, so they survive closing the preview.
@@ -537,8 +543,10 @@ stashes the untracked files too, `alt+enter` or `ctrl+o` leaves them. `a` apply,
 
 **File history**: from the explorer (`H` or **File history**) or the preview (`H`), the History view shows only the
 commits that changed the file, each linked to the previous one in the graph, and a commit's diff is limited to the
-file. The file's path shows on the right of the tabs: a click on it, or `x`, goes back to every file. Renames are not
-followed.
+file. The file's path shows on the right of the tabs, with its former name when it was renamed (`← old.js`, or the
+count of names): a click on it, or `x`, goes back to every file. Renames are followed: `git log --follow` finds the
+names the file had on the current branch, and the history lists the commits of all of them, so a file that later
+took one of those names shows there too.
 
 **History view**: the branch graph, the subject, the branches and remote branches at the commit (in their lane's
 colour) and its tags (yellow); on the right, the author (from 90 columns), the age and the short hash. Each branch
@@ -605,7 +613,7 @@ wheel scrolls 3 rows. `n`/`N` put it on the next or previous hunk.
 | Key        | Action                                                                                         |
 | ---------- | ---------------------------------------------------------------------------------------------- |
 | `a`        | a [review note](#review-notes) on the cursor's line (a removed line: the line now in its place), on the whole hunk from its `@@` row, on the whole file from its name |
-| `A` / `u`  | send the tab's notes to the agent / remove the last note                                       |
+| `A` / `C` / `u` | send the tab's notes to the agent / copy them (paths relative to the repository) / remove the last note |
 | `y`        | copy the cursor's line as `path:line`, relative to the pane's folder                           |
 | `b`        | compare with HEAD, or with the point where the branch left the default branch (the remote's `HEAD`, else `main` or `master`): every change of the branch, committed or not |
 | `s`        | inline / side by side (kept for the next diffs)                                                |
