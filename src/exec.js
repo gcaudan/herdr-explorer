@@ -135,7 +135,11 @@ const DEFAULTS = {
   icons: '',          // explorer icon theme: { id, label, file } of a VS Code one; empty: Nerd Font icons
   wrap: false,        // preview: wrap long lines
   lineNumbers: true,  // preview: line number gutter
+  diffLayout: '',     // diffs 'inline' or 'split' (side by side); empty: side by side when the pane is wide enough
   updateCheck: true,  // check GitHub once a day for a newer release
+  scmTree: false,     // source control: the changes as a folder tree rather than a list
+  scmGraphAll: true,  // source control history: every branch, or only the current one
+  scmListShare: {},   // source control: the list's share of the width beside the diff, by view
 };
 const SETTINGS_FILE = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'settings.json');
 function readSettings() {
