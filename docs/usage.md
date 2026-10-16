@@ -6,8 +6,8 @@ The plugin has six panes:
 | --------------- | ---------------------------- | ------------------------------------------------------------- |
 | Explorer        | split, left or right of tab  | new tab, `prefix+f`                                           |
 | Preview         | split, right of the terminal | `Enter`/double-click on a file, `p`, search results           |
-| Search          | popup, 80% × 80%             | `ctrl+p`, `ctrl+f`, `prefix+a`, header icon                   |
-| Source Control  | full tab (zoomed)            | `s`, `prefix+d`, header icon                                  |
+| Search          | popup, 80% × 80%             | `ctrl+p`, `ctrl+f`, `prefix+a`                                |
+| Source Control  | full tab (zoomed)            | `s`, `prefix+d`                                               |
 | Changes         | full tab (zoomed)            | menu **View changes**                                         |
 | Editor          | full tab (zoomed)            | `e`, **Edit in terminal**, `o` with a terminal editor         |
 
@@ -19,17 +19,15 @@ keys can be rebound.
 ### Header
 
 The header shows the root folder's name in bold, or in bold italic when **Set as root** moved the
-tree away from the tab's folder, followed by the git branch. A short message replaces the branch for
-2 s after an action. The icons on the right are clickable:
+tree away from the tab's folder. A short message replaces it after an action: `✓` when it is done
+(2 s), `✕` in red when it failed (4 s), `⋯` while it runs. The preview and source control show their
+messages the same way, in their bottom line. The icons on the right are clickable:
 
 | Icon      | Click                                                                  |
 | --------- | ---------------------------------------------------------------------- |
 | `↑`       | update to the newer release (green, only when one exists)              |
 | `!`       | copy the installer command that finishes an update (yellow)            |
-| magnifier | Go to file                                                             |
-| branch    | Source control (`Not a git repository` outside one)                    |
 | gear      | Settings                                                               |
-| `«`       | close the explorer, and the preview of its tab                         |
 
 ### Tree
 
@@ -95,13 +93,13 @@ never shown. Git decorations follow VS Code:
 ### Filter
 
 Press `/` to open a filter field at the bottom. The tree then shows only the entries whose name
-contains the text (case-insensitive), with their parent folders, the match underlined, and a count of
-matches. Git-ignored folders are not searched.
+contains the text (case-insensitive), with their parent folders dimmed, the match in bold blue, and a
+count of matches. Git-ignored folders are not searched.
 
 - Typed characters go to the field. Bound keys that are not characters (arrows, `enter`, `ctrl+…`)
   act on the list.
-- `tab` leaves the field and keeps the filter, so the single-letter keys work again. Click the
-  bottom line to type again.
+- `tab` leaves the field and keeps the filter, so the single-letter keys work again. The bottom line
+  then shows the filter in blue and `esc clear`. Click it to type again.
 - `escape` closes the filter and reveals the selected entry in the full tree.
 
 ### Prompts
@@ -245,7 +243,7 @@ always closes, as do the keys bound to close, collapse, menu and settings. A lon
   border, `<` `>`, or `shift+left` `shift+right`) remembers the new width for the next explorers.
   The preview keeps its width the same way, for as long as it is open. Resizing one of them, or the
   window, leaves the other's width alone: the terminal takes the difference. Closing the explorer
-  (`«` or `prefix+f`) closes the tab's preview too, so that the tab stays `explorer | [terminal |
+  (`q`, `esc` or `prefix+f`) closes the tab's preview too, so that the tab stays `explorer | [terminal |
   preview]`: dragging the border between the terminal and the preview leaves the explorer still. An
   explorer opened in a tab that still has a preview puts it back beside the terminal. On KDE Plasma, holding
   `<` or `>` shows the accented characters popup instead of repeating the key, unless **System
@@ -263,8 +261,10 @@ always closes, as do the keys bound to close, collapse, menu and settings. A lon
 The preview shows one file per tab. Opening another file from the explorer or the search reuses it.
 It reloads by itself when the file changes on disk, keeping its scroll position.
 
-Header: the file path relative to the root, then details (lines, size, image format and size). Then
-the clickable chips **Rendered/Raw** (Markdown), **Wrap/No wrap** (text) and **✕** (close). The footer
+Header: the file path relative to the root, then details (lines, size, image format and size). On the
+right, clickable switches: **Rendered · Raw** for Markdown, the active one underlined, and **wrap** and
+**lines** (line numbers) for text, `●` on and `○` off. A narrow pane drops the switches from the right,
+and then the size. The footer
 lists the main keys and the scroll percentage; a click on a key does what it does.
 
 ### Keys
@@ -317,7 +317,7 @@ also in wrapped lines and in rendered Markdown.
 - When the button is released outside the pane, the selection is copied at the next click or when the pane loses
   focus. Selection works everywhere but in images.
 - **Wheel** scrolls 3 lines.
-- Click the header chips to toggle rendering or wrap, or to close.
+- Click the header switches to change the rendering, wrap or line numbers.
 
 ### What it shows
 
@@ -333,12 +333,14 @@ also in wrapped lines and in rendered Markdown.
 
 ## Search popup
 
-The popup has two tabs, **Go to file** (`ctrl+p`) and **Search in files** (`ctrl+f`). Queries, globs
+The popup has two tabs, **Go to file** (`ctrl+p`) and **Search in files** (`ctrl+f`), the active one
+highlighted. Queries, globs
 and options are saved for the next time and shown selected, so typing replaces them.
 
 ### Go to file
 
-Fuzzy matching on paths, scored like fzf and VS Code. Matched characters are highlighted.
+Fuzzy matching on paths, scored like fzf and VS Code. Each result shows the file name, its folder on
+the right, and the matched characters highlighted.
 `path:line` (or `path:line:column`) opens the file at that line. The file list is git's tracked and
 untracked files that are not ignored. Outside a repository, when git lists no files, or with **hidden**
 on, the plugin walks the folder instead, without `.git`, and without `node_modules` and dot folders
@@ -346,8 +348,9 @@ unless **hidden** is on. Search in files uses the same file list.
 
 ### Search in files
 
-Text search across the files, results grouped by file. Chips toggle **Aa** (match case), **ab**
-(whole word) and **.\*** (regex). The **include** and **exclude** fields take comma-separated globs:
+Text search across the files, results grouped by file, with each file's count on the right. Chips
+toggle **Aa** (match case), **ab** (whole word) and **.\*** (regex), blue when on. The **in** (include)
+and **not in** (exclude) fields take comma-separated globs:
 `*` and `?` within a segment, `**` across segments, `{a,b}`, `[abc]`. A pattern without a leading
 `./` or `/` matches at any depth, and a folder matches its contents.
 
@@ -374,8 +377,9 @@ Other keys edit the focused field, with the same editing keys as the explorer's 
 because Windows Terminal keeps `alt+enter` for full screen.
 
 Opening a result in the preview or the editor, or inserting its path, closes the popup; on failure, the
-popup stays and shows the message. The status line counts the files (`12 of 840 files`) or the results
-(`37 results in 9 files`), and shows `indexing…` and `searching…` while they run.
+popup stays and shows the message. Go to file counts the files on the right of the field (`12 of 840`).
+In Search in files, the rule above the results counts them (`37 results in 9 files`). The rule also shows
+`indexing…`, `searching…` and the messages.
 
 ### Mouse
 
@@ -428,8 +432,8 @@ or **✓ Commit merge**. Then come **✧ Claude** (write the message), **☐ Ame
 
 ### Keys
 
-The status line shows the keys of the moment, as many as fit, and `?` opens the full list of the view;
-any key closes it. A click on a key of the status line does what the key does.
+The status line shows the keys of the moment, as many as fit, and `?` opens the full-pane key help of
+the view (see [Key help](#key-help--or-f1)). A click on a key of the status line does what the key does.
 
 | Key                        | Action                                                          |
 | -------------------------- | --------------------------------------------------------------- |
@@ -461,8 +465,8 @@ back to the last commit, and files added since are deleted. Conflicts cannot be 
 the explorer and the preview, `y` / `Y` copy its absolute / relative path, `e` edits it in the terminal
 editor and `o` opens it in the editor.
 
-**Stashes view**: `n` new stash (including untracked files, optional message), `a` apply, `o` pop,
-`d` drop.
+**Stashes view**: `n` new stash, named on a row above the list (the message is optional): `enter`
+stashes the untracked files too, `alt+enter` leaves them. `a` apply, `o` pop, `d` drop.
 
 **History view**: the graph of the branches, then the subject, the branches and remote branches pointing
 at the commit (in the colour of their lane) and its tags (yellow); the author (from 90 columns), the age and
@@ -474,7 +478,8 @@ further right are cut.
 
 **Refs view**: local branches, remote branches, tags, remotes and worktrees; the empty ones are named
 together on the last line. `enter` checks out a branch (a remote branch switches to its local branch, or
-creates one tracking it). `D` deletes a local branch, and offers `-D` when it is not fully merged.
+creates one tracking it). `D` deletes a local branch, and offers `-D` when it is not fully merged,
+saying how many commits would be lost (those on no other branch).
 
 **Comparing branches**: from 100 columns, the selected branch is compared on the right with the current
 branch: how many commits it is ahead and behind, the commits only on it, those only on the current branch
@@ -493,7 +498,13 @@ the diff).
 
 **Branch picker** (`b`): starts with *New branch…*, then local and remote branches. `up`/`down`
 (`k`/`j`), `pageup`/`pagedown`, `enter` switch, `n` new branch, `D` delete, `/` or typing filters,
-`escape` clears the filter then closes, `q` closes.
+`escape` clears the filter then closes, `q` closes. A new branch is named on the picker's first row,
+from the filter or else the current branch's prefix (`feat/`): `enter` creates it and switches to it,
+`alt+enter` only creates it, `escape` cancels.
+
+**Questions**: discarding, deleting a branch, aborting an operation, popping or dropping a stash, staging
+everything to commit and `git init` ask in a card over the pane, as in the explorer: `left`/`right` move
+between its buttons, `enter` presses the focused one (Cancel at first), `y` confirms, any other key cancels.
 
 ### Mouse
 
@@ -509,7 +520,9 @@ The pane refreshes when the git folder changes and every 5 s, which picks up wor
 
 Opened by **View changes**. For a file or folder, it compares tracked files with HEAD (index and
 working tree; before the first commit, the staged then the unstaged changes) and shows untracked files in
-full, up to 200. The header shows the name, the added and removed line counts, and the layout. The diff is inline, or side by side from 120 columns
+full, up to 200. The header shows the name, the added and removed line counts, and the layout switch
+**Inline · Side by side**, the active one underlined; a click on a side chooses it. The footer shows the
+keys and how far down the diff is. The diff is inline, or side by side from 120 columns
 wide, with changed words highlighted.
 
 | Key                               | Action                    |
@@ -537,6 +550,10 @@ first of `nano`, `nvim`, `vim`, `vi` found (`edit`, `nvim`, `vim`, `nano` on Win
 Every list (explorer, preview, search results, source control list and diff, changes pane) shows a
 scrollbar in its last column when it does not fit: a rail, a thumb, and `▴` `▾` buttons when the
 list is at least 4 rows tall.
+
+An empty list says why in grey, centred, with the keys that go on from there under it: *Empty folder*
+(`n` new file, `N` folder), *No match* (`esc` clear), *No results* in the search, *No changes* in source
+control (`ctrl+p` go to file, `2` history), *Not a git repository* (`i` git init here).
 
 - `│` is the rail and `┃` the thumb, sized to the part shown.
 - A press on the thumb grabs it: the list follows the mouse until the button is released, even outside the column.
