@@ -2,7 +2,7 @@
 // numbers), not a parser. Strings and comments spanning lines carry a state from one line to the next.
 // Output: one array of [text, style] segments per source line, ready for ui.line().
 'use strict';
-const { fg, cleanLine } = require('./ui');
+const { fg, cleanLine } = require('../core/ui');
 
 // VS Code Dark+ token colours.
 const COLORS = {

@@ -1,13 +1,13 @@
 // Git changes of a file or folder, in a temporary full-tab pane: tracked files compared with HEAD (index and
-// working tree), untracked files in full; or only the staged changes (EXPLORER_STAGED=1), or a commit
-// (EXPLORER_COMMIT=<hash>). Inline, or side by side from 120 columns; s switches, n and N jump between hunks,
-// arrows, Page keys or the wheel scroll, q or Esc closes the pane.
-// Required as a module (by scm.js), it only exports the parser and the renderer.
+// working tree), untracked files in full. Inline, or side by side from 120 columns; s switches, n and N jump between
+// hunks, arrows, Page keys or the wheel scroll, q or Esc closes the pane.
+// Required as a module (by the preview and source control), it exports the parser, the renderer, the collection of
+// changes and the layout setting.
 'use strict';
 const path = require('path');
 const { spawnSync } = require('child_process');
-const ui = require('./ui');
-const { GIT, gitEnv, readSettings, writeSettings } = require('./exec');
+const ui = require('./core/ui');
+const { GIT, gitEnv, readSettings, writeSettings } = require('./core/exec');
 
 const MAX_UNTRACKED = 200;
 const MAX_ROWS = 200000; // beyond, a huge diff would take seconds to lay out at every resize
@@ -37,7 +37,8 @@ const strip = p => (p = unquote(p.replace(/\t$/, ''))) === '/dev/null' ? null : 
 
 // Parses the output of git diff, show or stash show. Returns { pre, files, add, del }: pre, the lines before
 // the first file (commit header and stat); each file { from, to, status, notes, hunks, add, del }, each hunk
-// { head, lines: [[sign, text, old number, new number]] }.
+// { head, lines: [[sign, text, old number, new number, place]] }: place, the line's number in the new version, or for a
+// removed line that of the line now in its place.
 function parse(text) {
   const d = { pre: [], files: [], add: 0, del: 0 };
   let f = null, h = null, oldLeft = 0, newLeft = 0, o = 0, n = 0;
@@ -46,7 +47,7 @@ function parse(text) {
     if (h && (oldLeft > 0 || newLeft > 0 || l.startsWith('\\')) && /^[ +\-\\]/.test(l)) {
       const s = l[0];
       if (s === '\\') { h.lines.push([s, l.slice(1).trim(), null, null]); continue; }
-      h.lines.push([s, l.slice(1), s === '+' ? null : o, s === '-' ? null : n]);
+      h.lines.push([s, l.slice(1), s === '+' ? null : o, s === '-' ? null : n, n]);
       if (s !== '+') { o++; oldLeft--; }
       if (s !== '-') { n++; newLeft--; }
       if (s === '+') { f.add++; d.add++; } else if (s === '-') { f.del++; d.del++; }
@@ -153,25 +154,31 @@ function fileRow(f, width) {
 }
 
 // Rows of a parsed diff for a width: { segs, back } for ui.line(segs, width, back), hunk: true on the rows
-// n and N jump to. mode: 'inline', or 'split' (old version on the left, new on the right). titled: the caller's
-// title already names the only file, whose own row is left out.
+// n and N jump to, ref: what a row shows, { file, from, to } (the path as git gives it, lines of the new version,
+// 0 for the whole file). mode: 'inline', or 'split' (old version on the left, new on the right). titled: the
+// caller's title already names the only file, whose own row is left out.
 function render(d, width, mode = 'inline', titled = false) {
   const rows = [];
   const single = titled && !d.pre.length && d.files.length === 1;
   for (const l of d.pre) rows.push(preRow(ui.cleanLine(l)));
   for (const f of d.files) {
+    const file = f.to || f.from;
     if (rows.length) rows.push({ segs: [] });
-    if (!single) rows.push({ ...fileRow(f, width), hunk: !f.hunks.length });
+    if (!single) rows.push({ ...fileRow(f, width), hunk: !f.hunks.length, ref: { file, from: 0, to: 0 } });
     for (const note of f.notes) rows.push({ segs: [[`  ${note}`, DIM]] });
     if (!f.hunks.length && !f.notes.length && f.status !== 'renamed') rows.push({ segs: [['  (no content change)', DIM]] });
     let last = 1;
     for (const h of f.hunks) for (const [, , a, b] of h.lines) last = Math.max(last, a || 0, b || 0);
     const nw = String(last).length;
     for (const h of f.hunks) {
-      rows.push({ segs: [[' ' + ui.cleanLine(h.head), CYAN]], back: [30, 36, 44], hunk: true });
+      const places = h.lines.filter(l => l[0] !== '\\').map(l => l[4]);
+      rows.push({ segs: [[' ' + ui.cleanLine(h.head), CYAN]], back: [30, 36, 44], hunk: true,
+        ref: { file, from: places.length ? Math.min(...places) : 0, to: places.length ? Math.max(...places) : 0 } });
       for (const block of blocks(h.lines)) {
         if (rows.length > MAX_ROWS) { rows.push({ segs: [[' … diff too long, truncated', DIM]] }); return rows; }
+        const at = rows.length;
         if (mode === 'split') splitRows(rows, block, width, nw); else inlineRows(rows, block, width, nw);
+        for (let k = at; k < rows.length; k++) if (rows[k].place) rows[k].ref = { file, from: rows[k].place, to: rows[k].place };
       }
     }
   }
@@ -198,12 +205,12 @@ function blocks(lines) {
 }
 
 function inlineRows(rows, b, width, nw) {
-  const row = ([s, text, a, n], spans, back, strong, sign) => {
+  const row = ([s, text, a, n, place], spans, back, strong, sign) => {
     const gutter = s === '\\' ? ' '.repeat(nw * 2 + 2) : `${num(a, nw)} ${num(n, nw)} `;
     const style = s === '\\' ? DIM : '';
     const rest = Math.max(0, width - nw * 2 - 4);
     rows.push({ segs: [[gutter, DIM], [s === '\\' ? ' ' : s, sign], [' ', ''],
-      ...cell(spans || [[ui.cleanLine(text), false]], rest, style, back, strong)], back });
+      ...cell(spans || [[ui.cleanLine(text), false]], rest, style, back, strong)], back, place: s === '\\' ? 0 : place });
   };
   if (b.line) return row(b.line, null, null, null, DIM);
   b.dels.forEach((l, i) => row(l, b.words[i] && b.words[i][0], TINT.del, TINT.delWord, RED));
@@ -221,24 +228,70 @@ function splitRows(rows, b, width, nw) {
   };
   const bar = ['│', DIM];
   if (b.line) {
-    rows.push({ segs: [...side(b.line, half, null, null, null, false), bar, ...side(b.line, right, null, null, null, true)] });
+    rows.push({ segs: [...side(b.line, half, null, null, null, false), bar, ...side(b.line, right, null, null, null, true)],
+      place: b.line[0] === '\\' ? 0 : b.line[4] });
     return;
   }
   for (let i = 0; i < Math.max(b.dels.length, b.adds.length); i++) {
     const w = b.words[i];
     rows.push({ segs: [...side(b.dels[i], half, w && w[0], TINT.del, TINT.delWord, false), bar,
-      ...side(b.adds[i], right, w && w[1], TINT.add, TINT.addWord, true)] });
+      ...side(b.adds[i], right, w && w[1], TINT.add, TINT.addWord, true)], place: (b.adds[i] || b.dels[i])[4] });
   }
 }
 
 const defaultMode = width => (width >= SPLIT_MIN ? 'split' : 'inline');
 
-// The layout chosen with s, kept in the settings for the next diffs (source control included): 'inline', 'split',
-// or null to choose by width.
-const savedMode = () => { const m = readSettings().diffLayout; return m === 'inline' || m === 'split' ? m : null; };
-const saveMode = m => writeSettings({ ...readSettings(), diffLayout: m });
+// The changes to show, as git diff writes them: those of the working tree compared with base, 'head' (the last
+// commit) or 'branch' (where the branch left the default one, so every change of the branch, committed or not),
+// untracked files in full. file: a file or folder to limit them to. Returns { text, top, baseName }: top, the
+// repository's folder, which the diff's paths are relative to; baseName, the default branch ('' when none was found,
+// or when compared with it but no common commit).
+async function collect({ cwd, file = '', base = 'head' }) {
+  const env = { ...await gitEnv(cwd), GIT_LITERAL_PATHSPECS: '1' }; // a file named '*' or '[id]' means itself
+  const target = file ? ['--', file] : [];
+  // stdout even on a non-zero exit code: diff --no-index returns 1 when the files differ.
+  const git = (...args) => (GIT && spawnSync(GIT, ['-c', 'core.quotePath=false', ...args],
+    { cwd, env, encoding: 'utf8', maxBuffer: 64 << 20, windowsHide: true }).stdout) || '';
+  const diff = (...args) => git('diff', ...DIFF_OPTS, ...args);
+  const top = git('rev-parse', '--show-toplevel').trim() || cwd;
+  let baseName = '';
+  let from = git('rev-parse', '--verify', '-q', 'HEAD').trim() ? 'HEAD' : null;
+  // The default branch, named whatever the base, for the switch: the remote's HEAD, else main or master.
+  if (from) {
+    baseName = git('rev-parse', '--abbrev-ref', '-q', '--verify', 'refs/remotes/origin/HEAD').trim()
+      || ['main', 'master', 'origin/main', 'origin/master'].find(b => git('rev-parse', '--verify', '-q', `${b}^{commit}`).trim()) || '';
+  }
+  if (from && base === 'branch') {
+    const fork = baseName && git('merge-base', 'HEAD', baseName).trim();
+    if (fork) from = fork; else baseName = '';
+  }
+  // Without any commit, compare with the empty tree: staged changes, then unstaged ones.
+  let text = from ? diff(from, ...target) : diff('--cached', ...target) + diff(...target);
+  const untracked = git('ls-files', '--others', '--exclude-standard', '-z', ...target).split('\0').filter(Boolean);
+  for (const f of untracked.slice(0, MAX_UNTRACKED)) text += diff('--no-index', '--', '/dev/null', f);
+  if (untracked.length > MAX_UNTRACKED) text += `\n… and ${untracked.length - MAX_UNTRACKED} more untracked files\n`;
+  return { text, top, baseName };
+}
 
-module.exports = { DIFF_OPTS, MAX_UNTRACKED, SPLIT_MIN, parse, render, defaultMode, savedMode, saveMode, unquote, main };
+// The layout chosen with s, kept in the settings for the next diffs (source control and the preview included), by
+// width: one for narrow diffs (under SPLIT_MIN columns, as a preview beside the terminal) and one for wide ones (a
+// zoomed preview, the Changes pane), so that each keeps its own. diffLayout: { narrow, wide }, each 'inline' or
+// 'split', unset to choose by width; a single value (the settings view's, or older versions') holds for both until s
+// chooses one.
+const sizeOf = width => (width >= SPLIT_MIN ? 'wide' : 'narrow');
+function savedMode(width) {
+  const m = readSettings().diffLayout, v = m && typeof m === 'object' ? m[sizeOf(width)] : m;
+  return v === 'inline' || v === 'split' ? v : null;
+}
+function saveMode(width, mode) {
+  const s = readSettings(), old = s.diffLayout;
+  const both = old && typeof old === 'object' ? old : old ? { narrow: old, wide: old } : {};
+  writeSettings({ ...s, diffLayout: { ...both, [sizeOf(width)]: mode } });
+}
+// The layout of a diff of that width: the one chosen for its size, else by width.
+const layoutOf = width => savedMode(width) || defaultMode(width);
+
+module.exports = { DIFF_OPTS, MAX_UNTRACKED, SPLIT_MIN, parse, render, collect, defaultMode, savedMode, saveMode, layoutOf, unquote, main };
 
 // --- pane
 
@@ -247,129 +300,245 @@ if (require.main === module) main();
 function main() {
   const file = process.env.EXPLORER_FILE;
   const cwd = process.env.EXPLORER_ROOT || (file ? path.dirname(file) : process.cwd());
-  const commit = process.env.EXPLORER_COMMIT;
-  const staged = process.env.EXPLORER_STAGED === '1';
-  const target = file ? ['--', file] : [];
+  const PANE = process.env.HERDR_PANE_ID;
+  // The explorer's pane, whose terminal the notes go to; this pane's own when opened without it.
+  const FROM = process.env.EXPLORER_PANE || PANE;
+  const notes = require('./core/notes'), actions = require('./core/actions');
+  // base: what the changes are compared with, 'head' (the last commit) or 'branch' (where the branch left the default
+  // one, so every change of the branch, committed or not). top: the repository's folder, which the diff's paths are
+  // relative to. baseName: the default branch, once found.
+  let base = 'head', top = cwd, baseName = '';
 
   async function changes() {
-    const env = { ...await gitEnv(cwd), GIT_LITERAL_PATHSPECS: '1' }; // a file named '*' or '[id]' means itself
-    // stdout even on a non-zero exit code: diff --no-index returns 1 when the files differ.
-    const git = (...args) => (GIT && spawnSync(GIT, ['-c', 'core.quotePath=false', ...args],
-      { cwd, env, encoding: 'utf8', maxBuffer: 64 << 20, windowsHide: true }).stdout) || '';
-    const diff = (...args) => git('diff', ...DIFF_OPTS, ...args);
-    // A revision that would read as an option is refused; --end-of-options for the others.
-    if (commit) {
-      return /^-|[\x00-\x20]/.test(commit) ? ''
-        : git('show', ...DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', '--end-of-options', commit, ...target);
-    }
-    if (staged) return diff('--cached', ...target);
-    // Without any commit, compare with the empty tree: staged changes, then unstaged ones.
-    let text = git('rev-parse', '--verify', '-q', 'HEAD').trim() ? diff('HEAD', ...target)
-      : diff('--cached', ...target) + diff(...target);
-    const untracked = git('ls-files', '--others', '--exclude-standard', '-z', ...target).split('\0').filter(Boolean);
-    for (const f of untracked.slice(0, MAX_UNTRACKED)) text += diff('--no-index', '--', '/dev/null', f);
-    if (untracked.length > MAX_UNTRACKED) text += `\n… and ${untracked.length - MAX_UNTRACKED} more untracked files\n`;
-    return text;
+    const res = await collect({ cwd, file, base });
+    top = res.top; baseName = res.baseName;
+    return res.text;
   }
 
-  const name = commit ? `commit ${commit}${file ? ` · ${path.relative(cwd, file) || path.basename(file)}` : ''}`
-    : `${file ? path.relative(cwd, file) || path.basename(file) : path.basename(cwd)}${staged ? ' (staged)' : ''}`;
-  let parsed = null, rows = [], mode = savedMode(), cache = '', top = 0;
-  const scrollbar = new ui.Scrollbar(t => { top = t; draw(); });
+  const title = () => (file ? path.relative(cwd, file) || path.basename(file) : path.basename(cwd));
+  // cur: the row of the cursor, which notes and references take; note: { field, kind, ref } while one is typed.
+  let parsed = null, rows = [], cache = '', top0 = 0, cur = -1, note = null, flash = null, tab = null, tabNotes = [];
+  const scrollbar = new ui.Scrollbar(t => { top0 = t; draw(); });
 
   function layout(width, m) {
     const key = `${width}:${m}`;
-    if (parsed && key !== cache) { rows = render(parsed, width, m); cache = key; }
+    if (parsed && key !== cache) {
+      // The cursor stays on the same lines when the layout changes.
+      const was = rows[cur] && rows[cur].ref, hunk = !!(rows[cur] && rows[cur].hunk);
+      rows = render(parsed, width, m); cache = key;
+      const i = was ? rows.findIndex(r => r.ref && r.ref.file === was.file && r.ref.from === was.from && !!r.hunk === hunk) : -1;
+      cur = i >= 0 ? i : rows.findIndex(r => r.ref);
+    }
   }
+
+  const NOTE = ui.fg(ui.C.yellow);
+  // Lines covered by a note of the tab, by path relative to the repository.
+  const reals = new Map(); // the real path of each file of the diff, looked up once
+  const realOf = f => (reals.has(f) ? reals.get(f) : reals.set(f, notes.real(path.join(top, f))).get(f));
+  const noted = r => r.ref && r.ref.from && tabNotes.length && tabNotes.some(n => n.from && n.file === realOf(r.ref.file)
+    && r.ref.from >= n.from && r.ref.to <= n.to);
 
   function draw() {
     const { W, H } = ui.size();
-    const m = mode || defaultMode(W);
+    const m = layoutOf(W);
     const body = H - 2;
-    // One column narrower when the scrollbar shows (a narrower layout never has fewer rows): kept while it does.
-    if (cache !== `${W - 1}:${m}` || rows.length <= body) layout(W, m);
-    if (rows.length > body) layout(W - 1, m);
-    top = Math.max(0, Math.min(top, rows.length - body));
-    const bw = scrollbar.set(rows.length, body, top);
-    // Header: the name and the counts, then the layout switch, the active side underlined (clickable: switches).
+    // The first column holds the cursor's bar, the last the scrollbar when it shows (a narrower layout never has
+    // fewer rows): one column narrower then, kept while it shows.
+    if (cache !== `${W - 2}:${m}` || rows.length <= body) layout(W - 1, m);
+    if (rows.length > body) layout(W - 2, m);
+    top0 = Math.max(0, Math.min(top0, rows.length - body));
+    const bw = scrollbar.set(rows.length, body, top0);
+    // Header: the name and the counts, then the switches of the base (HEAD or the default branch) and the layout,
+    // the active choice filled (clickable), the base's left out when they do not fit.
     const counts = parsed ? [[` +${parsed.add}`, GREEN], [` −${parsed.del}`, RED]] : [];
-    const ON = '\x1b[1;4m', layouts = [['Inline', m === 'inline' ? ON : DIM], [' · ', DIM], ['Side by side', m === 'split' ? ON : DIM], [' ', '']];
-    const head = [[` ${name}`, '\x1b[1m'], ...counts];
-    const room = W - ui.segWidth(head) - ui.segWidth(layouts) - 1;
-    switchAt = room >= 0 ? W - ui.segWidth(layouts) + 1 : 0;
-    const lines = [ui.line(room >= 0 ? [...head, [' '.repeat(room + 1), ''], ...layouts] : head, W, ui.C.header)];
+    const head = [[` ${title()}`, '\x1b[1m'], ...counts];
+    const switches = [ui.segmented([['head', 'HEAD'], ['branch', baseName || 'main']], base),
+      ui.segmented([['inline', 'Inline'], ['split', 'Split']], m)];
+    const width = () => switches.reduce((w, s) => w + s.width + 1, 0);
+    while (switches.length && W - ui.segWidth(head) - width() < 1) switches.shift();
+    chips = [];
+    let x = W - width() + 1;
+    const segs = [...head, [' '.repeat(Math.max(0, W - ui.segWidth(head) - width())), '']];
+    for (const s of switches) {
+      segs.push(...s.segs, [' ', '']);
+      for (const h of s.hits) chips.push({ id: h.id, from: x + h.from, to: x + h.to });
+      x += s.width + 1;
+    }
+    const lines = [ui.line(segs, W, ui.C.header)];
     if (!parsed) lines.push(...ui.empty(W, body, 'Loading…'));
-    else if (!rows.length) lines.push(...ui.empty(W, body, 'No changes', [['q', 'close']]));
-    rows.slice(top, top + body).forEach((r, k) => lines.push(ui.line(r.segs, W - bw, r.back) + scrollbar.cell(k)));
+    else if (!rows.length) lines.push(...ui.empty(W, body, 'No changes', [['b', 'base'], ['q', 'close']]));
+    // The cursor's row and the noted ones: a bar in the first column.
+    rows.slice(top0, top0 + body).forEach((r, k) => {
+      const i = top0 + k, mark = i === cur ? ['▌', ui.fg(ui.C.blue)] : noted(r) ? ['▎', NOTE] : [' ', ''];
+      lines.push(ui.line([mark, ...r.segs], W - bw, i === cur && !r.back ? ui.C.selectBlur : r.back) + scrollbar.cell(k));
+    });
     while (lines.length < H - 1) lines.push(ui.line([], W));
     lines.length = H - 1;
-    // Footer: the keys, and how far down the diff is.
-    const pct = rows.length > body ? ` ${Math.round(100 * top / Math.max(1, rows.length - body))}% ` : '';
-    hints = ui.keys([['n N', 'hunks'], ['s', 'layout'], ['q', 'close'], ['?', 'keys']], W - pct.length);
-    lines.push(ui.line([...hints, [pct.padStart(Math.max(0, W - ui.segWidth(hints))), DIM]], W, ui.C.header));
+    lines.push(footer(W));
     if (help) ui.help(lines, W, 'Changes', HELP, help);
     paint(lines);
   }
 
+  function footer(W) {
+    hints = [];
+    if (note) {
+      const lead = ` ✎ ${noteWhere(note.ref)} `, kind = note.kind ? `[${note.kind}] ` : '[tab: kind] ';
+      return ui.line([[lead, NOTE], [kind, DIM], ...note.field.segments(Math.max(1, W - ui.textWidth(lead + kind)))], W, ui.C.header);
+    }
+    if (flash) return ui.line(ui.message(flash), W, ui.C.header);
+    // The keys, and how far down the diff is.
+    const body = ui.size().H - 2;
+    const pct = rows.length > body ? ` ${Math.round(100 * top0 / Math.max(1, rows.length - body))}% ` : '';
+    const send = tabNotes.length ? [['A', `send ${tabNotes.length} note${tabNotes.length > 1 ? 's' : ''}`]] : [];
+    // b and s are left out: the header's switches show them (their keys in the help).
+    hints = ui.keys([...send, ['a', 'note'], ['n N', 'hunks'], ['q', 'close'], ['?', 'keys']], W - pct.length);
+    return ui.line([...hints, [pct.padStart(Math.max(0, W - ui.segWidth(hints))), DIM]], W, ui.C.header);
+  }
+
+  function say(text) {
+    if (!text) return draw();
+    flash = text;
+    draw();
+    clearTimeout(say.timer);
+    say.timer = setTimeout(() => { flash = null; draw(); }, ui.messageTime(ui.messageKind(text)));
+  }
+
   // The key help (? or f1), over the whole pane (ui.help): { top, find } while it shows. hints: those of the footer;
-  // switchAt: the column of the header's layout switch (0: not shown).
-  let help = null, hints = [], switchAt = 0;
+  // chips: the choices of the header's switches, { id, from, to } in columns from 1.
+  let help = null, hints = [], chips = [];
   const HELP = [
-    ['Scroll', [['↑↓ j k', 'line'], ['pgup pgdn', 'page'], ['space', 'page down'], ['ctrl+u/d', 'half page'], ['g G', 'top, bottom']]],
-    ['Diff', [['n N', 'next, previous hunk'], ['s', 'inline, side by side']]],
+    ['Move', [['↑↓ j k', 'line'], ['pgup pgdn', 'page'], ['space', 'page down'], ['ctrl+u/d', 'half page'], ['g G', 'top, bottom']]],
+    ['Diff', [['n N', 'next, previous hunk'], ['s', 'inline, split (side by side)'], ['b', 'compare with HEAD or the default branch']]],
+    ['Review', [['a', 'note on the line (hunk, file)'], ['tab', 'kind of note, while typing'], ['A', 'send the notes to the agent'],
+      ['C', 'copy the notes'], ['u', 'remove the last note'], ['y', 'copy path:line']]],
     ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
   ];
   // Go to file and Search in files from the diff's folder, as from the explorer.
-  const search = mode => require('./actions').search(cwd, process.env.HERDR_PANE_ID, mode);
+  const search = mode => actions.search(cwd, PANE, mode);
 
-  function scroll(n) { top += n; draw(); }
-  // Next or previous hunk: its header comes to the top.
+  // The cursor moves over the rows that show lines of a file; the view follows it.
+  function move(n) {
+    const dir = Math.sign(n);
+    for (let i = cur + dir, left = Math.abs(n); left > 0 && i >= 0 && i < rows.length; i += dir) if (rows[i].ref) { cur = i; left--; }
+    follow();
+    draw();
+  }
+  function follow() {
+    const body = ui.size().H - 2;
+    if (cur < top0) top0 = cur;
+    if (cur >= top0 + body) top0 = cur - body + 1;
+  }
+  function scroll(n) { top0 += n; draw(); }
+  // Next or previous hunk: its header comes to the top, with the cursor.
   function jump(dir) {
-    const i = dir > 0 ? rows.findIndex((r, k) => k > top && r.hunk)
-      : rows.map((r, k) => (k < top && r.hunk ? k : -1)).filter(k => k >= 0).pop();
-    if (i !== undefined && i >= 0) { top = i; draw(); }
+    const i = dir > 0 ? rows.findIndex((r, k) => k > cur && r.hunk)
+      : rows.map((r, k) => (k < cur && r.hunk ? k : -1)).filter(k => k >= 0).pop();
+    if (i !== undefined && i >= 0) { cur = i; top0 = i; draw(); }
+  }
+
+  const noteWhere = ref => `${ref.file}${ref.from ? `:${ref.from}${ref.to > ref.from ? `-${ref.to}` : ''}` : ''}`;
+  function startNote() {
+    const r = rows[cur];
+    if (!r || !r.ref) return;
+    if (!tab) return say('Notes need herdr');
+    note = { field: new ui.Field(), kind: '', ref: r.ref };
+    draw();
+  }
+  function noteKey(k) {
+    if (k === 'escape' || k === 'ctrl+c') { note = null; return draw(); }
+    if (k === 'tab' || k === 'shift+tab') {
+      const i = notes.KINDS.indexOf(note.kind);
+      note.kind = notes.KINDS[(i + (k === 'tab' ? 1 : notes.KINDS.length - 1)) % notes.KINDS.length];
+      return draw();
+    }
+    if (k === 'enter') {
+      const n = note;
+      note = null;
+      if (!n.field.value.trim()) return draw();
+      const msg = notes.add(tab, { file: path.join(top, n.ref.file), from: n.ref.from, to: n.ref.to, kind: n.kind, text: n.field.value });
+      tabNotes = notes.read(tab);
+      return say(msg);
+    }
+    if (note.field.key(k)) draw();
+  }
+  async function act(promise) { say(await promise.catch(() => 'Action failed')); }
+  // y: the cursor's lines, relative to the pane's folder (src/app.js:12-14), to paste into a prompt.
+  function copyReference() {
+    const r = rows[cur];
+    if (!r || !r.ref) return;
+    const rel = path.relative(cwd, path.join(top, r.ref.file)).split(path.sep).join('/');
+    act(actions.copy(noteWhere({ ...r.ref, file: rel }), r.ref.from ? 'Reference copied' : 'Path copied'));
+  }
+  async function switchBase() {
+    base = base === 'head' ? 'branch' : 'head';
+    parsed = null; cache = ''; draw();
+    const text = await changes();
+    parsed = parse(text); cache = ''; draw();
+    if (base === 'branch' && !baseName) say('No default branch: compared with HEAD');
   }
 
   function onKey(k) {
     const page = ui.size().H - 3;
+    if (note) return noteKey(k);
     if (k === 'ctrl+c') process.exit(0);
     if (help) { if (!ui.helpKey(k, help)) help = null; return draw(); }
     if (k === '?' || k === 'f1') { help = { top: 0, find: null }; draw(); }
     else if (k === 'q' || k === 'escape') process.exit(0);
-    else if (k === 'up' || k === 'k') scroll(-1);
-    else if (k === 'down' || k === 'j' || k === 'enter') scroll(1);
-    else if (k === 'pageup') scroll(-page);
-    else if (k === 'pagedown' || k === 'space') scroll(page);
-    else if (k === 'ctrl+u') scroll(-Math.ceil(page / 2));
-    else if (k === 'ctrl+d') scroll(Math.ceil(page / 2));
-    else if (k === 'ctrl+p') search('files');
-    else if (k === 'ctrl+f') search('content');
-    else if (k === 'home' || k === 'g') { top = 0; draw(); }
-    else if (k === 'end' || k === 'G') { top = rows.length; draw(); }
+    else if (k === 'up' || k === 'k') move(-1);
+    else if (k === 'down' || k === 'j' || k === 'enter') move(1);
+    else if (k === 'pageup') move(-page);
+    else if (k === 'pagedown' || k === 'space') move(page);
+    else if (k === 'ctrl+u') move(-Math.ceil(page / 2));
+    else if (k === 'ctrl+d') move(Math.ceil(page / 2));
+    else if (k === 'ctrl+p') act(search('files'));
+    else if (k === 'ctrl+f') act(search('content'));
+    else if (k === 'home' || k === 'g') { cur = rows.findIndex(r => r.ref); top0 = 0; draw(); }
+    else if (k === 'end' || k === 'G') { move(rows.length); top0 = rows.length; draw(); }
     else if (k === 'n') jump(1);
     else if (k === 'N') jump(-1);
-    else if (k === 's') { mode = (mode || defaultMode(ui.size().W)) === 'split' ? 'inline' : 'split'; saveMode(mode); draw(); }
+    else if (k === 's') { const W = ui.size().W; saveMode(W, layoutOf(W) === 'split' ? 'inline' : 'split'); draw(); }
+    else if (k === 'b') switchBase();
+    else if (k === 'a') startNote();
+    else if (k === 'A') act(notes.send(tab, FROM));
+    else if (k === 'C') act(notes.copy(tab, top));
+    else if (k === 'u') say(notes.undo(tab));
+    else if (k === 'y') copyReference();
   }
 
   const paint = ui.screen({
     key: onKey,
+    paste(text) { if (note) { note.field.insert(text); draw(); } },
     mouse(m) {
       if (help) { if (!ui.helpMouse(m, help)) help = null; return draw(); }
       if (m.wheel) return scroll(m.wheel * 3);
       const click = m.press && !m.drag && m.button === 0;
-      // The layout switch: a click on a side chooses it.
-      if (click && m.y === 1 && switchAt && m.x >= switchAt) {
-        const want = m.x < switchAt + 6 ? 'inline' : 'split';
-        if (want !== (mode || defaultMode(ui.size().W))) { mode = want; saveMode(mode); draw(); }
+      // The header's switches: a click on a choice takes it.
+      const chip = click && m.y === 1 && chips.find(c => m.x >= c.from && m.x <= c.to);
+      if (chip) {
+        if ((chip.id === 'inline' || chip.id === 'split') && chip.id !== layoutOf(ui.size().W)) { saveMode(ui.size().W, chip.id); draw(); }
+        if ((chip.id === 'head' || chip.id === 'branch') && chip.id !== base) switchBase();
         return;
       }
       // A click on a hint of the footer does what its key does.
       const k = click && m.y === ui.size().H && ui.keyAt(hints, m.x - 1);
       if (k) return onKey(k);
-      scrollbar.mouse(m, m.y - 2, m.x === ui.size().W);
+      if (scrollbar.mouse(m, m.y - 2, m.x === ui.size().W)) return;
+      // A click on a row puts the cursor there.
+      const i = top0 + m.y - 2;
+      if (click && !note && m.y >= 2 && m.y < ui.size().H && rows[i] && rows[i].ref) { cur = i; draw(); }
     },
     resize: draw,
   }, { focus: false, motion: true });
   draw();
   changes().then(text => { parsed = parse(text); cache = ''; draw(); });
+  // The tab, whose notes this pane shows and takes.
+  if (PANE) {
+    actions.tabOf(PANE).then(t => {
+      tab = t && t.me.tab_id;
+      if (!tab) return;
+      tabNotes = notes.read(tab);
+      notes.watch(tab, () => { tabNotes = notes.read(tab); draw(); });
+      draw();
+    });
+  }
 }

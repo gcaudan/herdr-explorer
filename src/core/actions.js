@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const { WIN, PLUGIN, pathDirs, which, words, run, result, HERDR, GIT, gitEnv, readSettings } = require('./exec');
+const { WIN, PLUGIN, pathDirs, which, remoteLink, OWN_PANES: OWN, words, run, result, HERDR, GIT, gitEnv, readSettings } = require('./exec');
 
 const MAC = process.platform === 'darwin';
 
@@ -74,7 +74,11 @@ function terminalEditor() {
   return TERMINAL.has(editorName(words(command)[0])) ? command : null;
 }
 
+// A link to a network share is never handed to a program, which would follow it (see remoteLink).
+const NETWORK = 'Link to a network share: not opened';
+
 async function editor(abs, pane) {
+  if (remoteLink(abs)) return NETWORK;
   const command = readSettings().editor || '';
   const [cmd, ...args] = words(command);
   const name = editorName(cmd);
@@ -91,8 +95,17 @@ async function editor(abs, pane) {
   return edit(abs, pane);
 }
 
+// A page of the plugin's documentation in the browser: https only, never a path or another scheme.
+async function web(url) {
+  if (!/^https:\/\/[\w.-]+\/[\w./#%-]*$/.test(url)) return 'Not opened: not a web page';
+  const ok = WIN ? await detached(which('explorer.exe'), [url], { windowsHide: false })
+    : await detached(MAC ? 'open' : 'xdg-open', [url]);
+  return ok ? 'Opening the documentation' : 'Cannot open a browser';
+}
+
 async function system(abs) {
   if (!canOpen(abs)) return 'Not opened: file type not allowed';
+  if (remoteLink(abs)) return NETWORK;
   const ok = WIN ? await detached(which('explorer.exe'), [abs], { windowsHide: false })
     : await detached(MAC ? 'open' : 'xdg-open', [abs]);
   return ok ? `Opening ${path.basename(abs)}` : 'Cannot open';
@@ -104,6 +117,7 @@ function open(abs, pane) {
 }
 
 async function reveal(abs) {
+  if (remoteLink(abs)) return NETWORK;
   let ok;
   // windowsHide would hide the File Explorer window itself. A path cannot contain '"' on Windows.
   if (WIN) ok = await detached(which('explorer.exe'), [`/select,"${abs}"`], { windowsVerbatimArguments: true, windowsHide: false });
@@ -127,6 +141,24 @@ async function copy(text, done = 'Path copied') {
   return ok ? done : 'Clipboard unavailable';
 }
 
+// The clipboard's text, line breaks as \n, or null without a tool to read it (over SSH, the terminal's own paste still
+// reaches the pane, as a bracketed paste).
+async function clipboard() {
+  const opts = { timeout: 2000 };
+  let text;
+  if (WIN) {
+    // In base64: Windows PowerShell writes its output in the console's OEM code page, which loses é or €.
+    text = await run(which('powershell.exe'), ['-NoProfile', '-NonInteractive', '-Command',
+      '[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string](Get-Clipboard -Raw)))'], opts);
+    if (text !== null) text = Buffer.from(text.trim(), 'base64').toString('utf8');
+  } else if (MAC) text = await run(which('pbpaste'), [], opts);
+  else {
+    text = process.env.WAYLAND_DISPLAY ? await run(which('wl-paste'), ['--no-newline'], opts) : null;
+    if (text === null && process.env.DISPLAY) text = await run(which('xclip'), ['-selection', 'clipboard', '-o'], opts);
+  }
+  return text === null ? null : text.replace(/\r\n?/g, '\n');
+}
+
 // Quoted for the shell unless made of plain characters: single quotes are literal in PowerShell (where the
 // typographic ones count as quotes too, each doubled to escape it) and in POSIX shells ('\'' to escape).
 // A leading dash would read as an option of the command being typed.
@@ -145,16 +177,39 @@ async function insert(abs, pane) {
   const [target, side] = await terminalOf(pane);
   if (!target) return 'No terminal next to the explorer';
   const p = await run(HERDR, ['pane', 'get', target]).then(result).then(r => r && r.pane);
-  let ref = abs;
-  if (p && p.cwd) {
-    const rel = path.relative(p.cwd, abs);
-    if (!rel.startsWith('..') && !path.isAbsolute(rel)) ref = rel || '.';
-  }
-  ref = ref.split(path.sep).join('/');
+  const ref = relativeTo(p && p.cwd, abs);
   if (/[\x00-\x1f\x7f-\x9f]/.test(ref)) return 'Not inserted: control character in name';
   const text = (p && p.agent && !/\s/.test(ref) ? `@${ref}` : quote(ref)) + ' ';
+  return await typeInto(target, side, pane, text) ? null : 'Cannot insert';
+}
+
+// A path relative to a folder when inside it, with '/' separators; else the absolute path.
+function relativeTo(dir, abs) {
+  let ref = abs;
+  if (dir) {
+    const rel = path.relative(dir, abs);
+    if (!rel.startsWith('..') && !path.isAbsolute(rel)) ref = rel || '.';
+  }
+  return ref.split(path.sep).join('/');
+}
+
+// Types one line of text into the terminal next to the explorer, without submitting it, and focuses that terminal.
+// text: the line, or a function of the terminal's folder giving it. It must hold no control character: a newline
+// would submit a prompt or run a command.
+async function type(text, pane) {
+  const [target, side] = await terminalOf(pane);
+  if (!target) return 'No terminal next to the explorer';
+  if (typeof text === 'function') {
+    const p = await run(HERDR, ['pane', 'get', target]).then(result).then(r => r && r.pane);
+    text = text(p && p.cwd);
+  }
+  if (/[\x00-\x1f\x7f-\x9f]/.test(text)) return 'Not typed: control character';
+  return await typeInto(target, side, pane, text) ? null : 'Cannot type into the terminal';
+}
+
+async function typeInto(target, side, pane, text) {
   // send-text prints nothing on success: its exit code tells.
-  if (await run(HERDR, ['pane', 'send-text', target, text]) === null) return 'Cannot insert';
+  if (await run(HERDR, ['pane', 'send-text', target, text]) === null) return false;
   // By direction from the terminal's other neighbour would be fragile: move the focus step by step until it lands.
   for (let from = pane, n = 0; n < 4; n++) {
     const res = await run(HERDR, ['pane', 'focus', '--direction', side, '--pane', from]).then(result);
@@ -162,13 +217,12 @@ async function insert(abs, pane) {
     if (!now || now === target) break;
     from = now;
   }
-  return null;
+  return true;
 }
 
 // The terminal next to the explorer and its side: on the right of an explorer docked on the left, on the left of
 // one docked on the right. Both are tried, as the setting may have changed since the explorer opened. The plugin's
 // own panes are passed over: docked on the right, the preview sits between the terminal and the explorer.
-const OWN = new Set(['Explorer', 'Preview', 'Source Control', 'Changes', 'Editor', 'Search']);
 async function terminalOf(pane) {
   const order = readSettings().side === 'right' ? ['left', 'right'] : ['right', 'left'];
   for (const side of order) {
@@ -188,7 +242,7 @@ async function terminalOf(pane) {
 // explorer's tab rather than the active pane.
 async function diff(abs, root, pane) {
   const res = await run(HERDR, ['plugin', 'pane', 'open', '--plugin', PLUGIN, '--entrypoint', 'diff', '--placement', 'zoomed',
-    '--target-pane', pane, '--env', `EXPLORER_FILE=${abs}`, '--env', `EXPLORER_ROOT=${root}`]);
+    '--target-pane', pane, '--env', `EXPLORER_FILE=${abs}`, '--env', `EXPLORER_ROOT=${root}`, '--env', `EXPLORER_PANE=${pane}`]);
   return result(res) ? null : 'Cannot show changes';
 }
 
@@ -333,27 +387,36 @@ const requestFile = tab => process.env.HERDR_PLUGIN_STATE_DIR
   && path.join(process.env.HERDR_PLUGIN_STATE_DIR, `preview-${String(tab).replace(/[^\w-]/g, '_')}.json`);
 
 // Shows a file in the tab's preview pane, opened next to the terminal when there is none: explorer | terminal |
-// preview. line: 1-based line to scroll to. focus: give the focus to the preview.
-async function preview(abs, root, pane, line = 0, focus = false) {
+// preview. line: 1-based line to scroll to. focus: give the focus to the preview. open: false to only update a
+// preview already open, doing nothing without one. marks: the parts to highlight, [{ from, to, a, b }] (1-based lines,
+// and columns a to b included, 0 for whole lines). view: 'diff' to show the file's git changes rather than the file.
+// keep: in a kept tab of the preview, rather than the temporary one that the next file replaces (a double-click, Enter).
+// tabs: the tabs of a new preview, { list, current }, as the preview saved them (restore after a herdr restart).
+async function preview(abs, root, pane, line = 0, focus = false, open = true, { marks = [], view = 'file', keep = false, tabs = null } = {}) {
   const tab = pane && await tabOf(pane);
   if (!tab) return 'Cannot preview';
-  const request = { file: abs, root, line, t: Date.now() };
+  const request = { file: abs, root, line, marks, view, keep, t: Date.now() };
   const existing = tab.panes.find(p => p.label === 'Preview');
   if (existing) {
     try { fs.writeFileSync(requestFile(tab.me.tab_id), JSON.stringify(request)); } catch { return 'Cannot preview'; }
     if (focus) await herdr('plugin', 'pane', 'focus', existing.pane_id);
     return null;
   }
+  if (!open) return null;
   const target = (await terminalOf(pane))[0] || pane;
   const res = await openPane('preview', 'split', target, {
     EXPLORER_FILE: abs, EXPLORER_ROOT: root, EXPLORER_LINE: line, EXPLORER_TAB: tab.me.tab_id,
+    ...(marks.length ? { EXPLORER_MARKS: JSON.stringify(marks) } : {}), ...(view === 'diff' ? { EXPLORER_VIEW: 'diff' } : {}),
+    ...(keep ? { EXPLORER_KEEP: '1' } : {}), ...(tabs ? { EXPLORER_TABS: JSON.stringify(tabs) } : {}),
   }, ['--direction', 'right', focus ? '--focus' : '--no-focus']);
   return res ? null : 'Cannot open the preview';
 }
 
-// The terminal editor ($VISUAL, $EDITOR, else nano or vi) in a full-tab pane, closed when the editor exits.
+// The terminal editor ($VISUAL, $EDITOR, else nano, nvim, vim or vi; see edit.js) in a full-tab pane, closed when the
+// editor exits.
 // command: the editor of the settings when it is a terminal one (see editor), else $VISUAL, $EDITOR…
 async function edit(abs, pane, command = terminalEditor()) {
+  if (remoteLink(abs)) return NETWORK;
   return await openPane('edit', 'zoomed', pane, { EXPLORER_FILE: abs, ...(command ? { EXPLORER_EDITOR: command } : {}) })
     ? null : 'Cannot open the editor';
 }
@@ -365,10 +428,10 @@ async function search(root, pane, mode = 'files', query = '') {
   return await openPane('search', 'popup', pane, env) ? null : 'Cannot open the search';
 }
 
-// file: a file or folder to select among the changes.
-async function scm(root, pane, file = '') {
-  return await openPane('scm', 'zoomed', pane, { EXPLORER_ROOT: root, EXPLORER_PANE: pane, ...(file ? { EXPLORER_FILE: file } : {}) }) ? null
-    : 'Cannot open source control';
+// file: a file or folder to select among the changes; history: show the commits of that file instead.
+async function scm(root, pane, file = '', history = false) {
+  const env = { EXPLORER_ROOT: root, EXPLORER_PANE: pane, ...(file ? { [history ? 'EXPLORER_HISTORY' : 'EXPLORER_FILE']: file } : {}) };
+  return await openPane('scm', 'zoomed', pane, env) ? null : 'Cannot open source control';
 }
 
 // --- files
@@ -398,7 +461,8 @@ function rename(abs, name) {
   if (!to) return [null, 'Invalid name'];
   if (to === abs) return [abs, null];
   // A case-only change on a case-insensitive file system finds the file itself: the same file, not another one.
-  if (fs.existsSync(to) && !sameFile(abs, to)) return [null, 'Already exists'];
+  // lstat: a link is renamed, not followed.
+  if (fs.lstatSync(to, { throwIfNoEntry: false }) && !sameFile(abs, to)) return [null, 'Already exists'];
   try { fs.mkdirSync(path.dirname(to), { recursive: true }); fs.renameSync(abs, to); } catch (e) {
     return [null, `Cannot rename: ${e.code || e.message}`];
   }
@@ -407,13 +471,14 @@ function rename(abs, name) {
 
 function sameFile(a, b) {
   try {
-    const [x, y] = [fs.statSync(a, { bigint: true }), fs.statSync(b, { bigint: true })];
+    const [x, y] = [fs.lstatSync(a, { bigint: true }), fs.lstatSync(b, { bigint: true })];
     return x.ino === y.ino && x.dev === y.dev && x.ino !== 0n;
   } catch { return false; }
 }
 
 // A copy next to the original: "name copy.ext", "name copy 2.ext"…
 function duplicate(abs) {
+  if (remoteLink(abs)) return [null, NETWORK];
   const ext = fs.statSync(abs).isDirectory() ? '' : path.extname(abs);
   const base = abs.slice(0, abs.length - ext.length);
   let to = `${base} copy${ext}`;
@@ -425,7 +490,10 @@ function duplicate(abs) {
 }
 
 // To the trash of the desktop: gio on Linux, trash (macOS 14) or Finder on macOS, the recycle bin on Windows.
+// Never a link to a network share: the recycle bin would follow it, and on Windows a folder link reads as a file to
+// lstat; remove() deletes the link itself.
 async function trash(abs) {
+  if (remoteLink(abs)) return false;
   let ok;
   if (WIN) {
     const fn = fs.statSync(abs).isDirectory() ? 'DeleteDirectory' : 'DeleteFile';
@@ -436,11 +504,17 @@ async function trash(abs) {
     ok = await run('/usr/bin/trash', [abs]) !== null || await run('osascript', ['-e',
       'on run argv\ntell application "Finder" to delete POSIX file (item 1 of argv)\nend run', abs]) !== null;
   } else ok = await run('gio', ['trash', '--', abs]) !== null || await run('trash-put', ['--', abs]) !== null;
-  return ok && !fs.existsSync(abs);
+  return ok && !fs.lstatSync(abs, { throwIfNoEntry: false });
 }
 
+// A link goes itself, its target untouched: unlink, or rmdir for a folder link on Windows, which unlink refuses.
 function remove(abs) {
-  try { fs.rmSync(abs, { recursive: true, force: true }); return null; } catch (e) { return `Cannot delete: ${e.code || e.message}`; }
+  try {
+    if (fs.lstatSync(abs, { throwIfNoEntry: false })?.isSymbolicLink()) {
+      try { fs.unlinkSync(abs); } catch (e) { if (e.code !== 'EPERM' && e.code !== 'EISDIR') throw e; fs.rmdirSync(abs); }
+    } else fs.rmSync(abs, { recursive: true, force: true });
+    return null;
+  } catch (e) { return `Cannot delete: ${e.code || e.message}`; }
 }
 
 // --- git
@@ -485,7 +559,7 @@ async function discard(abs, root) {
 }
 
 module.exports = {
-  open, editor, system, canOpen, canPreview, reveal, copy, insert, diff, preview, edit, search, scm, requestFile, tabOf, terminalOf,
+  open, editor, system, web, canOpen, canPreview, reveal, copy, clipboard, insert, type, relativeTo, diff, preview, edit, search, scm, requestFile, tabOf, terminalOf,
   layoutOf, sideSplit, setWidth, widthKeeper,
   create, rename, duplicate, trash, remove, stage, unstage, discard, REVEAL: WIN ? 'Reveal in Explorer' : 'Open folder',
 };

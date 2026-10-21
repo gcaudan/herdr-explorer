@@ -1,11 +1,13 @@
-// Image preview: format and size read from the header (PNG, JPEG, GIF, BMP, WebP, ICO, SVG), pure JS decoders
-// for PNG, GIF, BMP, baseline JPEG and ICO, and rendering with half blocks (one cell = two pixels stacked).
+// Image preview: format and size read from the header (PNG, JPEG, GIF, BMP, WebP, TIFF, ICO, SVG), pure JS decoders
+// for PNG, GIF, BMP, JPEG (baseline and progressive), TIFF and ICO, and rendering with half blocks (one cell = two pixels stacked) or
+// as pixels for the Kitty graphics protocol. WebP goes through dwebp, when installed, which turns it into a PNG.
 // Files are untrusted: sizes are checked before allocating, every loop is bounded and nothing throws.
 'use strict';
 const zlib = require('zlib');
-const { fg, bg } = require('./ui');
+const { execFile } = require('child_process');
+const { fg, bg } = require('../core/ui');
 
-const FORMATS = new Set('png apng jpg jpeg jpe jfif gif bmp dib ico cur webp svg'.split(' '));
+const FORMATS = new Set('png apng jpg jpeg jpe jfif gif bmp dib ico cur webp tif tiff svg'.split(' '));
 const MAX_BYTES = 50 * 1024 * 1024;
 const MAX_PIXELS = 50e6;
 const MAX_RAW = 256 * 1024 * 1024; // inflated PNG data: a few bytes of zlib can claim gigabytes
@@ -19,12 +21,14 @@ const sle32 = (b, i) => b[i] | b[i + 1] << 8 | b[i + 2] << 16 | b[i + 3] << 24;
 const le32 = (b, i) => sle32(b, i) >>> 0;
 const ascii = (b, i, n) => String.fromCharCode(...b.subarray(i, i + n));
 const isPng = b => b.length > 8 && b[0] === 0x89 && ascii(b, 1, 3) === 'PNG';
+const isTiff = b => b.length > 8 && ((b[0] === 0x49 && b[1] === 0x49 && b[2] === 42 && b[3] === 0) || (b[0] === 0x4d && b[1] === 0x4d && b[2] === 0 && b[3] === 42));
+const isWebp = b => b.length > 12 && ascii(b, 0, 4) === 'RIFF' && ascii(b, 8, 4) === 'WEBP';
 
 // --- header
 
-// JPEG frame types other than baseline / extended sequential Huffman, which are not decoded.
+// JPEG frame types other than baseline, extended sequential and progressive Huffman, which are not decoded.
 const JPEG_NOTE = {
-  0xc2: 'progressive', 0xc3: 'lossless', 0xc5: 'hierarchical', 0xc6: 'progressive', 0xc7: 'lossless',
+  0xc3: 'lossless', 0xc5: 'hierarchical', 0xc6: 'progressive', 0xc7: 'lossless',
   0xc9: 'arithmetic', 0xca: 'progressive', 0xcb: 'lossless', 0xcd: 'hierarchical', 0xce: 'progressive',
   0xcf: 'lossless',
 };
@@ -56,6 +60,10 @@ function sniff(b) {
     return null;
   }
   if (ascii(b, 0, 4) === 'GIF8') return { format: 'GIF', width: le16(b, 6), height: le16(b, 8) };
+  if (isTiff(b)) {
+    const t = tiffTags(b);
+    return t && { format: 'TIFF', width: t.get(256) ? t.get(256)[0] : 0, height: t.get(257) ? t.get(257)[0] : 0 };
+  }
   if (b[0] === 0x42 && b[1] === 0x4d && n >= 26) {
     return le32(b, 14) === 12 ? { format: 'BMP', width: le16(b, 18), height: le16(b, 20) }
       : { format: 'BMP', width: sle32(b, 18), height: Math.abs(sle32(b, 22)) };
@@ -127,6 +135,7 @@ function decode(buf) {
     if (b[0] === 0xff && b[1] === 0xd8) return decodeJpeg(b);
     if (ascii(b, 0, 4) === 'GIF8') return decodeGif(b);
     if (b[0] === 0x42 && b[1] === 0x4d) return decodeDib(b, 14, le32(b, 10), false);
+    if (isTiff(b)) return decodeTiff(b);
     if (b[0] === 0 && b[1] === 0 && (b[2] === 1 || b[2] === 2) && b[3] === 0) return decodeIco(b);
     return null;
   } catch { return null; }
@@ -415,7 +424,7 @@ function decodeIco(b) {
   return isPng(d) ? decodePng(d) : decodeDib(d, 0, null, true);
 }
 
-// --- JPEG (baseline and extended sequential Huffman, 8-bit)
+// --- JPEG (baseline, extended sequential and progressive Huffman, 8-bit)
 
 const ZIGZAG = Uint8Array.from([
   0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5, 12, 19, 26, 33, 40, 48, 41, 34, 27, 20, 13, 6, 7, 14, 21, 28,
@@ -466,29 +475,36 @@ function decodeJpeg(b) {
       }
     } else if (m === 0xdd) restart = u16(b, s);
     else if (m === 0xee && ascii(b, s, 5) === 'Adobe') adobe = b[s + 11];
-    else if (m === 0xc0 || m === 0xc1) {
+    else if (m === 0xc0 || m === 0xc1 || m === 0xc2) {
       if (frame || b[s] !== 8) return null;
-      frame = jpegFrame(b, s);
+      frame = jpegFrame(b, s, m === 0xc2);
       if (!frame) return null;
-    } else if (m >= 0xc2 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) return null;
+    } else if (m >= 0xc3 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) return null;
     else if (m === 0xda) {
       if (!frame) return null;
+      const count = b[s], [ss, se, a] = [b[s + 1 + 2 * count], b[s + 2 + 2 * count], b[s + 3 + 2 * count]];
+      const scan = frame.progressive ? { ss, se, ah: a >> 4, al: a & 15 } : null;
+      // A progressive scan holds either the DC coefficients (of one or more components) or a band of AC ones (of
+      // one component), and needs only that table.
+      if (scan && (se > 63 || ss > se || (ss === 0 && se !== 0) || (ss > 0 && count !== 1) || scan.al > 13)) return null;
       const comps = [];
-      for (let k = 0; k < b[s]; k++) {
+      for (let k = 0; k < count; k++) {
         const c = frame.comps.find(x => x.id === b[s + 1 + 2 * k]), sel = b[s + 2 + 2 * k];
-        if (!c || !dcs[sel >> 4] || !acs[sel & 15] || !qt[c.tq]) return null;
-        comps.push({ c, dc: dcs[sel >> 4], ac: acs[sel & 15], q: qt[c.tq] });
+        const dc = dcs[sel >> 4], ac = acs[sel & 15];
+        if (!c || !qt[c.tq] || (scan ? (ss === 0 ? !dc && !scan.ah : !ac) : !dc || !ac)) return null;
+        comps.push({ c, dc, ac, q: qt[c.tq] });
       }
       if (!comps.length) return null;
-      i = jpegScan(b, e, frame, comps, restart);
+      i = scan ? jpegProgressive(b, e, frame, comps, restart, scan) : jpegScan(b, e, frame, comps, restart);
       continue;
     }
     i += 2 + len;
   }
+  if (frame && frame.progressive) jpegFinish(frame, qt);
   return frame && jpegColours(frame, adobe);
 }
 
-function jpegFrame(b, s) {
+function jpegFrame(b, s, progressive) {
   const h = u16(b, s + 1), w = u16(b, s + 3), count = b[s + 5];
   if (bad(w, h) || ![1, 3, 4].includes(count)) return null;
   const comps = [];
@@ -504,15 +520,19 @@ function jpegFrame(b, s) {
     c.plane = new Uint8Array(c.stride * my * c.v * 8);
     // Blocks of a scan with this component alone: no padding to whole MCUs.
     c.bw = Math.ceil(w * c.h / hmax / 8); c.bh = Math.ceil(h * c.v / vmax / 8);
+    // Progressive: the coefficients of every block, built up scan after scan, then transformed (jpegFinish).
+    c.across = mx * c.h;
+    if (progressive) c.coefs = new Int16Array(c.across * my * c.v * 64);
   }
-  return { w, h, comps, hmax, vmax, mx, my };
+  return { w, h, comps, hmax, vmax, mx, my, progressive };
 }
 
-// Decodes one scan; returns the position of the marker that follows it.
-function jpegScan(b, pos, frame, comps, restart) {
-  const n = b.length, blk = new Int32Array(64), tmp = new Int32Array(64);
+// The entropy-coded data of a scan, read bit by bit from pos. Byte stuffing (FF 00) is undone; at a marker or the
+// end of the file, zeros come instead.
+function jpegBits(b, pos) {
+  const n = b.length;
   let buf = 0, cnt = 0, marker = false;
-  // Keeps at least 25 bits in buf; zeros once a marker or the end is reached.
+  // Keeps at least 25 bits in buf.
   const fill = () => {
     while (cnt <= 24) {
       let v = 0;
@@ -523,50 +543,81 @@ function jpegScan(b, pos, frame, comps, restart) {
       buf = buf << 8 | v; cnt += 8;
     }
   };
-  const symbol = t => {
-    if (cnt < 16) fill();
-    const f = t.fast[(buf >>> (cnt - 9)) & 511];
-    if (f) { cnt -= f >> 8; return f & 255; }
-    for (let len = 10; len <= 16; len++) {
-      const code = (buf >>> (cnt - len)) & ((1 << len) - 1);
-      if (code <= t.max[len]) { cnt -= len; return t.values[t.ptr[len] + code - t.min[len]] | 0; }
-    }
-    cnt -= 16;
-    return 0;
-  };
-  const receive = s => {
+  const bits = s => {
     if (!s) return 0;
     if (cnt < s) fill();
     const v = (buf >>> (cnt - s)) & ((1 << s) - 1);
     cnt -= s;
-    return v < 1 << (s - 1) ? v - (1 << s) + 1 : v;
+    return v;
   };
+  const isMarker = (k, rst) => b[k] === 0xff && b[k + 1] !== 0 && b[k + 1] !== 0xff && (rst || !(b[k + 1] >= 0xd0 && b[k + 1] <= 0xd7));
+  return {
+    bits,
+    symbol(t) {
+      if (cnt < 16) fill();
+      const f = t.fast[(buf >>> (cnt - 9)) & 511];
+      if (f) { cnt -= f >> 8; return f & 255; }
+      for (let len = 10; len <= 16; len++) {
+        const code = (buf >>> (cnt - len)) & ((1 << len) - 1);
+        if (code <= t.max[len]) { cnt -= len; return t.values[t.ptr[len] + code - t.min[len]] | 0; }
+      }
+      cnt -= 16;
+      return 0;
+    },
+    // A value of s bits, its sign given by its first bit.
+    receive(s) {
+      const v = bits(s);
+      return s && v < 1 << (s - 1) ? v - (1 << s) + 1 : v;
+    },
+    // Resynchronises on the next RST marker; false when another marker comes first, which ends the scan.
+    restart() {
+      while (pos + 1 < n && !isMarker(pos, true)) pos++;
+      if (!(b[pos + 1] >= 0xd0 && b[pos + 1] <= 0xd7)) return false;
+      pos += 2; marker = false; buf = 0; cnt = 0;
+      return true;
+    },
+    // The position of the marker that ends the scan.
+    end() {
+      while (pos + 1 < n && !isMarker(pos, false)) pos++;
+      return pos;
+    },
+  };
+}
+
+// Decodes one scan of a baseline image; returns the position of the marker that follows it.
+function jpegScan(b, pos, frame, comps, restart) {
+  const r = jpegBits(b, pos), blk = new Int32Array(64), tmp = new Int32Array(64);
   const block = (s, bx, by) => {
     const { c, q } = s;
     blk.fill(0);
-    c.pred += receive(symbol(s.dc) & 15);
+    c.pred += r.receive(r.symbol(s.dc) & 15);
     blk[0] = c.pred * q[0];
     for (let k = 1; k < 64;) {
-      const rs = symbol(s.ac), size = rs & 15, run = rs >> 4;
+      const rs = r.symbol(s.ac), size = rs & 15, run = rs >> 4;
       if (!size) { if (run !== 15) break; k += 16; continue; }
       k += run;
       if (k > 63) break;
       const z = ZIGZAG[k++];
-      blk[z] = receive(size) * q[z];
+      blk[z] = r.receive(size) * q[z];
     }
     idct(blk, tmp, c.plane, by * 8 * c.stride + bx * 8, c.stride);
   };
+  eachBlock(frame, comps, restart, r, block);
+  return r.end();
+}
 
+// Calls block(component, x, y) for every block of a scan, in its order: MCU after MCU when it interleaves components,
+// row after row of the component's own blocks otherwise. Predictions (and the progressive end-of-band run) start
+// again at each restart marker.
+function eachBlock(frame, comps, restart, r, block) {
   const single = comps.length === 1;
   const total = single ? comps[0].c.bw * comps[0].c.bh : frame.mx * frame.my;
-  for (const s of comps) s.c.pred = 0;
+  const reset = () => { for (const s of comps) s.c.pred = 0; r.eobrun = 0; };
+  reset();
   for (let m = 0; m < total; m++) {
     if (restart && m && m % restart === 0) {
-      // Resynchronise on the next RST marker; any other marker ends the scan.
-      while (pos + 1 < n && !(b[pos] === 0xff && b[pos + 1] !== 0 && b[pos + 1] !== 0xff)) pos++;
-      if (!(b[pos + 1] >= 0xd0 && b[pos + 1] <= 0xd7)) break;
-      pos += 2; marker = false; buf = 0; cnt = 0;
-      for (const s of comps) s.c.pred = 0;
+      if (!r.restart()) break;
+      reset();
     }
     if (single) { const c = comps[0].c; block(comps[0], m % c.bw, (m / c.bw) | 0); continue; }
     const mx = m % frame.mx, my = (m / frame.mx) | 0;
@@ -574,9 +625,76 @@ function jpegScan(b, pos, frame, comps, restart) {
       for (let v = 0; v < s.c.v; v++) for (let h = 0; h < s.c.h; h++) block(s, mx * s.c.h + h, my * s.c.v + v);
     }
   }
-  while (pos + 1 < n && !(b[pos] === 0xff && b[pos + 1] !== 0 && b[pos + 1] !== 0xff
-    && !(b[pos + 1] >= 0xd0 && b[pos + 1] <= 0xd7))) pos++;
-  return pos;
+}
+
+// Decodes one scan of a progressive image into the coefficients: the DC ones or a band ss..se of AC ones, first
+// (ah 0) or one more bit of them (refinement), each scaled by 2^al. As libjpeg's jdphuff.c.
+function jpegProgressive(b, pos, frame, comps, restart, { ss, se, ah, al }) {
+  const r = jpegBits(b, pos), p1 = 1 << al, m1 = -1 << al;
+  // A refinement bit for a coefficient already non-zero: away from zero.
+  const refine = (co, z) => { if (r.bits(1) && (co[z] & p1) === 0) co[z] += co[z] >= 0 ? p1 : m1; };
+  const block = (s, bx, by) => {
+    const co = s.c.coefs, o = (by * s.c.across + bx) * 64;
+    if (o + 64 > co.length) return;
+    if (ss === 0) {
+      if (!ah) { s.c.pred += r.receive(r.symbol(s.dc) & 15); co[o] = s.c.pred * p1; } else if (r.bits(1)) co[o] |= p1;
+      return;
+    }
+    const at = co.subarray(o, o + 64);
+    let k = ss;
+    if (!ah) {
+      if (r.eobrun > 0) { r.eobrun--; return; }
+      for (; k <= se; k++) {
+        const rs = r.symbol(s.ac), run = rs >> 4, size = rs & 15;
+        if (!size) {
+          if (run < 15) { r.eobrun = (1 << run) - 1 + r.bits(run); break; }
+          k += 15;
+          continue;
+        }
+        k += run;
+        if (k > 63) break;
+        at[ZIGZAG[k]] = r.receive(size) * p1;
+      }
+      return;
+    }
+    if (r.eobrun <= 0) {
+      for (; k <= se; k++) {
+        const rs = r.symbol(s.ac);
+        let run = rs >> 4, value = 0;
+        if (rs & 15) value = r.bits(1) ? p1 : m1;
+        else if (run < 15) { r.eobrun = (1 << run) + r.bits(run); break; }
+        // Zeros to skip (run of them, or 16), refining the non-zero coefficients met on the way.
+        for (; k <= se; k++) {
+          const z = ZIGZAG[k];
+          if (at[z]) refine(at, z); else if (--run < 0) break;
+        }
+        if (value && k <= se) at[ZIGZAG[k]] = value;
+      }
+    }
+    if (r.eobrun > 0) {
+      for (; k <= se; k++) if (at[ZIGZAG[k]]) refine(at, ZIGZAG[k]);
+      r.eobrun--;
+    }
+  };
+  eachBlock(frame, comps, restart, r, block);
+  return r.end();
+}
+
+// A progressive image once its scans are read: every block's coefficients dequantised and transformed.
+function jpegFinish(frame, qt) {
+  const blk = new Int32Array(64), tmp = new Int32Array(64);
+  for (const c of frame.comps) {
+    const q = qt[c.tq];
+    if (!q) continue;
+    for (let by = 0; by < c.bh; by++) {
+      for (let bx = 0; bx < c.bw; bx++) {
+        const o = (by * c.across + bx) * 64;
+        for (let k = 0; k < 64; k++) blk[k] = c.coefs[o + k] * q[k];
+        idct(blk, tmp, c.plane, by * 8 * c.stride + bx * 8, c.stride);
+      }
+    }
+    c.coefs = null;
+  }
 }
 
 // Integer IDCT (the jidctint algorithm, as in stb_image): fixed point with 12 fractional bits.
@@ -656,6 +774,231 @@ function jpegColours({ w, h, comps, hmax, vmax }, adobe) {
   return { width: w, height: h, data: new Uint8Array(out.buffer) };
 }
 
+// --- TIFF
+//
+// Baseline images: one strip after another (no tiles), one plane, 1 to 16 bits per sample; grey, RGB(A), palette or
+// CMYK; uncompressed, PackBits, LZW or Deflate, with the horizontal predictor. Only the first image of the file.
+
+// The tags of the first directory: tag → array of numbers.
+function tiffTags(b) {
+  const le = b[0] === 0x49;
+  const r16 = i => (le ? le16(b, i) : u16(b, i)), r32 = i => (le ? le32(b, i) : u32(b, i));
+  const dir = r32(4), count = dir + 2 <= b.length ? r16(dir) : 0;
+  if (!count || count > 1000) return null;
+  const SIZE = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 6: 1, 7: 1, 8: 2, 9: 4 };
+  const tags = new Map();
+  for (let k = 0; k < count; k++) {
+    const e = dir + 2 + k * 12;
+    if (e + 12 > b.length) break;
+    const tag = r16(e), type = r16(e + 2), n = r32(e + 4), size = SIZE[type];
+    if (!size || n > 1 << 24) continue;
+    const at = n * size <= 4 ? e + 8 : r32(e + 8);
+    if (at + n * size > b.length) continue;
+    const values = [];
+    for (let i = 0; i < n; i++) {
+      const p = at + i * size;
+      values.push(size === 1 ? b[p] : size === 2 ? r16(p) : size === 4 ? r32(p) : r32(p) / (r32(p + 4) || 1));
+    }
+    tags.set(tag, values);
+  }
+  tags.le = le;
+  return tags;
+}
+
+function decodeTiff(b) {
+  const t = tiffTags(b);
+  if (!t) return null;
+  const one = (tag, d) => (t.get(tag) || [d])[0];
+  const w = one(256, 0), h = one(257, 0), spp = one(277, 1), bps = (t.get(258) || [1])[0];
+  const comp = one(259, 1), photo = one(262, 1), pred = one(317, 1), rps = Math.min(one(278, h), h);
+  const offsets = t.get(273), counts = t.get(279);
+  if (bad(w, h) || !offsets || !counts || one(284, 1) !== 1 || ![1, 2, 4, 8, 16].includes(bps) || spp < 1 || spp > 5) return null;
+  if (![0, 1, 2, 3, 5].includes(photo) || (photo === 2 && spp < 3) || (photo === 5 && spp < 4) || (bps < 8 && spp > 1)) return null;
+  const stride = Math.ceil(w * spp * bps / 8);
+  if (stride * h > MAX_RAW) return null;
+  const raw = new Uint8Array(stride * h);
+  for (let s = 0, y = 0; s < offsets.length && y < h; s++, y += rps) {
+    const data = b.subarray(offsets[s], offsets[s] + (counts[s] || 0));
+    const want = Math.min(rps, h - y) * stride;
+    let part;
+    if (comp === 1) part = data;
+    else if (comp === 32773) part = packBits(data, want);
+    else if (comp === 5) part = tiffLzw(data, want);
+    else if (comp === 8 || comp === 32946) {
+      part = zlib.inflateSync(data, { finishFlush: zlib.constants.Z_SYNC_FLUSH, maxOutputLength: want + 1024 });
+    } else return null;
+    raw.set(part.subarray(0, want), y * stride);
+  }
+  // Horizontal predictor: each sample stored as the difference with the one on its left (8 and 16 bits).
+  if (pred === 2 && bps >= 8) {
+    const bytes = bps / 8, step = spp * bytes;
+    for (let y = 0; y < h; y++) {
+      const row = y * stride;
+      if (bytes === 1) for (let i = row + step; i < row + stride; i++) raw[i] = raw[i] + raw[i - step];
+      else {
+        const get = i => (t.le ? raw[i] | raw[i + 1] << 8 : raw[i] << 8 | raw[i + 1]);
+        const set = (i, v) => { if (t.le) { raw[i] = v; raw[i + 1] = v >> 8; } else { raw[i] = v >> 8; raw[i + 1] = v; } };
+        for (let i = row + step; i + 1 < row + stride; i += 2) set(i, (get(i) + get(i - step)) & 0xffff);
+      }
+    }
+  }
+  // A sample as 8 bits: the high byte of 16, smaller depths spread over 0-255.
+  const max = (1 << Math.min(bps, 8)) - 1;
+  const sample = (y, k) => {
+    if (bps === 8) return raw[y * stride + k];
+    if (bps === 16) { const i = y * stride + k * 2; return t.le ? raw[i + 1] : raw[i]; }
+    const bit = k * bps, v = raw[y * stride + (bit >> 3)] >> (8 - bps - (bit & 7)) & max;
+    return photo === 3 ? v : Math.round(v * 255 / max);
+  };
+  const map = t.get(320), extra = (t.get(338) || [])[0];
+  const out = new Uint8Array(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0, o = y * w * 4; x < w; x++, o += 4) {
+      const k = x * spp;
+      let r, g, bl, a = 255;
+      if (photo === 3) {
+        const i = sample(y, k), n = map ? map.length / 3 : 0;
+        if (i >= n) { r = g = bl = 0; } else { r = map[i] >> 8; g = map[n + i] >> 8; bl = map[2 * n + i] >> 8; }
+      } else if (photo === 2) {
+        r = sample(y, k); g = sample(y, k + 1); bl = sample(y, k + 2);
+        if (spp > 3 && extra) a = sample(y, k + 3);
+      } else if (photo === 5) {
+        const kk = 255 - sample(y, k + 3);
+        r = (255 - sample(y, k)) * kk / 255; g = (255 - sample(y, k + 1)) * kk / 255; bl = (255 - sample(y, k + 2)) * kk / 255;
+      } else {
+        r = g = bl = photo === 0 ? 255 - sample(y, k) : sample(y, k);
+        if (spp > 1 && extra) a = sample(y, k + 1);
+      }
+      // Associated alpha (1): colours already multiplied by it.
+      if (a < 255 && extra === 1 && a) { r = r * 255 / a; g = g * 255 / a; bl = bl * 255 / a; }
+      out[o] = r; out[o + 1] = g; out[o + 2] = bl; out[o + 3] = a;
+    }
+  }
+  return { width: w, height: h, data: out };
+}
+
+// PackBits: a count n, then n + 1 bytes as they are (n ≥ 0) or the next byte 1 - n times (n < 0).
+function packBits(src, want) {
+  const out = new Uint8Array(want);
+  let o = 0;
+  for (let i = 0; i < src.length && o < want;) {
+    const n = src[i++] << 24 >> 24;
+    if (n >= 0) { const end = Math.min(i + n + 1, src.length); while (i < end && o < want) out[o++] = src[i++]; }
+    else if (n !== -128) { const v = src[i++]; for (let k = 0; k < 1 - n && o < want; k++) out[o++] = v; }
+  }
+  return out;
+}
+
+// TIFF's LZW: codes of 9 to 12 bits, most significant bit first, 256 to clear the table and 257 to end; the code
+// size grows one code earlier than in GIF.
+function tiffLzw(src, want) {
+  const out = new Uint8Array(want);
+  const prefix = new Int16Array(4096), suffix = new Uint8Array(4096), first = new Uint8Array(4096), len = new Uint16Array(4096);
+  for (let c = 0; c < 256; c++) { suffix[c] = c; first[c] = c; len[c] = 1; }
+  let bits = 9, next = 258, prev = -1, pos = 0, o = 0;
+  const total = src.length * 8;
+  const write = c => {
+    const n = len[c];
+    for (let k = n - 1, x = c; k >= 0; k--, x = prefix[x]) if (o + k < want) out[o + k] = suffix[x];
+    o += n;
+  };
+  while (o < want && pos + bits <= total) {
+    const i = pos >> 3;
+    const word = (src[i] << 16 | (src[i + 1] || 0) << 8 | (src[i + 2] || 0)) >>> 0;
+    const code = word >> (24 - bits - (pos & 7)) & ((1 << bits) - 1);
+    pos += bits;
+    if (code === 257) break;
+    if (code === 256) { bits = 9; next = 258; prev = -1; continue; }
+    if (prev < 0) { if (code > 255) break; write(code); prev = code; continue; }
+    let head;
+    if (code < next) { write(code); head = first[code]; } else if (code === next) {
+      head = first[prev];
+      write(prev);
+      if (o < want) out[o] = head;
+      o++;
+    } else break;
+    if (next < 4096) { prefix[next] = prev; suffix[next] = head; first[next] = first[prev]; len[next] = len[prev] + 1; next++; }
+    prev = code;
+    if (next >= (1 << bits) - 1 && bits < 12) bits++;
+  }
+  return out;
+}
+
+// --- WebP, through dwebp
+
+// The image as a PNG made by dwebp (libwebp), when the file is a WebP and dwebp is installed: a Promise of a Buffer,
+// or of null. The path is absolute, so that it never reads as an option.
+let dwebp;
+function convert(file, buffer) {
+  if (!isWebp(buffer) || !require('path').isAbsolute(file)) return Promise.resolve(null);
+  if (dwebp === undefined) dwebp = require('../core/exec').which('dwebp');
+  if (!dwebp) return Promise.resolve(null);
+  return new Promise(resolve => execFile(dwebp, ['-quiet', file, '-o', '-'],
+    { encoding: 'buffer', maxBuffer: MAX_RAW, timeout: 20000, windowsHide: true },
+    (err, out) => resolve(!err && isPng(out) ? out : null)));
+}
+
+// --- scaling
+
+// The size of an image scaled to fit maxW × maxH: never enlarged, except small icons by a whole factor (up to 4) until
+// their longer side reaches icon.
+function fit(w, h, maxW, maxH, icon = ICON) {
+  let scale = Math.min(maxW / w, maxH / h);
+  if (scale >= 1) scale = Math.max(1, Math.min(Math.floor(scale), Math.floor(icon / Math.max(w, h)), 4));
+  return [Math.max(1, Math.min(maxW, Math.round(w * scale))), Math.max(1, Math.min(maxH, Math.round(h * scale)))];
+}
+
+// RGBA pixels of a decoded image at tw × th: each target pixel averages its source area (box filter), colours
+// weighted by alpha.
+function scale({ width: w, height: h, data }, tw, th) {
+  const x0 = new Int32Array(tw), x1 = new Int32Array(tw);
+  for (let x = 0; x < tw; x++) {
+    x0[x] = Math.floor(x * w / tw);
+    x1[x] = Math.max(x0[x] + 1, Math.floor((x + 1) * w / tw));
+  }
+  const out = new Uint8Array(tw * th * 4);
+  const acc = new Float64Array(tw * 4);
+  for (let y = 0; y < th; y++) {
+    const y0 = Math.floor(y * h / th), y1 = Math.max(y0 + 1, Math.floor((y + 1) * h / th));
+    acc.fill(0);
+    for (let sy = y0; sy < y1; sy++) {
+      const row = sy * w * 4;
+      for (let x = 0; x < tw; x++) {
+        let r = 0, g = 0, b = 0, a = 0;
+        for (let p = row + x0[x] * 4, end = row + x1[x] * 4; p < end; p += 4) {
+          const al = data[p + 3];
+          r += data[p] * al; g += data[p + 1] * al; b += data[p + 2] * al; a += al;
+        }
+        const q = x * 4;
+        acc[q] += r; acc[q + 1] += g; acc[q + 2] += b; acc[q + 3] += a;
+      }
+    }
+    for (let x = 0; x < tw; x++) {
+      const q = x * 4, n = (x1[x] - x0[x]) * (y1 - y0), o = (y * tw + x) * 4, a = acc[q + 3];
+      if (a) { out[o] = Math.round(acc[q] / a); out[o + 1] = Math.round(acc[q + 1] / a); out[o + 2] = Math.round(acc[q + 2] / a); }
+      out[o + 3] = Math.round(a / n);
+    }
+  }
+  return out;
+}
+
+// The image scaled to fit maxW × maxH pixels, for the Kitty graphics protocol: { width, height, data (RGBA),
+// imageWidth, imageHeight }, or { info } when it cannot be shown.
+function pixels(buffer, maxW, maxH) {
+  try {
+    const meta = info(buffer);
+    if (!buffer || !buffer.length) return { info: 'Empty file' };
+    if (buffer.length > MAX_BYTES) return { info: describe(meta, 'file too large for preview') };
+    if (meta && meta.width * meta.height > MAX_PIXELS) return { info: describe(meta, 'too large for preview') };
+    const img = decode(buffer);
+    if (!img) return { info: describe(meta, 'no preview') };
+    const [tw, th] = fit(img.width, img.height, Math.max(1, maxW | 0), Math.max(1, maxH | 0), 128);
+    return { width: tw, height: th, data: tw === img.width && th === img.height ? img.data : scale(img, tw, th), imageWidth: img.width, imageHeight: img.height };
+  } catch {
+    return { info: 'No preview' };
+  }
+}
+
 // --- rendering
 
 const describe = (meta, why) => (meta
@@ -673,12 +1016,7 @@ function render(buffer, cols, rows, { background = [30, 30, 30] } = {}) {
     const img = decode(buffer);
     if (!img) return { info: describe(meta, 'no preview') };
     const { width: w, height: h, data } = img;
-    const maxW = Math.max(1, cols | 0), maxH = Math.max(1, rows | 0) * 2;
-    let scale = Math.min(maxW / w, maxH / h);
-    // Never enlarged, except small icons by a whole factor, up to ICON pixels.
-    if (scale >= 1) scale = Math.max(1, Math.min(Math.floor(scale), Math.floor(ICON / Math.max(w, h)), 4));
-    const tw = Math.max(1, Math.min(maxW, Math.round(w * scale)));
-    const th = Math.max(1, Math.min(maxH, Math.round(h * scale)));
+    const [tw, th] = fit(w, h, Math.max(1, cols | 0), Math.max(1, rows | 0) * 2);
 
     // Box filter: each target pixel averages its source area, colours weighted by alpha, then blended over the
     // background.
@@ -734,4 +1072,34 @@ function render(buffer, cols, rows, { background = [30, 30, 30] } = {}) {
   }
 }
 
-module.exports = { FORMATS, MAX_BYTES, info, decode, render };
+// --- images in scrolled text
+//
+// An image placed in pixels over rows cells of a scrolled text (rendered Markdown) shows only where those rows do.
+
+// The part of an image rows cells high, its first row at row start of the text, that shows when the rows top to
+// top + height - 1 do: { at, from, count, y, h }, the body row (from 0) where it shows, its rows from to
+// from + count - 1, and the pixels they hold, y to y + h - 1 of an image pixels high (the rows stretch the image
+// evenly, whatever the cell size); null when none shows.
+function crop(start, rows, pixels, top, height) {
+  const from = Math.max(0, top - start), to = Math.min(rows, top + height - start);
+  if (!(rows > 0) || to <= from) return null;
+  const y = Math.round(from * pixels / rows);
+  return { at: start + from - top, from, count: to - from, y, h: Math.max(1, Math.round(to * pixels / rows) - y) };
+}
+
+// The images showing among the rows top to top + height - 1 of a list: each row of an image carries
+// figure: { pic, row }, pic having rows and pixels (the image's height). Each image once, with where it starts in the
+// list (start, which tells two copies of an image apart) and its crop.
+function shown(list, top, height) {
+  const out = [], seen = new Set();
+  for (let i = Math.max(0, top); i < Math.min(list.length, top + height); i++) {
+    const f = list[i] && list[i].figure;
+    if (!f || seen.has(i - f.row)) continue;
+    seen.add(i - f.row);
+    const part = crop(i - f.row, f.pic.rows, f.pic.pixels, top, height);
+    if (part) out.push({ pic: f.pic, start: i - f.row, ...part });
+  }
+  return out;
+}
+
+module.exports = { FORMATS, MAX_BYTES, info, decode, convert, pixels, render, crop, shown };

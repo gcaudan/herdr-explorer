@@ -1,33 +1,38 @@
 // Icons of the files and folders: Nerd Font glyphs in the colours of the Seti theme, or a VS Code file icon theme
 // (Material Icon Theme…) read where VS Code or a fork of it installed it, each icon drawn in the colour of its SVG
-// or font glyph, as a Nerd Font glyph of its own when it has one.
+// or font glyph, as a Nerd Font glyph of its own when it has one. Without a Nerd Font, the icon set chosen in the
+// settings (ui.G.set): emoji, or a Unicode or ASCII mark in the colour of the file's type.
 'use strict';
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { C } = require('./ui');
+const { C, G, glyph } = require('./ui');
 const { newer } = require('./exec');
 
-const FOLDER = [0xf07b, 0xf07c];
-const FILE = [0xf15b, C.grey];
+// [Nerd Font glyph, colour, emoji]. The emoji are wide by default (no U+FE0F selector): two columns.
+const FOLDER = [[0xf07b, C.folder, '📁'], [0xf07c, C.folder, '📂']];
+const FILE = [0xf15b, C.grey, '📄'];
 // Without prototype: a file named "constructor" is a name like another.
 const EXTS = Object.create(null);
 for (const [exts, icon] of [
-  ['js mjs cjs jsx', [0xe74e, C.yellow]], ['ts tsx mts cts', [0xe628, C.blue]], ['json jsonc', [0xe60b, C.yellow]],
-  ['md mdx', [0xe609, C.blue]], ['py', [0xe606, C.blue]], ['html htm', [0xe736, C.orange]],
-  ['css scss sass less', [0xe749, C.blue]], ['sh bash zsh fish', [0xe795, C.green]],
-  ['ps1 psm1 psd1 bat cmd', [0xebc7, C.blue]], ['png jpg jpeg gif svg webp ico bmp', [0xf1c5, C.purple]],
-  ['pdf', [0xf1c1, C.red]], ['zip gz tgz 7z tar rar xz', [0xf1c6, C.orange]], ['xlsx xls csv', [0xf1c3, C.green]],
-  ['docx doc odt', [0xf1c2, C.blue]], ['lock', [0xf023, C.grey]],
-  ['toml yaml yml ini cfg conf env xml rules service', [0xf013, C.grey]], ['sql db sqlite', [0xf1c0, C.orange]],
-  ['rs', [0xe7a8, C.orange]], ['cs csproj sln', [0xf031b, C.purple]], ['java', [0xe738, C.red]],
-  ['vue', [0xe6a0, C.green]], ['txt log', [0xf0f6, C.grey]],
-  ['c h cpp hpp go rb php kt swift lua qml', [0xf121, C.blue]],
+  ['js mjs cjs jsx', [0xe74e, C.yellow, '📜']], ['ts tsx mts cts', [0xe628, C.blue, '📘']],
+  ['json jsonc', [0xe60b, C.yellow, '🧾']], ['md mdx', [0xe609, C.blue, '📝']], ['py', [0xe606, C.blue, '🐍']],
+  ['html htm', [0xe736, C.orange, '🌐']], ['css scss sass less', [0xe749, C.blue, '🎨']],
+  ['sh bash zsh fish', [0xe795, C.green, '🐚']], ['ps1 psm1 psd1 bat cmd', [0xebc7, C.blue, '🐚']],
+  ['png jpg jpeg gif svg webp ico bmp', [0xf1c5, C.purple, '📷']], ['pdf', [0xf1c1, C.red, '📕']],
+  ['zip gz tgz 7z tar rar xz', [0xf1c6, C.orange, '📦']], ['xlsx xls csv', [0xf1c3, C.green, '📊']],
+  ['docx doc odt', [0xf1c2, C.blue, '📃']], ['lock', [0xf023, C.grey, '🔒']],
+  ['toml yaml yml ini cfg conf env xml rules service', [0xf013, C.grey, '🔧']], ['sql db sqlite', [0xf1c0, C.orange, '💾']],
+  ['rs', [0xe7a8, C.orange, '🦀']], ['cs csproj sln', [0xf031b, C.purple, '💜']], ['java', [0xe738, C.red, '☕']],
+  ['vue', [0xe6a0, C.green, '💚']], ['txt log', [0xf0f6, C.grey, '📋']],
+  ['c h cpp hpp go rb php kt swift lua qml', [0xf121, C.blue, '💻']],
 ]) for (const ext of exts.split(' ')) EXTS[ext] = icon;
 const NAMES = Object.assign(Object.create(null), {
-  '.gitignore': [0xe702, C.orange], '.gitattributes': [0xe702, C.orange], '.gitmodules': [0xe702, C.orange],
-  'package.json': [0xe718, C.green], 'dockerfile': [0xe7b0, C.blue], 'readme.md': [0xf02d, C.blue],
+  '.gitignore': [0xe702, C.orange, '🔀'], '.gitattributes': [0xe702, C.orange, '🔀'], '.gitmodules': [0xe702, C.orange, '🔀'],
+  'package.json': [0xe718, C.green, '📦'], 'dockerfile': [0xe7b0, C.blue, '🐳'], 'readme.md': [0xf02d, C.blue, '📖'],
 });
+// The Unicode and ASCII marks: a folder (closed, open), a file of a known type, another file.
+const MARKS = { unicode: [['■', '□'], '●', '○'], ascii: [['/', '/'], '-', '-'] };
 
 // Extensions installed by the user, then the ones built into the editors (Seti), found from their command.
 const EDITORS = ['.vscode', '.vscode-insiders', '.vscode-oss', '.cursor', '.windsurf', '.vscode-server'];
@@ -191,11 +196,17 @@ function load(entry) {
   };
 }
 
-// [glyph, rgb] of a file or folder, from the theme loaded when it has one, else the default icons.
+// [text, rgb] of a file or folder: its icon and a space, from the theme loaded when it has one, else the default
+// icons, in the icon set chosen: two columns, three with an emoji. A Unicode or ASCII mark keeps the colour of the
+// theme.
 function icon(theme, name, dir, open) {
-  const [code, rgb] = theme ? (dir ? theme.folder(name) : theme.file(name)) : [];
-  const own = dir ? [FOLDER[open ? 1 : 0], C.folder] : NAMES[name.toLowerCase()] || EXTS[path.extname(name).slice(1).toLowerCase()] || FILE;
-  return [code || own[0], rgb || own[1]];
+  const [code, rgb] = theme && G.set !== 'emoji' ? (dir ? theme.folder(name) : theme.file(name)) : [];
+  const known = !dir && (NAMES[name.toLowerCase()] || EXTS[path.extname(name).slice(1).toLowerCase()]);
+  const own = dir ? FOLDER[open ? 1 : 0] : known || FILE;
+  if (G.set === 'emoji') return [`${own[2]} `, own[1]];
+  const marks = MARKS[G.set];
+  const mark = !marks ? glyph(code || own[0]) : dir ? marks[0][open ? 1 : 0] : known || code ? marks[1] : marks[2];
+  return [`${mark} `, rgb || own[1]];
 }
 
 module.exports = { themes, load, icon };
