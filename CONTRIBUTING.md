@@ -155,36 +155,24 @@ Other types (`test`, `chore`, `ci`, `refactor`…) are left out of the changelog
 ## Release process
 
 Releases are automated with [release-please](https://github.com/googleapis/release-please), run by
-`.github/workflows/release.yml` on every push to `main`. Nothing is done by hand:
+`.github/workflows/release.yml` on every push to `main`. The only step done by hand is merging the release pull
+request:
 
 1. Merge pull requests into `main` with Conventional Commit titles, once CI passes.
 2. When the merged commits include a type of the changelog table above (`feat`, `fix`, `perf`,
-   `docs`, `revert`), release-please opens a release pull request titled `chore: release X.Y.Z`. It
+   `docs`, `revert`), release-please opens or updates a release pull request titled `chore: release X.Y.Z`. It
    bumps `version` in `herdr-plugin.toml` (through `extra-files`) and in
-   `.release-please-manifest.json`, and updates `CHANGELOG.md`.
-3. The same run tests that pull request's commit, which gets no CI run of its own: `node --test` on the CI
-   matrix, in a read-only job, and the `version` of `herdr-plugin.toml` against the manifest. Once the tests
-   pass, it merges that commit only (squash), tags `vX.Y.Z` (no component in the tag) and publishes the
-   GitHub release. It then checks that the tag, the `version` in `herdr-plugin.toml`, the manifest
-   and the latest release agree, and that the version has only digits and dots, as the update
-   check requires.
+   `.release-please-manifest.json`, and updates `CHANGELOG.md`. The same run checks that `herdr-plugin.toml`
+   on that branch parses and carries the manifest's version.
+3. Merge the release pull request (squash) once the CI of `main` passes: its commit holds the same code as `main`,
+   only the version and the changelog differ. The run of that merge tags `vX.Y.Z` (no
+   component in the tag), publishes the GitHub release, then checks that the version has only digits and dots
+   and that `herdr-plugin.toml` at the tag carries it, as the update check requires.
 4. Installed explorers find the release within a day through the update check (`releases/latest`)
    and offer the update. Linked clones restart on the new code once pulled.
 
-Every merged `feat`, `fix`, `perf`, `docs` or `revert` therefore ships a release. Group changes in one pull request, or merge
-them together, when they should go out as one version. Merging the release pull request by hand
-still works: the next run publishes the release.
-
-A failed test leaves the release pull request open. A flaky test: use **Re-run failed jobs** (**Re-run all jobs**
-tests nothing the same day, release-please finding the pull request unchanged until the date in it changes, after
-midnight UTC). A real failure: a `feat` or `fix` merged into `main` updates the release pull request and tests it
-again; a fix with no changelog entry (`test`, `chore`, `ci`) leaves it as it is the same day, so merge it by hand once
-its CI passes. As long as a release pull request stays open without being updated, every run of the release workflow
-in which release-please works fails and names it, so that none looks green with a release left behind. The `ci` check of the release pull request itself fails with no job, as the pull request is merged
-within seconds: the `test` job of the release workflow stands in for it. When `main` or the release branch moved
-during that test, or a re-run comes after such a move, the run merges nothing and says so: check the release pull
-request (`node --test` on its branch), then merge it by hand, which publishes the release; unless a `feat` or
-`fix` reached `main` since, whose run takes the release up by itself.
+Until the release pull request is merged, every new `feat`, `fix`, `perf`, `docs` or `revert` joins it: merge it
+when the changes should go out as one version.
 
 Do not edit the version, `.release-please-manifest.json` or `CHANGELOG.md` by hand: release-please maintains them,
 and the update check and the panes' self-restart both depend on the version.
