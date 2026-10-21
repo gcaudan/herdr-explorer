@@ -1,7 +1,7 @@
 # Configuration
 
-Change the settings from the explorer's settings (`,` or the gear icon), which write them to
-`settings.json`. You can also edit the files below by hand.
+Change the settings from the explorer's settings (`,`, the gear icon or *Settings…* in its menu), which write them to
+`settings.json`, shared by every pane of every tab. You can also edit the files below by hand.
 
 ## Settings
 
@@ -9,8 +9,8 @@ The pane where a setting changes applies it at once; the last column says when t
 
 | Key | Default | Setting | Effect | Other open panes |
 |---|---|---|---|---|
-| `hidden` | `true` | Hidden files | show dot files in the tree | at their next opening |
-| `ignored` | `true` | Git-ignored files | show git-ignored files, greyed out | at their next opening |
+| `hidden` | `true` | Hidden files; explorer `.` | show dot files in the tree | at their next opening |
+| `ignored` | `true` | Git-ignored files; explorer `i` | show git-ignored files, greyed out | at their next opening |
 | `open` | `"preview"` | Enter opens | what `Enter` and a double-click do on a text file: `"preview"` or `"editor"` | at their next opening |
 | `editor` | `""` | Editor | external editor command, see below | at once (read at each use) |
 | `singleClick` | `false` | Preview follows selection | a file selected by a click or the arrow keys shows in the preview; the arrow keys only update a preview already open | at their next opening |
@@ -22,13 +22,14 @@ The pane where a setting changes applies it at once; the last column says when t
 | `wrap` | `false` | Wrap lines; preview `w`, **View** menu | wrap long lines in the preview | other previews at their next opening |
 | `lineNumbers` | `true` | Line numbers; preview `L`, **View** menu | line number gutter in the preview | other previews at their next opening |
 | `images` | `"auto"` | Images; preview `p` (that pane only), the line under a pixelated image | `"blocks"` (pixelated), `"auto"` (sharp when the terminal has the Kitty graphics protocol) or `"pixels"` (always sharp), see [Sharp images](usage.md#sharp-images) | previews within a second |
-| `diffLayout` | `""` (unset) | Diff layout; `s` in every diff (source control, Changes pane, preview's Diff view), **Inline · Split** switch, **View** menu | `{ "narrow": …, "wide": … }`, each `"inline"` or `"split"` (side by side): the layout of diffs under 120 columns (a preview beside the terminal) and from 120 (zoomed, full tab); unset, inline when narrow and split when wide. A single `"inline"` or `"split"`, from older versions, holds for both until one is chosen | other diffs at their next opening |
+| `diffLayout` | `""` | Diff layout (auto, split, inline); `s` in every diff (source control, Changes pane, preview's Diff view), **Inline · Split** switch, **View** menu | `""`: inline under 120 columns (a preview beside the terminal), side by side from 120 (zoomed, full tab). `"inline"` or `"split"`, as the settings view sets it: every diff. `{ "narrow": …, "wide": … }`, as `s` and the switch write it: one layout per size (under 120 columns, from 120), a size left out laid out by width; `s` on a single value keeps it for the other size. The settings view shows both sizes when they differ, and a choice there holds for both | other diffs at their next redraw |
 | `scmListShare` | `{}` | source control: drag the separator, `<` `>`, `shift+left` `shift+right` | share of the width taken by the list beside the diff, per view: `{ "changes": 0.3, "history": 0.6 }`; a view left out: 38 %, from 34 to 70 columns | other source control panes at their next opening |
 | `scmGraphAll` | `true` | source control History `a` | show every local and remote branch in History, or only the current one | other source control panes at their next opening |
 | `scmTree` | `false` | source control `t`, **List · Tree** switch | show the Changes view as a tree of folders | other source control panes at their next opening |
 | `updateCheck` | `true` | Check for updates | check GitHub once a day for a newer release | explorers within a second |
 
-A missing or unreadable `settings.json` means all defaults, and keys left out keep their default.
+A missing or unreadable `settings.json` means all defaults, and keys left out keep their default. `scmListShare`,
+`scmGraphAll` and `scmTree` are not in the settings view: only the source control pane changes them.
 
 ### Editor command
 
@@ -49,7 +50,8 @@ Without a terminal editor here, the Editor pane picks one itself (see [Editor pa
 ### Icon themes
 
 **Icon theme** lists the file icon themes installed for VS Code, VS Code Insiders, VSCodium, Cursor, Windsurf or
-VS Code Server: in each editor's user `extensions` folder (`~/.vscode/extensions`, `~/.cursor/extensions`…), the
+VS Code Server: in each editor's user `extensions` folder (`~/.vscode/extensions`, `~/.vscode-oss/extensions` for
+VSCodium, `~/.cursor/extensions`, `~/.vscode-server/extensions`…), the
 macOS application bundles, and next to the `code`, `code-insiders`, `codium`, `cursor` or `windsurf` commands on
 `PATH`. Each icon takes the colour of its SVG or font glyph; popular icons, mostly from Material Icon Theme, get a
 Nerd Font glyph of their own, the others the default glyph. A theme moved by an extension update is found again;
@@ -91,12 +93,13 @@ saved, and the explorer's width falls back to 32 columns.
 | `search.json`          | last Go to file query, search query, include/exclude globs, case/word/regex options          |
 | `update.json`          | `checkedAt`, `latest` release found, and `finish` (an update the installer must finish)      |
 | `resizing`             | the pane resizing itself, for half a second: the panes it moves let it put them back         |
-| `update.lock`          | present while an update runs                                                                 |
-| `panes/<pane id>.json` | per pane: the explorer's tab folder (`home`) and tree root (`root`), the preview's `file`, `root` and `line` |
-| `preview-<tab id>.json`| the last file the explorer or search asked the tab's preview to show                         |
+| `update.lock`          | present while an update runs; taken over after 2 minutes (a killed update)                   |
+| `panes/<pane id>.json` | per pane: the explorer's tab folder (`home`) and tree root (`root`), the preview's `file`, `root`, `line` and tabs (`tabs`) |
+| `preview-<tab id>.json`| the last file the explorer, the search or `peek.js` asked the tab's preview to show        |
+| `notes-<tab id>.json`  | the tab's review notes, removed once sent                                                    |
 
-`settings.json`, `expanded.json`, `update.json` and `panes/*.json` are written to a temporary file and
-then renamed, so a pane never reads them half-written. At herdr startup, the state files of panes
+`settings.json`, `expanded.json`, `update.json`, `notes-*.json` and `panes/*.json` are written to a temporary file
+and then renamed, so a pane never reads them half-written. At herdr startup, the state files of panes
 that no longer exist are deleted.
 
 ### Config folder
@@ -105,6 +108,8 @@ that no longer exist are deleted.
 | ----------- | ------------------------------------------------------------------------------------------------- |
 | `keys.json` | the explorer's key bindings, see below                                                            |
 | `state-dir` | the state folder's path, written by the hook for `peek.js`, which runs outside the plugin and gets only the config folder from herdr |
+
+`keys.json` is written to a temporary file and then renamed, like the state files.
 
 ### Config folder: `keys.json`
 
@@ -131,8 +136,8 @@ it leaves out, then opens it in the Editor pane. The explorer reloads the file w
 - A key you give to an action is taken away from the action that had it by default. A key listed for
   two actions goes to the last one.
 - Only the explorer's keys can be changed: the preview, search and source control keys are fixed.
-- In menus, the keys of `up`, `down`, `open`, `expand`, `close`, `collapse`, `menu` and `settings`
-  apply. `escape` always closes a menu.
+- In menus, `up` and `down` move, `open` and `expand` run the selected item, the key shown beside an item runs
+  it, and the other keys of `close`, `collapse`, `menu` and `settings` close the menu. `escape` always closes a menu.
 - In the settings and key bindings pages, the arrows, page keys, `home` and `end` always move and `escape` always
   goes back, so that a rebinding cannot lock you out.
 - While the filter field is active, bound keys that are not single characters reach the list, except
@@ -146,6 +151,9 @@ it leaves out, then opens it in the Editor pane. The explorer reloads the file w
 - `up`, `down`, `left`, `right`, `home`, `end`, `pageup`, `pagedown`
 - `ctrl+up`, `ctrl+down`, `ctrl+left`, `ctrl+right`, `ctrl+home`, `ctrl+end`, `shift+up`,
   `shift+down`, `shift+left`, `shift+right`, `alt+up`, `alt+down`, `alt+left`, `alt+right`
+- `ctrl+pageup`, `ctrl+pagedown`, `shift+home`, `shift+end`, `shift+pageup`, `shift+pagedown`,
+  `ctrl+shift+left`, `ctrl+shift+right`, `ctrl+shift+home`, `ctrl+shift+end`, `ctrl+delete`, and
+  `ctrl+shift+z` where the terminal tells it from `ctrl+z`
 - `f1`, `f2`, `f3`, `f4`, `f5`
 - `ctrl+a` … `ctrl+z` (note that `ctrl+i` is `tab`, `ctrl+j` and `ctrl+m` are `enter` and `ctrl+h` is
   `backspace` in a terminal)
@@ -162,8 +170,14 @@ folders. See [installation.md](installation.md#key-bindings).
 |---|---|
 | `PATH` | where `node`, `git`, `code`, `claude`, the editors and the clipboard and trash tools are found (absolute entries only) |
 | `VISUAL`, `EDITOR` | the Editor pane's terminal editor, after one set in **Editor** |
-| `GIT_SSH_COMMAND`, `GIT_SSH` | left alone by updates, which otherwise run ssh in batch mode |
+| `GIT_SSH_COMMAND`, `GIT_SSH` | when set, or `core.sshCommand`, updates leave ssh alone; otherwise they run it in batch mode |
+| `WAYLAND_DISPLAY`, `DISPLAY` | on Linux, the preview's paste reads the clipboard with `wl-paste` when `WAYLAND_DISPLAY` is set, else with `xclip` when `DISPLAY` is; with neither (over SSH), only the terminal's own paste reaches the pane |
 | `HERDR_BIN_PATH` | the herdr binary, else `herdr` from `PATH` |
+| `HERDR_PLUGIN_ID` | the plugin id, `gcaudan.explorer` when unset |
+| `XDG_STATE_HOME`, `LOCALAPPDATA` | where `peek.js` looks for the state folder when `state-dir` is missing (`LOCALAPPDATA` on Windows, also for VS Code) |
+
+herdr sets `HERDR_PLUGIN_STATE_DIR`, `HERDR_PLUGIN_CONFIG_DIR`, `HERDR_PLUGIN_CONTEXT_JSON` and
+`HERDR_PLUGIN_EVENT_JSON` for the plugin's own processes, and `HERDR_PANE_ID` in every pane; the plugin only reads them.
 
 The `EXPLORER_*` variables only pass between the plugin's own panes (see
 [Pane environment](architecture.md#pane-environment)).

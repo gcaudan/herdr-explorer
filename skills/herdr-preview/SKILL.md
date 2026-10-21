@@ -1,6 +1,6 @@
 ---
 name: herdr-preview
-description: Show a file, at a line and with parts highlighted, in the herdr explorer's preview pane next to the terminal. Use it inside herdr (HERDR_PANE_ID is set) to point the user at code you are talking about, or at a file you just wrote, instead of pasting it.
+description: Show a file, at a line and with parts highlighted, or its git changes, in the herdr explorer's preview pane next to the terminal. Use it inside herdr (HERDR_PANE_ID is set) to point the user at code you are talking about, or at a file you just wrote or changed, instead of pasting it.
 ---
 
 # Show a file in the herdr preview
@@ -30,15 +30,16 @@ columns on the line as it is in the file, indentation included: highlight a name
 its whole line when that is what you talk about.
 
 - `--diff` before the file shows its git changes rather than the file, the rows of the places' lines marked (whole
-  lines): `peek.js --diff src/app.js:40-52`. Use it after changing a file, to show what you changed; show the file
-  itself to explain existing code.
+  lines): `peek.js --diff src/app.js:40-52`. It also works on a deleted file. Use it after changing a file, to show
+  what you changed; show the file itself to explain existing code.
 - `--last` shows the changed file of the repository written last (`--diff --last`: its changes).
-- It prints `Preview: <file>[:<places>]` on success; otherwise an error on stderr and exit code 1 (2 for a wrong
-  argument or place).
+- It prints `Preview: <file>[:<places>]` (`Preview (diff): …` with `--diff`) on success; otherwise
+  `peek: <reason>` on stderr, with exit code 1 (2 for a wrong argument or place). On failure, tell the user in one
+  line and go on: do not retry.
 - The user goes through the places with `n` and `N`; `escape` clears them. A Markdown file shows as source, so that
   the places match its lines.
-- One file per call: the preview shows one file at a time. To walk the user through several files, call it again
-  for each one as you explain it.
+- One file per call: each call replaces the preview's temporary tab (tabs the user kept stay open). To walk the user
+  through several files, call it again for each one as you explain it.
 
 When to use it:
 

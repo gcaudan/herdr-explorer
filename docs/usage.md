@@ -4,12 +4,17 @@ The plugin has six panes:
 
 | Pane            | Opens as                     | Opened by                                                     |
 | --------------- | ---------------------------- | ------------------------------------------------------------- |
-| Explorer        | split, left or right of tab  | new tab, `prefix+f`                                           |
-| Preview         | split, right of the terminal | `Enter`/double-click on a file, `p`, `d` (its diff), search results |
+| Explorer        | split, left or right of tab  | new tab with a single pane (**Open automatically**), `prefix+f` |
+| Preview         | split, right of the terminal | `Enter`/double-click on a file, `p`, `d` (its diff), search results, [`peek.js`](#show-a-file-from-an-agent-or-a-script) |
 | Search          | popup, 80% × 80%             | `ctrl+p`, `ctrl+f`, `prefix+a`                                |
 | Source Control  | full tab (zoomed)            | `s`, `prefix+d`                                               |
-| Changes         | full tab (zoomed)            | **View changes** on a folder                                  |
+| Changes         | full tab (zoomed)            | `d` or **View changes** on a folder                           |
 | Editor          | full tab (zoomed)            | `e`, **Edit in terminal**, `o` with a terminal editor         |
+
+Its four herdr actions can be bound to keys (see [Key bindings](installation.md#key-bindings)):
+`gcaudan.explorer.toggle` shows or hides the explorer (`prefix+f`), `gcaudan.explorer.search` opens Go to file
+(`prefix+a`), `gcaudan.explorer.scm` source control (`prefix+d`), and `gcaudan.explorer.peek` previews the changed
+file written last (left unbound by the installer).
 
 Key names below are those of [configuration.md](configuration.md#key-names). Only the explorer's
 keys can be rebound.
@@ -60,7 +65,7 @@ The last column is the action's name in [`keys.json`](configuration.md#config-fo
 | `right` `l`              | unfold a folder, or go to its first child when already open                    | `expand` |
 | `left` `h`               | fold a folder, or go to the parent folder                                      | `collapse` |
 | `m` `menu` `shift+f10`   | action menu of the selected row                                                | `menu` |
-| `escape` `q`             | close the menu, the filter or the page shown, else the explorer and the tab's preview | `close` |
+| `escape` `q`             | close the menu, the filter, the changed files view or the page shown, else the explorer and the tab's preview | `close` |
 | `r`                      | refresh                                                                        | `refresh` |
 | `<` / `>`                | 4 columns wider / narrower (hold to repeat), kept for the next explorers       | `wider` / `narrower` |
 | `shift+right` / `shift+left` | the same, docked on the left (swapped when docked on the right): each pushes the inner border its way | `wider` / `narrower` |
@@ -77,7 +82,7 @@ The last column is the action's name in [`keys.json`](configuration.md#config-fo
 | `e`                      | edit the file in the terminal editor                                           | `edit` |
 | `o`                      | open in the external editor                                                    | `openInEditor` |
 | `O`                      | open the file with its system application (documents, media, text formats)     | `openInApp` |
-| `p`                      | preview the file and focus the preview                                         | `preview` |
+| `p`                      | preview the file in a kept tab and focus the preview                           | `preview` |
 | `y` / `Y`                | copy the absolute / relative path                                              | `copyPath` / `copyRelativePath` |
 | `backspace`              | make the parent folder the tree root                                           | `parentRoot` |
 | `c`                      | changed files only (see [Reviewing changes](#reviewing-changes))               | `changedOnly` |
@@ -98,7 +103,7 @@ The last column is the action's name in [`keys.json`](configuration.md#config-fo
 
 `/` opens a filter field at the bottom. The tree keeps the entries whose name contains the text (any case), with
 their parent folders dimmed, the match in bold blue, and a count of matches. Git-ignored folders are not searched,
-and folders cannot be folded while filtering.
+the filter reads 20000 entries at most, and folders cannot be folded while filtering.
 
 - Typed characters go to the field, as do `backspace`, `delete`, `ctrl+u` and `ctrl+d` (see
   [Prompts](#prompts)). The other bound keys that are not characters (arrows, `enter`, `ctrl+p`, `ctrl+f`…) act
@@ -132,7 +137,8 @@ default. The bottom line shows the keys (`⏎ rename`, `⏎ create in src`, `esc
 `escape` or any click cancels.
 
 Every text field (prompts, filter, finds, search and source control fields) edits with these keys, unless the
-pane uses the key itself, and takes pasted text.
+pane uses the key itself (in the search popup, `ctrl+k` moves in the results and `ctrl+f` switches tab), and takes
+pasted text.
 
 | Key                               | Action                              |
 | --------------------------------- | ----------------------------------- |
@@ -165,7 +171,7 @@ Source control asks the same way.
 | Item                     | Shown for                         | Action                                                       |
 | ------------------------ | --------------------------------- | ------------------------------------------------------------ |
 | Preview                  | files the preview can show        | show in the tab's preview                                    |
-| Open in editor           | files and folders                 | external editor (see [configuration](configuration.md#editor-command)) |
+| Open in editor           | files and folders                 | external editor: the settings' command, else VS Code when found, else the Editor pane (see [configuration](configuration.md#editor-command)) |
 | Open in app              | `txt md csv log json xml html htm` and the media types above | system application |
 | Edit in terminal         | files                             | Editor pane                                                  |
 | Insert into terminal     | all                               | type the path into the terminal next to the explorer         |
@@ -187,7 +193,7 @@ Source control asks the same way.
 **Insert into terminal** finds the terminal next to the explorer, skipping the plugin's own panes, types the path
 relative to the terminal's folder followed by a space, then focuses the terminal. When an agent runs there, the
 path is prefixed with `@`, unless it contains spaces: it is then quoted instead. In a shell, it is quoted when
-needed.
+needed. A name with a control character is refused.
 
 **Delete…** moves the entry to the trash (see [Platform tools](installation.md#platform-tools)). Without one, a
 second confirmation offers to delete it for good.
@@ -197,7 +203,8 @@ added since the last commit, and untracked files, go to the trash instead of bei
 
 ### Root menu (right-click below the rows)
 
-New file…, New folder…, Go to file…, Search in files…, Source control (in a repository), Open folder
+New file…, New folder…, Go to file…, Search in files…, Source control and Changed files only (or All files) in a
+repository, Open folder
 (Reveal in Explorer), Copy path, Up one level, Back to the space folder (after **Set as root**),
 Refresh, Settings….
 
@@ -266,7 +273,7 @@ its border. A click runs an item; a click elsewhere closes the menu.
 
 ### Other behaviours
 
-- **Width**: the explorer is 32 columns wide by default. Resizing it by hand (its border, `<` `>`, or the `shift`
+- **Width**: the explorer is 32 columns wide by default, 10 at least. Resizing it by hand (its border, `<` `>`, or the `shift`
   arrows) keeps the new width for the next explorers. The preview keeps its width the same way while it is open.
   Resizing one of them, or the window, leaves the other's width alone: the terminal takes the difference. Closing
   the explorer (`q`, `esc` or `prefix+f`) closes the tab's preview too, so that the tab stays
@@ -276,8 +283,10 @@ its border. A click runs an item; a click elsewhere closes the menu.
   Settings → Keyboard → When a key is held** is set to **Repeat the key**; the `shift` arrows repeat either way.
 - **Alone in a tab**: when the terminal exits and only the explorer is left, it closes, and the tab
   with it.
-- **Refresh**: the tree follows file changes, with a full rescan every 30 s. Expanded folders are remembered per
-  tree root.
+- **Refresh**: the tree follows file changes (at most every 250 ms; only the top level in `$HOME`, one of its parents
+  or the filesystem root) and changes of git's index or HEAD, with a full rescan every 30 s. Expanded folders are
+  remembered per tree root.
+- **Tree root**: the root chosen with **Set as root** or `backspace` comes back after a herdr restart.
 - **Follow the terminal folder**: when on, the explorer checks every 2 s the folder of the terminal next to it
   (that of its running program when herdr knows it) and reveals it. A folder outside the tree root but inside the
   tab's folder brings the root back to the tab's folder; a folder outside the tab's folder becomes the root, except
@@ -288,9 +297,11 @@ its border. A click runs an item; a click elsewhere closes the menu.
 The preview, one per herdr tab, keeps its files in tabs, as VS Code's editors. A file opened by a single click,
 by following the selection, with `]`/`[`, from the search or by an agent (`peek.js`) replaces the **temporary** tab,
 its name in italics; `enter`, a double-click, the explorer's `p` or its menu's **Preview** open a **kept** tab, which
-the next file does not replace. In the preview, `t`, a double-click on the tab, `e`, `o` or a review note keep the
+the next file does not replace. In the preview, `t`, a double-click on the tab, `i`, `e`, `o` or a review note keep the
 temporary tab. Each tab keeps its scroll, line, File or Diff view, comparison, Markdown mode and marks; the tabs come
-back after a herdr restart (those whose file still exists). It reloads by itself when the file changes on disk,
+back after a herdr restart (those whose file still exists). Past 50 tabs, the one furthest from the tab opened
+closes, unless it has unsaved edits: those tabs never close this way, the list growing past 50 when all the others
+have them. It reloads by itself when the file changes on disk,
 keeping its scroll position.
 
 Header: with several tabs, the tabs (the current one bold on a lighter background, `×` to close each), then the
@@ -302,7 +313,7 @@ added and removed lines). On the right:
 - the **File · Diff** switch, the active choice filled: a click on the other one switches ([Diff view](#diff-view));
 - `⚙` (or `,`, as the explorer's settings), which opens the **View** menu of the view's options, as the explorer's settings show them: a choice
   in blue, or `● on` / `○ off`. **Markdown** (rendered or raw, `m`), **Wrap lines** (`w`) and **Line numbers** (`L`)
-  for text, **Image** (sharp or pixelated, `p`); in the Diff view, **Layout** (inline or split, `s`) and **Compare
+  for text, **Edit here** (`i`), **Image** (sharp or pixelated, `p`); in the Diff view, **Layout** (inline or split, `s`) and **Compare
   with** (HEAD or the default branch, `b`). The key beside each does the same outside the menu. `left` / `right`,
   `enter`, `space` or a click changes the option in place, the menu staying open; `up` / `down` move, `escape`, `q`,
   `,` or a click elsewhere close it. The footer's actions are not repeated there, and the footer leaves out what the
@@ -316,7 +327,8 @@ a click runs, and the scroll percentage.
 
 | Key                          | Action                                                   |
 | ---------------------------- | -------------------------------------------------------- |
-| `q` `escape` `ctrl+c`        | close (first close the find; `escape` first clears a selection) |
+| `escape`                     | clear the selection, then the marks, then the find, else close |
+| `q` `ctrl+c`                 | close the find, else close                               |
 | `up` `k` / `down` `j` `enter`| scroll one line                                          |
 | `pageup` / `pagedown` `space` | scroll one page                                         |
 | `ctrl+u` / `ctrl+d`          | scroll half a page                                       |
@@ -352,15 +364,16 @@ a click runs, and the scroll percentage.
 
 ### Editing in the preview
 
-`i` (or **Edit here** in the View menu) edits the tab's file in place: a text file in UTF-8, up to 2 MB (a binary
-or otherwise encoded file is refused); Markdown edits as source. Lines do not wrap while editing, the terminal's
+`i` (or **Edit here** in the View menu) edits the tab's file in place, from the File view: a text file in UTF-8, up
+to 2 MB (otherwise *Cannot edit: over 2 MB*, *binary file* or *not UTF-8*); Markdown edits as source. Lines do not wrap while editing, the terminal's
 cursor shows as a bar, and the highlighting follows what you type.
 
 | Key | Action |
 |---|---|
-| arrows, `home` / `end`, `pageup` / `pagedown`, `ctrl+left` / `ctrl+right` | move (by word with `ctrl`); with `shift`, select |
+| arrows, `home` / `end`, `pageup` / `pagedown`, `ctrl+left` / `ctrl+right`, `ctrl+home` / `ctrl+end` | move (by word, to the file's ends with `ctrl`); with `shift`, select |
 | `enter` | new line, keeping the indentation |
 | `tab` / `shift+tab` | indent / unindent, with the file's own indentation |
+| `alt+backspace` / `ctrl+delete` | delete the word before / after the cursor |
 | `ctrl+s` | save |
 | `ctrl+z` / `ctrl+y` `ctrl+shift+z` | undo / redo (typed text grouped by word) |
 | `ctrl+c` / `ctrl+x` / `ctrl+v` | copy / cut / paste, the whole line when nothing is selected; `ctrl+a` selects all |
@@ -368,13 +381,14 @@ cursor shows as a bar, and the highlighting follows what you type.
 | `ctrl+r` | replace: `tab` switches field, `enter` replaces one, `alt+a` all (`ctrl+h` is backspace in terminals) |
 | `ctrl+g` | go to a line |
 | `escape` | clear the selection, then leave editing |
+| `ctrl+p`, `ctrl+pagedown` / `ctrl+pageup` | Go to file, next / previous tab |
 | `f1` | the editing keys |
 
 A click places the cursor, a double or triple click selects a word or the line, a drag selects (scrolling at the
 edges), the wheel scrolls; text pasted from the terminal goes in as typed.
 
 - **Saving** keeps the file's line endings (LF or CRLF; mixed ones become the most frequent, which a message says),
-  its last newline or its lack of one, and its mode; the file is written to a temporary file renamed over it.
+  its last newline or its lack of one, its byte order mark and its mode; the file is written to a temporary file renamed over it.
 - **Changes since opening** show in the gutter: a green `▎` for added lines, blue for modified ones, a red `▔`
   where lines were removed.
 - **Unsaved changes**: leaving editing, closing the tab (its `×` shows `●`) or the preview asks Save, Don't save or
@@ -390,7 +404,7 @@ belong to the tab: the preview and the [Changes pane](#changes-diff-pane) of a t
 
 - `a` opens a field in the footer for a note on the selected lines (select them with the mouse), else on the line
   the preview was opened at (a search result), else on the whole file. `tab` (`shift+tab` backwards) gives it a
-  kind, `fix`, `question`, `nit` or `verify`, shown before the text; `enter` saves it, `escape` cancels.
+  kind, `fix`, `question`, `nit` or `verify` (or none again), shown before the text; `enter` saves it, `escape` cancels.
 - Each note shows in yellow under the last line it covers, whose numbers turn yellow; notes on the whole file, and
   every note in rendered Markdown, show at the top.
 - `A` types the tab's notes, sorted by file and line, into the terminal next to the explorer, on one line, without
@@ -445,20 +459,21 @@ selection; `peek.js --diff` too.
 
 - **Text**: syntax highlighting for JS/TS, JSON, Python, shell, PowerShell, Rust, Go, C/C++, C#, Java,
   Kotlin, Swift, PHP, Ruby, Lua, SQL, HTML/XML, CSS, YAML, INI/TOML, Markdown, diff, Dockerfile and
-  Makefile.
+  Makefile. Past 8 MB, only the start shows; past 1 MB, and on lines over 2000 characters, the text stays plain.
 - **Markdown** (`md markdown mdx mkd`): headings, inline styles, lists, quotes, highlighted code
   blocks, GFM tables and task lists, alerts, and simple Mermaid flowcharts.
 - **Markdown images**: a local image of a paragraph (Markdown image syntax, or `<img src>`), relative to the Markdown file,
   is drawn under it, 60 columns and 20 rows at most: in pixels or with half blocks, like an image file (see
-  [Sharp images](#sharp-images)). Links to the web are never fetched.
+  [Sharp images](#sharp-images)). Links to the web are never fetched, nor images outside the project (outside the
+  Markdown file's folder when the file itself is outside the project).
 - **Images** (`png apng jpg jpeg jpe jfif gif bmp dib ico cur webp tif tiff svg`): PNG, GIF (first frame), BMP,
   JPEG (baseline and progressive), TIFF and ICO/CUR are decoded by the plugin, WebP by `dwebp` when it is installed
   (libwebp, see [Requirements](installation.md#requirements)). When herdr can show images (the Kitty graphics
   protocol), the image is drawn in real pixels, fitted to the pane; otherwise with half blocks (see
   [Sharp images](#sharp-images)). For other formats, such as SVG or a lossless or
-  arithmetic-coded JPEG, the preview shows the format and size only. TIFF: strips (not tiles), one plane,
-  uncompressed, PackBits, LZW or Deflate.
-- **Binary** (a NUL byte in the first 8000 bytes): a hex dump.
+  arithmetic-coded JPEG, or over 50 MB, the preview shows the format and size only. TIFF: strips (not tiles), one
+  plane, uncompressed, PackBits, LZW or Deflate.
+- **Binary** (a NUL byte in the first 8000 bytes): a hex dump of the first 64 KB.
 
 ### Sharp images
 
@@ -473,12 +488,13 @@ plugin cannot install a terminal: install one of them, then start herdr in it.
 
 | Value | Images |
 |---|---|
-| sharp if possible (default) | in pixels when the terminal answers the protocol's query, else half blocks |
-| pixelated | half blocks |
-| always sharp | in pixels without waiting for the answer, for a terminal that has the protocol but does not answer; nothing shows where it does not have it |
+| sharp if possible (`auto`, default) | in pixels when the terminal answers the protocol's query (awaited 500 ms at most), else half blocks |
+| pixelated (`blocks`) | half blocks |
+| always sharp (`pixels`) | in pixels without waiting for the answer, for a terminal that has the protocol but does not answer; nothing shows where it does not have it |
 
 The setting tells whether this terminal answered. `p` switches the image shown between sharp and pixelated, in
-this pane only, until the setting changes. Under a pixelated image, a line tells how to see it sharp: `p` and
+this pane only, until the setting changes; made sharp in a terminal that did not answer, it warns that the image
+may not show. Under a pixelated image, a line tells how to see it sharp: `p` and
 **sharp by default** when the terminal has the protocol, else a link to this section. Images in rendered Markdown
 follow the same setting, and `p` (or **Images** in the **View** menu) switches them all; scrolled partly out of the
 pane, an image shows its visible part.
@@ -491,11 +507,11 @@ off each time.
 
 ### Go to file
 
-Fuzzy matching on paths, scored like fzf and VS Code. Each result shows the file name, its folder on the right,
+Fuzzy matching on paths, scored like fzf and VS Code, the best 1000 kept. Each result shows the file name, its folder on the right,
 and the matched characters highlighted. `path:line` (or `path:line:column`) opens the file at that line. The file
 list is git's tracked and untracked files that are not ignored. Outside a repository, when git lists no files, or
-with **hidden** on, the plugin walks the folder instead, without `.git`, and without `node_modules` and dot
-folders unless **hidden** is on. Search in files uses the same file list.
+with **hidden** on, the plugin walks the folder instead (50000 files at most), without `.git`, and without
+`node_modules` and dot folders unless **hidden** is on. Search in files uses the same file list.
 
 ### Search in files
 
@@ -503,7 +519,8 @@ Text search across the files, results grouped by file, with each file's count on
 toggle **Aa** (match case), **ab** (whole word) and **.\*** (regex), blue when on. The **in** (include)
 and **not in** (exclude) fields take comma-separated globs:
 `*` and `?` within a segment, `**` across segments, `{a,b}`, `[abc]`, `[!abc]`. A pattern without a leading
-`./` or `/` matches at any depth, and a folder matches its contents.
+`./` or `/` matches at any depth, and a folder matches its contents. Files over 2 MB and binary files are skipped,
+and the search stops at 5000 matches.
 
 ### Keys
 
@@ -522,7 +539,7 @@ and **not in** (exclude) fields take comma-separated globs:
 | `enter`                     | open in the preview at the line                              |
 | `alt+enter` `ctrl+o`        | open in the editor                                           |
 | `ctrl+t`                    | insert the path into the terminal                            |
-| `ctrl+y`                    | copy the relative path                                       |
+| `ctrl+y`                    | copy the path, relative to the folder searched               |
 
 Other keys edit the focused field (see [Prompts](#prompts)). `ctrl+o` is there because Windows Terminal keeps
 `alt+enter` for full screen. Opening a result or inserting its path closes the popup; on failure, the popup stays
@@ -578,8 +595,9 @@ or **✓ Commit merge**. Then come **✧ Claude** (write the message), **☐ Ame
   [Security](../SECURITY.md#continue)). A `git am` is continued or aborted in the terminal.
 - During a rebase, **Continue** runs `git rebase --continue`. During a cherry-pick or revert, it continues when the
   message is empty, and otherwise commits with your message, then goes on with the next commit picked.
-- **✧** sends the file list and the diff (staged, or else all changes) to `claude -p`, without tools, and fills
-  the field with a one-line Conventional Commits message. When Claude is missing, fails or times out,
+- **✧** sends the file list and the diff (staged, or else all changes; 60000 characters at most) to `claude -p`,
+  run from the temporary folder without tools, sessions, MCP servers or project settings, and fills the field with
+  a one-line Conventional Commits message. When Claude is missing, fails or takes over 90 s,
   the message is built from the file names (`add foo.js`, `update a.js and 2 other files`).
 
 ### Keys
@@ -604,7 +622,7 @@ help of the view (see [Key help](#key-help--or-f1)).
 | `f` / `L` / `P`            | fetch / pull (fast-forward only) / push. The first push publishes the branch on `origin` (else the first remote) and sets its upstream |
 | `ctrl+p` / `ctrl+f`        | Go to file / Search in files, in the repository                 |
 | `b`                        | branch picker                                                   |
-| `m` `shift+f10`            | the [menu](#git-operations) of the selected branch or commit and of the repository (also `⋯` in the header) |
+| `m` `menu` `shift+f10`     | the [menu](#git-operations) of the selected branch or commit and of the repository (also `⋯` in the header) |
 | `T`                        | create a tag on HEAD                                            |
 | `c`                        | type the commit message (from any view: back to Changes)        |
 | `ctrl+g`                   | write the message with Claude (same)                            |
@@ -662,6 +680,8 @@ or commit (History), then those of the repository, each with its key when it has
 | Force push (with lease)… | `git push --force-with-lease`, never a plain `--force`; the question says how many commits of the upstream would be lost |
 | Undo last commit… | `git reset --soft HEAD~1`: the changes stay staged and the message comes back in the commit box; the question warns when the commit is already pushed |
 | Reset --hard… (to HEAD, or to the selected commit) | `git reset --hard`; the question counts the changed files and the commits lost (those on no other branch, tag or remote branch). Untracked files are kept |
+
+The menu also has **Check out** and **Delete** on a branch, and **Fetch**, **Pull** and **Push**.
 
 A merge, rebase or cherry-pick that stops on a conflict switches to Changes, where the commit box continues it and
 `X` aborts it. They use the `ort` strategy (git 2.33 or later), whatever the repository's `branch.<name>.mergeOptions`.
@@ -738,15 +758,15 @@ node "$dir/src/peek.js" src/app.js:42
 
 - The argument is `file`, or `file:places`, relative to the current folder or absolute. Places are separated by
   commas: a line (`42`), lines (`12-14`) or columns of a line (`42:5-18`, counted in characters from 1, both included);
-  `42:5`, as compilers write it, is line 42. The preview scrolls to the first place and highlights them all: whole
-  lines on the line highlight's colour, columns on the selection's. `n` and `N` go from one to the next (when no
+  `42:5`, as compilers write it, is line 42. A name that exists as given is taken whole, a colon included. The
+  preview scrolls to the first place and highlights them all: whole lines on the line highlight's colour, columns on the selection's. `n` and `N` go from one to the next (when no
   find is open), `escape` clears them; a Markdown file shows as source, so that they match its lines.
 - `--last` shows the changed file of the repository (modified, added or untracked) written last.
-- `--diff` before the file shows its changes ([Diff view](#diff-view)) rather than the file: the view goes to the
+- `--diff` before the file (or before `--last`) shows its changes ([Diff view](#diff-view)) rather than the file: the view goes to the
   first place, and the rows of the new version's lines the places cover carry a blue bar (whole lines only). A
   deleted file is accepted there.
-- It prints `Preview: src/app.js:12-14,42:5-18`, or the reason on stderr with exit code 1 (2 for a wrong argument or
-  place).
+- It prints `Preview: src/app.js:12-14,42:5-18`, or the reason on stderr after `peek: `, with exit code 1 (2 for a
+  wrong argument or place, or when run outside a herdr pane, without `HERDR_PANE_ID`).
 - `herdr plugin list` gives the plugin's folder (`manifest_path`) whether it was installed from the index or from a
   clone, so the command works in both cases.
 

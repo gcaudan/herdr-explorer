@@ -8,12 +8,12 @@ updates are fast-forward pulls.
 
 | Requirement | Used for |
 |---|---|
-| herdr 0.9.3 or later | the host (`min_herdr_version` in `herdr-plugin.toml`) |
+| herdr 0.9.3 or later, as `herdr` on `PATH` (or its path in `HERDR_BIN_PATH`) | the host (`min_herdr_version` in `herdr-plugin.toml`) |
 | Node.js 20 or later, as `node` on the `PATH` herdr gives plugins | every pane and hook runs `node src/<script>.js` |
 | A [Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr | icons, chevrons and header icons; without one, choose emoji, Unicode or ASCII icons in the settings ([Without a Nerd Font](configuration.md#without-a-nerd-font)) |
-| git (optional) | git status, the changes view, source control, updates. Without it, the explorer and preview still work |
+| git (optional), in an absolute folder of `PATH` (relative entries are ignored) | git status, the changes view, source control, `peek --last`, updates. Without it, the explorer and preview still work |
 | VS Code or another graphical editor (optional) | the external editor (see [Editor command](configuration.md#editor-command)) |
-| A terminal editor (optional) | the [Editor pane](usage.md#editor-pane) |
+| A terminal editor (optional): `$VISUAL`, `$EDITOR`, else the first of `nano`, `nvim`, `vim`, `vi` (`edit`, `nvim`, `vim`, `nano` on Windows) | the [Editor pane](usage.md#editor-pane) |
 | The [Claude Code](https://claude.com/claude-code) CLI, `claude` (optional) | commit messages written by Claude |
 | `dwebp`, from libwebp (optional) | WebP images in the preview (`webp` package on Linux, `brew install webp` on macOS) |
 | A terminal with the Kitty graphics protocol (optional) | sharp images in the preview, with **Settings → Images** (Kitty, Ghostty, WezTerm, Konsole…, with herdr's `terminal.kitty_graphics`, on by default); half blocks otherwise, see [Sharp images](usage.md#sharp-images) |
@@ -25,6 +25,7 @@ Each feature degrades gracefully without its tool.
 | Feature | Linux | macOS | Windows |
 |---|---|---|---|
 | Clipboard | `wl-copy`, else `xclip`, else OSC 52 | `pbcopy` | PowerShell `Set-Clipboard` |
+| Paste (preview edit mode) | `wl-paste`, else `xclip` | `pbpaste` | PowerShell `Get-Clipboard` |
 | Trash | `gio trash`, else `trash-put` | `/usr/bin/trash` (macOS 14), else Finder | Recycle Bin (PowerShell) |
 | Open in app | `xdg-open` | `open` | `explorer.exe` |
 | Reveal | `xdg-open` on the parent folder | `open -R` (selects the file) | `explorer.exe /select` |
@@ -43,7 +44,8 @@ herdr plugin install gcaudan/herdr-explorer
 ```
 
 herdr manages this checkout and its updates, but does not add key bindings: append the blocks of
-[Key bindings](#key-bindings) to herdr's `config.toml`, then run `herdr server reload-config`.
+[Key bindings](#key-bindings) to herdr's `config.toml`, then run `herdr server reload-config`. Nor does it link the
+[herdr-preview skill](usage.md#show-a-file-from-an-agent-or-a-script) for Claude Code.
 
 To update, run `herdr plugin update gcaudan.explorer` (`↑` in the explorer copies it): herdr installs the new version into a new folder, so the open explorers and previews keep the old code until you reopen
 them (`prefix+f` twice). To uninstall, see [Uninstall](#uninstall).
@@ -71,8 +73,9 @@ Keep the clone where it is, on `main`: herdr runs the plugin from that folder, a
    mentions that action. A binding you already changed, for example to another key, is left alone.
 5. Run `herdr server reload-config`, ignoring errors.
 6. When Claude Code is installed (a `~/.claude` folder), link the [herdr-preview skill](usage.md#show-a-file-from-an-agent-or-a-script)
-   into `~/.claude/skills/herdr-preview` (a junction on Windows), so that Claude Code can show you files in the
-   preview. A link of that name is replaced; a folder that is not a link is left alone.
+   into `~/.claude/skills/herdr-preview` (a junction on Windows, which needs no admin right), so that Claude Code can
+   show you files in the preview and updates reach the skill. A link of that name is replaced; a folder that is not a
+   link is left alone, with a message.
 
 The script prints the plugin folder, each key it added and the skill's link.
 
@@ -178,7 +181,7 @@ copied `git -C "<plugin folder>" pull --ff-only --no-rebase` to the clipboard, t
 When the update changed `herdr-plugin.toml` (beyond its version) or an install script, the message is
 `Updated to X.Y.Z: rerun the installer`: every explorer header shows a yellow `!`, and the settings
 **! Finish the update** (`u`). Either one copies the installer command (`"<plugin folder>/install.sh"`, or
-`powershell -ExecutionPolicy Bypass -File …` on Windows), and the `!` goes away; run it in a terminal. The plugin
+`powershell -ExecutionPolicy Bypass -File …` on Windows), and once it is copied the `!` goes away; run it in a terminal. The plugin
 never reruns the installer itself, since it unlinks and relinks the plugin while its panes run.
 
 ### Pane restart
@@ -189,10 +192,11 @@ and position), once you are not busy:
 
 - the explorer, while no prompt, confirmation, menu, active filter, settings or key help is open and
   no update is running;
-- the preview, while no find field is being typed and no mouse selection is being dragged.
+- the preview, while no find field or review note is being typed, no mouse selection is being dragged and no tab has
+  unsaved edits.
 
 A pull that leaves the version unchanged restarts nothing. The explorer keeps its tree root (*Set as root*
-included), the preview its file and line. The other panes start a new process each time they open, so they always
+included), the preview its tabs, file and line. The other panes start a new process each time they open, so they always
 run the current code.
 
 ## Uninstall
