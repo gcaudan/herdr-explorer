@@ -302,6 +302,8 @@ function rows() {
   } else if (markdownView()) {
     let res;
     try { res = markdown.render(state.text, Math.max(1, Math.min(width - 1, 120)), { highlight, image: picture }); } catch { res = null; }
+    // The images taken back are in pictures now; the others are dropped.
+    if (!waiting()) stalePictures = new Map();
     if (res) list = res.lines.map(segs => ({ segs: [[' ', ''], ...segs], src: -1, pad: 1, figure: segs.figure }));
     else list = state.source.map((segs, i) => ({ segs, src: i, first: true }));
   } else if (state.kind === 'error') {
@@ -351,10 +353,11 @@ const noPreview = why => (state.missing ? `${why || 'No preview'}: ${state.missi
 // The images a Markdown file shows, under their paragraph: local files only (never a URL), relative to the Markdown
 // file, at most 60 columns and 20 rows. As the Images setting and p say, in pixels (blank lines that the image is
 // placed over, see placeFigures; nothing until the terminal's answer in 'auto') or with half blocks. Decoded once
-// per file, its size and date, width and way of drawing (pictures).
+// per file, width and way of drawing (pictures).
 const pictures = new Map();
-// The pictures of the Markdown file shown before a reload: those still the same are taken back rather than decoded
-// again (an agent rewriting the file reloads it often); another file's are dropped.
+// The pictures of the Markdown file shown before a reload: those whose file kept its size and date are taken back
+// rather than decoded again (an agent rewriting the file reloads it often), the rest dropped once the rows are
+// rebuilt; another file's are dropped at once.
 let stalePictures = new Map(), picturesOf = null;
 function forgetPictures(file) {
   // Two reloads in a row, with no drawing between them, keep the older ones.
@@ -374,12 +377,13 @@ function picture(url, width) {
   if (!within(abs, base)) return null;
   if (waiting()) return null;
   const pixels = sharp(), [cw, ch] = kitty.cell;
-  let stat = null;
+  const key = `${abs}\0${width}${pixels ? `\0${cw}×${ch}` : ''}`;
+  if (pictures.has(key)) return pictures.get(key).lines;
+  let lines = null, stat = null;
   try { stat = remoteLink(abs, base) ? null : fs.statSync(abs); } catch { }
-  const key = `${abs}\0${stat ? `${stat.mtimeMs}:${stat.size}` : ''}\0${width}${pixels ? `\0${cw}×${ch}` : ''}`;
-  if (pictures.has(key)) return pictures.get(key);
-  if (stalePictures.has(key)) { pictures.set(key, stalePictures.get(key)); return pictures.get(key); }
-  let lines = null;
+  const sig = stat ? `${stat.mtimeMs}:${stat.size}` : '';
+  const old = stalePictures.get(key);
+  if (old && old.sig === sig) { pictures.set(key, old); return old.lines; }
   try {
     if (stat && stat.isFile() && stat.size <= image.MAX_BYTES) {
       if (pixels) {
@@ -395,10 +399,10 @@ function picture(url, width) {
       }
     }
   } catch { }
-  pictures.set(key, lines);
+  pictures.set(key, { lines, sig });
   return lines;
 }
-const hasPictures = () => [...pictures.values()].some(Boolean);
+const hasPictures = () => [...pictures.values()].some(p => p.lines);
 
 // --- Kitty graphics
 //

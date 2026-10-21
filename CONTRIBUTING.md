@@ -46,8 +46,9 @@ Keep the conventions of the existing code:
   terminal. Text typed into a terminal must hold no control character.
 - A path from the tree, a search or Markdown goes through `remoteLink()` (`src/core/exec.js`) before it is read,
   followed or handed to a program: a link to a network share must never be opened (see [SECURITY.md](SECURITY.md#windows)).
-- Shared state files are written to a temporary file, then renamed.
+- Shared state files are written with `writeAtomic()` (`src/core/exec.js`): a temporary file, then renamed.
 - Panes stay usable when the state or config folder is missing.
+- In a menu (`ui.Menu`), an arrow never runs an action: `left`/`right` only change an option that has a value.
 - A new pane, hook or action is also declared in `herdr-plugin.toml`. A change to the manifest (other than its
   version) or to the install scripts makes users run the installer again after updating: the update only gives them
   the command.
@@ -91,7 +92,8 @@ Markdown, images, graph). The explorer and source control panes keep their own m
 | `src/core/notes.js`   | review notes of a tab: stored in the state folder, typed into the agent's prompt             |
 | `src/core/icons.js`   | Nerd Font, emoji, Unicode and ASCII icons, and VS Code icon theme loading                    |
 | `src/core/ui.js`      | terminal helpers: colours, text width, lines, input decoding, text field, scrollbar, screen, restart |
-| `src/core/exec.js`    | safe program execution, git hardening, links to network shares, settings, pane state, key bindings |
+| `src/core/exec.js`    | safe program execution, git hardening, links to network shares (`remoteLink`, `realPath`), atomic writes (`writeAtomic`), settings, pane state, key bindings |
+| `src/core/places.js`  | the places of `peek.js`'s argument (`file:12-14,42:5-18`), pure and tested                  |
 | `src/core/which.js`   | `which()`: programs found in the absolute folders of `PATH` only; loads before the state folder is known (`peek.js`) |
 | `src/core/update.js`  | daily release check, self-update by fast-forward pull, version watch                         |
 | `src/render/highlight.js` | table-driven syntax highlighter (VS Code Dark+ colours)                                      |

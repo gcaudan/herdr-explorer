@@ -82,7 +82,8 @@ async function last() {
   if (diff) args.shift();
   if (args.length !== 1 || args[0] === '--help' || args[0] === '-h') fail('usage: peek.js [--diff] <file>[:<line>[-<line>][:<col>-<col>],…] | [--diff] --last', 2);
   let abs, marks;
-  try { [abs, marks] = args[0] === '--last' ? [(await last())[0], []] : target(args[0], cwd); } catch (e) { fail(e.message, 2); }
+  if (args[0] === '--last') [abs, marks] = [(await last())[0], []];
+  else try { [abs, marks] = target(args[0], cwd); } catch (e) { fail(e.message, 2); }
   const line = marks.length ? marks[0].from : 0;
   // A deleted file still has changes to show.
   let stat = null;

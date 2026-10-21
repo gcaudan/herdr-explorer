@@ -471,7 +471,8 @@ function main() {
   function copyReference() {
     const r = rows[cur];
     if (!r || !r.ref) return;
-    const rel = path.relative(cwd, path.join(top, r.ref.file)).split(path.sep).join('/');
+    // From the folder resolved as top is (git gives its real path): /home → /var/home would otherwise give ../../..
+    const rel = path.relative(notes.real(cwd), path.join(top, r.ref.file)).split(path.sep).join('/');
     act(actions.copy(noteWhere({ ...r.ref, file: rel }), r.ref.from ? 'Reference copied' : 'Path copied'));
   }
   async function switchBase() {

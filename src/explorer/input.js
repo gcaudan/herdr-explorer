@@ -31,9 +31,9 @@ module.exports = ctx => {
   function menuKey(k) {
     const m = state.menu, action = ctx.keys.get(k), H = out.rows || 24;
     if (k === 'escape') closeMenu();
-    else if (action === 'up') m.move(-1, H);
-    else if (action === 'down') m.move(1, H);
-    else if (action === 'open') return runAction(m.items[m.sel].run);
+    // Moving and running go through ui.Menu, as in the other menus, from the keys bound here.
+    else if (action === 'up' || action === 'down') m.key(action, H);
+    else if (action === 'open') { const r = m.key('enter', H); if (r && r.run) return runAction(r.run); }
     else {
       // The key shown beside an item runs it (Settings… on ,); the others close the menu.
       const item = action && m.items.find(it => it && it.action === action);

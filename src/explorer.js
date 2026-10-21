@@ -285,7 +285,7 @@ let settle = null;
 function saveWidth(w) {
   if (w === width) return;
   width = w;
-  try { fs.writeFileSync(WIDTH_FILE, String(width)); } catch { }
+  writeAtomic(WIDTH_FILE, String(width));
 }
 
 // The width checked at once, so that a pane moved by another one's resize goes back while the gesture goes on

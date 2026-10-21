@@ -53,13 +53,17 @@ function addConfig(env, pairs) {
   return env;
 }
 
-// A file written to a temporary file then renamed, its folder made if needed, so that another pane never reads it
-// half-written. Returns whether it was written.
+// A file written to a temporary file then renamed, so that another pane never reads it half-written; its folder made
+// when missing (only then, as some files are written often: the resizing marker). Returns whether it was written.
 function writeAtomic(file, text) {
   const tmp = `${file}.${process.pid}`;
+  const put = () => { fs.writeFileSync(tmp, text); fs.renameSync(tmp, file); };
   try {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(tmp, text); fs.renameSync(tmp, file);
+    try { put(); } catch (e) {
+      if (e.code !== 'ENOENT') throw e;
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      put();
+    }
     return true;
   } catch { try { fs.unlinkSync(tmp); } catch { } return false; }
 }
@@ -165,7 +169,7 @@ const DEFAULTS = {
   ignored: true,      // show git-ignored files, greyed out
   open: 'preview',    // Enter and double-click on a text file: 'preview' or 'editor'
   editor: '',         // external editor command ("zed", "subl -w"); empty: VS Code when found, else the terminal editor
-  singleClick: false, // a single click on a file opens the preview, like VS Code
+  singleClick: false, // the preview follows the selection (click or arrows): Preview follows selection
   side: 'left',       // explorer docked to the left or the right of the tab
   autoOpen: true,     // open the explorer in every new tab that has a single pane
   follow: false,      // reveal the folder of the terminal next to the explorer when it changes

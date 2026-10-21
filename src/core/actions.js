@@ -397,7 +397,8 @@ async function preview(abs, root, pane, line = 0, focus = false, open = true, { 
   const request = { file: abs, root, line, marks, view, keep, t: Date.now() };
   const existing = tab.panes.find(p => p.label === 'Preview');
   if (existing) {
-    try { fs.writeFileSync(requestFile(tab.me.tab_id), JSON.stringify(request)); } catch { return 'Cannot preview'; }
+    // Whole or not at all: the preview polls it.
+    if (!writeAtomic(requestFile(tab.me.tab_id), JSON.stringify(request))) return 'Cannot preview';
     if (focus) await herdr('plugin', 'pane', 'focus', existing.pane_id);
     return null;
   }
