@@ -125,6 +125,7 @@ them on every pull request and every push to `main`, on Linux, macOS and Windows
 | `preview-tabs.test.js` | the preview's tabs |
 | `review.test.js` | review notes and the lines of a diff they point at |
 | `scm-parse.test.js` | the git output parsers (`src/scm/parse.js`) |
+| `update.test.js` | the GitHub repository the update check reads from the clone's `origin` |
 
 `docs.test.js` computes anchors as GitHub does: the heading in lower case, punctuation other than `-` and `_` dropped,
 spaces turned into dashes. When you rename a heading, update the links to it, including the one `src/preview.js`

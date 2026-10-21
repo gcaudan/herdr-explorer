@@ -179,10 +179,10 @@ Files are untrusted input:
 ## Updates
 
 - The check is a single HTTPS request to the GitHub releases API (3 s timeout), at most once a day, from the hooks
-  only, and only a version number made of digits and dots is kept: nothing it returns reaches a command. Turn it off
+  only, for the repository of the clone's `origin` (the plugin's when it is not on GitHub), and only a version number made of digits and dots is kept: nothing it returns reaches a command. Turn it off
   with *Check for updates*.
 - The update only runs `git pull --ff-only --no-rebase` in the plugin's own clone (its git top level must be the
-  plugin folder, not a dotfiles repository holding a copy), on `main`, with no operation in progress and no local
+  plugin folder, not a dotfiles repository holding a copy), on its remote's default branch, with no operation in progress and no local
   changes, under the same no-prompt rules (`GIT_TERMINAL_PROMPT=0`, `GCM_INTERACTIVE=never`, detached, ssh in
   `BatchMode` unless you set your own ssh command).
 - A checkout installed by `herdr plugin install` is never pulled: the plugin copies herdr's update command instead.

@@ -137,8 +137,9 @@ Run it from the plugin folder, in a herdr pane.
 ### The update check
 
 Once a day at most, from the hook (at herdr startup and when a tab is created, never from the panes), the plugin
-asks GitHub for the latest release (`api.github.com/repos/gcaudan/herdr-explorer/releases/latest`, 3 s timeout). A
-failed check waits for the next day. Only a version made of digits and dots (a leading `v` stripped) is kept, in
+asks GitHub for the latest release (`api.github.com/repos/<owner>/<repo>/releases/latest`, 3 s timeout). The
+repository is the clone's `origin` when it is on GitHub, so a fork follows its own releases; otherwise
+`gcaudan/herdr-explorer`. A failed check waits for the next day. Only a version made of digits and dots (a leading `v` stripped) is kept, in
 `update.json`. Turn it off with **Settings → Check for updates**.
 
 When a newer release exists, a green `↑` shows in the explorer header, and **↑ X.Y.Z available** under the
@@ -165,7 +166,7 @@ The update checks, in this order (`src/core/update.js`), and stops with the mess
 | take `update.lock` in the state folder (one update at a time across all explorers; a lock older than 2 min is taken over) | `Update in progress` |
 | a `git` executable is on `PATH` | `git not found in PATH` |
 | `git rev-parse --show-toplevel` is the plugin folder itself, not a copy inside another repository such as dotfiles | `Not a git clone` |
-| the current branch is `main` | `Not on main` |
+| the current branch is the one `origin/HEAD` points at (`main` when unset) | `Not on <branch>` |
 | no merge, rebase, cherry-pick, revert, `git am` or bisect in progress | `A git operation is in progress` |
 | `git status --porcelain --untracked-files=no` is empty (untracked files are allowed) | `Local changes in the plugin folder` |
 

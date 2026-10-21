@@ -50,7 +50,7 @@
   `&`, `|`, `<`, `>`, `^` or `%` could still run a command once `Enter` is pressed.
 - ***Open in app*** opens HTML and SVG files in the browser, and Office documents in Office, which asks before
   enabling macros.
-- **Updates** from the explorer need a git clone on `main` without changes to tracked files (see
+- **Updates** from the explorer need a git clone on its remote's default branch (`main`) without changes to tracked files (see
   [Refusals](installation.md#refusals)).
 - **Old panes**: an explorer or preview started by a version without the launcher (0.4.0 and earlier) keeps its old
   waiting `node` processes after updating, until it is closed. Close and reopen it (`prefix+f` twice for the
