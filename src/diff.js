@@ -1,7 +1,8 @@
 // Git changes of a file or folder, in a temporary full-tab pane: tracked files compared with HEAD (index and
 // working tree), untracked files in full. Inline, or side by side from 120 columns; s switches, n and N jump between
 // hunks, arrows, Page keys or the wheel scroll, q or Esc closes the pane.
-// Required as a module (by scm.js), it only exports the parser and the renderer.
+// Required as a module (by the preview and source control), it exports the parser, the renderer, the collection of
+// changes and the layout setting.
 'use strict';
 const path = require('path');
 const { spawnSync } = require('child_process');
