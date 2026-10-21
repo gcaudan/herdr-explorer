@@ -141,8 +141,10 @@ async function clipboard() {
   const opts = { timeout: 2000 };
   let text;
   if (WIN) {
-    text = await run(which('powershell.exe'), ['-NoProfile', '-NonInteractive', '-Command', 'Get-Clipboard -Raw'], opts);
-    if (text !== null) text = text.replace(/\r?\n$/, '');
+    // In base64: Windows PowerShell writes its output in the console's OEM code page, which loses é or €.
+    text = await run(which('powershell.exe'), ['-NoProfile', '-NonInteractive', '-Command',
+      '[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string](Get-Clipboard -Raw)))'], opts);
+    if (text !== null) text = Buffer.from(text.trim(), 'base64').toString('utf8');
   } else if (MAC) text = await run(which('pbpaste'), [], opts);
   else {
     text = process.env.WAYLAND_DISPLAY ? await run(which('wl-paste'), ['--no-newline'], opts) : null;
