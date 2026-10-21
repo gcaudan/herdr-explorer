@@ -262,11 +262,11 @@ function matcher() {
 }
 
 // Text of a regular file, or [null, reason] when not searchable: too large or binary (NUL in the first 8 kB).
-// Stat first: opening a FIFO would block. A link is read only when it does not lead to a network share (git lists
-// links, never the files behind a linked folder, so the file itself is the only link on its way below the root).
+// Stat first: opening a FIFO would block. A file is read only when no link on its way below the root leads to a
+// network share: a crafted index could list a file under a linked folder.
 async function readText(abs) {
   try {
-    if ((await fsp.lstat(abs)).isSymbolicLink() && remoteLink(abs, ROOT)) return [null, 'link to a network share'];
+    if (remoteLink(abs, ROOT)) return [null, 'link to a network share'];
     const st = await fsp.stat(abs);
     if (!st.isFile()) return [null, 'not a file'];
     if (st.size > MAX_SIZE) return [null, 'file too large'];
