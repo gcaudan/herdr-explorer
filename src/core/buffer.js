@@ -44,8 +44,8 @@ function read(file) {
   } catch (e) { return { error: e.code || e.message }; } finally { if (fd !== undefined) fs.closeSync(fd); }
 }
 
-// The text written over the file at once: to a new temporary file beside it, with the file's permissions, then
-// renamed over it. A link keeps pointing to it: its target is written. A file with other names (hard links), owned by
+// The text written over the file at once: to a new temporary file beside it, with the file's permissions and group,
+// then renamed over it. A link keeps pointing to it: its target is written. A file with other names (hard links), owned by
 // another user, or in a folder that cannot be written, is written in place instead, which keeps all of that. Returns
 // the file's new stat.
 function save(file, text) {
@@ -57,6 +57,8 @@ function save(file, text) {
     try {
       // wx: never through a file or link already there.
       fs.writeFileSync(tmp, text, { flag: 'wx', mode: stat ? stat.mode & 0o7777 : 0o666 });
+      // Its group too (EPERM when not one of the user's: written in place), before chmod as chown clears setgid.
+      if (stat && process.getuid && fs.statSync(tmp).gid !== stat.gid) fs.chownSync(tmp, stat.uid, stat.gid);
       if (stat) fs.chmodSync(tmp, stat.mode & 0o7777);
       fs.renameSync(tmp, real);
       return fs.statSync(real);
