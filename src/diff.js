@@ -1,7 +1,6 @@
 // Git changes of a file or folder, in a temporary full-tab pane: tracked files compared with HEAD (index and
-// working tree), untracked files in full; or only the staged changes (EXPLORER_STAGED=1), or a commit
-// (EXPLORER_COMMIT=<hash>). Inline, or side by side from 120 columns; s switches, n and N jump between hunks,
-// arrows, Page keys or the wheel scroll, q or Esc closes the pane.
+// working tree), untracked files in full. Inline, or side by side from 120 columns; s switches, n and N jump between
+// hunks, arrows, Page keys or the wheel scroll, q or Esc closes the pane.
 // Required as a module (by scm.js), it only exports the parser and the renderer.
 'use strict';
 const path = require('path');
@@ -241,12 +240,12 @@ function splitRows(rows, b, width, nw) {
 
 const defaultMode = width => (width >= SPLIT_MIN ? 'split' : 'inline');
 
-// The changes to show, as git diff writes them: of a commit, the staged ones only, or those of the working tree
-// compared with base, 'head' (the last commit) or 'branch' (where the branch left the default one, so every change of
-// the branch, committed or not), untracked files in full. file: a file or folder to limit them to. Returns
-// { text, top, baseName }: top, the repository's folder, which the diff's paths are relative to; baseName, the default
-// branch ('' when none was found, or when compared with it but no common commit).
-async function collect({ cwd, file = '', commit = '', staged = false, base = 'head' }) {
+// The changes to show, as git diff writes them: those of the working tree compared with base, 'head' (the last
+// commit) or 'branch' (where the branch left the default one, so every change of the branch, committed or not),
+// untracked files in full. file: a file or folder to limit them to. Returns { text, top, baseName }: top, the
+// repository's folder, which the diff's paths are relative to; baseName, the default branch ('' when none was found,
+// or when compared with it but no common commit).
+async function collect({ cwd, file = '', base = 'head' }) {
   const env = { ...await gitEnv(cwd), GIT_LITERAL_PATHSPECS: '1' }; // a file named '*' or '[id]' means itself
   const target = file ? ['--', file] : [];
   // stdout even on a non-zero exit code: diff --no-index returns 1 when the files differ.
@@ -255,12 +254,6 @@ async function collect({ cwd, file = '', commit = '', staged = false, base = 'he
   const diff = (...args) => git('diff', ...DIFF_OPTS, ...args);
   const top = git('rev-parse', '--show-toplevel').trim() || cwd;
   let baseName = '';
-  // A revision that would read as an option is refused; --end-of-options for the others.
-  if (commit) {
-    return { top, baseName, text: /^-|[\x00-\x20]/.test(commit) ? ''
-      : git('show', ...DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', '--end-of-options', commit, ...target) };
-  }
-  if (staged) return { top, baseName, text: diff('--cached', ...target) };
   let from = git('rev-parse', '--verify', '-q', 'HEAD').trim() ? 'HEAD' : null;
   // The default branch, named whatever the base, for the switch: the remote's HEAD, else main or master.
   if (from) {
@@ -306,8 +299,6 @@ if (require.main === module) main();
 function main() {
   const file = process.env.EXPLORER_FILE;
   const cwd = process.env.EXPLORER_ROOT || (file ? path.dirname(file) : process.cwd());
-  const commit = process.env.EXPLORER_COMMIT;
-  const staged = process.env.EXPLORER_STAGED === '1';
   const PANE = process.env.HERDR_PANE_ID;
   // The explorer's pane, whose terminal the notes go to; this pane's own when opened without it.
   const FROM = process.env.EXPLORER_PANE || PANE;
@@ -318,13 +309,12 @@ function main() {
   let base = 'head', top = cwd, baseName = '';
 
   async function changes() {
-    const res = await collect({ cwd, file, commit, staged, base });
+    const res = await collect({ cwd, file, base });
     top = res.top; baseName = res.baseName;
     return res.text;
   }
 
-  const title = () => (commit ? `commit ${commit}${file ? ` · ${path.relative(cwd, file) || path.basename(file)}` : ''}`
-    : `${file ? path.relative(cwd, file) || path.basename(file) : path.basename(cwd)}${staged ? ' (staged)' : ''}`);
+  const title = () => (file ? path.relative(cwd, file) || path.basename(file) : path.basename(cwd));
   // cur: the row of the cursor, which notes and references take; note: { field, kind, ref } while one is typed.
   let parsed = null, rows = [], cache = '', top0 = 0, cur = -1, note = null, flash = null, tab = null, tabNotes = [];
   const scrollbar = new ui.Scrollbar(t => { top0 = t; draw(); });
@@ -361,7 +351,7 @@ function main() {
     // the active choice filled (clickable), the base's left out when they do not fit.
     const counts = parsed ? [[` +${parsed.add}`, GREEN], [` −${parsed.del}`, RED]] : [];
     const head = [[` ${title()}`, '\x1b[1m'], ...counts];
-    const switches = [...(!commit && !staged ? [ui.segmented([['head', 'HEAD'], ['branch', baseName || 'main']], base)] : []),
+    const switches = [ui.segmented([['head', 'HEAD'], ['branch', baseName || 'main']], base),
       ui.segmented([['inline', 'Inline'], ['split', 'Split']], m)];
     const width = () => switches.reduce((w, s) => w + s.width + 1, 0);
     while (switches.length && W - ui.segWidth(head) - width() < 1) switches.shift();
@@ -375,7 +365,7 @@ function main() {
     }
     const lines = [ui.line(segs, W, ui.C.header)];
     if (!parsed) lines.push(...ui.empty(W, body, 'Loading…'));
-    else if (!rows.length) lines.push(...ui.empty(W, body, 'No changes', [...(commit || staged ? [] : [['b', 'base']]), ['q', 'close']]));
+    else if (!rows.length) lines.push(...ui.empty(W, body, 'No changes', [['b', 'base'], ['q', 'close']]));
     // The cursor's row and the noted ones: a bar in the first column.
     rows.slice(top0, top0 + body).forEach((r, k) => {
       const i = top0 + k, mark = i === cur ? ['▌', ui.fg(ui.C.blue)] : noted(r) ? ['▎', NOTE] : [' ', ''];
@@ -479,7 +469,6 @@ function main() {
     act(actions.copy(noteWhere({ ...r.ref, file: rel }), r.ref.from ? 'Reference copied' : 'Path copied'));
   }
   async function switchBase() {
-    if (commit || staged) return;
     base = base === 'head' ? 'branch' : 'head';
     parsed = null; cache = ''; draw();
     const text = await changes();
