@@ -12,7 +12,7 @@ const ui = require('./core/ui');
 const update = require('./core/update');
 const Tree = require('./explorer/tree');
 const { run, result, HERDR, GIT: GIT_BIN, gitEnv, DEFAULT_WIDTH, WIDTH_FILE, readWidth, readSettings, writeSettings, KEYS_FILE, readKeys,
-  writePaneState, SETTINGS_FILE } = require('./core/exec');
+  writePaneState, SETTINGS_FILE, remoteLink } = require('./core/exec');
 
 const HOME = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());
 // the space folder, or another one chosen with Set as root (EXPLORER_TREE: the one it had before a herdr restart)
@@ -441,6 +441,12 @@ function renameEntry(r) {
 
 function deleteEntry(r) {
   const abs = absOf(r.rel), name = r.name + (r.dir ? '/' : ''), where = whereOf(r.rel);
+  // Never to the trash, which would follow it (see actions.trash).
+  if (remoteLink(abs, ROOT)) {
+    return confirm({ title: 'Link to a network share: delete the link?', name, where,
+      note: 'Only the link goes; the share is untouched.', action: 'Delete' },
+    () => flash(actions.remove(abs) || `${r.name} deleted`));
+  }
   confirm({ title: 'Move to the trash?', name, where, action: 'Move' }, async () => {
     flash('Moving to the trash…');
     if (await actions.trash(abs)) return flash(`${r.name} moved to the trash`);

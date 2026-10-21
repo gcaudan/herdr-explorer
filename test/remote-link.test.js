@@ -10,7 +10,7 @@ const { remoteLink } = require('../src/core/exec');
 // A name that never resolves (RFC 2606), in case a link were followed by mistake.
 const SHARE = '\\\\share.invalid\\s';
 
-test('a link to a network share is found, directly, through a folder or another link', t => {
+test('a link to a network share is found, directly, through a folder or another link', async t => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'links-'));
   try {
     fs.writeFileSync(path.join(dir, 'real.png'), '');
@@ -43,5 +43,11 @@ test('a link to a network share is found, directly, through a folder or another 
     assert.strictEqual(actions.duplicate(path.join(dir, 'local.png'))[1], null);
     assert.deepStrictEqual(actions.rename(path.join(dir, 'remote.png'), 'moved.png'), [path.join(dir, 'moved.png'), null]);
     assert.ok(fs.lstatSync(path.join(dir, 'moved.png')).isSymbolicLink());
+    // Never sent to the trash; deleted, it goes itself, the folder link too.
+    assert.strictEqual(await actions.trash(path.join(dir, 'pics')), false);
+    assert.strictEqual(actions.remove(path.join(dir, 'pics')), null);
+    assert.strictEqual(fs.lstatSync(path.join(dir, 'pics'), { throwIfNoEntry: false }), undefined);
+    assert.strictEqual(actions.remove(path.join(dir, 'local.png')), null);
+    assert.ok(fs.existsSync(path.join(dir, 'real.png')), 'the target of a removed link stays');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });

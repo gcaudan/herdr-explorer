@@ -490,12 +490,13 @@ function duplicate(abs) {
 }
 
 // To the trash of the desktop: gio on Linux, trash (macOS 14) or Finder on macOS, the recycle bin on Windows.
-// A link to a network share goes as the link itself, never followed (lstat).
+// Never a link to a network share: the recycle bin would follow it, and on Windows a folder link reads as a file to
+// lstat; remove() deletes the link itself.
 async function trash(abs) {
+  if (remoteLink(abs)) return false;
   let ok;
-  const remote = remoteLink(abs);
   if (WIN) {
-    const fn = (remote ? fs.lstatSync(abs) : fs.statSync(abs)).isDirectory() ? 'DeleteDirectory' : 'DeleteFile';
+    const fn = fs.statSync(abs).isDirectory() ? 'DeleteDirectory' : 'DeleteFile';
     ok = await run(which('powershell.exe'), ['-NoProfile', '-NonInteractive', '-Command',
       `Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.FileIO.FileSystem]::${fn}($env:EXPLORER_TRASH, 'OnlyErrorDialogs', 'SendToRecycleBin')`],
     { env: { ...process.env, EXPLORER_TRASH: abs } }) !== null;
@@ -506,8 +507,14 @@ async function trash(abs) {
   return ok && !fs.lstatSync(abs, { throwIfNoEntry: false });
 }
 
+// A link goes itself, its target untouched: unlink, or rmdir for a folder link on Windows, which unlink refuses.
 function remove(abs) {
-  try { fs.rmSync(abs, { recursive: true, force: true }); return null; } catch (e) { return `Cannot delete: ${e.code || e.message}`; }
+  try {
+    if (fs.lstatSync(abs, { throwIfNoEntry: false })?.isSymbolicLink()) {
+      try { fs.unlinkSync(abs); } catch (e) { if (e.code !== 'EPERM' && e.code !== 'EISDIR') throw e; fs.rmdirSync(abs); }
+    } else fs.rmSync(abs, { recursive: true, force: true });
+    return null;
+  } catch (e) { return `Cannot delete: ${e.code || e.message}`; }
 }
 
 // --- git

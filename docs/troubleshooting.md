@@ -113,6 +113,7 @@
 | `No changes`                                     | `]` or `[` found no changed file                                                   |
 | `Deleted: Discard changes in the menu restores it` | the action needs the file on disk, and the row is a deleted file                 |
 | `No trash: delete for good?`                     | no trash tool was found. Install `gio` (GLib) or `trash-put` (`trash-cli`) on Linux to keep deletions recoverable |
+| `Link to a network share: delete the link?`      | (Delete) the entry is a link to `\\host\share`: it never goes to the trash, which would follow it; only the link is deleted, see [Security](../SECURITY.md#windows) |
 | `No terminal next to the explorer`               | **Insert into terminal**, or sending review notes, found no terminal pane beside the explorer |
 | `Not inserted: control character in name`, `Not typed: control character` | the text contains a control character, which could run a command: it is never typed into a terminal |
 | `Cannot insert`, `Cannot type into the terminal` | `herdr pane send-text` failed                                                      |
