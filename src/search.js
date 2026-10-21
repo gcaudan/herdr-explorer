@@ -50,7 +50,9 @@ function save() {
   const f = state.fields, o = state.opts;
   const data = { files: f.files.value, content: f.content.value, include: f.include.value, exclude: f.exclude.value,
     case: o.case, word: o.word, regex: o.regex };
-  try { fs.writeFileSync(SAVE, JSON.stringify(data)); } catch { }
+  // Written to a temporary file then renamed, so that another popup never reads it half-written.
+  const tmp = `${SAVE}.${process.pid}`;
+  try { fs.writeFileSync(tmp, JSON.stringify(data)); fs.renameSync(tmp, SAVE); } catch { try { fs.unlinkSync(tmp); } catch { } }
 }
 
 // --- file list
