@@ -6,28 +6,26 @@
 if (require('./launch').launch()) return;
 const fs = require('fs');
 const path = require('path');
-const actions = require('./actions');
-const icons = require('./icons');
-const ui = require('./ui');
-const update = require('./update');
-const { run, result, HERDR, GIT: GIT_BIN, gitEnv, WIDTH_FILE, readWidth, readSettings, writeSettings, KEYS_FILE, readKeys,
-  keysTemplate, writeKeys, writePaneState, SETTINGS_FILE } = require('./exec');
+const actions = require('./core/actions');
+const icons = require('./core/icons');
+const ui = require('./core/ui');
+const update = require('./core/update');
+const Tree = require('./explorer/tree');
+const { run, result, HERDR, GIT: GIT_BIN, gitEnv, DEFAULT_WIDTH, WIDTH_FILE, readWidth, readSettings, writeSettings, KEYS_FILE, readKeys,
+  writePaneState, SETTINGS_FILE, remoteLink } = require('./core/exec');
 
-const { C, GIT, fg, glyph, line, fit, textWidth } = ui;
 const HOME = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());
 // the space folder, or another one chosen with Set as root (EXPLORER_TREE: the one it had before a herdr restart)
 let ROOT = process.env.EXPLORER_TREE ? path.resolve(process.env.EXPLORER_TREE) : HOME;
 const PANE = process.env.HERDR_PANE_ID;
-const WIDTH = 32; // columns when the terminal size is unknown
+const WIDTH = DEFAULT_WIDTH; // columns when the terminal size is unknown
 const SAVE = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'expanded.json');
-const FILTER_BUDGET = 20000; // entries read at most while filtering
 const out = process.stdout;
 const settings = readSettings();
+ui.useGlyphs(settings.glyphs);
 const SIDE = settings.side; // where this explorer was docked: a later change applies to the next tabs
 // The side of its inner border, which shift+← and shift+→ push: on the right of an explorer docked on the left.
 const INNER = SIDE === 'right' ? 'left' : 'right';
-
-const RANK = { U: 1, A: 2, R: 2, M: 3, D: 4, C: 5 };
 
 // Actions and their default keys, changed in keys.json ("explorer" object). Key names: up, down, left, right, home,
 // end, pageup, pagedown, enter, space, tab, backspace, delete, escape, menu, f1…f5, ctrl+<letter>, alt+<key>, or the
@@ -39,7 +37,7 @@ const DEFAULT_KEYS = {
   menu: ['m', 'menu', 'shift+f10'], refresh: ['r'], filter: ['/'], goToFile: ['ctrl+p'], searchInFiles: ['ctrl+f'],
   sourceControl: ['s'], settings: [','], toggleHidden: ['.'], toggleIgnored: ['i'], newFile: ['n'], newFolder: ['N'],
   rename: ['R', 'f2'], delete: ['delete'], edit: ['e'], openInEditor: ['o'], openInApp: ['O'], preview: ['p'], copyPath: ['y'],
-  copyRelativePath: ['Y'], parentRoot: ['backspace'], narrower: ['>', INNER === 'right' ? 'shift+left' : 'shift+right'],
+  copyRelativePath: ['Y'], parentRoot: ['backspace'], changedOnly: ['c'], viewChanges: ['d'], nextChange: [']'], previousChange: ['['], fileHistory: ['H'], narrower: ['>', INNER === 'right' ? 'shift+left' : 'shift+right'],
   wider: ['<', INNER === 'right' ? 'shift+right' : 'shift+left'], halfPageUp: ['ctrl+u'], halfPageDown: ['ctrl+d'], help: ['?', 'f1'],
 };
 // The key help (help action), by group, with the keys bound now: [group, [[action, description]]].
@@ -47,6 +45,8 @@ const HELP = [
   ['Move', [['up', 'up'], ['down', 'down'], ['pageUp', 'page up'], ['pageDown', 'page down'], ['halfPageUp', 'half page up'],
     ['halfPageDown', 'half page down'], ['top', 'first'], ['bottom', 'last'], ['expand', 'unfold'], ['collapse', 'fold, parent'],
     ['filter', 'filter']]],
+  ['Review', [['changedOnly', 'changed files only'], ['viewChanges', 'changes in the preview'], ['nextChange', 'next changed file'], ['previousChange', 'previous changed file'],
+    ['fileHistory', 'history of the file']]],
   ['Open', [['open', 'open, fold'], ['preview', 'preview'], ['edit', 'edit (terminal)'], ['openInEditor', 'open in editor'], ['openInApp', 'open in app'],
     ['copyPath', 'copy path'], ['copyRelativePath', 'copy relative path']]],
   ['Files', [['newFile', 'new file'], ['newFolder', 'new folder'], ['rename', 'rename'], ['delete', 'to the trash'],
@@ -56,10 +56,13 @@ const HELP = [
     ['refresh', 'refresh'], ['help', 'keys'], ['close', 'close']]],
 ];
 let keys = readKeys('explorer', DEFAULT_KEYS);
+// The keys of an action, its default ones first in their order.
+const keysOf = action => {
+  const rank = k => { const i = DEFAULT_KEYS[action].indexOf(k); return i < 0 ? Infinity : i; };
+  return [...keys].filter(([, a]) => a === action).map(([k]) => k).sort((a, b) => rank(a) - rank(b));
+};
 if (KEYS_FILE) fs.watchFile(KEYS_FILE, { interval: 1000 }, () => { keys = readKeys('explorer', DEFAULT_KEYS); });
 
-const CHEVRON = [0xeab6, 0xeab4];
-const SEARCH = ui.SEARCH.codePointAt(0), GEAR = 0xf013;
 let theme = icons.load(settings.icons); // VS Code icon theme; null: the default icons
 // Moved by an update of its extension: its new place saved for the next starts. No longer installed: the default
 // icons saved, rather than searching for it again at every start.
@@ -67,15 +70,17 @@ if (theme ? theme.entry.file !== settings.icons.file : settings.icons && setting
   settings.icons = theme ? theme.entry : '';
   writeSettings({ ...readSettings(), icons: settings.icons });
 }
-// The icon theme chosen in another explorer, the update check or the opening in new tabs turned on or off there, and
-// the preview and diff settings changed in their panes (shown by an open settings view).
+// The icon theme or icon set chosen in another explorer, the update check, the opening in new tabs, what Enter opens,
+// the editor and the preview following the selection changed there, and the preview and diff settings changed in
+// their panes (shown by an open settings view). Hidden and ignored files and Follow terminal stay this explorer's.
 if (SETTINGS_FILE) fs.watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
   // A file read while being written is skipped, rather than taken for the default settings.
   let saved, chosen;
   try { saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')); chosen = saved.icons || ''; } catch { return; }
-  for (const name of ['updateCheck', 'autoOpen', 'wrap', 'lineNumbers', 'diffLayout']) {
+  for (const name of ['updateCheck', 'autoOpen', 'open', 'editor', 'singleClick', 'wrap', 'lineNumbers', 'images', 'diffLayout', 'glyphs']) {
     if (saved[name] === undefined || saved[name] === settings[name]) continue;
     settings[name] = saved[name];
+    if (name === 'glyphs') ui.useGlyphs(saved.glyphs);
     render();
   }
   if (JSON.stringify(chosen) === JSON.stringify(settings.icons)) return;
@@ -102,70 +107,28 @@ const state = {
   flash: null,     // short message shown in the header
   lastClick: null, // to detect double-clicks
   filter: null,    // { field, active }: rows limited to the names containing the text
+  changed: false,  // rows limited to the changed files and their folders, all unfolded
   prompt: null,    // { label, field, done(value), inline }: a name typed in the tree (inline: { rel } or
                    // { dir, folder }) or at the bottom
   confirm: null,   // { title, name, where, note, action, tone, yes(), focus }: y, or Enter on the action's button
                    // (focus 'yes', moved with ← →), to confirm; any other key to cancel
 };
 const scrollbar = new ui.Scrollbar(top => { state.top = top; render(); });
-const git = { top: null, prefix: '', files: new Map(), dirs: new Map(), untracked: new Set(), ignored: new Set() };
-const cache = new Map(); // relative folder → sorted entries
+const tree = Tree.create(() => ROOT, settings);
+const { git, cache, decoration, changedFiles } = tree;
 
 // The repository config is read again before each call, as it may change while the explorer runs.
 const gitRun = async args => run(GIT_BIN, args, { cwd: ROOT, env: await gitEnv(ROOT) });
-const parentOf = rel => (rel === '' ? null : rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : '');
+const { parentOf, treeBefore } = Tree;
 const absOf = rel => path.join(ROOT, rel);
 
 // --- tree
 
-function readDir(rel) {
-  if (cache.has(rel)) return cache.get(rel);
-  let entries = [];
-  try {
-    entries = fs.readdirSync(path.join(ROOT, rel), { withFileTypes: true })
-      .filter(e => e.name !== '.git')
-      .map(e => {
-        let dir = e.isDirectory();
-        if (e.isSymbolicLink()) try { dir = fs.statSync(path.join(ROOT, rel, e.name)).isDirectory(); } catch { }
-        return { name: e.name, dir, rel: rel ? `${rel}/${e.name}` : e.name };
-      })
-      .sort((a, b) => (b.dir - a.dir) || a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-  } catch { }
-  cache.set(rel, entries);
-  return entries;
-}
-
-// Entries shown with the current settings: dot files and git-ignored ones can be hidden.
-const visible = rel => readDir(rel).filter(e => (settings.hidden || !e.name.startsWith('.'))
-  && (settings.ignored || decoration(e) !== '!'));
-
+// The rows of the tree as the view shows them, the selection kept on its entry (else on the first match, or at the
+// same place).
 function buildRows() {
-  const rows = [];
   const query = state.filter && state.filter.field.value.toLowerCase();
-  if (query) {
-    // Every folder is read, except ignored ones (node_modules, build output), within a budget.
-    let budget = FILTER_BUDGET;
-    const walk = (rel, depth) => {
-      const found = [];
-      for (const e of visible(rel)) {
-        if (--budget < 0) break;
-        const at = e.name.toLowerCase().indexOf(query);
-        const kids = e.dir && !git.ignored.has(e.rel) ? walk(e.rel, depth + 1) : [];
-        if (at >= 0 || kids.length) found.push({ ...e, depth, hit: at >= 0 ? [at, at + query.length] : null, open: kids.length > 0 }, ...kids);
-      }
-      return found;
-    };
-    rows.push(...walk('', 0));
-  } else {
-    const walk = (rel, depth) => {
-      for (const e of visible(rel)) {
-        rows.push({ ...e, depth, open: e.dir && state.expanded.has(e.rel) });
-        if (e.dir && state.expanded.has(e.rel)) walk(e.rel, depth + 1);
-      }
-    };
-    walk('', 0);
-  }
-  state.rows = rows;
+  const rows = state.rows = tree.rows({ query, changed: state.changed, expanded: state.expanded });
   const i = state.selected === null ? -1 : rows.findIndex(r => r.rel === state.selected);
   select(i >= 0 ? i : query ? rows.findIndex(r => r.hit) : state.cursor);
 }
@@ -176,7 +139,7 @@ function select(i) {
 }
 
 function toggle(row, open) {
-  if (!row || !row.dir || state.filter) return;
+  if (!row || !row.dir || state.filter || state.changed) return;
   if (open === undefined) open = !state.expanded.has(row.rel);
   if (open) state.expanded.add(row.rel); else state.expanded.delete(row.rel);
   buildRows();
@@ -219,7 +182,7 @@ function setRoot(dir) {
   state.selected = null;
   load();
   cache.clear();
-  Object.assign(git, { top: null, prefix: '', files: new Map(), dirs: new Map(), untracked: new Set(), ignored: new Set() });
+  Object.assign(git, { top: null, prefix: '', files: new Map(), dirs: new Map(), untracked: new Set(), ignored: new Set(), gone: [] });
   // Going up: the folder left is selected.
   const back = path.relative(ROOT, from).split(path.sep).join('/');
   if (back && !back.startsWith('..') && !path.isAbsolute(back)) revealRel(back);
@@ -251,58 +214,11 @@ async function initGit() {
   } catch { }
 }
 
-function code(x, y) {
-  if (x === '?') return 'U';
-  if (x === '!') return '!';
-  if (x === 'U' || y === 'U' || (x === 'A' && y === 'A') || (x === 'D' && y === 'D')) return 'C';
-  if (x === 'D' || y === 'D') return 'D';
-  if (x === 'R' || y === 'R') return 'R';
-  if (x === 'A' || x === 'C') return 'A';
-  return 'M';
-}
-
 async function refreshGit() {
   if (!git.top) return;
   const status = await gitRun(['status', '--porcelain=v1', '-z', '--ignored=matching', '--ignore-submodules=all', '--', '.']);
   if (status === null) return;
-  git.files = new Map(); git.dirs = new Map(); git.untracked = new Set(); git.ignored = new Set();
-  const parts = status.split('\0');
-  for (let i = 0; i < parts.length; i++) {
-    const p = parts[i];
-    if (p.length < 4) continue;
-    const c = code(p[0], p[1]);
-    if ('RC'.includes(p[0]) || 'RC'.includes(p[1])) i++; // the original path follows (renamed in the index or the tree)
-    let rel = p.slice(3);
-    if (git.prefix) {
-      if (!rel.startsWith(git.prefix + '/')) continue;
-      rel = rel.slice(git.prefix.length + 1);
-    }
-    const isDir = rel.endsWith('/');
-    if (isDir) rel = rel.slice(0, -1);
-    if (c === '!') { git.ignored.add(rel); continue; }
-    if (isDir) git.untracked.add(rel); else git.files.set(rel, c);
-    for (let a = parentOf(rel); a !== null; a = parentOf(a)) {
-      if (!git.dirs.has(a) || RANK[c] > RANK[git.dirs.get(a)]) git.dirs.set(a, c);
-    }
-  }
-}
-
-// Decoration of an entry: that of an ignored or untracked folder extends to all its contents.
-function decoration(row) {
-  for (let a = row.rel; a !== null && a !== ''; a = parentOf(a)) {
-    if (git.ignored.has(a)) return '!';
-    if (git.untracked.has(a)) return 'U';
-  }
-  // A symbolic link to a folder is a file for git.
-  return (row.dir && git.dirs.get(row.rel)) || git.files.get(row.rel);
-}
-
-// A change inside a collapsed ignored folder (node_modules, bin, obj…) is not visible: skip it.
-function hidden(rel) {
-  for (let a = parentOf(rel); a !== null && a !== ''; a = parentOf(a)) {
-    if (git.ignored.has(a) && !state.expanded.has(a)) return true;
-  }
-  return false;
+  tree.applyStatus(status);
 }
 
 // --- refresh
@@ -332,12 +248,16 @@ function watchRoot() {
   if (rootWatcher) rootWatcher.close();
   rootWatcher = null;
   if (stopped) return;
-  const real = p => { try { return fs.realpathSync(p); } catch { return p; } }; // /home → /var/home on some systems
-  const up = path.relative(real(ROOT), real(require('os').homedir()));
-  const big = ROOT === path.parse(ROOT).root || !up.startsWith('..') && !path.isAbsolute(up);
-  for (const recursive of big ? [false] : [true, false]) {
+  for (const recursive of big(ROOT) ? [false] : [true, false]) {
     try { rootWatcher = watchTree(recursive); return; } catch { }
   }
+}
+
+// $HOME, one of its parents or the filesystem root.
+function big(dir) {
+  const real = p => { try { return fs.realpathSync(p); } catch { return p; } }; // /home → /var/home on some systems
+  const up = path.relative(real(dir), real(require('os').homedir()));
+  return dir === path.parse(dir).root || !up.startsWith('..') && !path.isAbsolute(up);
 }
 
 function watchTree(recursive) {
@@ -347,7 +267,7 @@ function watchTree(recursive) {
       if (!git.top) setTimeout(() => initGit().then(() => git.top && schedule()), 500);
       return;
     }
-    if (rel.includes('/.git/') || hidden(rel)) return;
+    if (rel.includes('/.git/') || tree.hidden(rel, state.expanded)) return;
     schedule();
   });
   watcher.on('error', () => { });
@@ -423,11 +343,12 @@ async function follow() {
   if (stopped || !cwd || cwd === lastCwd || state.filter || state.menu || state.settings || state.help || state.prompt || state.confirm) return;
   lastCwd = cwd;
   const inside = (dir, root) => { const r = path.relative(root, dir); return !r.startsWith('..') && !path.isAbsolute(r); };
-  // Outside the root: back to the space folder when it holds the terminal folder. Never above it, where the
-  // recursive watch could cover $HOME or the whole disk.
+  // Outside the root: back to the space folder when it holds the terminal folder, else the terminal folder itself.
+  // Never $HOME, one of its parents or the filesystem root, where the tree would be too big to follow.
   if (!inside(cwd, ROOT)) {
-    if (!inside(cwd, HOME)) return;
-    setRoot(HOME);
+    if (inside(cwd, HOME)) setRoot(HOME);
+    else if (big(cwd)) return;
+    else setRoot(cwd);
   }
   const rel = path.relative(ROOT, cwd).split(path.sep).join('/');
   if (!rel) return;
@@ -438,8 +359,6 @@ async function follow() {
 
 // --- rendering
 
-const bodyHeight = () => (out.rows || 24) - 1 - (state.filter || state.prompt ? 1 : 0);
-
 // The tree, or a page in its place (settings, key help), and a question over it.
 function render() {
   const W = out.columns || WIDTH, H = out.rows || 24;
@@ -449,134 +368,20 @@ function render() {
   paint(lines);
 }
 
-// The tree, with the name being typed in it (Rename, New file), then at the bottom the prompt, its keys or the filter.
-function treeView(W, H) {
-  const lines = [header(W)];
-  const listH = bodyHeight();
-  const shown = shownRows(), edit = shown.findIndex(e => e.edit);
-  if (edit >= 0 && edit < state.top) state.top = edit;
-  if (edit >= state.top + listH) state.top = edit - listH + 1;
-  if (state.top > shown.length - listH) state.top = Math.max(0, shown.length - listH);
-  const bw = scrollbar.set(shown.length, listH, state.top);
-  const selected = state.rows[state.cursor];
-  for (let i = state.top; i < Math.min(shown.length, state.top + listH); i++) {
-    const e = shown[i];
-    lines.push((e.edit ? editRow(e, W - bw) : row(e.r, W - bw, e.r === selected)) + scrollbar.cell(i - state.top));
-  }
-  if (!shown.length) {
-    const first = a => ui.keyLabel(keysOf(a)[0] || '');
-    lines.push(...(state.filter ? ui.empty(W, listH, 'No match', [['esc', 'clear']])
-      : ui.empty(W, listH, 'Empty folder', [[first('newFile'), 'new file'], [first('newFolder'), 'folder']].filter(([k]) => k))));
-  }
-  while (lines.length < listH + 1) lines.push(line([], W));
-  if (state.prompt) lines.push(state.prompt.inline ? line(promptKeys(W), W, C.header) : promptLine(W));
-  else if (state.filter) {
-    lines.push(filterLine(W));
-  }
-  if (state.menu) drawMenu(lines, W);
-  while (lines.length < H) lines.push(line([], W));
-  lines.length = H;
-  return lines;
-}
-
-// The rows shown: the tree's, the one being renamed made a field, or a new one at the top of the folder it goes to.
-function shownRows() {
-  const shown = state.rows.map(r => ({ r }));
-  const at = state.prompt && state.prompt.inline;
-  if (!at) return shown;
-  if (at.rel !== undefined) {
-    const i = state.rows.findIndex(r => r.rel === at.rel);
-    if (i >= 0) shown[i] = { r: state.rows[i], edit: true };
-    return shown;
-  }
-  const i = at.dir ? state.rows.findIndex(r => r.rel === at.dir) : -1;
-  shown.splice(i + 1, 0, { edit: true, depth: i >= 0 ? state.rows[i].depth + 1 : 0, dir: at.folder });
-  return shown;
-}
-
-// A row being named, its icon following the name typed.
-const FIELD = [60, 60, 60];
-function editRow(e, W) {
-  const f = state.prompt.field, r = e.r, dir = r ? r.dir : e.dir, open = r ? r.open : false;
-  const icon = icons.icon(theme, f.value || (r ? r.name : ''), dir, open);
-  const lead = ' '.repeat(1 + (r ? r.depth : e.depth) * 2) + (dir ? glyph(CHEVRON[open ? 1 : 0]) : ' ') + ' ';
-  return line([[lead, fg(C.dim)], [glyph(icon[0]) + ' ', fg(icon[1])], ...f.segments(Math.max(1, W - textWidth(lead) - 3))], W, FIELD);
-}
-
-// The keys of a name typed in the tree, and where a new entry goes.
-function promptKeys(W) {
-  const at = state.prompt.inline;
-  const what = at.rel !== undefined ? 'rename' : `create in ${path.basename(at.dir || ROOT)}`;
-  return ui.keys([['⏎', what], ['esc', 'cancel']], W);
-}
-
-// A prompt at the bottom (the editor command).
-function promptLine(W) {
-  const label = ` ${state.prompt.label}: `;
-  return line([[label, fg(C.dim)], ...state.prompt.field.segments(W - textWidth(label))], W, C.header);
-}
-
-// Header: space name (or an action message), then the icons: ! when the installer must finish an
-// update, else ↑ when a newer release exists (left out while a message shows), and the settings gear.
-const showUpdate = () => !state.flash && (finish || (latest && settings.updateCheck && !updating));
-function header(W) {
-  const up = !showUpdate() ? [] : finish ? [['! ', fg(C.yellow)]] : [['↑ ', fg(C.green)]];
-  const icons = [...up, [`${glyph(GEAR)} `, fg(C.dim)]];
-  const room = W - 3 - (up.length ? 2 : 0);
-  if (state.flash) {
-    const msg = ui.slice(ui.message(state.flash), 0, room);
-    return line([...msg, [' '.repeat(Math.max(0, room - ui.segWidth(msg) + 1)), ''], ...icons], W);
-  }
-  const [name, nw] = fit(` ${path.basename(ROOT).toUpperCase() || ROOT}`, room);
-  return line([[name, ROOT === HOME ? '\x1b[1m' : '\x1b[1;3m'], [' '.repeat(Math.max(0, room - nw + 1)), ''], ...icons], W);
-}
-
-// The filter's line: while typed, the field and the count on the right; once kept (Tab), the filter in blue, the
-// count, and how to clear it.
-const HIT = '\x1b[1m' + fg([24, 163, 255]);
-function filterLine(W) {
-  const f = state.filter, n = state.rows.filter(r => r.hit).length;
-  const count = f.field.value ? `${n} match${n === 1 ? '' : 'es'}` : '';
-  const lead = [` ${glyph(SEARCH)} `, fg(C.dim)];
-  if (f.active) {
-    const field = f.field.segments(Math.max(1, W - 5 - count.length));
-    return line([lead, ...field, [count.padStart(Math.max(0, W - 4 - ui.segWidth(field))), fg(C.dim)]], W, C.header);
-  }
-  const left = [lead, [f.field.value, fg(C.blue)], [count && `  ${count}`, fg(C.dim)]];
-  const hint = ui.keys([['esc', 'clear']]);
-  const room = W - ui.segWidth(left) - ui.segWidth(hint) - 1;
-  return line(room >= 0 ? [...left, [' '.repeat(room), ''], ...hint] : left, W, C.header);
-}
-
-function row(r, W, selected) {
-  const deco = decoration(r);
-  const color = deco ? fg(GIT[deco]) : '';
-  const icon = icons.icon(theme, r.name, r.dir, r.open);
-  const indent = ' '.repeat(1 + r.depth * 2);
-  const chevron = r.dir ? glyph(CHEVRON[r.open ? 1 : 0]) : ' ';
-  const badge = !deco || deco === '!' ? '' : r.dir ? '●' : deco === 'C' ? '!' : deco;
-  const room = W - indent.length - 4 - (badge ? 2 : 0) - 1;
-  let name = r.name;
-  if (textWidth(name) > room) name = fit(name, Math.max(1, room - 1))[0] + '…';
-  const pad = Math.max(0, W - indent.length - 4 - textWidth(name) - (badge ? 2 : 0) - 1);
-  // The part matching the filter in bold blue, as in Go to file; a folder shown only for what it holds, dimmed.
-  const parts = r.hit && r.hit[1] <= name.length
-    ? [[name.slice(0, r.hit[0]), color], [name.slice(r.hit[0], r.hit[1]), HIT], [name.slice(r.hit[1]), color]]
-    : [[name, state.filter && state.filter.field.value && !r.hit ? fg(C.dim) : color]];
-  return line([
-    [indent + chevron + ' ', fg(C.dim)], [glyph(icon[0]) + ' ', fg(deco === '!' ? GIT['!'] : icon[1])],
-    ...parts, [' '.repeat(pad) + (badge ? ' ' + badge : ''), color],
-  ], W, selected ? (state.focused ? C.select : C.selectBlur) : null);
-}
-
 // --- opening
+
+// The changes of an entry: a file's in the preview's Diff view, a folder's in the Changes pane (the whole tab).
+const viewChanges = r => (r.dir ? actions.diff(absOf(r.rel), ROOT, PANE)
+  : actions.preview(absOf(r.rel), ROOT, PANE, 0, false, true, { view: 'diff' }));
 
 // Enter and double-click: documents and media other than images with their application, the rest in the preview
 // (or the editor, depending on the settings).
 async function openFile(r) {
   if (!r || r.dir) return;
   const abs = absOf(r.rel);
-  if (settings.open === 'preview' && actions.canPreview(abs)) return runAction(() => actions.preview(abs, ROOT, PANE));
+  // A deleted file: what it held, in its diff.
+  if (r.gone) return runAction(() => viewChanges(r));
+  if (settings.open === 'preview' && actions.canPreview(abs)) return runAction(() => actions.preview(abs, ROOT, PANE, 0, false, true, { keep: true }));
   return runAction(() => actions.open(abs, PANE));
 }
 
@@ -636,6 +441,12 @@ function renameEntry(r) {
 
 function deleteEntry(r) {
   const abs = absOf(r.rel), name = r.name + (r.dir ? '/' : ''), where = whereOf(r.rel);
+  // Never to the trash, which would follow it (see actions.trash).
+  if (remoteLink(abs, ROOT)) {
+    return confirm({ title: 'Link to a network share: delete the link?', name, where,
+      note: 'Only the link goes; the share is untouched.', action: 'Delete' },
+    () => flash(actions.remove(abs) || `${r.name} deleted`));
+  }
   confirm({ title: 'Move to the trash?', name, where, action: 'Move' }, async () => {
     flash('Moving to the trash…');
     if (await actions.trash(abs)) return flash(`${r.name} moved to the trash`);
@@ -650,11 +461,20 @@ function deleteEntry(r) {
 function menuItems(r) {
   const items = [];
   const dirRel = r ? (r.dir ? r.rel : parentOf(r.rel)) : '';
-  if (r) {
+  if (r && r.gone) {
+    // A deleted entry: its changes and history, or back with Discard.
+    const abs = absOf(r.rel);
+    items.push(['View changes', () => viewChanges(r), 'viewChanges']);
+    if (!r.dir) items.push(['File history', () => actions.scm(ROOT, PANE, abs, true), 'fileHistory']);
+    items.push(null, ['Stage', () => actions.stage(abs, ROOT)], ['Unstage', () => actions.unstage(abs, ROOT)],
+      ['Discard changes…', () => confirm({ title: 'Restore it?', name: r.name + (r.dir ? '/' : ''), where: whereOf(r.rel),
+        note: 'Its changes are discarded.', action: 'Restore' }, () => runAction(() => actions.discard(abs, ROOT))), null, true],
+      null, ['Copy relative path', () => actions.copy(r.rel), 'copyRelativePath']);
+  } else if (r) {
     const abs = absOf(r.rel);
     const deco = decoration(r);
     if (!r.dir) {
-      if (actions.canPreview(abs)) items.push(['Preview', () => actions.preview(abs, ROOT, PANE), 'preview']);
+      if (actions.canPreview(abs)) items.push(['Preview', () => actions.preview(abs, ROOT, PANE, 0, false, true, { keep: true }), 'preview']);
       items.push(['Open in editor', () => actions.editor(abs, PANE), 'openInEditor']);
       if (actions.canOpen(abs)) items.push(['Open in app', () => actions.system(abs), 'openInApp']);
       items.push(['Edit in terminal', () => actions.edit(abs, PANE), 'edit']);
@@ -672,7 +492,8 @@ function menuItems(r) {
     if (git.top && deco !== '!') {
       const changed = deco && deco !== '!';
       items.push(null);
-      if (changed) items.push(['View changes', () => actions.diff(abs, ROOT, PANE)]);
+      if (changed) items.push(['View changes', () => viewChanges(r), 'viewChanges']);
+      if (!r.dir && deco !== 'U') items.push(['File history', () => actions.scm(ROOT, PANE, abs, true), 'fileHistory']);
       if (changed) items.push(['Stage', () => actions.stage(abs, ROOT)]);
       items.push(['Unstage', () => actions.unstage(abs, ROOT)]);
       if (changed) {
@@ -684,7 +505,10 @@ function menuItems(r) {
     items.push(['New file…', () => newEntry('', false), 'newFile'], ['New folder…', () => newEntry('', true), 'newFolder'], null);
     items.push(['Go to file…', () => actions.search(ROOT, PANE, 'files'), 'goToFile'],
       ['Search in files…', () => actions.search(ROOT, PANE, 'content'), 'searchInFiles']);
-    if (git.top) items.push(['Source control', () => actions.scm(ROOT, PANE), 'sourceControl']);
+    if (git.top) {
+      items.push(['Source control', () => actions.scm(ROOT, PANE), 'sourceControl'],
+        [state.changed ? 'All files' : 'Changed files only', () => showChanged(!state.changed), 'changedOnly']);
+    }
     items.push(null, [actions.REVEAL, () => actions.reveal(ROOT)], ['Copy path', () => actions.copy(ROOT)],
       ['Up one level', () => setRoot(path.dirname(ROOT)), 'parentRoot']);
     if (ROOT !== HOME) items.push(['Back to the space folder', () => setRoot(HOME)]);
@@ -735,29 +559,6 @@ function openMenu(i) {
   render();
 }
 
-// Rows of the menu that fit in the pane; a longer menu scrolls with its selection (▴ ▾ on its border).
-const menuRows = () => Math.max(1, Math.min(state.menu.items.length, (out.rows || 24) - 2 - state.menu.at));
-
-// The menu in a frame titled with the entry it acts on, each item with the first key of its action on the right.
-function drawMenu(lines, W) {
-  const { items, sel, at, off, title } = state.menu;
-  const n = menuRows();
-  const keyOf = item => { const k = item[2] && keysOf(item[2])[0]; return k ? ui.keyLabel(k) : ''; };
-  const want = Math.max(textWidth(title) + 4, ...items.map(item => (item ? textWidth(item[0]) + (keyOf(item) ? textWidth(keyOf(item)) + 2 : 0) + 2 : 0)));
-  const inner = Math.min(W - 3, want);
-  const edge = fg(C.dim);
-  const border = (l, r, t, more) => line([[` ${l}${t}${'─'.repeat(Math.max(0, inner - textWidth(t) - (more ? 2 : 0)))}${more ? more + '─' : ''}${r}`, edge]], W);
-  lines[at] = border('╭', '╮', ` ${ui.ellipsis(title, Math.max(1, inner - 4))} `, off > 0 && '▴');
-  items.slice(off, off + n).forEach((item, k) => {
-    if (!item) { lines[at + 1 + k] = line([[' ├' + '─'.repeat(inner) + '┤', edge]], W); return; }
-    const key = keyOf(item), label = ui.ellipsis(item[0], Math.max(1, inner - 3 - (key ? textWidth(key) + 1 : 0)));
-    const pad = ' '.repeat(Math.max(1, inner - 2 - textWidth(label) - textWidth(key)));
-    const segs = [[` ${label}`, item[3] ? fg(C.red) : ''], [`${pad}${key} `, fg(C.dim)]];
-    lines[at + 1 + k] = ` ${edge}│\x1b[39m${line(segs, inner, off + k === sel ? C.select : C.selectBlur)}${edge}│\x1b[0m` + ' '.repeat(Math.max(0, W - inner - 3));
-  });
-  lines[at + n + 1] = border('╰', '╯', '', off + n < items.length && '▾');
-}
-
 async function runAction(action) {
   state.menu = null;
   render();
@@ -772,34 +573,6 @@ function flash(text) {
   flash.timer = setTimeout(() => { state.flash = null; render(); }, ui.messageTime(ui.messageKind(text)));
 }
 
-function moveMenu(dir) {
-  const m = state.menu;
-  do m.sel = (m.sel + dir + m.items.length) % m.items.length; while (!m.items[m.sel]);
-  const n = menuRows();
-  if (m.sel < m.off) m.off = m.sel;
-  if (m.sel >= m.off + n) m.off = m.sel - n + 1;
-}
-
-function closeMenu() {
-  state.menu = null;
-}
-
-// Escape always closes the menu, whatever the bindings; the key of an item runs it.
-function menuKey(k) {
-  const m = state.menu, action = keys.get(k);
-  if (k === 'escape') closeMenu();
-  else if (action === 'up') moveMenu(-1);
-  else if (action === 'down') moveMenu(1);
-  else if (action === 'open' || action === 'expand') return runAction(m.items[m.sel][1]);
-  else {
-    // The key shown beside an item runs it (Settings… on ,); the others close the menu.
-    const item = action && m.items.find(it => it && it[2] === action);
-    if (item) return runAction(item[1]);
-    if (['close', 'collapse', 'menu', 'settings'].includes(action)) closeMenu();
-  }
-  render();
-}
-
 function reveal() {
   const listH = bodyHeight();
   if (state.cursor < state.top) state.top = state.cursor;
@@ -812,462 +585,11 @@ function reveal() {
 function setSetting(name, value) {
   settings[name] = value;
   writeSettings({ ...readSettings(), [name]: value });
+  if (name === 'glyphs') ui.useGlyphs(value);
   cache.clear();
   buildRows();
   if (name === 'follow') { lastCwd = null; follow(); }
   return null;
-}
-
-// The value of a setting and its change(dir): the next value (1: enter, → or a click) or the previous one (-1: ←),
-// or the setting's dialog (left alone by ←); change returns a message or null.
-const onOff = name => ({
-  value: settings[name] ? ['● on', fg(C.green)] : ['○ off', fg(C.dim)],
-  change: () => setSetting(name, !settings[name]),
-});
-const choice = (name, values, shown = v => v) => {
-  const now = Math.max(0, values.indexOf(settings[name]));
-  return { value: [shown(values[now]), fg(C.blue)], change: dir => setSetting(name, values[(now + dir + values.length) % values.length]) };
-};
-const dialog = (value, open) => ({ value: [value, fg(C.blue)], change: dir => (dir > 0 ? open() : null) });
-
-// The rows of the settings view: a group title, or a setting with its value and its help.
-function settingsRows() {
-  const editor = () => ask('Editor', readSettings().editor, cmd => {
-    settings.editor = cmd.trim();
-    writeSettings({ ...readSettings(), editor: settings.editor });
-    return settings.editor ? `Editor: ${settings.editor}` : 'Editor: default';
-  }, true);
-  return [
-    { group: 'TREE' },
-    { label: 'Hidden files', help: 'Show dot files in the tree.', ...onOff('hidden') },
-    { label: 'Git-ignored files', help: 'Show the files git ignores, greyed out.', ...onOff('ignored') },
-    { label: 'Follow terminal', help: 'Reveal the folder of the terminal beside the explorer, within the tab folder.', ...onOff('follow') },
-    { label: 'Icon theme', help: 'Nerd Font icons, or a file icon theme installed for VS Code.',
-      ...dialog((settings.icons && settings.icons.label) || 'Nerd Font', () => openIconThemes()) },
-    { group: 'OPENING' },
-    { label: 'Enter opens', help: 'Enter and double-click on a text file: show it in the preview or in the editor.', ...choice('open', ['preview', 'editor']) },
-    { label: 'Editor', help: 'Command run with the path. Empty: VS Code if installed, else a terminal editor.', ...dialog(settings.editor || 'default', editor) },
-    { label: 'Single-click preview', help: 'A single click on a file shows it in the preview.', ...onOff('singleClick') },
-    { group: 'NEXT TABS' },
-    { label: 'Dock side', help: 'Where new explorers dock. An open explorer keeps its side.', ...choice('side', ['left', 'right']) },
-    { label: 'Open automatically', help: 'Open the explorer in new tabs that have a single pane. Off: only with prefix+f.', ...onOff('autoOpen') },
-    { group: 'PREVIEW' },
-    { label: 'Wrap lines', help: 'Wrap long lines in the preview (w). Other previews at their next opening.', ...onOff('wrap') },
-    { label: 'Line numbers', help: 'Line numbers in the preview (L). Other previews at their next opening.', ...onOff('lineNumbers') },
-    { label: 'Diff layout', help: 'Diffs inline or side by side (s). Auto: side by side when the pane is wide enough.', ...choice('diffLayout', ['', 'split', 'inline'], v => v || 'auto') },
-    { group: 'GENERAL' },
-    { label: 'Key bindings', help: 'Change the explorer keys, saved in keys.json.',
-      ...dialog(changedActions().length ? `${changedActions().length} changed` : 'default', () => openKeys()) },
-    { label: 'Check for updates', help: 'Look for a newer release on GitHub, once a day.', ...onOff('updateCheck') },
-  ];
-}
-
-// The update to install, or the one the installer must finish: [text, colour, action], or null.
-const pendingUpdate = () => (finish ? ['! Finish the update', C.yellow, finishUpdate]
-  : latest && settings.updateCheck && !updating ? [`↑ ${latest} available`, C.green, askUpdate] : null);
-
-function openSettings() {
-  state.menu = null;
-  state.settings = { sel: 1, top: 0 };
-  render();
-  return null;
-}
-
-// --- settings pages: the settings, then the icon themes and the key bindings, opened from them. Each one takes the
-// place of the tree: its title (or an action message), a list scrolled with the selection, a rule, what the page
-// shows of the selection, its keys.
-
-const pageTitle = (title, W) => line(state.flash ? ui.message(state.flash) : [[' ‹ ', fg(C.dim)], [title, '\x1b[1m']], W);
-
-// The rows a find keeps: those whose label, value or help has the text typed (any case), under their group title.
-function found(list, p) {
-  if (!p.find || !p.find.value) return list;
-  const q = p.find.value.toLowerCase(), out = [];
-  let group = null;
-  for (const r of list) {
-    if (r.group) { group = r; continue; }
-    if (!`${r.label} ${r.value[0]} ${r.help || ''} ${r.action || ''}`.toLowerCase().includes(q)) continue;
-    if (group) { out.push(group); group = null; }
-    out.push(r);
-  }
-  return out;
-}
-const firstRow = list => Math.max(0, list.findIndex(r => !r.group));
-const sameRow = (a, b) => a && b && !a.group && !b.group && a.label === b.label && a.action === b.action;
-
-// The find of a page (/ or the key bound to filter): typed characters go to it and the list keeps the rows that
-// match; the arrows, Enter and the other keys that are not characters go to the page. Escape closes it, the selection
-// staying on its row. all: the page's rows. Returns true when the key was the find's.
-function findKey(p, k, all) {
-  if (!p.find) {
-    if (k !== '/' && keys.get(k) !== 'filter') return false;
-    p.find = new ui.Field('');
-    return true;
-  }
-  const r = found(all, p)[p.sel];
-  if (k === 'escape') {
-    p.find = null;
-    const i = all.findIndex(x => sameRow(x, r));
-    p.sel = i >= 0 ? i : firstRow(all);
-    return true;
-  }
-  if (!ui.printable(k) && k !== 'space' && k !== 'backspace' && k !== 'delete') return false;
-  if (p.find.key(k)) {
-    const list = found(all, p), i = list.findIndex(x => sameRow(x, r));
-    p.sel = i >= 0 ? i : firstRow(list);
-    p.top = 0;
-  }
-  return true;
-}
-
-// The find's line: the field, and the count of rows kept.
-function findLine(p, list, W) {
-  const count = p.find.value ? ` ${list.filter(r => !r.group).length}` : '';
-  const field = p.find.segments(Math.max(1, W - 4 - count.length));
-  return line([[` ${glyph(SEARCH)} `, fg(C.dim)], ...field, [count.padStart(Math.max(0, W - 3 - ui.segWidth(field))), fg(C.dim)]], W, C.header);
-}
-
-// The rows of a list from p.top, n at most, the selection kept in view with the title of its group: a group title,
-// or a label with a value on the right ([text, style]).
-function listLines(list, p, n, W) {
-  const first = list[p.sel - 1] && list[p.sel - 1].group ? p.sel - 1 : p.sel;
-  p.top = Math.max(0, Math.min(p.top, first, list.length - n));
-  if (p.sel >= p.top + n) p.top = p.sel - n + 1;
-  const lines = list.slice(p.top, p.top + n).map((r, k) => {
-    if (r.group) return line([[` ${r.group}`, '\x1b[1m' + fg(C.dim)]], W);
-    // The value keeps at least half the room, the label is cut first.
-    const value = ui.ellipsis(r.value[0], Math.max(1, W - 4 - Math.min(textWidth(r.label), Math.floor((W - 4) / 2))));
-    const label = ui.ellipsis(r.label, Math.max(1, W - 4 - textWidth(value)));
-    const pad = ' '.repeat(Math.max(1, W - 3 - textWidth(label) - textWidth(value)));
-    const back = p.top + k === p.sel ? (state.focused ? C.select : C.selectBlur) : null;
-    return line([[`  ${label}${pad}`, ''], [value, r.value[1]]], W, back);
-  });
-  if (!list.length) lines.push(...ui.empty(W, n, 'No match', [['esc', 'clear']]));
-  while (lines.length < n) lines.push(line([], W));
-  return lines;
-}
-
-// The rule under a list, with ▴ ▾ when it scrolls.
-function rule(list, p, n, W) {
-  const more = (p.top > 0 ? '▴' : '') + (p.top + n < list.length ? '▾' : '');
-  return line([['─'.repeat(Math.max(0, W - more.length - 1)) + more, fg(C.dim)]], W);
-}
-
-// The selection moved by dir rows, past the group titles, within the list.
-function moveIn(list, p, dir) {
-  const step = dir < 0 ? -1 : 1, ok = i => list[i] && !list[i].group;
-  let i = Math.max(0, Math.min(list.length - 1, p.sel + dir));
-  if (!ok(i)) i = ok(i + step) ? i + step : i - step;
-  p.sel = i;
-}
-
-// The page shown: the settings, or one opened from them.
-const settingsPage = () => (state.settings.icons ? { view: iconsView, key: iconsKey, mouse: iconsMouse }
-  : state.settings.keys ? { view: keysView, key: keysKey, mouse: keysMouse }
-    : { view: settingsView, key: settingsKey, mouse: settingsMouse });
-
-// The moves of the bound keys, page by page of n rows. ARROWS: the keys that move in a page whatever the bindings.
-const ARROWS = { up: 'up', down: 'down', pageup: 'pageUp', pagedown: 'pageDown', home: 'top', end: 'bottom' };
-function moves(n) {
-  const page = n - 1;
-  return { up: -1, down: 1, pageUp: -page, pageDown: page, halfPageUp: -Math.ceil(page / 2), halfPageDown: Math.ceil(page / 2),
-    top: -Infinity, bottom: Infinity };
-}
-
-// --- the settings
-
-// The settings view: the find when open and the update when there is one under the title, the settings, the help of
-// the selected one, the keys, and a prompt. at: screen row of the first setting, n: the rows they get, update: the
-// row of the update (0: none), detail: the help's lines.
-function settingsLayout(H, W) {
-  const find = state.settings.find ? 1 : 0, update = pendingUpdate() ? 1 + find : 0;
-  const at = 1 + find + (update ? 1 : 0), detail = detailLines(W);
-  return { at, n: Math.max(1, H - at - 2 - detail - (state.prompt ? 1 : 0)), update, detail };
-}
-// The lines of the longest help at this width, whichever setting is selected, so that the list does not move: from
-// 1 to MAX_DETAIL.
-const MAX_DETAIL = 4;
-const detailLines = W => Math.min(MAX_DETAIL, Math.max(1, ...settingsRows().filter(r => r.help).map(r => ui.wrap(r.help, W - 2).length)));
-const settingsKeys = W => ui.keys([['←→', 'change'], ['/', 'find'], ['esc', 'back']], W);
-
-function settingsView(W, H) {
-  const s = state.settings, list = found(settingsRows(), s), up = pendingUpdate(), { n, detail } = settingsLayout(H, W);
-  const lines = [pageTitle('Settings', W)];
-  if (s.find) lines.push(findLine(s, list, W));
-  if (up) {
-    // The key on the right, left out when it does not fit.
-    let hint = ui.keys([['u', finish ? 'finish' : 'update']]);
-    if (textWidth(up[0]) + 2 + ui.segWidth(hint) > W) hint = [];
-    lines.push(line([[` ${up[0]}`.padEnd(Math.max(0, W - 1 - ui.segWidth(hint))), fg(up[1])], ...hint], W));
-  }
-  lines.push(...listLines(list, s, n, W), rule(list, s, n, W));
-  const r = list[s.sel];
-  // The help wrapped, its last line cut when it needs more.
-  const help = ui.wrap(r && !r.group ? r.help : '', W - 2);
-  if (help.length > detail) help.splice(detail - 1, help.length, ui.ellipsis(help.slice(detail - 1).join(' '), W - 2));
-  for (let i = 0; i < detail; i++) lines.push(line([[` ${help[i] || ''}`, fg(C.dim)]], W));
-  lines.push(line(settingsKeys(W), W, C.header));
-  if (state.prompt) lines.push(promptLine(W));
-  while (lines.length < H) lines.push(line([], W));
-  lines.length = H;
-  return lines;
-}
-
-// ← → and enter change the selected setting, u installs the update. Escape, and the keys bound to close and
-// settings, go back to the tree.
-function settingsKey(k) {
-  const s = state.settings;
-  if (findKey(s, k, settingsRows())) return render();
-  const list = found(settingsRows(), s), r = list[s.sel], action = keys.get(k), up = pendingUpdate();
-  const move = moves(settingsLayout(out.rows || 24, out.columns || 80).n), to = ARROWS[k] || action;
-  if (k === 'escape' || action === 'close' || action === 'settings') state.settings = null;
-  else if (k === 'u' && up) return runAction(up[2]);
-  else if (to in move) moveIn(list, s, move[to]);
-  else if (r && !r.group && (k === 'enter' || k === 'right' || action === 'open' || action === 'expand')) return runAction(() => r.change(1));
-  else if (r && !r.group && (k === 'left' || action === 'collapse')) return runAction(() => r.change(-1));
-  render();
-}
-
-// The wheel moves the selection. A click on the title goes back, on the update installs it, on a setting changes it,
-// on a key hint acts as its key; elsewhere, it cancels a prompt.
-function settingsMouse(m) {
-  const s = state.settings, list = found(settingsRows(), s), W = out.columns || WIDTH, y = m.y - 1;
-  const { at, n, update, detail } = settingsLayout(out.rows || 24, out.columns || 80);
-  if (m.wheel) { moveIn(list, s, m.wheel); return render(); }
-  if (!m.press || m.drag || m.button !== 0) return;
-  if (state.prompt) { state.prompt = null; return render(); }
-  if (y === 0) { state.settings = null; return render(); }
-  if (update && y === update) return runAction(pendingUpdate()[2]);
-  const r = list[s.top + y - at];
-  if (y >= at && y < at + n && r && !r.group) {
-    s.sel = s.top + y - at;
-    return runAction(() => r.change(1));
-  }
-  // The keys come after the list, its rule and the help lines.
-  const k = y === at + n + 1 + detail && ui.keyAt(settingsKeys(W), m.x - 1);
-  if (k) settingsKey(k);
-}
-
-// --- icon themes
-
-// The default icons and the VS Code themes installed (a scan of the editors' extensions, made when the page opens),
-// above a sample tree drawn with the theme under the selection. Enter saves it and goes back to the settings; Escape
-// goes back without a change.
-const NERD_FONT = { id: '', label: 'Nerd Font (default)' };
-const SAMPLE = [
-  [0, 'src', true, true], [1, 'components', true], [1, 'App.tsx'], [1, 'main.py'], [1, 'styles.css'],
-  [0, '.github', true], [0, 'docs', true], [0, '.gitignore'], [0, 'Dockerfile'], [0, 'logo.png'],
-  [0, 'package.json'], [0, 'README.md'],
-];
-
-function openIconThemes() {
-  if (!state.settings) return null; // closed by a key typed meanwhile (the action runs after the keys already read)
-  const current = (settings.icons && settings.icons.id) ? settings.icons : NERD_FONT;
-  const found = icons.themes();
-  // The saved theme kept in the list when the scan misses it (an editor folder out of reach).
-  const list = [NERD_FONT, ...(current.id && !found.some(t => t.id === current.id) ? [current] : []), ...found];
-  state.settings.icons = { list, sel: Math.max(0, list.findIndex(t => t.id === current.id)), top: 0, loaded: new Map() };
-  return null;
-}
-
-// The theme of an entry of the list, loaded once (null: the default icons, or a theme not found).
-function loadTheme(t) {
-  const { loaded } = state.settings.icons;
-  if (!loaded.has(t.id)) loaded.set(t.id, t.id ? icons.load(t) : null);
-  return loaded.get(t.id);
-}
-
-function chooseTheme(t) {
-  const chosen = loadTheme(t);
-  if (t.id && !chosen) return `${t.label}: not found`;
-  theme = chosen;
-  settings.icons = chosen ? chosen.entry : '';
-  writeSettings({ ...readSettings(), icons: settings.icons });
-  if (state.settings) state.settings.icons = null;
-  return null;
-}
-
-// The themes as list rows, the saved one checked.
-const themeRows = () => state.settings.icons.list.map(t => ({
-  label: t.label, value: [t.id === ((settings.icons && settings.icons.id) || '') ? '✓' : '', fg(C.green)],
-}));
-
-// The sample gets at least 4 rows, the themes what remains. at: screen row of the first theme, n: the rows they get.
-function iconsLayout(H) {
-  const room = H - 3, count = state.settings.icons.list.length;
-  const sample = Math.max(0, Math.min(SAMPLE.length, Math.max(Math.min(4, room - 1), room - count)));
-  return { at: 1, n: Math.max(1, Math.min(count, room - sample)), sample };
-}
-const iconsKeys = W => ui.keys([['↑↓', 'move'], ['⏎', 'choose'], ['esc', 'back']], W);
-
-function iconsView(W, H) {
-  const p = state.settings.icons, list = themeRows(), { n, sample } = iconsLayout(H);
-  const lines = [pageTitle('Icon theme', W), ...listLines(list, p, n, W), rule(list, p, n, W)];
-  // The sample tree, in the theme under the selection.
-  const th = loadTheme(p.list[p.sel]);
-  for (const [depth, name, dir, open] of SAMPLE.slice(0, sample)) {
-    const icon = icons.icon(th, name, dir, open);
-    const chevron = dir ? glyph(CHEVRON[open ? 1 : 0]) : ' ';
-    lines.push(line([[' '.repeat(1 + depth * 2) + chevron + ' ', fg(C.dim)], [glyph(icon[0]) + ' ', fg(icon[1])], [name, '']], W));
-  }
-  while (lines.length < H - 1) lines.push(line([], W));
-  lines.push(line(iconsKeys(W), W, C.header));
-  lines.length = H;
-  return lines;
-}
-
-function iconsKey(k) {
-  const p = state.settings.icons, action = keys.get(k), move = moves(iconsLayout(out.rows || 24).n);
-  if (k === 'escape' || ['close', 'settings', 'collapse'].includes(action)) state.settings.icons = null;
-  else if (action in move) moveIn(p.list, p, move[action]);
-  else if (action === 'open' || action === 'expand') return runAction(() => chooseTheme(p.list[p.sel]));
-  render();
-}
-
-// The wheel moves the selection; a click on the title goes back, on a theme chooses it, on a key hint acts as its key.
-function iconsMouse(m) {
-  const p = state.settings.icons, W = out.columns || WIDTH, H = out.rows || 24, { at, n } = iconsLayout(H), y = m.y - 1;
-  if (m.wheel) { moveIn(p.list, p, m.wheel); return render(); }
-  if (!m.press || m.drag || m.button !== 0) return;
-  if (y === 0) { state.settings.icons = null; return render(); }
-  if (y >= at && y < at + n && p.list[p.top + y - at]) {
-    p.sel = p.top + y - at;
-    return runAction(() => chooseTheme(p.list[p.sel]));
-  }
-  const k = y === H - 1 && ui.keyAt(iconsKeys(W), m.x - 1);
-  if (k) iconsKey(k);
-}
-
-// --- key bindings
-
-// The explorer's actions by group, as in the key help, each with its keys; below the rule, the selected action's
-// keys and its default ones. Enter waits for a key and adds it to the action (taken from the action that had it),
-// Delete removes the action's last key, r gives it back its default keys. Saved in keys.json, which the last row
-// opens in the editor. The page's own keys are the arrows and the bound ones, so that a rebinding cannot lock it.
-function openKeys() {
-  if (!state.settings) return null;
-  state.settings.keys = { sel: 1, top: 0, find: null, capture: false };
-  return null;
-}
-
-// The keys of an action, its default ones first in their order.
-const keysOf = action => {
-  const rank = k => { const i = DEFAULT_KEYS[action].indexOf(k); return i < 0 ? Infinity : i; };
-  return [...keys].filter(([, a]) => a === action).map(([k]) => k).sort((a, b) => rank(a) - rank(b));
-};
-const sameKeys = (a, b) => a.length === b.length && a.every(k => b.includes(k));
-const changedActions = () => Object.keys(DEFAULT_KEYS).filter(a => !sameKeys(keysOf(a), DEFAULT_KEYS[a]));
-const keyText = list => list.map(ui.keyLabel).join(' ') || '—';
-
-function keyRows() {
-  return [
-    ...HELP.flatMap(([group, items]) => [{ group: group.toUpperCase() }, ...items.map(([action, text]) => ({
-      action, label: text[0].toUpperCase() + text.slice(1),
-      value: [keyText(keysOf(action)), fg(sameKeys(keysOf(action), DEFAULT_KEYS[action]) ? C.blue : C.yellow)],
-    }))]),
-    { group: 'FILE' },
-    { label: 'Open keys.json', value: ['edit…', fg(C.blue)] },
-  ];
-}
-
-// The changes saved, then read back at once rather than at the next check of the file.
-function saveKeys(changes) {
-  if (!writeKeys('explorer', changes)) return 'Cannot write keys.json';
-  keys = readKeys('explorer', DEFAULT_KEYS);
-  return null;
-}
-
-// The default keys of an action given back, taken from the actions that have them now; the keys it took from other
-// actions given back to them.
-function resetKeys(action) {
-  const changes = { [action]: null };
-  const now = a => (a in changes ? changes[a] || DEFAULT_KEYS[a] : keysOf(a));
-  for (const k of DEFAULT_KEYS[action]) {
-    const owner = keys.get(k);
-    if (owner && owner !== action) changes[owner] = now(owner).filter(x => x !== k);
-  }
-  for (const k of keysOf(action)) {
-    const home = Object.keys(DEFAULT_KEYS).find(a => a !== action && DEFAULT_KEYS[a].includes(k));
-    if (home && !now(home).includes(k)) changes[home] = [...now(home), k];
-  }
-  for (const a of Object.keys(changes)) if (changes[a] && sameKeys(changes[a], DEFAULT_KEYS[a])) changes[a] = null;
-  return saveKeys(changes);
-}
-
-// The key pressed while waiting, added to the action and taken from the one that had it.
-function bindKey(action, k) {
-  const owner = keys.get(k);
-  if (owner === action) return `${ui.keyLabel(k)}: already bound`;
-  const changes = { [action]: [...keysOf(action), k] };
-  if (owner) changes[owner] = keysOf(owner).filter(x => x !== k);
-  const label = owner && HELP.flatMap(([, items]) => items).find(([a]) => a === owner);
-  return saveKeys(changes) || (owner ? `${ui.keyLabel(k)} taken from ${label ? label[1] : owner}` : null);
-}
-
-function keysLayout(H) {
-  const find = state.settings.keys.find ? 1 : 0;
-  return { at: 1 + find, n: Math.max(1, H - 7 - find) };
-}
-const keysKeys = (W, capture) => ui.keys(capture ? [['esc', 'cancel']] : [['⏎', 'add'], ['del', 'remove'], ['/', 'find']], W);
-
-function keysView(W, H) {
-  const p = state.settings.keys, list = found(keyRows(), p), r = list[p.sel], { n } = keysLayout(H);
-  const lines = [pageTitle('Key bindings', W), ...(p.find ? [findLine(p, list, W)] : []), ...listLines(list, p, n, W), rule(list, p, n, W)];
-  if (r && r.action) {
-    const now = keysOf(r.action), changed = !sameKeys(now, DEFAULT_KEYS[r.action]);
-    lines.push(line([[` ${r.label}`, '\x1b[1m'], [changed ? '  changed' : '', fg(C.yellow)]], W));
-    lines.push(line([[' Keys     ', fg(C.dim)], [keyText(now), fg(changed ? C.yellow : C.blue)]], W));
-    lines.push(line([[' Default  ', fg(C.dim)], [keyText(DEFAULT_KEYS[r.action]), fg(C.dim)]], W));
-    // r, which the keys line has no room for, told where it applies (typed in the find while it is open).
-    lines.push(line(p.capture ? [[' Press the new key…', fg(C.yellow)]] : changed && !p.find ? ui.keys([['r', 'back to the default keys']], W) : [], W));
-  } else if (r && !r.group) {
-    lines.push(line([[' keys.json', '\x1b[1m']], W), line([[` ${ui.ellipsis('Opened in the editor', W - 2)}`, fg(C.dim)]], W));
-  }
-  while (lines.length < H - 1) lines.push(line([], W));
-  lines.push(line(keysKeys(W, p.capture), W, C.header));
-  lines.length = H;
-  return lines;
-}
-
-function keysKey(k) {
-  const p = state.settings.keys;
-  if (p.capture) {
-    const r = found(keyRows(), p)[p.sel];
-    p.capture = false;
-    return k === 'escape' ? render() : runAction(() => bindKey(r.action, k));
-  }
-  if (findKey(p, k, keyRows())) return render();
-  const list = found(keyRows(), p), r = list[p.sel], action = keys.get(k);
-  const move = moves(keysLayout(out.rows || 24).n), to = ARROWS[k] || action;
-  if (k === 'escape' || k === 'left' || ['close', 'settings', 'collapse'].includes(action)) state.settings.keys = null;
-  else if (to in move) moveIn(list, p, move[to]);
-  else if (!r || r.group) return render();
-  else if (k === 'enter' || action === 'open' || action === 'expand') {
-    if (!r.action) return runAction(() => { const file = keysTemplate('explorer', DEFAULT_KEYS); return file ? actions.edit(file, PANE) : 'No config folder'; });
-    p.capture = true;
-  } else if (r.action && (k === 'delete' || k === 'backspace')) {
-    const now = keysOf(r.action);
-    return runAction(() => (now.length ? saveKeys({ [r.action]: now.slice(0, -1) }) : 'No key to remove'));
-  } else if (r.action && k === 'r') return runAction(() => resetKeys(r.action));
-  render();
-}
-
-// The wheel moves the selection. A click on the title goes back, on an action selects it (on the selected one, waits
-// for its new key), on a key hint acts as its key; any click while waiting cancels.
-function keysMouse(m) {
-  const p = state.settings.keys, list = found(keyRows(), p), W = out.columns || WIDTH, H = out.rows || 24, { at, n } = keysLayout(H), y = m.y - 1;
-  if (m.wheel) { if (!p.capture) moveIn(list, p, m.wheel); return render(); }
-  if (!m.press || m.drag || m.button !== 0) return;
-  if (p.capture) { p.capture = false; return render(); }
-  if (y === 0) { state.settings.keys = null; return render(); }
-  const i = p.top + y - at;
-  if (y >= at && y < at + n && list[i] && !list[i].group) {
-    if (i === p.sel) return keysKey('enter');
-    p.sel = i;
-    return render();
-  }
-  const k = y === H - 1 && ui.keyAt(keysKeys(W, false), m.x - 1);
-  if (k) keysKey(k);
 }
 
 // --- key help
@@ -1280,178 +602,75 @@ function openHelp() {
 
 const helpGroups = () => HELP.map(([group, items]) => [group, items.map(([action, text]) => [keysOf(action).join(' ') || '—', text])]);
 
-// --- keyboard and mouse
-
-// A question (ui.confirmKey), or a prompt.
-function promptKey(k) {
-  if (state.confirm) {
-    const q = state.confirm, answer = ui.confirmKey(k, q);
-    if (answer === 'move') return render();
-    state.confirm = null;
-    if (answer === 'yes') return runAction(q.yes);
-    return render();
-  }
-  const p = state.prompt;
-  if (k === 'escape') state.prompt = null;
-  else if (k === 'enter') { state.prompt = null; const v = p.field.value; if (v.trim() || p.empty) runAction(() => p.done(v)); }
-  else p.field.key(k);
-  render();
-}
-
-// While filtering, typed characters go to the filter; arrows and Enter act on the list.
-const FILTER_EDIT = new Set(['backspace', 'delete', 'ctrl+u', 'ctrl+d']);
-function filterKey(k) {
-  const f = state.filter;
-  if (k === 'escape') return closeFilter();
-  // Bound keys that are not characters (arrows, Enter, ctrl+…) act on the list; characters and the field's editing
-  // keys go to the filter (ctrl+u and ctrl+d move half a page in the tree only).
-  if (keys.has(k) && !ui.printable(k) && !FILTER_EDIT.has(k)) return listKey(k);
-  if (k === 'tab') { f.active = false; return render(); }
-  if (f.field.key(k)) {
-    state.selected = null;
-    if (!f.field.value) { state.filter = { field: f.field, active: true }; }
-    buildRows();
-    state.top = 0;
-    reveal();
-    render();
-  }
-}
-
-function closeFilter() {
+// The changed files only, or the whole tree again with the selected entry shown.
+function showChanged(on) {
+  if (on && !git.top) return flash('Not a git repository');
   const sel = state.selected;
-  state.filter = null;
-  if (sel) revealRel(sel); else buildRows();
+  state.changed = on;
+  state.top = 0;
+  if (!on && sel) revealRel(sel); else { buildRows(); reveal(); }
   render();
 }
 
-function key(k) {
-  if (state.confirm || state.prompt) return promptKey(k);
-  if (state.menu) return menuKey(k);
-  if (state.settings) return settingsPage().key(k);
-  if (state.help) { if (!ui.helpKey(k, state.help)) state.help = null; return render(); }
-  if (state.filter && state.filter.active) return filterKey(k);
-  if (state.filter && (k === 'escape' || keys.get(k) === 'close')) return closeFilter();
-  listKey(k);
-}
-
-function listKey(k) {
-  listAction(keys.get(k));
-}
-
-// An action of the tree, from its key.
-function listAction(action) {
+// ] and [: the next or previous changed file after the selected entry, unfolded, selected and previewed; past the
+// last one, back to the first.
+function nextChange(dir) {
+  if (!git.top) return flash('Not a git repository');
+  const list = changedFiles();
+  if (!list.length) return flash('No changes');
   const r = state.rows[state.cursor];
-  const page = bodyHeight() - 1;
-  const dirOf = () => (r ? (r.dir ? r.rel : parentOf(r.rel)) : '');
-  switch (action) {
-    case 'up': select(state.cursor - 1); break;
-    case 'down': select(state.cursor + 1); break;
-    case 'pageUp': select(state.cursor - page); break;
-    case 'pageDown': select(state.cursor + page); break;
-    case 'halfPageUp': select(state.cursor - Math.ceil(page / 2)); break;
-    case 'halfPageDown': select(state.cursor + Math.ceil(page / 2)); break;
-    case 'help': return openHelp();
-    case 'close': return close();
-    case 'top': select(0); break;
-    case 'bottom': select(state.rows.length - 1); break;
-    case 'open':
-      if (r && !r.dir) return openFile(r);
-      toggle(r);
-      break;
-    case 'menu': return openMenu(state.rows.length ? state.cursor : null);
-    case 'expand':
-      if (r && r.dir && !r.open) toggle(r, true);
-      else if (r && r.dir) select(state.cursor + 1);
-      break;
-    case 'collapse':
-      if (r && r.dir && r.open && !state.filter) toggle(r, false);
-      else if (r) { const p = state.rows.findIndex(x => x.rel === parentOf(r.rel)); if (p >= 0) select(p); }
-      break;
-    case 'refresh': schedule(); return;
-    case 'filter': state.filter = { field: new ui.Field(state.filter ? state.filter.field.value : ''), active: true }; buildRows(); break;
-    case 'goToFile': return runAction(() => actions.search(ROOT, PANE, 'files'));
-    case 'searchInFiles': return runAction(() => actions.search(r && r.dir ? absOf(r.rel) : ROOT, PANE, 'content'));
-    case 'sourceControl': return runAction(() => (git.top ? actions.scm(ROOT, PANE, r ? absOf(r.rel) : '') : 'Not a git repository'));
-    case 'settings': return openSettings();
-    case 'toggleHidden': setSetting('hidden', !settings.hidden); flash(settings.hidden ? 'Hidden files shown' : 'Hidden files hidden'); return;
-    case 'toggleIgnored': setSetting('ignored', !settings.ignored); flash(settings.ignored ? 'Ignored files shown' : 'Ignored files hidden'); return;
-    case 'newFile': return newEntry(dirOf(), false);
-    case 'newFolder': return newEntry(dirOf(), true);
-    case 'rename': if (r) renameEntry(r); return;
-    case 'delete': if (r) deleteEntry(r); return;
-    case 'edit': if (r && !r.dir) runAction(() => actions.edit(absOf(r.rel), PANE)); return;
-    case 'openInEditor': if (r) runAction(() => actions.editor(absOf(r.rel), PANE)); return;
-    case 'openInApp': if (r && !r.dir) runAction(() => actions.system(absOf(r.rel))); return;
-    case 'preview': if (r && !r.dir) runAction(() => actions.preview(absOf(r.rel), ROOT, PANE, 0, true)); return;
-    case 'copyPath': if (r) runAction(() => actions.copy(absOf(r.rel))); return;
-    case 'copyRelativePath': if (r) runAction(() => actions.copy(r.rel)); return;
-    case 'parentRoot': return setRoot(path.dirname(ROOT));
-    case 'narrower': return widen(-4);
-    case 'wider': return widen(4);
-    default: return;
+  let i;
+  if (!r) i = dir > 0 ? 0 : list.length - 1;
+  else if (dir > 0) { i = list.findIndex(f => treeBefore(r.rel, r.dir, f, false)); if (i < 0) i = 0; }
+  else { i = list.findLastIndex(f => treeBefore(f, false, r.rel, r.dir)); if (i < 0) i = list.length - 1; }
+  const rel = list[i];
+  if (!git.gone.includes(rel)) revealRel(rel);
+  else {
+    // A deleted file shows only among the changed files, every folder unfolded there.
+    state.changed = true; state.selected = rel;
+    buildRows(); reveal();
   }
-  reveal();
   render();
-}
-
-function mouse(m) {
-  const H = out.rows || 24, W = out.columns || WIDTH;
-  // A question: a click on its first button confirms, any other click cancels.
-  if (state.confirm) {
-    const q = state.confirm, answer = ui.confirmMouse(m, q);
-    if (!answer) return;
-    state.confirm = null;
-    if (answer === 'yes') return runAction(q.yes);
-    return render();
-  }
-  if (m.wheel && state.menu) { moveMenu(m.wheel); return render(); }
-  if (state.settings) return settingsPage().mouse(m);
-  if (state.help) { if (!ui.helpMouse(m, state.help)) state.help = null; return render(); }
-  if (m.wheel) {
-    const max = Math.max(0, state.rows.length - bodyHeight());
-    state.top = Math.max(0, Math.min(max, state.top + m.wheel * 3));
-    return render();
-  }
-  if (scrollbar.mouse(m, m.y - 2, m.x === W && !state.menu)) return;
-  if (!m.press || m.drag || (m.button !== 0 && m.button !== 2)) return;
-  const btn = m.button, { x, y } = m;
-  if (state.prompt) { state.prompt = null; return render(); }
-  if (state.menu) {
-    // Click in the menu: action; elsewhere: close the menu (a right-click reopens it on the new row).
-    const k = y - 2 - state.menu.at;
-    if (btn === 0 && k >= 0 && k < menuRows()) {
-      const item = state.menu.items[state.menu.off + k];
-      return item ? runAction(item[1]) : undefined;
-    }
-    closeMenu();
-    if (btn === 0) return render();
-  }
-  if (y === 1) {
-    if (btn !== 0) return render();
-    // Each icon and the cell after it: a Nerd Font glyph often spills over the next cell.
-    if (x >= W - 2) return openSettings();
-    if (x >= W - 4 && showUpdate()) return runAction(finish ? finishUpdate : askUpdate);
-    return render();
-  }
-  if (y > bodyHeight() + 1) { if (state.filter) { state.filter.active = true; render(); } return; }
-  const i = state.top + y - 2;
-  if (i >= state.rows.length) return btn === 2 ? openMenu(null) : render();
-  if (btn === 2) return openMenu(i);
-  if (state.filter) state.filter.active = false;
-  const r = state.rows[i];
-  const now = Date.now(), double = state.lastClick && state.lastClick.i === i && now - state.lastClick.t < 400;
-  state.lastClick = double ? null : { i, t: now };
-  select(i);
-  if (r.dir) toggle(r);
-  else if (double) return openFile(r);
-  else if (settings.singleClick && actions.canPreview(absOf(r.rel))) return runAction(() => actions.preview(absOf(r.rel), ROOT, PANE));
-  render();
+  const abs = absOf(rel);
+  // Among the changed files, and for a deleted one, the preview shows the changes.
+  if (state.changed) runAction(() => actions.preview(abs, ROOT, PANE, 0, false, true, { view: 'diff' }));
+  else if (actions.canPreview(abs)) runAction(() => actions.preview(abs, ROOT, PANE));
 }
 
 // --- startup
 
+// Whether the terminal has the Kitty graphics protocol, for the Images setting: null until its answer, at most 500 ms.
+let graphics = null;
+
+// The explorer's modules (src/explorer/), given what they share in ctx: the state and the objects that stay, the
+// values that change (read through ctx, as ctx.ROOT), the functions of this file they call, and the functions of each
+// module, added for the next ones.
+const ctx = {
+  state, settings, out, scrollbar, tree, git, HOME, PANE, WIDTH, DEFAULT_KEYS, HELP,
+  get ROOT() { return ROOT; },
+  get theme() { return theme; },
+  set theme(t) { theme = t; },
+  get keys() { return keys; },
+  set keys(k) { keys = k; },
+  get latest() { return latest; },
+  get finish() { return finish; },
+  get updating() { return updating; },
+  get graphics() { return graphics; },
+  keysOf, render, flash, runAction, ask, setSetting, askUpdate, finishUpdate, select, toggle, reveal, revealRel, buildRows,
+  close, schedule, openFile, openMenu, openHelp, newEntry, renameEntry, deleteEntry, setRoot, showChanged, viewChanges,
+  nextChange, widen, absOf, parentOf,
+};
+const view = require('./explorer/render')(ctx);
+Object.assign(ctx, view);
+const pages = require('./explorer/settings')(ctx);
+Object.assign(ctx, pages);
+const { key, mouse } = require('./explorer/input')(ctx);
+const { bodyHeight, treeView } = view;
+const { settingsPage, openSettings } = pages;
+
 const paint = ui.screen({
   key, mouse,
+  reply: text => { if (ui.KITTY_OK.test(text)) { graphics = true; render(); } },
   focus: f => { state.focused = f; render(); },
   paste: text => {
     if (state.prompt) state.prompt.field.insert(text);
@@ -1460,6 +679,9 @@ const paint = ui.screen({
   },
   resize: () => { resized(); reveal(); render(); },
 }, { motion: true });
+// The Kitty graphics query, as the preview sends it.
+process.stdout.write(ui.KITTY_QUERY);
+setTimeout(() => { if (graphics === null) { graphics = false; render(); } }, 500);
 
 watchRoot();
 const timers = [

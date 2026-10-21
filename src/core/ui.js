@@ -2,11 +2,24 @@
 // field, and the alternate screen setup.
 'use strict';
 
+// The Kitty graphics protocol query (a 1×1 image, not kept), and the start of the answer of a terminal that has it.
+const KITTY_QUERY = '\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\';
+const KITTY_OK = /^\x1b_Gi=31;OK/;
+
 const fg = rgb => `\x1b[38;2;${rgb.join(';')}m`;
 const bg = rgb => `\x1b[48;2;${rgb.join(';')}m`;
 const glyph = code => String.fromCodePoint(code);
-// The magnifier (Nerd Font) before every find and filter field.
-const SEARCH = glyph(0xf002);
+// The glyphs of the panes' controls in the icon set chosen in the settings: Nerd Font glyphs, or characters any
+// font has. G.search is the magnifier before every find and filter field; G.set the set's name.
+const GLYPHS = {
+  nerd: { closed: glyph(0xeab6), open: glyph(0xeab4), gear: glyph(0xf013), search: glyph(0xf002), branch: glyph(0xe0a0) },
+  unicode: { closed: '▸', open: '▾', gear: '⚙', search: '⌕', branch: '⎇' },
+  ascii: { closed: '>', open: 'v', gear: '=', search: '/', branch: '*' },
+};
+GLYPHS.emoji = GLYPHS.unicode;
+const G = {};
+const useGlyphs = set => Object.assign(G, GLYPHS[set] || GLYPHS.nerd, { set: GLYPHS[set] ? set : 'nerd' });
+useGlyphs('nerd');
 
 // Colours from the VS Code Dark+ theme (git decorations) and the Seti theme (icons).
 const C = {
@@ -133,7 +146,7 @@ function help(lines, W, title, groups, state) {
   if (state.find) {
     const count = state.find.value ? ` ${rows.filter(r => r.length === 2).length}` : '';
     const field = state.find.segments(Math.max(1, W - 4 - count.length));
-    out.push(line([[` ${SEARCH} `, fg(C.dim)], ...field, [count.padStart(Math.max(0, W - 3 - segWidth(field))), fg(C.dim)]], W, C.header));
+    out.push(line([[` ${G.search} `, fg(C.dim)], ...field, [count.padStart(Math.max(0, W - 3 - segWidth(field))), fg(C.dim)]], W, C.header));
   }
   for (const r of rows.slice(state.top, state.top + n)) {
     if (r.length === 1) { out.push(line([[` ${r[0]}`, '\x1b[1m' + fg(C.blue)]], W)); continue; }
@@ -232,6 +245,74 @@ function confirmMouse(m, q) {
   if (!m.press || m.drag || m.wheel) return null;
   const z = q.zones;
   return m.button === 0 && z && m.y - 1 === z.y && m.x >= z.yes[0] && m.x <= z.yes[1] ? 'yes' : 'no';
+}
+
+// A question in a card with more answers than confirm's two, drawn as confirm draws its card: q: { title, name, where,
+// note, buttons: [{ key, label, tone }], focus (the index of the button lit) }. Each button shows its key and label,
+// the focused one lit in its tone ('go' green, 'danger' red, else grey). The columns of the buttons are kept for clicks
+// (zones), and the card's (box).
+function ask(lines, W, H, q) {
+  q.zones = null; q.box = null;
+  if (W < 2) return;
+  const inner = Math.min(48, Math.max(W - 4, Math.min(12, W - 2), 0)), room = Math.max(1, inner - 2);
+  const names = q.name ? wrap(q.name, room).slice(0, 3).map(l => [[` ${l}`, '']]) : [];
+  const where = q.where ? [[[` ${ellipsis(q.where, room)}`, fg(C.dim)]]] : [];
+  const note = q.note ? [[[` ${ellipsis(q.note, room)}`, fg(C.dim)]]] : [];
+  // A low pane: the same order as confirm's to leave things out, the buttons last.
+  let gaps = 2, title = true;
+  const rows = () => +title + 1 + gaps + names.length + where.length + note.length, fit = Math.max(1, H - 3);
+  while (rows() > fit && gaps) gaps--;
+  if (rows() > fit) where.length = 0;
+  while (rows() > fit && names.length > 1) names.pop();
+  if (rows() > fit) note.length = 0;
+  if (rows() > fit) names.length = 0;
+  if (rows() > fit) title = false;
+  const text = [...(title ? [[[` ${ellipsis(q.title, room)}`, '\x1b[1m']]] : []), ...(gaps > 1 ? [[]] : []), ...names, ...where, ...note];
+  const labels = q.buttons.map(b => ` ${keyLabel(b.key)} ${b.label} `);
+  const gap = labels.reduce((s, l) => s + textWidth(l), 0) + 2 * (labels.length - 1) <= inner - 2 ? 2 : 1;
+  const lit = '\x1b[1m' + fg([255, 255, 255]), buttons = [['  ', '']];
+  q.buttons.forEach((b, i) => {
+    if (i) buttons.push([' '.repeat(gap), '']);
+    buttons.push([labels[i], i === q.focus ? lit + bg(BUTTON[b.tone] || BUTTON_ON) : fg(DANGER_TEXT[b.tone] || C.dim) + bg(BUTTON_OFF)]);
+  });
+  text.push(...(gaps ? [[]] : []), buttons);
+  const h = text.length + 2, x = Math.max(0, Math.floor((W - inner - 2) / 2));
+  const y = Math.max(1, Math.min(H - h, Math.floor((H - h) / 3)));
+  const edge = fg(C.dim), left = ' '.repeat(x), right = ' '.repeat(Math.max(0, W - x - inner - 2));
+  const put = (i, l) => { if (i < H) lines[i] = l; };
+  put(y, left + line([['╭' + '─'.repeat(inner) + '╮', edge]], inner + 2) + right);
+  text.forEach((segs, k) => put(y + 1 + k, left + line([['│', edge], ...segs], inner + 1) + line([['│', edge]], 1) + right));
+  put(y + h - 1, left + line([['╰' + '─'.repeat(inner) + '╯', edge]], inner + 2) + right);
+  // Screen columns from 1: the card's edge, then 2 spaces before the first button; a button cut by the edge is
+  // clickable up to it, one past it not at all.
+  const end = x + inner + 1;
+  let bx = x + 4;
+  q.box = { x0: x + 1, x1: x + inner + 2, y0: y + 1, y1: y + h };
+  if (y + h - 2 < H) {
+    q.zones = { y: y + h - 2, buttons: [] };
+    labels.forEach((l, i) => {
+      if (bx <= end) q.zones.buttons.push([bx, Math.min(bx + textWidth(l) - 1, end), q.buttons[i].key]);
+      bx += textWidth(l) + gap;
+    });
+  }
+}
+// A key for the question: ← → (and tab) move between the buttons ('move'), Enter and space press the focused one,
+// a button's key presses it, escape and ctrl+c give 'escape'; other keys nothing (null), the card staying.
+function askKey(k, q) {
+  const n = q.buttons.length;
+  if (['left', 'right', 'tab', 'shift+tab'].includes(k)) { q.focus = (q.focus + (k === 'left' || k === 'shift+tab' ? n - 1 : 1)) % n; return 'move'; }
+  if (k === 'enter' || k === 'space') return q.buttons[q.focus].key;
+  if (k === 'escape' || k === 'ctrl+c') return 'escape';
+  const b = q.buttons.find(x => x.key === k);
+  return b ? b.key : null;
+}
+// A click: on a button, its key; out of the card, 'escape'; null for the rest.
+function askMouse(m, q) {
+  if (!m.press || m.drag || m.wheel || m.button !== 0) return null;
+  const z = q.zones, hit = z && m.y - 1 === z.y && z.buttons.find(([a, b]) => m.x >= a && m.x <= b);
+  if (hit) return hit[2];
+  const b = q.box;
+  return b && m.x >= b.x0 && m.x <= b.x1 && m.y >= b.y0 && m.y <= b.y1 ? null : 'escape';
 }
 
 // An empty area of h lines, width w: what it lacks, dimmed and centred a third of the way down, and under it the
@@ -457,11 +538,16 @@ const SEQ = {
   '\x1b[1;5A': 'ctrl+up', '\x1b[1;5B': 'ctrl+down', '\x1b[1;5C': 'ctrl+right', '\x1b[1;5D': 'ctrl+left',
   '\x1b[1;2A': 'shift+up', '\x1b[1;2B': 'shift+down', '\x1b[1;2C': 'shift+right', '\x1b[1;2D': 'shift+left', '\x1b[1;3A': 'alt+up', '\x1b[1;3B': 'alt+down',
   '\x1b[1;3C': 'alt+right', '\x1b[1;3D': 'alt+left', '\x1b[1;5H': 'ctrl+home', '\x1b[1;5F': 'ctrl+end',
+  '\x1b[5;5~': 'ctrl+pageup', '\x1b[6;5~': 'ctrl+pagedown',
+  // With shift, for a selection in a text being edited; ctrl+shift+z where the terminal tells it from ctrl+z.
+  '\x1b[1;2H': 'shift+home', '\x1b[1;2F': 'shift+end', '\x1b[5;2~': 'shift+pageup', '\x1b[6;2~': 'shift+pagedown',
+  '\x1b[1;6C': 'ctrl+shift+right', '\x1b[1;6D': 'ctrl+shift+left', '\x1b[1;6H': 'ctrl+shift+home', '\x1b[1;6F': 'ctrl+shift+end',
+  '\x1b[3;5~': 'ctrl+delete', '\x1b[122;6u': 'ctrl+shift+z', '\x1b[90;6u': 'ctrl+shift+z', '\x1b[27;6;90~': 'ctrl+shift+z', '\x1b[27;6;122~': 'ctrl+shift+z',
   '\x1bOP': 'f1', '\x1bOQ': 'f2', '\x1bOR': 'f3', '\x1bOS': 'f4', '\x1b[11~': 'f1', '\x1b[12~': 'f2', '\x1b[15~': 'f5',
   '\r': 'enter', '\n': 'enter', '\t': 'tab', '\x7f': 'backspace', '\x08': 'backspace', '\x1b': 'escape',
   '\x1b\x7f': 'alt+backspace', '\x1b\r': 'alt+enter', ' ': 'space',
 };
-const TOKEN = /\x1b\[200~[\s\S]*?\x1b\[201~|\x1b\[<(\d+);(\d+);(\d+)([Mm])|\x1b\[([IO])|\x1b\[[\d;]*[A-Za-z~]|\x1bO[A-Za-z]|\x1b[^\x1b]|[\s\S]/gu;
+const TOKEN = /\x1b\[200~[\s\S]*?\x1b\[201~|\x1b_[^\x1b]*\x1b\\|\x1b\[(\d+(?:;\d+)*)t|\x1b\[<(\d+);(\d+);(\d+)([Mm])|\x1b\[([IO])|\x1b\[[\d;]*[A-Za-z~]|\x1bO[A-Za-z]|\x1b[^\x1b]|[\s\S]/gu;
 
 function keyName(k) {
   if (SEQ[k]) return SEQ[k];
@@ -475,22 +561,27 @@ function keyName(k) {
 //   key(name)                      'up', 'enter', 'ctrl+p', 'alt+x', or the typed character itself ('a', 'É')
 //   mouse({ button, x, y, press, drag, wheel })   x and y from 1; wheel: -1 up, 1 down; drag: motion with a button
 //   focus(bool)                    focus reports (mode 1004)
-//   paste(text)                    bracketed paste (mode 2004), control characters removed
+//   paste(text, raw)               bracketed paste (mode 2004), control characters removed; raw: as pasted, line
+//                                  breaks as \n, for a text being edited
+//   reply(text)                    the terminal's answer to a query: a Kitty graphics reply (\x1b_G…) or a size
+//                                  report (\x1b[6;h;wt), never read as keys
 function decode(data, handlers) {
   for (const m of data.matchAll(TOKEN)) {
     const t = m[0];
+    if (t.startsWith('\x1b_') || m[1] !== undefined) { if (handlers.reply) handlers.reply(t); continue; }
     if (t.startsWith('\x1b[200~')) {
-      if (handlers.paste) handlers.paste(t.slice(6, -6).replace(/\r\n?/g, '\n').replace(/[\x00-\x09\x0b-\x1f\x7f-\x9f]/g, ''));
+      const raw = t.slice(6, -6).replace(/\r\n?/g, '\n');
+      if (handlers.paste) handlers.paste(raw.replace(/[\x00-\x09\x0b-\x1f\x7f-\x9f]/g, ''), raw);
       continue;
     }
-    if (m[1] !== undefined) {
+    if (m[2] !== undefined) {
       if (!handlers.mouse) continue;
-      const b = +m[1];
+      const b = +m[2];
       const wheel = b & 64 ? ((b & 3) === 0 ? -1 : (b & 3) === 1 ? 1 : 0) : 0;
-      handlers.mouse({ button: b & 3, mods: b & 28, x: +m[2], y: +m[3], press: m[4] === 'M', drag: !!(b & 32), wheel });
+      handlers.mouse({ button: b & 3, mods: b & 28, x: +m[3], y: +m[4], press: m[5] === 'M', drag: !!(b & 32), wheel });
       continue;
     }
-    if (m[5]) { if (handlers.focus) handlers.focus(m[5] === 'I'); continue; }
+    if (m[6]) { if (handlers.focus) handlers.focus(m[6] === 'I'); continue; }
     const name = keyName(t);
     if (name && handlers.key) handlers.key(name);
   }
@@ -592,13 +683,117 @@ function restart(env) {
   process.stdin.removeAllListeners('data');
   process.stdin.pause();
   process.stdout.removeAllListeners('resize');
-  process.send({ restart: env }, () => process.exit(require('./launch').RESTART));
+  process.send({ restart: env }, () => process.exit(require('../launch').RESTART));
 }
 
 const size = () => ({ W: process.stdout.columns || 80, H: process.stdout.rows || 24 });
 
+// --- segmented switch and menu
+
+// Two or more ways to see the same thing, the active one filled: [id, label] choices. Returns { segs, width, hits },
+// hits: the columns of each choice from 0, { id, from, to }, for clicks.
+const SWITCH = [58, 58, 62];
+// An option's value as the explorer's settings show it.
+const onOff = on => (on ? ['● on', fg(C.green)] : ['○ off', fg(C.dim)]);
+const switchStyle = on => (on ? bg(C.select) + fg(C.text) + '\x1b[1m' : bg(SWITCH) + fg(C.dim));
+function segmented(choices, active) {
+  const segs = [], hits = [];
+  let x = 0;
+  for (const [id, label] of choices) {
+    const on = id === active, text = ` ${label} `;
+    segs.push([text, switchStyle(on)]);
+    hits.push({ id, from: x, to: x + textWidth(text) - 1 });
+    x += textWidth(text);
+  }
+  return { segs, width: x, hits };
+}
+
+// The first n columns of a drawn line (ui.line's output), its colours kept, padded with spaces when shorter: the part
+// of a line left of something drawn over it.
+function head(text, n) {
+  let out = '', w = 0, prev;
+  for (const tok of text.match(/\x1b\[[0-9;?]*[A-Za-z]|[\s\S]/gu) || []) {
+    if (tok[0] === '\x1b') { out += tok; continue; }
+    const c = cols(tok, prev);
+    if (w + c > n) break;
+    out += tok; w += c; prev = tok;
+  }
+  return `${out}\x1b[0m${' '.repeat(Math.max(0, n - w))}`;
+}
+
+// A menu in a frame over a pane, as the explorer's: items { label, run, key, value, danger }, or null for a rule. key:
+// the key that does the same outside the menu, dimmed after the label; value: [text, style] on the right, as in the
+// explorer's settings (onOff gives ● on / ○ off). at: the screen line (from 0) of its top border; right: its right
+// edge's column (from 1), else it starts at the left.
+class Menu {
+  constructor({ title, items, at = 0, right = 0 }) {
+    Object.assign(this, { title, items, at, right, sel: Math.max(0, items.findIndex(Boolean)), off: 0, x: 1, inner: 0 });
+  }
+  rows(H) { return Math.max(1, Math.min(this.items.length, H - 2 - this.at)); }
+  draw(lines, W, H) {
+    const n = this.rows(H), edge = fg(C.dim);
+    // An item: a space, its label, its key after two spaces, at least one space (two before a value), its value, a
+    // space.
+    const side = it => (it.key ? textWidth(it.key) + 2 : 0) + (it.value ? textWidth(it.value[0]) + 1 : 0);
+    const want = Math.max(textWidth(this.title) + 4, ...this.items.map(it => (it ? textWidth(it.label) + side(it) + 3 : 0)));
+    const inner = this.inner = Math.min(W - 3, want);
+    // From its left column x (from 1): the frame takes inner + 2 columns after a space.
+    const x = this.x = this.right ? Math.max(1, this.right - inner - 2) : 1;
+    // Left of the frame, what the line showed; right of it, blank.
+    const rest = ' '.repeat(Math.max(0, W - x - inner - 2));
+    let pad = '';
+    const keep = i => { pad = x > 1 ? head(lines[i] || '', x - 1) : ''; };
+    const border = (l, r, t, more) => `${pad}${line([[`${l}${t}${'─'.repeat(Math.max(0, inner - textWidth(t) - (more ? 2 : 0)))}${more ? more + '─' : ''}${r}`, edge]], inner + 2)}${rest}`;
+    keep(this.at);
+    lines[this.at] = border('╭', '╮', ` ${ellipsis(this.title, Math.max(1, inner - 4))} `, this.off > 0 && '▴');
+    this.items.slice(this.off, this.off + n).forEach((it, k) => {
+      keep(this.at + 1 + k);
+      if (!it) { lines[this.at + 1 + k] = `${pad}${line([['├' + '─'.repeat(inner) + '┤', edge]], inner + 2)}${rest}`; return; }
+      const key = it.key ? `  ${it.key}` : '', [value, style] = it.value || ['', ''];
+      const label = ellipsis(it.label, Math.max(1, inner - 3 - textWidth(key) - (value ? textWidth(value) + 1 : 0)));
+      const gap = ' '.repeat(Math.max(1, inner - 2 - textWidth(label) - textWidth(key) - textWidth(value)));
+      const segs = [[` ${label}`, it.danger ? fg(C.red) : ''], [key, fg(C.dim)], [gap, ''], [`${value} `, style]];
+      lines[this.at + 1 + k] = `${pad}${edge}│\x1b[39m${line(segs, inner, this.off + k === this.sel ? C.select : C.selectBlur)}${edge}│\x1b[0m${rest}`;
+    });
+    keep(this.at + n + 1);
+    lines[this.at + n + 1] = border('╰', '╯', '', this.off + n < this.items.length && '▾');
+  }
+  move(dir, H) {
+    if (!this.items.some(Boolean)) return;
+    do this.sel = (this.sel + dir + this.items.length) % this.items.length; while (!this.items[this.sel]);
+    const n = this.rows(H);
+    if (this.sel < this.off) this.off = this.sel;
+    if (this.sel >= this.off + n) this.off = this.sel - n + 1;
+  }
+  // A key: up and down (and k j) move, enter, space, left and right (h l) run the selection, the key shown beside an
+  // item runs it; escape, q and , (which opens the menus of the panes) close. Returns { run } for an item to run, 'close', or null when the menu took the key. The menu stays
+  // open after a run when keep is set on the item (an option changed in place).
+  key(k, H) {
+    if (k === 'escape' || k === 'q' || k === ',') return 'close';
+    // ← → change the selected option, as in the explorer's settings.
+    if (['left', 'right', 'h', 'l'].includes(k)) return this.items[this.sel] ? { run: this.items[this.sel].run, keep: this.items[this.sel].keep } : null;
+    if (k === 'up' || k === 'k') { this.move(-1, H); return null; }
+    if (k === 'down' || k === 'j') { this.move(1, H); return null; }
+    if (k === 'enter' || k === 'space') return this.items[this.sel] ? { run: this.items[this.sel].run, keep: this.items[this.sel].keep } : null;
+    const it = this.items.find(i => i && i.key && i.key === k);
+    return it ? { run: it.run, keep: it.keep } : null;
+  }
+  // A click: on an item, { run }; elsewhere, 'close'. The wheel moves the selection.
+  mouse(m, H) {
+    if (m.wheel) { this.move(m.wheel, H); return null; }
+    if (!m.press || m.drag) return null;
+    const k = m.y - 2 - this.at;
+    if (m.button === 0 && k >= 0 && k < this.rows(H) && m.x > this.x && m.x <= this.x + this.inner + 1) {
+      const it = this.items[this.off + k];
+      return it ? { run: it.run, keep: it.keep } : null;
+    }
+    return 'close';
+  }
+}
+
 module.exports = {
-  fg, bg, glyph, SEARCH, C, GIT, clean, cleanLine, cols, fit, textWidth, ellipsis, line, keys, keyAt, help, helpKey, helpMouse, wrap, empty, message, messageKind, messageTime, confirm, confirmKey, confirmMouse,
-  segWidth, segText, slice, split, mark, Scrollbar,
+  KITTY_QUERY, KITTY_OK,
+  fg, bg, glyph, G, useGlyphs, C, GIT, clean, cleanLine, cols, fit, textWidth, ellipsis, line, keys, keyAt, help, helpKey, helpMouse, wrap, empty, message, messageKind, messageTime, confirm, confirmKey, confirmMouse, ask, askKey, askMouse,
+  segWidth, segText, slice, split, mark, Scrollbar, segmented, switchStyle, onOff, Menu,
   keyName, keyLabel, decode, printable, Field, screen, restart, size,
 };

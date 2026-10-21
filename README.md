@@ -24,21 +24,31 @@ Plugin id `gcaudan.explorer` · herdr 0.9.3 or later · Linux, macOS and Windows
 
 - **Explorer**: a file tree docked on the left (or right) of every new tab, without taking the focus: VS Code git
   decorations, filter as you type, file actions (new, rename, duplicate, trash, stage, discard), *Set as root*, and
-  an optional mode that follows the terminal's folder.
+  an optional mode that follows the terminal's folder. Its keys can be rebound.
+- **Review**: the changed files only, `]` and `[` to step through them in the preview, and review notes on lines of
+  the preview or the diff, typed together into the agent's prompt (`src/app.js:12-14 (fix): …`) without submitting
+  it.
+- **Show a file from an agent**: `src/peek.js file:line`, and a Claude Code skill that calls it, show a file at a
+  line in the tab's preview, so that an agent points you at the code it talks about.
 - **Insert into terminal**: types a file's path, relative and quoted, into the terminal next to the explorer;
   prefixed with `@` when an agent such as Claude Code runs there.
-- **Preview**: one pane per tab, reused for every file: syntax highlighting for 27 languages and formats, rendered
-  Markdown (GFM tables, task lists, alerts, simple Mermaid flowcharts), images drawn with half blocks, a hex dump for
-  binary files. Reloads as soon as the file changes on disk. Find, wrap, zoom, and mouse selection copied to the
-  clipboard.
+- **Preview**: one pane per tab, with VS Code-style tabs (temporary or kept): syntax highlighting for 27 languages and formats, rendered
+  Markdown (GFM tables, task lists, alerts, simple Mermaid flowcharts, local images, sharp where possible), images in real pixels where the
+  terminal has the Kitty graphics protocol (else half blocks), WebP and TIFF included, a hex dump for binary files.
+  Reloads as soon as the file changes on disk. Find, wrap, zoom, and mouse selection copied to the clipboard.
+  Quick edits in place (`i`, text files up to 2 MB): undo, find and replace, changed lines in the gutter, line endings kept. A **Diff**
+  view shows the file's git changes.
 - **Search**: fuzzy *Go to file* (`path:line` supported) and *Search in files* (case, whole word, regex, globs),
   with a preview of the selected result on wide screens.
-- **Source control**: stage, unstage, discard, commit or amend (with an optional message written by Claude), fetch, pull,
-  push, branches, stashes and refs; a history with a branch graph, branch comparisons; continue or abort a merge,
-  rebase, cherry-pick or revert. Inline or side-by-side diffs with word-level highlights.
+- **Source control**: stage, unstage, discard, commit or amend (with an optional message written by Claude), fetch,
+  pull, push (also forced with lease), merge, rebase, cherry-pick, tags, undo the last commit, reset, branches,
+  stashes and refs; a history with a branch graph, also for a single file, branch comparisons;
+  continue or abort a merge, rebase, cherry-pick or revert. Inline or side-by-side diffs with word-level highlights,
+  compared with HEAD or with where the branch started, also in a full-tab *Changes* pane for a file or a folder.
 - **Editors**: your graphical editor (VS Code by default), a terminal editor in a full-tab pane, or the system's
   application for documents and media. Executables and scripts are never run.
-- **Icons**: Nerd Font icons, or the colours of any VS Code icon theme you have installed.
+- **Icons**: Nerd Font icons, or the colours of any VS Code icon theme you have installed; emoji, Unicode or ASCII
+  icons without a Nerd Font.
 - **Restored after a herdr restart**, at the same folder and file, and **updated** from GitHub releases in place.
 - **Safe on untrusted repositories**: no shell, hardened git calls and sanitized terminal output (see
   [SECURITY.md](SECURITY.md)).
@@ -46,7 +56,7 @@ Plugin id `gcaudan.explorer` · herdr 0.9.3 or later · Linux, macOS and Windows
 ## Requirements
 
 herdr 0.9.3 or later, Node.js 20 or later (`node` on the `PATH` that herdr gives plugins), and a
-[Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr. git, a graphical editor, a clipboard and
+[Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr, or emoji, Unicode or ASCII icons. git, a graphical editor, a clipboard and
 a trash tool, and the [Claude Code](https://claude.com/claude-code) CLI are optional: see
 [Requirements](docs/installation.md#requirements) for what each one adds.
 
@@ -67,7 +77,8 @@ append the three blocks of [Key bindings](docs/installation.md#key-bindings) to 
 
 ### From a git clone
 
-The install script links the clone to herdr and adds the key bindings; the explorer can then update itself.
+The install script links the clone to herdr, adds the key bindings and, when Claude Code is installed, links the
+`herdr-preview` skill; the explorer can then update itself.
 
 ```sh
 git clone https://github.com/gcaudan/herdr-explorer.git
@@ -93,7 +104,7 @@ Keep the clone where it is, on `main`: herdr runs the plugin from that folder, a
    delete, view changes, stage…
 4. `/` filters the tree, `ctrl+p` goes to a file and `ctrl+f` searches in files.
 5. `s` opens source control: `c` to type a message, `Enter` to commit.
-6. `,` opens the settings, `?` lists every key of the pane, and `q` closes the explorer.
+6. `,` opens the settings, `?` (or `F1`) lists every key of the pane, and `q` closes the explorer.
 
 See [docs/usage.md](docs/usage.md) for every pane, key, mouse action and menu item.
 

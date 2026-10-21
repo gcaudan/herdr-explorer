@@ -2,7 +2,7 @@
 // highlighted by highlight.js, GFM tables and task lists, simple Mermaid flowcharts. A small CommonMark-like
 // parser, not a complete one. Output: lines of [text, style] segments that fit the width, for ui.line().
 'use strict';
-const { fg, bg, cleanLine, textWidth, fit } = require('./ui');
+const { fg, bg, cleanLine, textWidth, fit } = require('../core/ui');
 
 const BOLD = '\x1b[1m', ITALIC = '\x1b[3m', UNDER = '\x1b[4m', STRIKE = '\x1b[9m';
 const COL = {
@@ -33,6 +33,7 @@ const widthOf = segs => segs.reduce((w, s) => w + textWidth(s[0]), 0);
 const prefixed = (lines, first, rest) => lines.map((l, k) => {
   const r = [...(k ? rest : first), ...l];
   if (l.anchor) r.anchor = l.anchor;
+  if (l.figure) r.figure = l.figure;
   return r;
 });
 
@@ -171,7 +172,10 @@ function link(text, i, base, ctx, depth, image) {
     url = ctx.refs[ref.trim().toLowerCase()];
     if (url === undefined) return null;
   }
-  if (image) return [end, [['🖼 ' + (plain(inline(label, '', ctx, depth + 1)) || 'image'), base + fg(COL.image)]]];
+  if (image) {
+    if (ctx.found && url) ctx.found.push(url);
+    return [end, [['🖼 ' + (plain(inline(label, '', ctx, depth + 1)) || 'image'), base + fg(COL.image)]]];
+  }
   const segs = inline(label, base + LINK, ctx, depth + 1);
   const shown = plain(segs);
   if (url && url !== shown && url !== 'mailto:' + shown && !/^\s*!\[/.test(label)) push(segs, ` (${url})`, DIM);
@@ -212,7 +216,10 @@ function tag(text, i, base, ctx, depth) {
   const end = i + m[0].length, name = m[2].toLowerCase();
   if (m[1]) return [end, []];
   if (name === 'br') return [end, [['\n', '']]];
-  if (name === 'img') return [end, [['🖼 ' + (attr(m[3], 'alt') || 'image'), base + fg(COL.image)]]];
+  if (name === 'img') {
+    if (ctx.found && attr(m[3], 'src')) ctx.found.push(attr(m[3], 'src'));
+    return [end, [['🖼 ' + (attr(m[3], 'alt') || 'image'), base + fg(COL.image)]]];
+  }
   if (!(name in TAG_STYLE) || m[4]) return [end, []];
   const close = text.toLowerCase().indexOf('</' + name, end);
   if (close < 0) return [end, []];
@@ -560,8 +567,17 @@ function block(b, width, ctx) {
       return out;
     }
     case 'para': {
+      // The images of the paragraph, drawn under it when the caller can (ctx.image).
+      ctx.found = ctx.image ? [] : null;
       const out = wrap(inline(b.text, '', ctx), width);
+      const found = ctx.found || [];
+      ctx.found = null;
       while (out.length && !out[out.length - 1].length) out.pop();
+      for (const url of found) {
+        let lines = null;
+        try { lines = ctx.image(url, width); } catch { }
+        if (lines && lines.length) out.push(...lines);
+      }
       return out;
     }
     case 'hr': return [[['─'.repeat(width), BORDER]]];
@@ -619,16 +635,19 @@ function clamp(segs, width) {
     if (part.length < t.length) break;
   }
   if (segs.anchor) out.anchor = segs.anchor;
+  if (segs.figure) out.figure = segs.figure;
   return out;
 }
 
 // Rendered lines of a Markdown text for width columns, and the line index of each heading by its slug
 // (GitHub style: "## Some title" → "some-title"). highlight: the highlight.js module, loaded when not given.
-function render(text, width, { highlight } = {}) {
+// image(url, width): the lines drawing an image of the text, or null to show its name only; a line's figure property
+// (an image placed in pixels over blank lines) is kept, whatever prefix a list or a quote adds.
+function render(text, width, { highlight, image } = {}) {
   width = Math.max(1, Math.floor(width) || 1);
   let hl = highlight;
   const load = () => { try { return require('./highlight'); } catch { return null; } };
-  const ctx = { refs: {}, slugs: {}, level: 0, tight: false, hl: () => (hl === undefined ? (hl = load()) : hl) };
+  const ctx = { refs: {}, slugs: {}, level: 0, tight: false, hl: () => (hl === undefined ? (hl = load()) : hl), image, found: null };
   const src = String(text).replace(/\r\n?/g, '\n').split('\n').map(l => cleanLine(l));
   const tree = [];
   // Front matter: a YAML block between --- lines at the very start.

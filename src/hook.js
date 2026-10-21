@@ -6,17 +6,26 @@
 //   node hook.js --restore startup hook: reopens the explorer and preview panes that herdr restored as shells
 //   node hook.js --search  key binding action: Go to file popup of the current tab's folder
 //   node hook.js --scm     key binding action: source control of the current tab's folder
+// Each run also saves the state folder for peek.js.
 'use strict';
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const { PLUGIN, HERDR, result, readWidth, readSettings, PANES_DIR, paneFile, readPaneState } = require('./exec');
-const { sideSplit } = require('./actions');
+const { PLUGIN, HERDR, result, OWN_PANES: OWN, readWidth, readSettings, PANES_DIR, paneFile, readPaneState } = require('./core/exec');
+const { sideSplit } = require('./core/actions');
 const LABEL = 'Explorer';
-// The plugin's panes, by label.
-const OWN = new Set(['Explorer', 'Preview', 'Source Control', 'Changes', 'Editor', 'Search']);
 if (!HERDR) process.exit(0);
+
+// The state folder, saved in the config folder for peek.js, which runs outside the plugin (from an agent's pane) and
+// can find the config folder only (herdr plugin config-dir).
+const { HERDR_PLUGIN_STATE_DIR: STATE, HERDR_PLUGIN_CONFIG_DIR: CONFIG } = process.env;
+if (STATE && CONFIG) {
+  const file = path.join(CONFIG, 'state-dir');
+  try { if (fs.readFileSync(file, 'utf8') !== STATE) throw 0; } catch {
+    try { fs.mkdirSync(CONFIG, { recursive: true }); fs.writeFileSync(file, STATE); } catch { }
+  }
+}
 
 const herdr = (...args) => result(execFileSync(HERDR, args, { encoding: 'utf8' }));
 const workspacePanes = workspaceId => herdr('pane', 'list', '--workspace', workspaceId).panes;
@@ -99,7 +108,7 @@ if (process.argv.includes('--toggle')) {
   } else if (panes.length) open(panes, ctx.tab_id, ctx.workspace_cwd);
 } else if (process.argv.includes('--search') || process.argv.includes('--scm')) {
   // From the tab's explorer when there is one, so that the search opens files in that tab's preview.
-  const actions = require('./actions');
+  const actions = require('./core/actions');
   const panes = ctx.tab_id ? tabPanes(ctx.workspace_id, ctx.tab_id) : [];
   const explorer = panes.find(p => p.label === LABEL);
   const pane = (explorer && explorer.pane_id) || process.env.HERDR_PANE_ID || ctx.pane_id || (panes[0] && panes[0].pane_id);
@@ -122,12 +131,12 @@ if (process.argv.includes('--toggle')) {
   // herdr restores the plugin's panes as plain shells, its session keeping only their label and folder: close
   // them, then reopen the explorer and the preview in the tabs that had them, at what they saved under the same
   // pane id (the preview's file only when it still exists).
-  const actions = require('./actions');
+  const actions = require('./core/actions');
   const exists = (p, dir) => { try { return p && fs.statSync(p).isDirectory() === dir ? p : null; } catch { return null; } };
   const running = p => herdr('pane', 'process-info', '--pane', p.pane_id).process_info.foreground_processes
     .some(f => /^node(\.exe)?$/i.test(path.basename((f.argv && f.argv[0]) || '')));
   // A newer release, looked for alongside (at most once a day).
-  require('./update').check().catch(() => { });
+  require('./core/update').check().catch(() => { });
   (async () => {
     for (const ws of herdr('workspace', 'list').workspaces) {
       const tabs = new Map();
@@ -145,9 +154,17 @@ if (process.argv.includes('--toggle')) {
           const home = exists(saved.home, true);
           anchor = open(rest, tab, home, home && exists(saved.root, true));
         }
+        // The preview's tabs whose file still exists, the one shown first among them.
         const preview = stale.find(p => p.label === 'Preview');
         const shown = preview && readPaneState(preview.pane_id);
-        if (shown && exists(shown.file, false)) await actions.preview(shown.file, shown.root, anchor, shown.line);
+        const saved = shown && shown.tabs && Array.isArray(shown.tabs.list) ? shown.tabs : null;
+        const list = saved ? saved.list.filter(t => t && exists(t.file, false)) : [];
+        const at = saved ? list.indexOf(saved.list[saved.current]) : -1;
+        const first = at >= 0 ? list[at] : list[0] || (shown && exists(shown.file, false) && shown);
+        if (first) {
+          await actions.preview(first.file, first.root, anchor, first.line, false, true,
+            { view: first.view === 'diff' ? 'diff' : 'file', keep: !!first.kept, tabs: list.length ? { list, current: Math.max(0, at) } : null });
+        }
       }
     }
     // The state of panes that no longer exist.
@@ -159,7 +176,7 @@ if (process.argv.includes('--toggle')) {
   })();
 } else {
   // Also here, for a herdr session running for days: the check itself happens once a day at most.
-  require('./update').check().catch(() => { });
+  require('./core/update').check().catch(() => { });
   const ev = JSON.parse(process.env.HERDR_PLUGIN_EVENT_JSON || '{}');
   const tab = ev.data && ev.data.tab;
   if (tab && readSettings().autoOpen) {

@@ -2,7 +2,7 @@
 // second parent of a merge opening a lane.
 const test = require('node:test');
 const assert = require('node:assert');
-const { layout } = require('../src/graph');
+const { layout } = require('../src/render/graph');
 
 const draw = commits => layout(commits).map(r => r.cells.map(([ch]) => ch).join('').trimEnd());
 

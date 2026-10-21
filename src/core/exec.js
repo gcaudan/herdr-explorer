@@ -7,24 +7,36 @@ const { execFile } = require('child_process');
 const WIN = process.platform === 'win32';
 const PLUGIN = process.env.HERDR_PLUGIN_ID || 'gcaudan.explorer';
 
-// Absolute folders of PATH (relative entries would depend on the working directory).
-const pathDirs = () => (process.env.PATH || '').split(path.delimiter)
-  .map(d => d.replace(/^"(.*)"$/, '$1')).filter(d => path.isAbsolute(d));
+// pathDirs and which live apart so that peek.js can find herdr before the state folder this module reads is set.
+const { pathDirs, which } = require('./which');
 
-// Absolute path of a program found in the absolute folders of PATH, or null. On Windows, a bare name is looked up
-// in the child's working directory before PATH; elsewhere, an empty or '.' entry of PATH means that folder too: a git
-// planted in an untrusted repository would run. Resolved first, on every system.
-function which(name) {
-  if (path.isAbsolute(name)) return name;
-  const file = WIN && !path.extname(name) ? name + '.exe' : name;
-  for (const dir of pathDirs()) {
-    const full = path.join(dir, file);
-    try {
-      if (fs.statSync(full).isFile()) { if (!WIN) fs.accessSync(full, fs.constants.X_OK); return full; }
-    } catch { }
+// A path that reaches a network share or a device through a symbolic link (or junction) on its way: a link to
+// \\host\share, \\?\… or \\.\…. Opening it would reach the network, which on Windows sends the user's credentials,
+// and a repository can hold such a link. The links are read (readlink), never followed; the folders of top (the
+// tree's root, trusted) and above are not looked at. A loop of links counts as remote.
+function remoteLink(p, top = '') {
+  const trusted = top && path.resolve(top).toLowerCase() + path.sep;
+  let cur = path.resolve(p);
+  for (let hops = 0; hops <= 32; hops++) {
+    const { root } = path.parse(cur), parts = cur.slice(root.length).split(path.sep).filter(Boolean);
+    let next = null;
+    for (let i = 0, at = root; i < parts.length && !next; i++) {
+      at = path.join(at, parts[i]);
+      if (trusted && trusted.startsWith(at.toLowerCase() + path.sep)) continue;
+      let target;
+      try { target = fs.lstatSync(at).isSymbolicLink() ? fs.readlinkSync(at) : null; } catch { return false; }
+      if (target === null) continue;
+      if (/^[\\/]{2}/.test(target)) return true;
+      next = path.resolve(path.dirname(at), target, ...parts.slice(i + 1));
+    }
+    if (!next) return false;
+    cur = next;
   }
-  return null;
+  return true;
 }
+
+// The labels of the plugin's own panes (herdr-plugin.toml), told apart from the terminals and agents.
+const OWN_PANES = new Set(['Explorer', 'Preview', 'Source Control', 'Changes', 'Editor', 'Search']);
 
 // Command line split at spaces outside quotes: "code --wait" → ['code', '--wait'].
 const words = s => (String(s).match(/"[^"]*"|'[^']*'|\S+/g) || []).map(w => w.replace(/^(["'])(.*)\1$/, '$2'));
@@ -117,9 +129,10 @@ function newer(a, b) {
 }
 
 // Pane width remembered by the explorer (width file in the state folder), 32 columns by default.
+const DEFAULT_WIDTH = 32;
 const WIDTH_FILE = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'width');
 function readWidth() {
-  try { return Math.max(10, parseInt(fs.readFileSync(WIDTH_FILE, 'utf8'), 10)) || 32; } catch { return 32; }
+  try { return Math.max(10, parseInt(fs.readFileSync(WIDTH_FILE, 'utf8'), 10)) || DEFAULT_WIDTH; } catch { return DEFAULT_WIDTH; }
 }
 
 // User settings, shared by the explorer, the preview and the hook (settings.json in the state folder).
@@ -132,10 +145,13 @@ const DEFAULTS = {
   side: 'left',       // explorer docked to the left or the right of the tab
   autoOpen: true,     // open the explorer in every new tab that has a single pane
   follow: false,      // reveal the folder of the terminal next to the explorer when it changes
+  glyphs: 'nerd',     // icon set: 'nerd' (Nerd Font glyphs), 'emoji', 'unicode' or 'ascii', for terminals without a Nerd Font
   icons: '',          // explorer icon theme: { id, label, file } of a VS Code one; empty: Nerd Font icons
   wrap: false,        // preview: wrap long lines
   lineNumbers: true,  // preview: line number gutter
-  diffLayout: '',     // diffs 'inline' or 'split' (side by side); empty: side by side when the pane is wide enough
+  images: 'auto',     // preview images: 'auto' (pixels when the terminal has the Kitty graphics protocol, else half
+                      // blocks), 'blocks' (half blocks), 'pixels' (pixels without waiting for the terminal's answer)
+  diffLayout: '',     // diffs 'inline' or 'split' (side by side), or { narrow, wide } (diff.js); empty: by the pane's width
   updateCheck: true,  // check GitHub once a day for a newer release
   scmTree: false,     // source control: the changes as a folder tree rather than a list
   scmGraphAll: true,  // source control history: every branch, or only the current one
@@ -169,8 +185,8 @@ function writePaneState(pane, data) {
   } catch { try { fs.unlinkSync(tmp); } catch { } }
 }
 
-// Key bindings, editable by the user: keys.json in the plugin config folder, one object per pane, mapping an action
-// to its keys ({ "explorer": { "newFile": ["a"] } }). An action left out keeps its default keys.
+// Key bindings, editable by the user: keys.json in the plugin config folder, one object per pane (only the
+// explorer reads its own so far), mapping an action to its keys ({ "explorer": { "newFile": ["a"] } }). An action left out keeps its default keys.
 const KEYS_FILE = process.env.HERDR_PLUGIN_CONFIG_DIR && path.join(process.env.HERDR_PLUGIN_CONFIG_DIR, 'keys.json');
 
 // Key name → action. A key the user gives to an action is taken from the action that had it by default.
@@ -224,6 +240,6 @@ function saveKeys(all) {
 }
 
 module.exports = {
-  WIN, PLUGIN, pathDirs, which, words, run, result, HERDR, GIT, gitEnv, gitOperation, version, newer, WIDTH_FILE, readWidth,
+  WIN, PLUGIN, pathDirs, which, remoteLink, OWN_PANES, words, run, result, HERDR, GIT, gitEnv, gitOperation, version, newer, DEFAULT_WIDTH, WIDTH_FILE, readWidth,
   SETTINGS_FILE, readSettings, writeSettings, PANES_DIR, paneFile, readPaneState, writePaneState, KEYS_FILE, readKeys, keysTemplate, writeKeys,
 };

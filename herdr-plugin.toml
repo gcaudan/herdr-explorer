@@ -67,3 +67,9 @@ id = "scm"
 title = "Source control"
 contexts = ["tab"]
 command = ["node", "src/hook.js", "--scm"]
+
+[[actions]]
+id = "peek"
+title = "Preview the last changed file"
+contexts = ["tab"]
+command = ["node", "src/peek.js", "--last"]

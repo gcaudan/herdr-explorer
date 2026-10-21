@@ -5,11 +5,12 @@
 const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
-const ui = require('./ui');
-const actions = require('./actions');
-const { WIN, run, GIT, gitEnv } = require('./exec');
+const ui = require('./core/ui');
+const actions = require('./core/actions');
+const { WIN, run, GIT, gitEnv, readSettings, remoteLink } = require('./core/exec');
 
 const { C, fg, bg, line, textWidth, ellipsis, Field } = ui;
+ui.useGlyphs(readSettings().glyphs);
 const ROOT = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());
 const PANE = process.env.EXPLORER_PANE;
 const SAVE = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'search.json');
@@ -49,7 +50,9 @@ function save() {
   const f = state.fields, o = state.opts;
   const data = { files: f.files.value, content: f.content.value, include: f.include.value, exclude: f.exclude.value,
     case: o.case, word: o.word, regex: o.regex };
-  try { fs.writeFileSync(SAVE, JSON.stringify(data)); } catch { }
+  // Written to a temporary file then renamed, so that another popup never reads it half-written.
+  const tmp = `${SAVE}.${process.pid}`;
+  try { fs.writeFileSync(tmp, JSON.stringify(data)); fs.renameSync(tmp, SAVE); } catch { try { fs.unlinkSync(tmp); } catch { } }
 }
 
 // --- file list
@@ -85,7 +88,11 @@ async function walk(hidden) {
       for (const e of entries) {
         const r = rel ? `${rel}/${e.name}` : e.name;
         let dir = e.isDirectory();
-        if (e.isSymbolicLink()) try { dir = (await fsp.stat(path.join(abs, e.name))).isDirectory(); } catch { continue; }
+        // A link to a network share is left out, never followed (see remoteLink).
+        if (e.isSymbolicLink()) try {
+          if (remoteLink(path.join(abs, e.name), ROOT)) continue;
+          dir = (await fsp.stat(path.join(abs, e.name))).isDirectory();
+        } catch { continue; }
         if (!dir) { if (files.length < MAX_FILES) files.push(r); continue; }
         if (e.name === '.git' || (!hidden && (e.name === 'node_modules' || e.name.startsWith('.')))) continue;
         queue.push(r);
@@ -257,9 +264,11 @@ function matcher() {
 }
 
 // Text of a regular file, or [null, reason] when not searchable: too large or binary (NUL in the first 8 kB).
-// Stat first: opening a FIFO would block.
+// Stat first: opening a FIFO would block. A file is read only when no link on its way below the root leads to a
+// network share: a crafted index could list a file under a linked folder.
 async function readText(abs) {
   try {
+    if (remoteLink(abs, ROOT)) return [null, 'link to a network share'];
     const st = await fsp.stat(abs);
     if (!st.isFile()) return [null, 'not a file'];
     if (st.size > MAX_SIZE) return [null, 'file too large'];
@@ -519,7 +528,7 @@ function render() {
   chips.push(chip('hidden', state.opts.hidden, toggle('hidden')), [' ', '']);
   // Go to file: the count on the right of the field.
   const count = !content && state.files ? [`${state.fields.files.value ? `${state.results.length}${state.results.length >= MAX_ROWS ? '+' : ''} of ` : ''}${state.files.length}  `, DIM] : ['', ''];
-  const prompt = [` ${ui.SEARCH} `, DIM, () => focus('query')];
+  const prompt = [` ${ui.G.search} `, DIM, () => focus('query')];
   const qw = Math.max(1, W - 3 - width(chips) - width([count]) - 1);
   const qparts = fieldParts(queryField(), qw, !content || state.focus === 'query').map(p => [...p, () => focus('query')]);
   lines.push(bar(1, [prompt, ...qparts, [' '.repeat(Math.max(0, W - 3 - width(qparts) - width(chips) - width([count]))), '', () => focus('query')],
@@ -577,7 +586,7 @@ function render() {
   }
 
   // Keys.
-  const keys = [['↵', 'open'], content ? ['ctrl+p', 'go to file'] : ['ctrl+f', 'search in files'], ['ctrl+o', 'editor'], ['ctrl+t', 'insert'], ['ctrl+y', 'copy path'],
+  const keys = [['↵', 'open'], content ? ['ctrl+p', 'go to file'] : ['ctrl+f', 'search in files'], ['ctrl+o', 'editor'], ['ctrl+t', 'insert'], ['ctrl+y', 'copy relative path'],
     ...(content ? [['tab', 'fields'], ['alt+←→', 'fold']] : []), ['esc', 'close'], ['f1', 'keys']];
   while (lines.length < H - 1) lines.push(line([], W));
   lines.length = H - 1;
@@ -592,7 +601,7 @@ const HELP = [
   ['Results', [['↑↓', 'select'], ['ctrl+n', 'next'], ['ctrl+k', 'previous'], ['pgup pgdn', 'page'], ['ctrl+home', 'first'],
     ['ctrl+end', 'last'], ['alt+← →', 'fold, unfold a file']]],
   ['Open', [['⏎', 'in the preview'], ['ctrl+o', 'in the editor'], ['alt+⏎', 'in the editor'], ['ctrl+t', 'insert in terminal'],
-    ['ctrl+y', 'copy the path']]],
+    ['ctrl+y', 'copy the relative path']]],
   ['Search', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['tab', 'next field'], ['alt+c', 'match case'],
     ['alt+w', 'whole word'], ['alt+r', 'regular expression'], ['alt+h', 'hidden files']]],
   ['Pane', [['f1', 'keys'], ['esc', 'close']]],

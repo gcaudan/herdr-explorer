@@ -8,10 +8,16 @@ const https = require('https');
 const { execFile } = require('child_process');
 const { WIN, GIT, HERDR, PLUGIN, run, result, gitOperation, newer, readSettings } = require('./exec');
 
-const DIR = path.join(__dirname, '..'); // the plugin's folder, a git clone
+const DIR = path.join(__dirname, '..', '..'); // the plugin's folder, a git clone
 const HERDR_UPDATE = `herdr plugin update ${PLUGIN}`;
 const MANIFEST = path.join(DIR, 'herdr-plugin.toml');
-const URL = 'https://api.github.com/repos/gcaudan/herdr-explorer/releases/latest';
+// The GitHub repository the releases come from: the clone's origin when it is on GitHub (a fork follows its own
+// releases), else the plugin's.
+const REPO = 'gcaudan/herdr-explorer';
+function repoOf(url) {
+  const m = /^(?:https:\/\/|ssh:\/\/git@|git@)github\.com[:/]([\w.-]+)\/([\w.-]+?)(?:\.git)?\/?$/.exec(String(url).trim());
+  return m && !/^\.+$/.test(m[1]) && !/^\.+$/.test(m[2]) ? `${m[1]}/${m[2]}` : null;
+}
 const DAY = 24 * 60 * 60 * 1000;
 
 function readVersion() {
@@ -35,8 +41,8 @@ function write(data) {
 }
 
 // The version of the latest GitHub release, or null (offline, timeout, no release).
-const latestRelease = () => new Promise(resolve => {
-  const req = https.get(URL, {
+const latestRelease = repo => new Promise(resolve => {
+  const req = https.get(`https://api.github.com/repos/${repo}/releases/latest`, {
     headers: { 'User-Agent': 'herdr-explorer', Accept: 'application/vnd.github+json' }, timeout: 3000,
   }, res => {
     if (res.statusCode !== 200) { res.resume(); return resolve(null); }
@@ -59,7 +65,8 @@ async function check() {
   if (!FILE || readSettings().updateCheck === false) return;
   const saved = read();
   if (Date.now() - (saved.checkedAt || 0) < DAY) return;
-  const latest = await latestRelease();
+  const origin = await git(['config', '--get', 'remote.origin.url']);
+  const latest = await latestRelease((origin.ok && repoOf(origin.out)) || REPO);
   write({ ...read(), checkedAt: Date.now(), ...(latest ? { latest } : {}) });
 }
 
@@ -117,7 +124,7 @@ function finished() {
   if (finish) write(rest);
 }
 
-// Fast-forward of the clone to its remote main branch: { ok, message, retry }. retry: the pull itself failed, and
+// Fast-forward of the clone to its remote default branch: { ok, message, retry }. retry: the pull itself failed, and
 // running it in a terminal may succeed (a passphrase to type, the network back); a refusal has none. The installer is
 // not run again: it unlinks and links the plugin, with an unknown effect on the panes running; the user does it when
 // it changed.
@@ -130,8 +137,11 @@ async function pull() {
   if (!GIT) return { ok: false, message: 'git not found in PATH' };
   const top = await git(['rev-parse', '--show-toplevel']);
   if (!top.ok || !samePath(real(top.out.trim()), real(DIR))) return { ok: false, message: 'Not a git clone' };
+  // The branch origin points at (origin/HEAD, set by the clone), main when unknown.
   const head = await git(['rev-parse', '--abbrev-ref', 'HEAD']);
-  if (head.out.trim() !== 'main') return { ok: false, message: 'Not on main' };
+  const def = await git(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']);
+  const branch = (def.ok && def.out.trim().replace(/^origin\//, '')) || 'main';
+  if (head.out.trim() !== branch) return { ok: false, message: `Not on ${branch}` };
   const gitdir = await git(['rev-parse', '--absolute-git-dir']);
   if (!gitdir.ok || gitOperation(gitdir.out.trim())) return { ok: false, message: 'A git operation is in progress' };
   const status = await git(['status', '--porcelain', '--untracked-files=no']);
@@ -177,5 +187,5 @@ function watch(idle, restart) {
 }
 
 module.exports = {
-  DIR, HERDR_UPDATE, CURRENT, FILE, INSTALLER, readVersion, check, available, managed, install, finishing, finished, watch,
+  repoOf, DIR, HERDR_UPDATE, CURRENT, FILE, INSTALLER, readVersion, check, available, managed, install, finishing, finished, watch,
 };
