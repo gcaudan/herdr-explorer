@@ -98,7 +98,7 @@ function target(arg) {
 (async () => {
   const args = process.argv.slice(2);
   // --diff: the file's git changes, at the places, rather than the file.
-  const diff = args[0] === '--diff' && args.length > 1;
+  const diff = args[0] === '--diff';
   if (diff) args.shift();
   if (args.length !== 1 || args[0] === '--help' || args[0] === '-h') fail('usage: peek.js [--diff] <file>[:<line>[-<line>][:<col>-<col>],…] | [--diff] --last', 2);
   const [abs, marks] = args[0] === '--last' ? [(await last())[0], []] : target(args[0]);
