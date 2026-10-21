@@ -70,13 +70,14 @@ if (theme ? theme.entry.file !== settings.icons.file : settings.icons && setting
   settings.icons = theme ? theme.entry : '';
   writeSettings({ ...readSettings(), icons: settings.icons });
 }
-// The icon theme or icon set chosen in another explorer, the update check or the opening in new tabs turned on or off
-// there, and the preview and diff settings changed in their panes (shown by an open settings view).
+// The icon theme or icon set chosen in another explorer, the update check, the opening in new tabs, what Enter opens,
+// the editor and the preview following the selection changed there, and the preview and diff settings changed in
+// their panes (shown by an open settings view). Hidden and ignored files and Follow terminal stay this explorer's.
 if (SETTINGS_FILE) fs.watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
   // A file read while being written is skipped, rather than taken for the default settings.
   let saved, chosen;
   try { saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')); chosen = saved.icons || ''; } catch { return; }
-  for (const name of ['updateCheck', 'autoOpen', 'wrap', 'lineNumbers', 'images', 'diffLayout', 'glyphs']) {
+  for (const name of ['updateCheck', 'autoOpen', 'open', 'editor', 'singleClick', 'wrap', 'lineNumbers', 'images', 'diffLayout', 'glyphs']) {
     if (saved[name] === undefined || saved[name] === settings[name]) continue;
     settings[name] = saved[name];
     if (name === 'glyphs') ui.useGlyphs(saved.glyphs);
