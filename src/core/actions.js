@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const { WIN, PLUGIN, pathDirs, which, remoteLink, OWN_PANES: OWN, words, run, result, HERDR, GIT, gitEnv, readSettings } = require('./exec');
+const { WIN, PLUGIN, pathDirs, which, remoteLink, writeAtomic, OWN_PANES: OWN, words, run, result, HERDR, GIT, gitEnv, readSettings } = require('./exec');
 
 const MAC = process.platform === 'darwin';
 
@@ -300,9 +300,8 @@ function resizingElsewhere(pane) {
 }
 function markResizing(moved) {
   if (!RESIZING) return;
-  // Written to a temporary file then renamed, as the other panes read it at any time.
-  const tmp = `${RESIZING}.${process.pid}`;
-  try { fs.writeFileSync(tmp, JSON.stringify({ moved, at: Date.now() })); fs.renameSync(tmp, RESIZING); } catch { try { fs.unlinkSync(tmp); } catch { } }
+  // Whole or not at all, as the other panes read it at any time.
+  writeAtomic(RESIZING, JSON.stringify({ moved, at: Date.now() }));
 }
 
 // The widths (borders included) of the other panes of the layout that keep theirs.

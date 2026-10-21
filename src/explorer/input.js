@@ -18,18 +18,10 @@ const ON_DISK = new Set(['rename', 'delete', 'edit', 'openInEditor', 'openInApp'
 module.exports = ctx => {
   const { state, settings, out, WIDTH, PANE, git, scrollbar, render, runAction, flash, buildRows, reveal, revealRel, select,
     toggle, close, schedule, openFile, openMenu, openHelp, openSettings, setSetting, newEntry, renameEntry, deleteEntry,
-    setRoot, showChanged, viewChanges, nextChange, widen, absOf, parentOf, settingsPage, menuRows, bodyHeight, showUpdate,
+    setRoot, showChanged, viewChanges, nextChange, widen, absOf, parentOf, settingsPage, bodyHeight, showUpdate,
     finishUpdate, askUpdate } = ctx;
 
   // --- action menu
-
-  function moveMenu(dir) {
-    const m = state.menu;
-    do m.sel = (m.sel + dir + m.items.length) % m.items.length; while (!m.items[m.sel]);
-    const n = menuRows();
-    if (m.sel < m.off) m.off = m.sel;
-    if (m.sel >= m.off + n) m.off = m.sel - n + 1;
-  }
 
   function closeMenu() {
     state.menu = null;
@@ -37,16 +29,17 @@ module.exports = ctx => {
 
   // Escape always closes the menu, whatever the bindings; the key of an item runs it.
   function menuKey(k) {
-    const m = state.menu, action = ctx.keys.get(k);
+    const m = state.menu, action = ctx.keys.get(k), H = out.rows || 24;
     if (k === 'escape') closeMenu();
-    else if (action === 'up') moveMenu(-1);
-    else if (action === 'down') moveMenu(1);
-    else if (action === 'open' || action === 'expand') return runAction(m.items[m.sel][1]);
+    else if (action === 'up') m.move(-1, H);
+    else if (action === 'down') m.move(1, H);
+    else if (action === 'open') return runAction(m.items[m.sel].run);
     else {
       // The key shown beside an item runs it (Settings… on ,); the others close the menu.
-      const item = action && m.items.find(it => it && it[2] === action);
-      if (item) return runAction(item[1]);
+      const item = action && m.items.find(it => it && it.action === action);
+      if (item) return runAction(item.run);
       if (['close', 'collapse', 'menu', 'settings'].includes(action)) closeMenu();
+      // expand (right, l) does nothing: an arrow never runs an action.
     }
     render();
   }
@@ -196,7 +189,7 @@ module.exports = ctx => {
       if (answer === 'yes') return runAction(q.yes);
       return render();
     }
-    if (m.wheel && state.menu) { moveMenu(m.wheel); return render(); }
+    if (m.wheel && state.menu) { state.menu.move(m.wheel, H); return render(); }
     if (state.settings) return settingsPage().mouse(m);
     if (state.help) { if (!ui.helpMouse(m, state.help)) state.help = null; return render(); }
     if (m.wheel) {
@@ -210,11 +203,9 @@ module.exports = ctx => {
     if (state.prompt) { state.prompt = null; return render(); }
     if (state.menu) {
       // Click in the menu: action; elsewhere: close the menu (a right-click reopens it on the new row).
-      const k = y - 2 - state.menu.at;
-      if (btn === 0 && k >= 0 && k < menuRows()) {
-        const item = state.menu.items[state.menu.off + k];
-        return item ? runAction(item[1]) : undefined;
-      }
+      const hit = btn === 0 ? state.menu.mouse(m, H) : 'close';
+      if (hit && hit.run) return runAction(hit.run);
+      if (hit !== 'close') return;
       closeMenu();
       if (btn === 0) return render();
     }

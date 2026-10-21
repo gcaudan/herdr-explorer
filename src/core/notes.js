@@ -5,6 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const actions = require('./actions');
+const { realPath, writeAtomic } = require('./exec');
 
 // The kinds a note can have, chosen with Tab while it is typed; '' for a plain remark.
 const KINDS = ['', 'fix', 'question', 'nit', 'verify'];
@@ -26,11 +27,7 @@ function write(tab, list) {
   const file = fileOf(tab);
   if (!file) return false;
   if (!list.length) { try { fs.unlinkSync(file); } catch { } return true; }
-  const tmp = `${file}.${process.pid}`;
-  try { fs.writeFileSync(tmp, JSON.stringify(list)); fs.renameSync(tmp, file); return true; } catch {
-    try { fs.unlinkSync(tmp); } catch { }
-    return false;
-  }
+  return writeAtomic(file, JSON.stringify(list));
 }
 
 // A note's text keeps no control character, which could submit the prompt once typed.
@@ -38,9 +35,7 @@ const clean = text => String(text).replace(/[\x00-\x1f\x7f-\x9f]/g, ' ').trim();
 
 // A file as notes name it: its real path, so that the preview (from the explorer's folder, maybe through a symbolic
 // link such as /home → /var/home) and the diff (from the repository's real folder) agree.
-function real(file) {
-  try { return fs.realpathSync(file); } catch { const up = path.dirname(file); return up === file ? file : path.join(real(up), path.basename(file)); }
-}
+const real = realPath;
 
 function add(tab, { file, from = 0, to = from, kind = '', text }) {
   text = clean(text);
@@ -59,9 +54,10 @@ function undo(tab) {
   return write(tab, list) ? `Note removed: ${last.text}` : 'Cannot remove the note';
 }
 
-// Where a note points, relative to a folder: src/app.js:12, src/app.js:12-14, or the file alone.
+// Where a note points, relative to a folder: src/app.js:12, src/app.js:12-14, or the file alone. The folder is
+// resolved as the note's file is, so that one reached through a symbolic link still gives a relative path.
 function where(n, dir) {
-  const ref = actions.relativeTo(dir, n.file);
+  const ref = actions.relativeTo(dir && real(dir), n.file);
   return n.from ? `${ref}:${n.from}${n.to > n.from ? `-${n.to}` : ''}` : ref;
 }
 

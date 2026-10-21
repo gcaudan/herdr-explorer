@@ -35,6 +35,35 @@ function remoteLink(p, top = '') {
   return true;
 }
 
+// A path with its symbolic links resolved, as far as it exists; one that reaches a network share (remoteLink) is
+// left as given, since resolving it would reach the network.
+function realPath(p) {
+  if (remoteLink(p)) return path.resolve(p);
+  const real = q => {
+    try { return fs.realpathSync(q); } catch { const up = path.dirname(q); return up === q ? q : path.join(real(up), path.basename(q)); }
+  };
+  return real(p);
+}
+
+// [key, value] pairs added to env as git config (GIT_CONFIG_KEY_n, GIT_CONFIG_VALUE_n), after those already there.
+function addConfig(env, pairs) {
+  let n = parseInt(env.GIT_CONFIG_COUNT, 10) || 0;
+  for (const [key, value] of pairs) { env[`GIT_CONFIG_KEY_${n}`] = key; env[`GIT_CONFIG_VALUE_${n++}`] = value; }
+  env.GIT_CONFIG_COUNT = String(n);
+  return env;
+}
+
+// A file written to a temporary file then renamed, its folder made if needed, so that another pane never reads it
+// half-written. Returns whether it was written.
+function writeAtomic(file, text) {
+  const tmp = `${file}.${process.pid}`;
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(tmp, text); fs.renameSync(tmp, file);
+    return true;
+  } catch { try { fs.unlinkSync(tmp); } catch { } return false; }
+}
+
 // The labels of the plugin's own panes (herdr-plugin.toml), told apart from the terminals and agents.
 const OWN_PANES = new Set(['Explorer', 'Preview', 'Source Control', 'Changes', 'Editor', 'Search']);
 
@@ -92,12 +121,7 @@ async function gitEnv(cwd) {
   // GIT_NO_LAZY_FETCH: in a partial clone, a missing object would make git fetch it from the promisor remote,
   // running that remote's upload-pack or ssh command, even for git status.
   const env = { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_NO_LAZY_FETCH: '1' };
-  let n = parseInt(env.GIT_CONFIG_COUNT, 10) || 0;
-  for (const [key, value] of config) {
-    env[`GIT_CONFIG_KEY_${n}`] = key;
-    env[`GIT_CONFIG_VALUE_${n++}`] = value;
-  }
-  env.GIT_CONFIG_COUNT = String(n);
+  addConfig(env, config);
   // core.worktree set by the repository could point anywhere (the home folder): switch, pull or discard would write
   // there. The working tree is kept to the folder holding the repository.
   if (worktree) {
@@ -161,11 +185,8 @@ const SETTINGS_FILE = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.en
 function readSettings() {
   try { return { ...DEFAULTS, ...JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')) }; } catch { return { ...DEFAULTS }; }
 }
-// Written to a temporary file then renamed, so that another pane never reads it half-written.
 function writeSettings(settings) {
-  if (!SETTINGS_FILE) return;
-  const tmp = `${SETTINGS_FILE}.${process.pid}`;
-  try { fs.writeFileSync(tmp, JSON.stringify(settings, null, 1)); fs.renameSync(tmp, SETTINGS_FILE); } catch { try { fs.unlinkSync(tmp); } catch { } }
+  if (SETTINGS_FILE) writeAtomic(SETTINGS_FILE, JSON.stringify(settings, null, 1));
 }
 
 // What each plugin pane shows, one file per pane in the state folder (panes/), since herdr does not keep it across a
@@ -177,12 +198,7 @@ function readPaneState(pane) {
 }
 function writePaneState(pane, data) {
   const file = paneFile(pane);
-  if (!file) return;
-  const tmp = `${file}.${process.pid}`;
-  try {
-    fs.mkdirSync(PANES_DIR, { recursive: true });
-    fs.writeFileSync(tmp, JSON.stringify(data)); fs.renameSync(tmp, file);
-  } catch { try { fs.unlinkSync(tmp); } catch { } }
+  if (file) writeAtomic(file, JSON.stringify(data));
 }
 
 // Key bindings, editable by the user: keys.json in the plugin config folder, one object per pane (only the
@@ -231,15 +247,10 @@ function writeKeys(pane, changes) {
 function saveKeys(all) {
   const lines = Object.entries(all).map(([p, actions]) => `  ${JSON.stringify(p)}: {\n`
     + Object.entries(actions).map(([a, k]) => `    ${JSON.stringify(a)}: ${JSON.stringify(k)}`).join(',\n') + '\n  }');
-  const tmp = `${KEYS_FILE}.${process.pid}`;
-  try {
-    fs.mkdirSync(path.dirname(KEYS_FILE), { recursive: true });
-    fs.writeFileSync(tmp, `{\n${lines.join(',\n')}\n}\n`); fs.renameSync(tmp, KEYS_FILE);
-    return true;
-  } catch { try { fs.unlinkSync(tmp); } catch { } return false; }
+  return writeAtomic(KEYS_FILE, `{\n${lines.join(',\n')}\n}\n`);
 }
 
 module.exports = {
-  WIN, PLUGIN, pathDirs, which, remoteLink, OWN_PANES, words, run, result, HERDR, GIT, gitEnv, gitOperation, version, newer, DEFAULT_WIDTH, WIDTH_FILE, readWidth,
+  WIN, PLUGIN, pathDirs, which, remoteLink, realPath, writeAtomic, addConfig, OWN_PANES, words, run, result, HERDR, GIT, gitEnv, gitOperation, version, newer, DEFAULT_WIDTH, WIDTH_FILE, readWidth,
   SETTINGS_FILE, readSettings, writeSettings, PANES_DIR, paneFile, readPaneState, writePaneState, KEYS_FILE, readKeys, keysTemplate, writeKeys,
 };

@@ -45,7 +45,7 @@ module.exports = ctx => {
     else if (state.filter) {
       lines.push(filterLine(W));
     } else if (state.changed) lines.push(changedLine(W));
-    if (state.menu) drawMenu(lines, W);
+    if (state.menu) state.menu.draw(lines, W, H);
     while (lines.length < H) lines.push(line([], W));
     lines.length = H;
     return lines;
@@ -151,28 +151,5 @@ module.exports = ctx => {
     ], W, selected ? (state.focused ? C.select : C.selectBlur) : null);
   }
 
-  // Rows of the menu that fit in the pane; a longer menu scrolls with its selection (▴ ▾ on its border).
-  const menuRows = () => Math.max(1, Math.min(state.menu.items.length, (out.rows || 24) - 2 - state.menu.at));
-
-  // The menu in a frame titled with the entry it acts on, each item with the first key of its action on the right.
-  function drawMenu(lines, W) {
-    const { items, sel, at, off, title } = state.menu;
-    const n = menuRows();
-    const keyOf = item => { const k = item[2] && keysOf(item[2])[0]; return k ? ui.keyLabel(k) : ''; };
-    const want = Math.max(textWidth(title) + 4, ...items.map(item => (item ? textWidth(item[0]) + (keyOf(item) ? textWidth(keyOf(item)) + 2 : 0) + 2 : 0)));
-    const inner = Math.min(W - 3, want);
-    const edge = fg(C.dim);
-    const border = (l, r, t, more) => line([[` ${l}${t}${'─'.repeat(Math.max(0, inner - textWidth(t) - (more ? 2 : 0)))}${more ? more + '─' : ''}${r}`, edge]], W);
-    lines[at] = border('╭', '╮', ` ${ui.ellipsis(title, Math.max(1, inner - 4))} `, off > 0 && '▴');
-    items.slice(off, off + n).forEach((item, k) => {
-      if (!item) { lines[at + 1 + k] = line([[' ├' + '─'.repeat(inner) + '┤', edge]], W); return; }
-      const key = keyOf(item), label = ui.ellipsis(item[0], Math.max(1, inner - 3 - (key ? textWidth(key) + 1 : 0)));
-      const pad = ' '.repeat(Math.max(1, inner - 2 - textWidth(label) - textWidth(key)));
-      const segs = [[` ${label}`, item[3] ? fg(C.red) : ''], [`${pad}${key} `, fg(C.dim)]];
-      lines[at + 1 + k] = ` ${edge}│\x1b[39m${line(segs, inner, off + k === sel ? C.select : C.selectBlur)}${edge}│\x1b[0m` + ' '.repeat(Math.max(0, W - inner - 3));
-    });
-    lines[at + n + 1] = border('╰', '╯', '', off + n < items.length && '▾');
-  }
-
-  return { chevron, bodyHeight, treeView, promptLine, showUpdate, menuRows };
+  return { chevron, bodyHeight, treeView, promptLine, showUpdate };
 };

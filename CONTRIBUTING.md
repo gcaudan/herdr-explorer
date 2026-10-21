@@ -118,12 +118,13 @@ them on every pull request and every push to `main`, on Linux, macOS and Windows
 | --- | --- |
 | `syntax.test.js` | every script of the root, `src/` and its folders passes `node --check` |
 | `docs.test.js` | relative links and `#anchors` of `README.md`, `SECURITY.md`, `CONTRIBUTING.md` and `docs/*.md` |
-| `ui.test.js` | terminal width of text (emoji, flags, wide characters) and the segment helpers |
+| `ui.test.js` | terminal width of text (emoji, flags, wide characters), the segment helpers and the menus |
 | `editor.test.js` | in-place editing (`src/core/buffer.js`) |
 | `explorer-tree.test.js` | the explorer's rows, their order and the filter (`src/explorer/tree.js`) |
 | `graph.test.js` | the lanes of the history graph |
 | `icons.test.js` | icon widths in each icon set |
 | `markdown-images.test.js` | images of rendered Markdown in pixels |
+| `places.test.js` | the places of `peek.js`'s argument (`src/core/places.js`) |
 | `preview-tabs.test.js` | the preview's tabs |
 | `remote-link.test.js` | links to a network share found without being followed, and refused by the file actions (skipped where links cannot be created, such as Windows without developer mode) |
 | `review.test.js` | review notes and the lines of a diff they point at |

@@ -93,17 +93,31 @@ function nextAt(text, i) {
   }
   return j;
 }
-// Where the character before the one at i starts: found from the start of the line, where the boundaries are known.
+// A character's start at or before i - 1 (0 at most), from which the boundaries are known: one that joins nothing
+// before it, and no flag half, whose pairing depends on the halves before.
+function safeStart(text, i) {
+  for (let k = Math.min(i, text.length) - 1; k > 0; k--) {
+    const c = text.charCodeAt(k);
+    if (c >= 0xdc00 && c <= 0xdfff) continue; // the second half of a surrogate pair
+    const cp = text.codePointAt(k);
+    if (!JOINS.test(String.fromCodePoint(cp)) && !flagPart(cp) && text.charCodeAt(k - 1) !== 0x200d) return k;
+  }
+  return 0;
+}
+// Where the character before the one at i starts: found from a known boundary, not from the start of the line, so
+// that a long line (minified code) stays fast.
 function prevAt(text, i) {
-  let p = 0;
-  for (let q = nextAt(text, 0); q < i; q = nextAt(text, q)) p = q;
+  const k = safeStart(text, i);
+  let p = k;
+  for (let q = nextAt(text, k); q < i; q = nextAt(text, q)) p = q;
   return Math.min(p, i);
 }
 // The start of the character holding i (i itself when it is one).
 function snap(text, i) {
+  if (i >= text.length) return text.length;
   let p = 0;
-  for (let q = 0; q <= i && q < text.length; q = nextAt(text, q)) p = q;
-  return i >= text.length ? text.length : p;
+  for (let q = safeStart(text, i + 1); q <= i; q = nextAt(text, q)) p = q;
+  return p;
 }
 
 // A line as the screen shows it: tabs as spaces to the next stop, other control characters as ? (one column).

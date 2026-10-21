@@ -12,7 +12,7 @@ const ui = require('./core/ui');
 const update = require('./core/update');
 const Tree = require('./explorer/tree');
 const { run, result, HERDR, GIT: GIT_BIN, gitEnv, DEFAULT_WIDTH, WIDTH_FILE, readWidth, readSettings, writeSettings, KEYS_FILE, readKeys,
-  writePaneState, SETTINGS_FILE, remoteLink } = require('./core/exec');
+  writePaneState, SETTINGS_FILE, remoteLink, writeAtomic } = require('./core/exec');
 
 const HOME = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());
 // the space folder, or another one chosen with Set as root (EXPLORER_TREE: the one it had before a herdr restart)
@@ -99,7 +99,7 @@ if (update.FILE) fs.watchFile(update.FILE, { interval: 1000 }, () => { latest = 
 
 const state = {
   expanded: new Set(['']), rows: [], cursor: 0, top: 0, selected: null, focused: true,
-  menu: null,      // { items: [[label, action] | null], at: screen row of the menu top, sel }
+  menu: null,      // the entry's actions (ui.Menu) while open
   help: null,      // { top, find }: the key help over the pane (ui.help)
   settings: null,  // { sel, top, find, icons }: the settings view in place of the tree, its selected row and first row
                    // shown, and the page opened from it: icon themes ({ list, sel, top, loaded }) or key bindings
@@ -166,8 +166,7 @@ function save() {
   let all = {};
   try { all = JSON.parse(fs.readFileSync(SAVE, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') return; }
   all[ROOT] = [...state.expanded].filter(Boolean);
-  const tmp = `${SAVE}.${process.pid}`;
-  try { fs.writeFileSync(tmp, JSON.stringify(all, null, 1)); fs.renameSync(tmp, SAVE); } catch { try { fs.unlinkSync(tmp); } catch { } }
+  writeAtomic(SAVE, JSON.stringify(all, null, 1));
 }
 
 // Another folder as the root of the tree: from the menu (Set as root), or its parent (Backspace).
@@ -555,7 +554,10 @@ function openMenu(i) {
   const H = out.rows || 24, y = r ? i - state.top + 1 : Math.min(H - 1, state.rows.length - state.top + 1);
   const h = Math.min(items.length, H - 2) + 2;
   const title = r ? r.name + (r.dir ? '/' : '') : `${path.basename(ROOT)}/`;
-  state.menu = { items, title, sel: 0, off: 0, at: y + 1 + h <= H ? y + 1 : Math.max(0, Math.min(y - h, H - h)) };
+  const at = y + 1 + h <= H ? y + 1 : Math.max(0, Math.min(y - h, H - h));
+  // Each item with the first key of its action on the right.
+  const keyOf = action => { const k = action && keysOf(action)[0]; return k ? ui.keyLabel(k) : ''; };
+  state.menu = new ui.Menu({ title, at, left: 2, items: items.map(it => it && { label: it[0], run: it[1], action: it[2], key: keyOf(it[2]), danger: it[3] }) });
   render();
 }
 

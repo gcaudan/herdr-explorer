@@ -101,3 +101,21 @@ test('a menu item with a key and no value keeps its whole label', () => {
   new ui.Menu({ title: 'M', items: [{ label: 'Rebase onto…', key: 'R' }] }).draw(lines, 40, 24);
   assert.strictEqual(plain(lines[1]).trimEnd(), '│ Rebase onto…  R  │');
 });
+
+test('a menu from a left column keeps what is left of it', () => {
+  const plain = s => s.replace(/\x1b\[[0-9;]*m/g, '');
+  const lines = ['', 'xyz', 'xyz', 'xyz'];
+  const menu = new ui.Menu({ title: 'M', items: [{ label: 'Delete…', key: 'del', danger: true, run: () => 'd' }], left: 2 });
+  menu.draw(lines, 30, 24);
+  assert.deepStrictEqual(lines.slice(0, 3).map(l => plain(l).trimEnd()), [' ╭ M ────────────╮', 'x│ Delete…  del  │', 'x╰───────────────╯']);
+  assert.strictEqual(menu.mouse({ press: true, button: 0, x: 4, y: 2 }, 24).run(), 'd');
+  assert.strictEqual(menu.mouse({ press: true, button: 0, x: 20, y: 2 }, 24), 'close');
+});
+
+test('arrows change an option of a menu, never run an action', () => {
+  const menu = new ui.Menu({ title: 'M', items: [{ label: 'Push', key: 'P', run: () => 'push' }, { label: 'Wrap', value: ui.onOff(true), run: () => 'wrap' }] });
+  assert.strictEqual(menu.key('right', 24), null);
+  assert.strictEqual(menu.key('enter', 24).run(), 'push');
+  menu.move(1, 24);
+  assert.strictEqual(menu.key('left', 24).run(), 'wrap');
+});
