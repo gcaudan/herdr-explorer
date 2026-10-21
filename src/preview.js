@@ -1433,6 +1433,8 @@ function key(k) {
   }
   const page = ui.size().H - 3;
   // The key help (ui.helpKey): scrolls, finds with /, closes with esc, q, ? or f1.
+  // While editing, ctrl+c (copy there) only closes the help, never the pane.
+  if (state.help && state.edit && k === 'ctrl+c') { state.help = null; return render(); }
   if (state.help && k !== 'ctrl+c') { if (!ui.helpKey(k, state.help)) state.help = null; return render(); }
   switch (k) {
     case '?': case 'f1': state.help = { top: 0, find: null }; return render();
