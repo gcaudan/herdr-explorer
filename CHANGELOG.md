@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/gcaudan/herdr-explorer/compare/v0.6.0...v0.7.0) (2026-10-21)
+
+
+### Features
+
+* add review notes, preview tabs, in-place editing and git operations ([#21](https://github.com/gcaudan/herdr-explorer/issues/21)) ([fcbc8ff](https://github.com/gcaudan/herdr-explorer/commit/fcbc8ff0d9cd8c92b2c1a3e848c60c51e2698123))
+
 ## [0.6.0](https://github.com/gcaudan/herdr-explorer/compare/v0.5.1...v0.6.0) (2026-10-16)
 
 
