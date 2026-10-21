@@ -7,7 +7,7 @@ const fsp = fs.promises;
 const path = require('path');
 const ui = require('./core/ui');
 const actions = require('./core/actions');
-const { WIN, run, GIT, gitEnv, readSettings } = require('./core/exec');
+const { WIN, run, GIT, gitEnv, readSettings, remoteLink } = require('./core/exec');
 
 const { C, fg, bg, line, textWidth, ellipsis, Field } = ui;
 ui.useGlyphs(readSettings().glyphs);
@@ -86,7 +86,11 @@ async function walk(hidden) {
       for (const e of entries) {
         const r = rel ? `${rel}/${e.name}` : e.name;
         let dir = e.isDirectory();
-        if (e.isSymbolicLink()) try { dir = (await fsp.stat(path.join(abs, e.name))).isDirectory(); } catch { continue; }
+        // A link to a network share is left out, never followed (see remoteLink).
+        if (e.isSymbolicLink()) try {
+          if (remoteLink(path.join(abs, e.name), ROOT)) continue;
+          dir = (await fsp.stat(path.join(abs, e.name))).isDirectory();
+        } catch { continue; }
         if (!dir) { if (files.length < MAX_FILES) files.push(r); continue; }
         if (e.name === '.git' || (!hidden && (e.name === 'node_modules' || e.name.startsWith('.')))) continue;
         queue.push(r);
@@ -258,9 +262,11 @@ function matcher() {
 }
 
 // Text of a regular file, or [null, reason] when not searchable: too large or binary (NUL in the first 8 kB).
-// Stat first: opening a FIFO would block.
+// Stat first: opening a FIFO would block. A link is read only when it does not lead to a network share (git lists
+// links, never the files behind a linked folder, so the file itself is the only link on its way below the root).
 async function readText(abs) {
   try {
+    if ((await fsp.lstat(abs)).isSymbolicLink() && remoteLink(abs, ROOT)) return [null, 'link to a network share'];
     const st = await fsp.stat(abs);
     if (!st.isFile()) return [null, 'not a file'];
     if (st.size > MAX_SIZE) return [null, 'file too large'];

@@ -195,6 +195,11 @@ Files are untrusted input:
 
 - Programs are resolved with `.exe`, never from the working directory, and the hooks path is a folder inside the
   plugin rather than `/dev/null`.
+- A symbolic link to a network share (`\\host\share`, or a `\\?\` or `\\.\` path), which a repository checked out with
+  `core.symlinks=true` can hold, is never followed: opening it would send your credentials to that host. The links on
+  the way are read without being opened; such an entry shows as a plain file in the tree, is left out of the search
+  and of `peek`, and the preview refuses it, Markdown images included. The editors, *Open in app*, *Reveal* and
+  *Duplicate* refuse it too; *Rename* and *Delete* act on the link itself.
 - The clipboard and recycle bin calls run PowerShell with fixed scripts; the path or text goes through an environment
   variable, never inside the script.
 - VS Code is started by running `Code.exe` on its `cli.js`, as `code.cmd` does, without `cmd`. Other editor commands

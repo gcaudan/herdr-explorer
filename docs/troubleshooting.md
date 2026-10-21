@@ -136,6 +136,7 @@
 | `No config folder`, `Cannot write keys.json`     | herdr gave no config folder, or `keys.json` cannot be written (fix or delete an unreadable file) |
 | `Action failed`                                  | unexpected error in an action                                                      |
 | `File deleted`, `Folder`, `Not a regular file`, `Cannot read: <code>` | (Preview) the file is gone, is a folder, a pipe or device, or unreadable |
+| `Link to a network share: not opened` | (Preview) the file is a symbolic link (or sits behind one) to `\\host\share`, never followed, see [Security](../SECURITY.md#windows) |
 | `No preview`, `<format> W×H (… no preview)`, `(too large for preview)`, `Unknown image format (…)`, `Empty file` | (Preview) image over a limit, in an unsupported format or encoding (for example `arithmetic, no preview`), or empty. `o` opens it |
 | `install dwebp (libwebp) to see WebP images`     | (Preview) WebP needs `dwebp` on `PATH`                                             |
 | `The terminal did not answer the Kitty graphics query: the image may not show` | (Preview) pixels were asked for in a terminal that did not answer. See [Sharp images](usage.md#sharp-images) |

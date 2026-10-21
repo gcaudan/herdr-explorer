@@ -11,14 +11,14 @@ const icons = require('./core/icons');
 const ui = require('./core/ui');
 const update = require('./core/update');
 const Tree = require('./explorer/tree');
-const { run, result, HERDR, GIT: GIT_BIN, gitEnv, WIDTH_FILE, readWidth, readSettings, writeSettings, KEYS_FILE, readKeys,
+const { run, result, HERDR, GIT: GIT_BIN, gitEnv, DEFAULT_WIDTH, WIDTH_FILE, readWidth, readSettings, writeSettings, KEYS_FILE, readKeys,
   writePaneState, SETTINGS_FILE } = require('./core/exec');
 
 const HOME = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());
 // the space folder, or another one chosen with Set as root (EXPLORER_TREE: the one it had before a herdr restart)
 let ROOT = process.env.EXPLORER_TREE ? path.resolve(process.env.EXPLORER_TREE) : HOME;
 const PANE = process.env.HERDR_PANE_ID;
-const WIDTH = 32; // columns when the terminal size is unknown
+const WIDTH = DEFAULT_WIDTH; // columns when the terminal size is unknown
 const SAVE = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'expanded.json');
 const out = process.stdout;
 const settings = readSettings();

@@ -4,6 +4,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const { remoteLink } = require('../core/exec');
 
 const FILTER_BUDGET = 20000; // entries read at most while filtering
 
@@ -78,7 +79,9 @@ function create(root, settings) {
         .filter(e => e.name !== '.git')
         .map(e => {
           let dir = e.isDirectory();
-          if (e.isSymbolicLink()) try { dir = fs.statSync(path.join(root(), rel, e.name)).isDirectory(); } catch { }
+          // A link to a network share stays a plain entry, never followed (see remoteLink).
+          const full = path.join(root(), rel, e.name);
+          if (e.isSymbolicLink() && !remoteLink(full, root())) try { dir = fs.statSync(full).isDirectory(); } catch { }
           return { name: e.name, dir, rel: rel ? `${rel}/${e.name}` : e.name };
         })
         .sort(ENTRY_ORDER);

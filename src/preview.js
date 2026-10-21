@@ -14,7 +14,7 @@ const notes = require('./core/notes');
 const Tabs = require('./core/tabs');
 const buffer = require('./core/buffer');
 const update = require('./core/update');
-const { run, HERDR, readSettings, writeSettings, writePaneState, SETTINGS_FILE } = require('./core/exec');
+const { run, HERDR, readSettings, writeSettings, writePaneState, SETTINGS_FILE, remoteLink } = require('./core/exec');
 
 const PANE = process.env.HERDR_PANE_ID;
 const TAB = process.env.EXPLORER_TAB;
@@ -108,10 +108,14 @@ const scrollbar = new ui.Scrollbar(top => { state.top = top; render(); });
 
 const ext = file => path.extname(file).slice(1).toLowerCase();
 const isMarkdown = file => /^(md|markdown|mdx|mkd)$/.test(ext(file));
+// file inside dir (or dir itself), by their paths.
+const within = (file, dir) => { const r = path.relative(dir, file); return r !== '..' && !r.startsWith(`..${path.sep}`) && !path.isAbsolute(r); };
 
 function load(keepScroll) {
   const file = state.file;
   let buf;
+  // Through a link to a network share, the read would send the user's credentials (see remoteLink).
+  if (remoteLink(file, state.root && within(file, state.root) ? state.root : '')) return setError('Link to a network share: not opened');
   try {
     const stat = fs.statSync(file);
     if (stat.isDirectory()) return setError('Folder');
@@ -349,7 +353,6 @@ const noPreview = why => (state.missing ? `${why || 'No preview'}: ${state.missi
 // placed over, see placeFigures; nothing until the terminal's answer in 'auto') or with half blocks. Decoded once
 // per file, width and way of drawing (pictures).
 const pictures = new Map();
-const within = (file, dir) => { const r = path.relative(dir, file); return !r.startsWith('..') && !path.isAbsolute(r); };
 function picture(url, width) {
   if (!image || /^[a-z][\w+.-]*:/i.test(url) || url.startsWith('//')) return null;
   let rel = url.replace(/[?#].*$/, '');
@@ -366,8 +369,8 @@ function picture(url, width) {
   if (pictures.has(key)) return pictures.get(key);
   let lines = null;
   try {
-    const stat = fs.statSync(abs);
-    if (stat.isFile() && stat.size <= image.MAX_BYTES) {
+    const stat = remoteLink(abs, base) ? null : fs.statSync(abs);
+    if (stat && stat.isFile() && stat.size <= image.MAX_BYTES) {
       if (pixels) {
         const room = Math.max(1, Math.min(60, width - 2));
         const px = image.pixels(fs.readFileSync(abs), room * cw, 20 * ch);

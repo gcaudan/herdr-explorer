@@ -12,11 +12,9 @@ const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const { PLUGIN, HERDR, result, readWidth, readSettings, PANES_DIR, paneFile, readPaneState } = require('./core/exec');
+const { PLUGIN, HERDR, result, OWN_PANES: OWN, readWidth, readSettings, PANES_DIR, paneFile, readPaneState } = require('./core/exec');
 const { sideSplit } = require('./core/actions');
 const LABEL = 'Explorer';
-// The plugin's panes, by label.
-const OWN = new Set(['Explorer', 'Preview', 'Source Control', 'Changes', 'Editor', 'Search']);
 if (!HERDR) process.exit(0);
 
 // The state folder, saved in the config folder for peek.js, which runs outside the plugin (from an agent's pane) and

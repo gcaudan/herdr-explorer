@@ -26,6 +26,34 @@ function which(name) {
   return null;
 }
 
+// A path that reaches a network share or a device through a symbolic link (or junction) on its way: a link to
+// \\host\share, \\?\… or \\.\…. Opening it would reach the network, which on Windows sends the user's credentials,
+// and a repository can hold such a link. The links are read (readlink), never followed; the folders of top (the
+// tree's root, trusted) and above are not looked at. A loop of links counts as remote.
+function remoteLink(p, top = '') {
+  const trusted = top && path.resolve(top).toLowerCase() + path.sep;
+  let cur = path.resolve(p);
+  for (let hops = 0; hops <= 32; hops++) {
+    const { root } = path.parse(cur), parts = cur.slice(root.length).split(path.sep).filter(Boolean);
+    let next = null;
+    for (let i = 0, at = root; i < parts.length && !next; i++) {
+      at = path.join(at, parts[i]);
+      if (trusted && trusted.startsWith(at.toLowerCase() + path.sep)) continue;
+      let target;
+      try { target = fs.lstatSync(at).isSymbolicLink() ? fs.readlinkSync(at) : null; } catch { return false; }
+      if (target === null) continue;
+      if (/^[\\/]{2}/.test(target)) return true;
+      next = path.resolve(path.dirname(at), target, ...parts.slice(i + 1));
+    }
+    if (!next) return false;
+    cur = next;
+  }
+  return true;
+}
+
+// The labels of the plugin's own panes (herdr-plugin.toml), told apart from the terminals and agents.
+const OWN_PANES = new Set(['Explorer', 'Preview', 'Source Control', 'Changes', 'Editor', 'Search']);
+
 // Command line split at spaces outside quotes: "code --wait" → ['code', '--wait'].
 const words = s => (String(s).match(/"[^"]*"|'[^']*'|\S+/g) || []).map(w => w.replace(/^(["'])(.*)\1$/, '$2'));
 
@@ -117,9 +145,10 @@ function newer(a, b) {
 }
 
 // Pane width remembered by the explorer (width file in the state folder), 32 columns by default.
+const DEFAULT_WIDTH = 32;
 const WIDTH_FILE = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'width');
 function readWidth() {
-  try { return Math.max(10, parseInt(fs.readFileSync(WIDTH_FILE, 'utf8'), 10)) || 32; } catch { return 32; }
+  try { return Math.max(10, parseInt(fs.readFileSync(WIDTH_FILE, 'utf8'), 10)) || DEFAULT_WIDTH; } catch { return DEFAULT_WIDTH; }
 }
 
 // User settings, shared by the explorer, the preview and the hook (settings.json in the state folder).
@@ -172,8 +201,8 @@ function writePaneState(pane, data) {
   } catch { try { fs.unlinkSync(tmp); } catch { } }
 }
 
-// Key bindings, editable by the user: keys.json in the plugin config folder, one object per pane, mapping an action
-// to its keys ({ "explorer": { "newFile": ["a"] } }). An action left out keeps its default keys.
+// Key bindings, editable by the user: keys.json in the plugin config folder, one object per pane (only the
+// explorer reads its own so far), mapping an action to its keys ({ "explorer": { "newFile": ["a"] } }). An action left out keeps its default keys.
 const KEYS_FILE = process.env.HERDR_PLUGIN_CONFIG_DIR && path.join(process.env.HERDR_PLUGIN_CONFIG_DIR, 'keys.json');
 
 // Key name → action. A key the user gives to an action is taken from the action that had it by default.
@@ -227,6 +256,6 @@ function saveKeys(all) {
 }
 
 module.exports = {
-  WIN, PLUGIN, pathDirs, which, words, run, result, HERDR, GIT, gitEnv, gitOperation, version, newer, WIDTH_FILE, readWidth,
+  WIN, PLUGIN, pathDirs, which, remoteLink, OWN_PANES, words, run, result, HERDR, GIT, gitEnv, gitOperation, version, newer, DEFAULT_WIDTH, WIDTH_FILE, readWidth,
   SETTINGS_FILE, readSettings, writeSettings, PANES_DIR, paneFile, readPaneState, writePaneState, KEYS_FILE, readKeys, keysTemplate, writeKeys,
 };

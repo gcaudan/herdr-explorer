@@ -1,5 +1,6 @@
 // Terminal editor on a file, in a full-tab pane opened from the explorer or the preview: the editor of the
-// settings when it needs a terminal, $VISUAL, $EDITOR, else the first of nano, nvim, vim, vi (edit on Windows).
+// settings when it needs a terminal, $VISUAL, $EDITOR, else the first of nano, nvim, vim, vi (edit, nvim, vim, nano
+// on Windows).
 // The pane closes when the editor exits.
 'use strict';
 const { spawnSync } = require('child_process');

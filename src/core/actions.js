@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const { WIN, PLUGIN, pathDirs, which, words, run, result, HERDR, GIT, gitEnv, readSettings } = require('./exec');
+const { WIN, PLUGIN, pathDirs, which, remoteLink, OWN_PANES: OWN, words, run, result, HERDR, GIT, gitEnv, readSettings } = require('./exec');
 
 const MAC = process.platform === 'darwin';
 
@@ -74,7 +74,11 @@ function terminalEditor() {
   return TERMINAL.has(editorName(words(command)[0])) ? command : null;
 }
 
+// A link to a network share is never handed to a program, which would follow it (see remoteLink).
+const NETWORK = 'Link to a network share: not opened';
+
 async function editor(abs, pane) {
+  if (remoteLink(abs)) return NETWORK;
   const command = readSettings().editor || '';
   const [cmd, ...args] = words(command);
   const name = editorName(cmd);
@@ -101,6 +105,7 @@ async function web(url) {
 
 async function system(abs) {
   if (!canOpen(abs)) return 'Not opened: file type not allowed';
+  if (remoteLink(abs)) return NETWORK;
   const ok = WIN ? await detached(which('explorer.exe'), [abs], { windowsHide: false })
     : await detached(MAC ? 'open' : 'xdg-open', [abs]);
   return ok ? `Opening ${path.basename(abs)}` : 'Cannot open';
@@ -112,6 +117,7 @@ function open(abs, pane) {
 }
 
 async function reveal(abs) {
+  if (remoteLink(abs)) return NETWORK;
   let ok;
   // windowsHide would hide the File Explorer window itself. A path cannot contain '"' on Windows.
   if (WIN) ok = await detached(which('explorer.exe'), [`/select,"${abs}"`], { windowsVerbatimArguments: true, windowsHide: false });
@@ -217,7 +223,6 @@ async function typeInto(target, side, pane, text) {
 // The terminal next to the explorer and its side: on the right of an explorer docked on the left, on the left of
 // one docked on the right. Both are tried, as the setting may have changed since the explorer opened. The plugin's
 // own panes are passed over: docked on the right, the preview sits between the terminal and the explorer.
-const OWN = new Set(['Explorer', 'Preview', 'Source Control', 'Changes', 'Editor', 'Search']);
 async function terminalOf(pane) {
   const order = readSettings().side === 'right' ? ['left', 'right'] : ['right', 'left'];
   for (const side of order) {
@@ -407,9 +412,11 @@ async function preview(abs, root, pane, line = 0, focus = false, open = true, { 
   return res ? null : 'Cannot open the preview';
 }
 
-// The terminal editor ($VISUAL, $EDITOR, else nano or vi) in a full-tab pane, closed when the editor exits.
+// The terminal editor ($VISUAL, $EDITOR, else nano, nvim, vim or vi; see edit.js) in a full-tab pane, closed when the
+// editor exits.
 // command: the editor of the settings when it is a terminal one (see editor), else $VISUAL, $EDITOR…
 async function edit(abs, pane, command = terminalEditor()) {
+  if (remoteLink(abs)) return NETWORK;
   return await openPane('edit', 'zoomed', pane, { EXPLORER_FILE: abs, ...(command ? { EXPLORER_EDITOR: command } : {}) })
     ? null : 'Cannot open the editor';
 }
@@ -454,7 +461,8 @@ function rename(abs, name) {
   if (!to) return [null, 'Invalid name'];
   if (to === abs) return [abs, null];
   // A case-only change on a case-insensitive file system finds the file itself: the same file, not another one.
-  if (fs.existsSync(to) && !sameFile(abs, to)) return [null, 'Already exists'];
+  // lstat: a link is renamed, not followed.
+  if (fs.lstatSync(to, { throwIfNoEntry: false }) && !sameFile(abs, to)) return [null, 'Already exists'];
   try { fs.mkdirSync(path.dirname(to), { recursive: true }); fs.renameSync(abs, to); } catch (e) {
     return [null, `Cannot rename: ${e.code || e.message}`];
   }
@@ -463,13 +471,14 @@ function rename(abs, name) {
 
 function sameFile(a, b) {
   try {
-    const [x, y] = [fs.statSync(a, { bigint: true }), fs.statSync(b, { bigint: true })];
+    const [x, y] = [fs.lstatSync(a, { bigint: true }), fs.lstatSync(b, { bigint: true })];
     return x.ino === y.ino && x.dev === y.dev && x.ino !== 0n;
   } catch { return false; }
 }
 
 // A copy next to the original: "name copy.ext", "name copy 2.ext"…
 function duplicate(abs) {
+  if (remoteLink(abs)) return [null, NETWORK];
   const ext = fs.statSync(abs).isDirectory() ? '' : path.extname(abs);
   const base = abs.slice(0, abs.length - ext.length);
   let to = `${base} copy${ext}`;
@@ -481,10 +490,12 @@ function duplicate(abs) {
 }
 
 // To the trash of the desktop: gio on Linux, trash (macOS 14) or Finder on macOS, the recycle bin on Windows.
+// A link to a network share goes as the link itself, never followed (lstat).
 async function trash(abs) {
   let ok;
+  const remote = remoteLink(abs);
   if (WIN) {
-    const fn = fs.statSync(abs).isDirectory() ? 'DeleteDirectory' : 'DeleteFile';
+    const fn = (remote ? fs.lstatSync(abs) : fs.statSync(abs)).isDirectory() ? 'DeleteDirectory' : 'DeleteFile';
     ok = await run(which('powershell.exe'), ['-NoProfile', '-NonInteractive', '-Command',
       `Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.FileIO.FileSystem]::${fn}($env:EXPLORER_TRASH, 'OnlyErrorDialogs', 'SendToRecycleBin')`],
     { env: { ...process.env, EXPLORER_TRASH: abs } }) !== null;
@@ -492,7 +503,7 @@ async function trash(abs) {
     ok = await run('/usr/bin/trash', [abs]) !== null || await run('osascript', ['-e',
       'on run argv\ntell application "Finder" to delete POSIX file (item 1 of argv)\nend run', abs]) !== null;
   } else ok = await run('gio', ['trash', '--', abs]) !== null || await run('trash-put', ['--', abs]) !== null;
-  return ok && !fs.existsSync(abs);
+  return ok && !fs.lstatSync(abs, { throwIfNoEntry: false });
 }
 
 function remove(abs) {

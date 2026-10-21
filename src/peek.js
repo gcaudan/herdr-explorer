@@ -32,11 +32,10 @@ if (!process.env.HERDR_PLUGIN_STATE_DIR) {
 }
 // Loaded once the state folder is set: the settings' path depends on it.
 const actions = require('./core/actions');
-const { GIT, gitEnv, run } = require('./core/exec');
+const { GIT, gitEnv, run, remoteLink, OWN_PANES: OWN } = require('./core/exec');
 
 // The pane it runs from, and its folder. As the peek action, the tab's focused pane, or its first terminal when the
 // focus is on one of the plugin's panes.
-const OWN = new Set(['Explorer', 'Preview', 'Source Control', 'Changes', 'Editor', 'Search']);
 let pane = process.env.HERDR_PANE_ID, cwd = process.cwd();
 if (process.env.HERDR_PLUGIN_CONTEXT_JSON) {
   let ctx = {};
@@ -65,7 +64,8 @@ async function last() {
     if ('RC'.includes(p[0])) i++; // the original path follows
     const abs = path.join(top, p.slice(3));
     let stat;
-    try { stat = fs.statSync(abs); } catch { continue; }
+    try { stat = remoteLink(abs, top) ? null : fs.statSync(abs); } catch { continue; }
+    if (!stat) continue;
     if (stat.isFile() && (!best || stat.mtimeMs > best.time)) best = { abs, time: stat.mtimeMs };
   }
   if (!best) fail('no changed file');
@@ -103,6 +103,7 @@ function target(arg) {
   const line = marks.length ? marks[0].from : 0;
   // A deleted file still has changes to show.
   let stat = null;
+  if (remoteLink(abs)) fail(`link to a network share, not shown: ${abs}`);
   try { stat = fs.statSync(abs); } catch { if (!diff) fail(`no such file: ${abs}`); }
   if (stat && !stat.isFile()) fail(`not a file: ${abs}`);
   const err = await actions.preview(abs, cwd, pane, line, false, true, { marks, view: diff ? 'diff' : 'file' });
