@@ -98,8 +98,8 @@ saved, and the explorer's width falls back to 32 columns.
 | `preview-<tab id>.json`| the last file the explorer, the search or `peek.js` asked the tab's preview to show        |
 | `notes-<tab id>.json`  | the tab's review notes, removed once sent                                                    |
 
-`settings.json`, `expanded.json`, `update.json`, `notes-*.json` and `panes/*.json` are written to a temporary file
-and then renamed, so a pane never reads them half-written. At herdr startup, the state files of panes
+`settings.json`, `expanded.json`, `width`, `update.json`, `search.json`, `resizing`, `preview-*.json`, `notes-*.json`,
+`panes/*.json` and `keys.json` (in the config folder) are written to a temporary file and then renamed, so a pane never reads them half-written. At herdr startup, the state files of panes
 that no longer exist are deleted.
 
 ### Config folder

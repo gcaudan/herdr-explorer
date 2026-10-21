@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { execFile } = require('child_process');
-const { WIN, GIT, HERDR, PLUGIN, run, result, gitOperation, newer, readSettings } = require('./exec');
+const { WIN, GIT, HERDR, PLUGIN, run, result, gitOperation, newer, readSettings, writeAtomic } = require('./exec');
 
 const DIR = path.join(__dirname, '..', '..'); // the plugin's folder, a git clone
 const HERDR_UPDATE = `herdr plugin update ${PLUGIN}`;
@@ -31,14 +31,7 @@ const FILE = process.env.HERDR_PLUGIN_STATE_DIR ? path.join(process.env.HERDR_PL
 function read() {
   try { return JSON.parse(fs.readFileSync(FILE, 'utf8')) || {}; } catch { return {}; }
 }
-// Written to a temporary file then renamed, so that a pane never reads it half-written.
-function write(data) {
-  const tmp = `${FILE}.${process.pid}`;
-  try {
-    fs.mkdirSync(path.dirname(FILE), { recursive: true });
-    fs.writeFileSync(tmp, JSON.stringify(data)); fs.renameSync(tmp, FILE);
-  } catch { try { fs.unlinkSync(tmp); } catch { } }
-}
+const write = data => writeAtomic(FILE, JSON.stringify(data));
 
 // The version of the latest GitHub release, or null (offline, timeout, no release).
 const latestRelease = repo => new Promise(resolve => {

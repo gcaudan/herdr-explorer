@@ -7,7 +7,7 @@ const { spawn } = require('child_process');
 const ui = require('../core/ui');
 const diffs = require('../diff');
 const graph = require('../render/graph');
-const { WIN, GIT, gitEnv, gitOperation, readSettings, writeSettings } = require('../core/exec');
+const { WIN, GIT, gitEnv, gitOperation, readSettings, writeSettings, realPath, addConfig } = require('../core/exec');
 const parse = require('./parse');
 const { errorOf } = parse;
 const { ROOT, NET_TIMEOUT, S, frame, late, draw, select, follow, base, flash } = require('./context');
@@ -72,9 +72,7 @@ async function safeEnv(cwd) {
     else if (key.endsWith('helper')) extra.push([key, ''], ...user.map(v => [key, v]));
     else extra.push([key, user.length ? user[user.length - 1] : key in DEFAULTS ? DEFAULTS[key] : 'git merge-file %A %O %B']);
   }
-  let n = parseInt(env.GIT_CONFIG_COUNT, 10) || 0;
-  for (const [k, v] of extra) { env[`GIT_CONFIG_KEY_${n}`] = k; env[`GIT_CONFIG_VALUE_${n++}`] = v; }
-  env.GIT_CONFIG_COUNT = String(n);
+  addConfig(env, extra);
   return { env, pack };
 }
 
@@ -97,9 +95,7 @@ async function git(args, opts = {}) {
   const safe = opts.safe ? await safeEnv(cwd) : null;
   const literal = args.includes('--') || args.includes(fromFile[0]) ? { GIT_LITERAL_PATHSPECS: '1' } : {};
   const env = english({ ...(safe ? safe.env : await gitEnv(cwd)), ...literal, ...opts.env });
-  let n = parseInt(env.GIT_CONFIG_COUNT, 10) || 0;
-  for (const [k, v] of opts.config || []) { env[`GIT_CONFIG_KEY_${n}`] = k; env[`GIT_CONFIG_VALUE_${n++}`] = v; }
-  env.GIT_CONFIG_COUNT = String(n);
+  addConfig(env, opts.config || []);
   const pack = safe ? (args[0] === 'push' ? safe.pack.push : /^(fetch|pull)$/.test(args[0]) ? safe.pack.fetch : []) : [];
   return exec(GIT, ['-c', 'core.quotePath=false', args[0], ...pack, ...args.slice(1)], { ...opts, cwd, env });
 }
@@ -264,11 +260,6 @@ async function refresh() {
 // The file or folder selected in the explorer, selected here once the changes are loaded: the file, else the first
 // changed file of the folder.
 reveal.file = process.env.EXPLORER_FILE || null;
-// A path with its symbolic links resolved, as far as it exists.
-function realPath(p) {
-  try { return fs.realpathSync(p); } catch { const up = path.dirname(p); return up === p ? p : path.join(realPath(up), path.basename(p)); }
-}
-
 function reveal(abs) {
   const rel = path.relative(realPath(S.repo.top), realPath(abs)).split(path.sep).join('/');
   const r = S.repo, inside = p => !rel || p === rel || p.startsWith(rel + '/');

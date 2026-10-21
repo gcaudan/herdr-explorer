@@ -265,11 +265,11 @@ field; the arrows and `enter` still act on the list. `escape` closes the find, t
 
 ### Menu keys
 
-The menu's frame is titled with the entry it acts on. Each item shows the key of its action on the right, which
-runs it while the menu is open. **Delete…** and **Discard changes…** are in red. `up`/`down` (and their bound keys)
-move, skipping separators, and `enter`/`space`/`right`/`l` run the item. `escape` always closes, as do the keys
-bound to close, collapse and menu; the key of settings opens **Settings…**. A long menu scrolls, with `▴` `▾` on
-its border. A click runs an item; a click elsewhere closes the menu.
+The menu's frame is titled with the entry it acts on. Each item shows the key of its action after its label,
+dimmed, which runs it while the menu is open. **Delete…** and **Discard changes…** are in red. `up`/`down` (and
+their bound keys) move, skipping separators, and `enter`/`space` (and the other keys bound to open) run the item;
+`right`/`l` do nothing, so that an arrow never runs an action. `escape` always closes, as do the keys bound to close,
+collapse and menu; the key of settings opens **Settings…**. A long menu scrolls, with `▴` `▾` on its border. A click runs an item; a click elsewhere closes the menu.
 
 ### Other behaviours
 
