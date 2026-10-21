@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/gcaudan/herdr-explorer/compare/v0.7.0...v0.7.1) (2026-10-21)
+
+
+### Fixes
+
+* harden 0.7.0 after its code review ([#23](https://github.com/gcaudan/herdr-explorer/issues/23)) ([8d75725](https://github.com/gcaudan/herdr-explorer/commit/8d757250eb0f81372194af7588abf37ae8f2fb94))
+
 ## [0.7.0](https://github.com/gcaudan/herdr-explorer/compare/v0.6.0...v0.7.0) (2026-10-21)
 
 
