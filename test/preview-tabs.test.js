@@ -39,6 +39,19 @@ test('the list stays under its maximum', () => {
   assert.strictEqual(s.list[s.current].file, `f${tabs.MAX + 4}`);
 });
 
+test('a busy tab (unsaved edits) is never dropped past the maximum', () => {
+  let s = empty;
+  for (let i = 0; i < tabs.MAX; i++) s = tabs.open(s, `f${i}`, true);
+  const busy = t => t.file === 'f0';
+  s = tabs.open(s, 'new', true, busy);
+  assert.strictEqual(s.list.length, tabs.MAX);
+  assert.ok(s.list.some(t => t.file === 'f0'), 'the busy tab stays');
+  assert.ok(!s.list.some(t => t.file === 'f1'), 'the next furthest goes');
+  assert.strictEqual(s.list[s.current].file, 'new');
+  // Every other tab busy: the list grows past the maximum.
+  assert.strictEqual(tabs.open(s, 'more', true, () => true).list.length, tabs.MAX + 1);
+});
+
 test('closing shows the tab on the right, else on the left', () => {
   const s = { list: ['a', 'b', 'c'].map(file => ({ file, kept: true })), current: 1 };
   assert.deepStrictEqual([files(tabs.close(s, 1)), tabs.close(s, 1).current], ['a c', 1]);

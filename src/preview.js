@@ -1730,7 +1730,7 @@ function take(stat) {
   // other: the pane shows another file than before.
   const prev = state.file, was = tabs.current;
   stash();
-  tabs = Tabs.open(tabs, req.file, req.keep === true);
+  tabs = Tabs.open(tabs, req.file, req.keep === true, t => !!t.edit && t.edit.ed.dirty());
   if (tabs.fresh || tabs.current !== was) unstash();
   const same = !tabs.fresh, other = state.file !== prev || tabs.fresh;
   const view = req.view === 'diff' ? 'diff' : 'file', keep = same && view === state.view;

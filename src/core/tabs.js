@@ -9,8 +9,9 @@ const path = require('path');
 const MAX = 50;
 
 // A file shown: in its tab when one has it (kept when asked), else in the temporary tab, else in a new tab after the
-// current one. fresh: the tab is new or replaced, its view to start over.
-function open({ list, current }, file, keep = false) {
+// current one. fresh: the tab is new or replaced, its view to start over. busy(tab): a tab never dropped past MAX
+// (unsaved edits), the list growing past it when every other one is.
+function open({ list, current }, file, keep = false, busy = () => false) {
   const at = list.findIndex(t => t.file === file);
   if (at >= 0) return { list: list.map((t, i) => (i === at && keep && !t.kept ? { ...t, kept: true } : t)), current: at, fresh: false };
   const tab = { file, kept: !!keep };
@@ -18,7 +19,11 @@ function open({ list, current }, file, keep = false) {
   if (temp >= 0) return { list: list.map((t, i) => (i === temp ? tab : t)), current: temp, fresh: true };
   const i = Math.min(list.length, current + 1);
   let next = [...list.slice(0, i), tab, ...list.slice(i)], shown = i;
-  if (next.length > MAX) { const drop = shown > next.length / 2 ? 0 : next.length - 1; next = next.filter((_, k) => k !== drop); if (drop < shown) shown--; }
+  if (next.length > MAX) {
+    const far = next.map((_, k) => k).filter(k => k !== shown && !busy(next[k]))
+      .sort((a, b) => Math.abs(b - shown) - Math.abs(a - shown) || b - a);
+    if (far.length) { const drop = far[0]; next = next.filter((_, k) => k !== drop); if (drop < shown) shown--; }
+  }
   return { list: next, current: shown, fresh: true };
 }
 
