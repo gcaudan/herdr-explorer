@@ -11,7 +11,9 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const fail = (text, code = 1) => { console.error(`peek: ${text}`); process.exit(code); };
-const HERDR_BIN = process.env.HERDR_BIN_PATH || 'herdr';
+// Found in the absolute folders of PATH: on Windows a bare name would run a herdr.exe of the working directory.
+const HERDR_BIN = require('./core/which').which(process.env.HERDR_BIN_PATH || 'herdr');
+if (!HERDR_BIN) fail('herdr not found in PATH');
 const herdr = (...args) => { try { return JSON.parse(execFileSync(HERDR_BIN, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })).result; } catch { return null; } };
 
 // The plugin's state folder, where the preview reads its requests: herdr gives it to the plugin's own processes only.

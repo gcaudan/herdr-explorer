@@ -89,7 +89,8 @@ Markdown, images, graph). The explorer and source control panes keep their own m
 | `src/core/notes.js`   | review notes of a tab: stored in the state folder, typed into the agent's prompt             |
 | `src/core/icons.js`   | Nerd Font, emoji, Unicode and ASCII icons, and VS Code icon theme loading                    |
 | `src/core/ui.js`      | terminal helpers: colours, text width, lines, input decoding, text field, scrollbar, screen, restart |
-| `src/core/exec.js`    | safe program execution, git hardening, settings, pane state, key bindings                    |
+| `src/core/exec.js`    | safe program execution, git hardening, links to network shares, settings, pane state, key bindings |
+| `src/core/which.js`   | `which()`: programs found in the absolute folders of `PATH` only; loads before the state folder is known (`peek.js`) |
 | `src/core/update.js`  | daily release check, self-update by fast-forward pull, version watch                         |
 | `src/render/highlight.js` | table-driven syntax highlighter (VS Code Dark+ colours)                                      |
 | `src/render/markdown.js` | Markdown renderer for the terminal, including tables, alerts and Mermaid flowcharts          |

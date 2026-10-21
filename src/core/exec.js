@@ -7,24 +7,8 @@ const { execFile } = require('child_process');
 const WIN = process.platform === 'win32';
 const PLUGIN = process.env.HERDR_PLUGIN_ID || 'gcaudan.explorer';
 
-// Absolute folders of PATH (relative entries would depend on the working directory).
-const pathDirs = () => (process.env.PATH || '').split(path.delimiter)
-  .map(d => d.replace(/^"(.*)"$/, '$1')).filter(d => path.isAbsolute(d));
-
-// Absolute path of a program found in the absolute folders of PATH, or null. On Windows, a bare name is looked up
-// in the child's working directory before PATH; elsewhere, an empty or '.' entry of PATH means that folder too: a git
-// planted in an untrusted repository would run. Resolved first, on every system.
-function which(name) {
-  if (path.isAbsolute(name)) return name;
-  const file = WIN && !path.extname(name) ? name + '.exe' : name;
-  for (const dir of pathDirs()) {
-    const full = path.join(dir, file);
-    try {
-      if (fs.statSync(full).isFile()) { if (!WIN) fs.accessSync(full, fs.constants.X_OK); return full; }
-    } catch { }
-  }
-  return null;
-}
+// pathDirs and which live apart so that peek.js can find herdr before the state folder this module reads is set.
+const { pathDirs, which } = require('./which');
 
 // A path that reaches a network share or a device through a symbolic link (or junction) on its way: a link to
 // \\host\share, \\?\… or \\.\…. Opening it would reach the network, which on Windows sends the user's credentials,
