@@ -44,6 +44,8 @@ Keep the conventions of the existing code:
   `src/scm/state.js`. See [SECURITY.md](SECURITY.md).
 - Text from files, names or git goes through `ui.line()`/`clean()`/`cleanLine()` before reaching the
   terminal. Text typed into a terminal must hold no control character.
+- A path from the tree, a search or Markdown goes through `remoteLink()` (`src/core/exec.js`) before it is read,
+  followed or handed to a program: a link to a network share must never be opened (see [SECURITY.md](SECURITY.md#windows)).
 - Shared state files are written to a temporary file, then renamed.
 - Panes stay usable when the state or config folder is missing.
 - A new pane, hook or action is also declared in `herdr-plugin.toml`. A change to the manifest (other than its
@@ -123,6 +125,7 @@ them on every pull request and every push to `main`, on Linux, macOS and Windows
 | `icons.test.js` | icon widths in each icon set |
 | `markdown-images.test.js` | images of rendered Markdown in pixels |
 | `preview-tabs.test.js` | the preview's tabs |
+| `remote-link.test.js` | links to a network share found without being followed, and refused by the file actions (skipped where links cannot be created, such as Windows without developer mode) |
 | `review.test.js` | review notes and the lines of a diff they point at |
 | `scm-parse.test.js` | the git output parsers (`src/scm/parse.js`) |
 | `update.test.js` | the GitHub repository the update check reads from the clone's `origin` |
