@@ -586,7 +586,7 @@ function render() {
   }
 
   // Keys.
-  const keys = [['↵', 'open'], content ? ['ctrl+p', 'go to file'] : ['ctrl+f', 'search in files'], ['ctrl+o', 'editor'], ['ctrl+t', 'insert'], ['ctrl+y', 'copy path'],
+  const keys = [['↵', 'open'], content ? ['ctrl+p', 'go to file'] : ['ctrl+f', 'search in files'], ['ctrl+o', 'editor'], ['ctrl+t', 'insert'], ['ctrl+y', 'copy relative path'],
     ...(content ? [['tab', 'fields'], ['alt+←→', 'fold']] : []), ['esc', 'close'], ['f1', 'keys']];
   while (lines.length < H - 1) lines.push(line([], W));
   lines.length = H - 1;
@@ -601,7 +601,7 @@ const HELP = [
   ['Results', [['↑↓', 'select'], ['ctrl+n', 'next'], ['ctrl+k', 'previous'], ['pgup pgdn', 'page'], ['ctrl+home', 'first'],
     ['ctrl+end', 'last'], ['alt+← →', 'fold, unfold a file']]],
   ['Open', [['⏎', 'in the preview'], ['ctrl+o', 'in the editor'], ['alt+⏎', 'in the editor'], ['ctrl+t', 'insert in terminal'],
-    ['ctrl+y', 'copy the path']]],
+    ['ctrl+y', 'copy the relative path']]],
   ['Search', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['tab', 'next field'], ['alt+c', 'match case'],
     ['alt+w', 'whole word'], ['alt+r', 'regular expression'], ['alt+h', 'hidden files']]],
   ['Pane', [['f1', 'keys'], ['esc', 'close']]],

@@ -57,7 +57,7 @@ module.exports = ctx => {
       { label: 'Preview follows selection', help: 'A file selected by a click or the arrow keys shows in the preview: arrow keys only update an open one.', ...onOff('singleClick') },
       { group: 'NEXT TABS' },
       { label: 'Dock side', help: 'Where new explorers dock. An open explorer keeps its side.', ...choice('side', ['left', 'right']) },
-      { label: 'Open automatically', help: 'Open the explorer in new tabs that have a single pane. Off: only with prefix+f.', ...onOff('autoOpen') },
+      { label: 'Open automatically', help: 'Open the explorer in new tabs that have a single pane. Off: only with the toggle key (prefix+f by default).', ...onOff('autoOpen') },
       { group: 'PREVIEW' },
       { label: 'Wrap lines', help: 'Wrap long lines in the preview (w). Other previews at their next opening.', ...onOff('wrap') },
       { label: 'Line numbers', help: 'Line numbers in the preview (L). Other previews at their next opening.', ...onOff('lineNumbers') },
