@@ -209,7 +209,7 @@ setting. The settings are shared by every explorer. See [configuration.md](confi
 
 | Group     | Settings                                                      |
 | --------- | ------------------------------------------------------------- |
-| Tree      | Hidden files, Git-ignored files, Follow terminal, Icon theme  |
+| Tree      | Hidden files, Git-ignored files, Follow terminal, Icon set, Icon theme |
 | Opening   | Enter opens (preview or editor), Editor, Preview follows selection |
 | Next tabs | Dock side (left or right), Open automatically                 |
 | Preview   | Wrap lines, Line numbers, Images, Diff layout (auto, split, inline) |
@@ -224,7 +224,8 @@ click on a setting changes it, a click on the title goes back.
 **Icon theme** opens a page of its own: the Nerd Font default and the VS Code icon themes installed (see
 [Icon themes](configuration.md#icon-themes)), the saved one marked `✓`, above a sample tree of folders and files
 in the theme under the selection. `enter` (or a click) keeps it and goes back to the settings; `escape` goes back
-without a change.
+without a change. **Icon set** (Nerd Font, emoji, Unicode, ASCII) is for a terminal without a Nerd Font (see
+[Without a Nerd Font](configuration.md#without-a-nerd-font)).
 
 **Key bindings** opens a page of its own: the explorer's actions by group, as in the key help, with
 their keys (in yellow when changed). Below the list, the selected action shows its keys and its
@@ -284,10 +285,16 @@ its border. A click runs an item; a click elsewhere closes the menu.
 
 ## Preview
 
-The preview shows one file per tab: opening another file from the explorer or the search reuses it. It reloads
-by itself when the file changes on disk, keeping its scroll position.
+The preview, one per herdr tab, keeps its files in tabs, as VS Code's editors. A file opened by a single click,
+by following the selection, with `]`/`[`, from the search or by an agent (`peek.js`) replaces the **temporary** tab,
+its name in italics; `enter`, a double-click, the explorer's `p` or its menu's **Preview** open a **kept** tab, which
+the next file does not replace. In the preview, `t`, a double-click on the tab, `e`, `o` or a review note keep the
+temporary tab. Each tab keeps its scroll, line, File or Diff view, comparison, Markdown mode and marks; the tabs come
+back after a herdr restart (those whose file still exists). It reloads by itself when the file changes on disk,
+keeping its scroll position.
 
-Header: the file path relative to the root, then details (lines, size, image format and size; in the Diff view, the
+Header: with several tabs, the tabs (the current one bold on a lighter background, `×` to close each), then the
+details when they fit; with one, the file path relative to the root, then details (lines, size, image format and size; in the Diff view, the
 added and removed lines). On the right:
 
 - in the Diff view, what the changes are compared with, dimmed: `vs HEAD` or `vs main` (the rest shows in the content
@@ -301,7 +308,8 @@ added and removed lines). On the right:
   `,` or a click elsewhere close it. The footer's actions are not repeated there, and the footer leaves out what the
   header's controls do (`d`, `,`): the key help (`?`) lists every key.
 
-A narrow pane drops the reminder, then the switch, then the details; `⚙` stays. The footer lists the main keys, which
+A narrow pane drops the reminder, then the switch, then the details; `⚙` stays. Tabs that do not fit are marked
+`‹` / `›` (a click shows the next one that way), and the strip scrolls only when the current tab would leave it. The footer lists the main keys, which
 a click runs, and the scroll percentage.
 
 ### Keys
@@ -313,6 +321,9 @@ a click runs, and the scroll percentage.
 | `pageup` / `pagedown` `space` | scroll one page                                         |
 | `ctrl+u` / `ctrl+d`          | scroll half a page                                       |
 | `?` `f1`                     | all the keys                                             |
+| `tab` / `shift+tab`, `ctrl+pagedown` / `ctrl+pageup` | next / previous tab              |
+| `t`                          | keep the temporary tab                                   |
+| `x`                          | close the tab (the last one: the preview)                |
 | `home` `g` / `end` `G`       | top / bottom                                             |
 | `left` `h` / `right` `l`     | scroll 8 columns sideways (when not wrapping)            |
 | `/`                          | find in file                                             |
@@ -325,6 +336,7 @@ a click runs, and the scroll percentage.
 | `m`                          | Markdown: rendered / source                              |
 | `p`                          | image: sharp / pixelated, in this pane only (see [Sharp images](#sharp-images)) |
 | `r`                          | reload                                                   |
+| `i`                          | edit here, in the preview (see [Editing in the preview](#editing-in-the-preview)) |
 | `e`                          | edit in the terminal editor                              |
 | `o`                          | open (system application for documents and media, else the editor) |
 | `O`                          | open in app (allowed types only)                         |
@@ -337,6 +349,39 @@ a click runs, and the scroll percentage.
 | `shift+left` `shift+right`   | move the inner border 4 columns that way                 |
 | `ctrl+p`                     | Go to file                                               |
 | `ctrl+f`                     | Search in files                                          |
+
+### Editing in the preview
+
+`i` (or **Edit here** in the View menu) edits the tab's file in place: a text file in UTF-8, up to 2 MB (a binary
+or otherwise encoded file is refused); Markdown edits as source. Lines do not wrap while editing, the terminal's
+cursor shows as a bar, and the highlighting follows what you type.
+
+| Key | Action |
+|---|---|
+| arrows, `home` / `end`, `pageup` / `pagedown`, `ctrl+left` / `ctrl+right` | move (by word with `ctrl`); with `shift`, select |
+| `enter` | new line, keeping the indentation |
+| `tab` / `shift+tab` | indent / unindent, with the file's own indentation |
+| `ctrl+s` | save |
+| `ctrl+z` / `ctrl+y` `ctrl+shift+z` | undo / redo (typed text grouped by word) |
+| `ctrl+c` / `ctrl+x` / `ctrl+v` | copy / cut / paste, the whole line when nothing is selected; `ctrl+a` selects all |
+| `ctrl+f` | find: `enter` or `down` next, `up` previous |
+| `ctrl+r` | replace: `tab` switches field, `enter` replaces one, `alt+a` all (`ctrl+h` is backspace in terminals) |
+| `ctrl+g` | go to a line |
+| `escape` | clear the selection, then leave editing |
+| `f1` | the editing keys |
+
+A click places the cursor, a double or triple click selects a word or the line, a drag selects (scrolling at the
+edges), the wheel scrolls; text pasted from the terminal goes in as typed.
+
+- **Saving** keeps the file's line endings (LF or CRLF; mixed ones become the most frequent, which a message says),
+  its last newline or its lack of one, and its mode; the file is written to a temporary file renamed over it.
+- **Changes since opening** show in the gutter: a green `▎` for added lines, blue for modified ones, a red `▔`
+  where lines were removed.
+- **Unsaved changes**: leaving editing, closing the tab (its `×` shows `●`) or the preview asks Save, Don't save or
+  Cancel. Other tabs keep working meanwhile. A pane closed by herdr itself loses them.
+- **Changed on disk**: without edits of yours, the file reloads silently (which empties the undo history and the
+  gutter); with edits, a bar offers `alt+r` to reload (losing them) or `alt+k` to keep yours, and saving over the
+  newer file then asks first. The plugin waits for editing to end before restarting on an update.
 
 ### Review notes
 
@@ -380,6 +425,7 @@ Every match is highlighted, the current one brighter, also in wrapped lines and 
 - Under a pixelated image, a click on **p sharp** shows it sharp, on **sharp by default** sets **Images** to
   *sharp if possible*, and on **Sharp images ↗** opens [Sharp images](#sharp-images) in the browser.
 - The **wheel** scrolls 3 lines. In the header, **File · Diff** switches the view and `⚙` opens the View menu.
+- On a tab: a click shows it, a double-click keeps it, a click on its `×` or a middle click closes it.
 
 ### Diff view
 
@@ -403,7 +449,8 @@ selection; `peek.js --diff` too.
 - **Markdown** (`md markdown mdx mkd`): headings, inline styles, lists, quotes, highlighted code
   blocks, GFM tables and task lists, alerts, and simple Mermaid flowcharts.
 - **Markdown images**: a local image of a paragraph (Markdown image syntax, or `<img src>`), relative to the Markdown file,
-  is drawn with half blocks under it, 60 columns and 20 rows at most. Links to the web are never fetched.
+  is drawn under it, 60 columns and 20 rows at most: in pixels or with half blocks, like an image file (see
+  [Sharp images](#sharp-images)). Links to the web are never fetched.
 - **Images** (`png apng jpg jpeg jpe jfif gif bmp dib ico cur webp tif tiff svg`): PNG, GIF (first frame), BMP,
   JPEG (baseline and progressive), TIFF and ICO/CUR are decoded by the plugin, WebP by `dwebp` when it is installed
   (libwebp, see [Requirements](installation.md#requirements)). When herdr can show images (the Kitty graphics
@@ -433,7 +480,8 @@ plugin cannot install a terminal: install one of them, then start herdr in it.
 The setting tells whether this terminal answered. `p` switches the image shown between sharp and pixelated, in
 this pane only, until the setting changes. Under a pixelated image, a line tells how to see it sharp: `p` and
 **sharp by default** when the terminal has the protocol, else a link to this section. Images in rendered Markdown
-are always pixelated.
+follow the same setting, and `p` (or **Images** in the **View** menu) switches them all; scrolled partly out of the
+pane, an image shows its visible part.
 
 ## Search popup
 
@@ -556,6 +604,8 @@ help of the view (see [Key help](#key-help--or-f1)).
 | `f` / `L` / `P`            | fetch / pull (fast-forward only) / push. The first push publishes the branch on `origin` (else the first remote) and sets its upstream |
 | `ctrl+p` / `ctrl+f`        | Go to file / Search in files, in the repository                 |
 | `b`                        | branch picker                                                   |
+| `m` `shift+f10`            | the [menu](#git-operations) of the selected branch or commit and of the repository (also `⋯` in the header) |
+| `T`                        | create a tag on HEAD                                            |
 | `c`                        | type the commit message (from any view: back to Changes)        |
 | `ctrl+g`                   | write the message with Claude (same)                            |
 | `alt+a`                    | toggle amend                                                    |
@@ -584,18 +634,37 @@ colour) and its tags (yellow); on the right, the author (from 90 columns), the a
 has its own lane and colour, linked to the commit it started from and to the merge that brought it back; its
 commits are marked ┿ on its line (┯ for a branch tip, ┷ for the first commit), and the checked-out commit's
 subject is bold. It shows every local and remote branch, or with `a` only the current one (kept for the next
-panes). The graph takes 24 columns at most: lanes further right are cut.
+panes). The graph takes 24 columns at most: lanes further right are cut. On a commit, `t` creates a tag and `C`
+cherry-picks it onto the current branch (refused when the branch already has it).
 
 **Refs view**: local branches, remote branches, tags, remotes and worktrees; the empty ones are named
 together on the last line. `enter` checks out a branch (a remote branch switches to its local branch, or
 creates one tracking it). `D` deletes a local branch, and offers `-D` when it is not fully merged,
-saying how many commits would be lost (those on no other branch).
+saying how many commits would be lost (those on no other branch). `M` merges the selected branch into the current
+one, `R` rebases the current branch onto it.
 
 **Comparing branches**: from 100 columns, the selected branch is compared on the right with the current branch:
 commits ahead and behind, the commits only on each side (`=` marks a change also on the other side, as after a
 cherry-pick), and the files it changed since it left the current branch. `=` opens the comparison at any width and focuses it; there, `up`/`down` select a commit,
 `enter` shows it, and `q` or `escape` on that commit goes back to the comparison. `B` makes the selected branch the
 base of the comparisons instead of the current branch (`B` again on it, or on the current branch, goes back).
+
+### Git operations
+
+`m` (or the menu key, `shift+f10`, the header's `⋯`) opens a menu: first the actions of the selected branch (Refs)
+or commit (History), then those of the repository, each with its key when it has one:
+
+| Item | What it runs |
+|---|---|
+| Merge into / Rebase onto (`M` / `R` on a branch), Merge a branch… / Rebase onto a branch… | `git merge` / `git rebase` with the chosen branch, after a question; the menu items open the branch picker to choose it |
+| Create tag… (`t` on a commit, `T` for HEAD) | a lightweight tag named in place (`enter`); `ctrl+o` asks for a message and makes an annotated tag |
+| Cherry-pick (`C` on a commit) | `git cherry-pick`, after a question |
+| Force push (with lease)… | `git push --force-with-lease`, never a plain `--force`; the question says how many commits of the upstream would be lost |
+| Undo last commit… | `git reset --soft HEAD~1`: the changes stay staged and the message comes back in the commit box; the question warns when the commit is already pushed |
+| Reset --hard… (to HEAD, or to the selected commit) | `git reset --hard`; the question counts the changed files and the commits lost (those on no other branch, tag or remote branch). Untracked files are kept |
+
+A merge, rebase or cherry-pick that stops on a conflict switches to Changes, where the commit box continues it and
+`X` aborts it. They use the `ort` strategy (git 2.33 or later), whatever the repository's `branch.<name>.mergeOptions`.
 
 **Fetch, pull, push** never prompt and stop after 2 minutes; a repository whose own config sets network keys
 is refused (see [Messages](troubleshooting.md#source-control)).
@@ -616,7 +685,7 @@ from the filter or else the current branch's prefix (`feat/`): `enter` creates i
 `alt+enter` or `ctrl+o` only creates it, `escape` cancels.
 
 **Questions**: discarding, deleting a branch, aborting an operation, popping or dropping a stash, staging
-everything to commit and `git init` ask in a card over the pane, with the keys of the explorer's
+everything to commit, `git init` and the [git operations](#git-operations) ask in a card over the pane, with the keys of the explorer's
 [confirmations](#confirmations).
 
 ### Mouse

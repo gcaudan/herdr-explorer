@@ -37,7 +37,7 @@ Keep the conventions of the existing code:
 
 - Every external program goes through an absolute path (`which`) with an argument list, never a shell.
 - Every git call in a user repository uses `gitEnv()`. A command that writes uses `safeEnv()` in
-  `scm.js`. See [SECURITY.md](SECURITY.md).
+  `src/scm/state.js`. See [SECURITY.md](SECURITY.md).
 - Text from files, names or git goes through `ui.line()`/`clean()`/`cleanLine()` before reaching the
   terminal.
 - Shared state files are written to a temporary file, then renamed.
@@ -47,7 +47,9 @@ Keep the conventions of the existing code:
 
 The scripts herdr runs stay at the root of `src/`: the manifest names them, and a self-restart runs the same path
 again. Modules they share go in `src/core/` (terminal, programs, actions, state) and `src/render/` (highlighting,
-Markdown, images, graph).
+Markdown, images, graph). The explorer and source control panes keep their own modules in `src/explorer/` and
+`src/scm/`: the entry file starts the pane and hands the modules a shared context; the pure ones (`tree.js`,
+`parse.js`) run nothing when loaded, so that tests can require them.
 
 | File                  | Role                                                                                         |
 | --------------------- | -------------------------------------------------------------------------------------------- |
@@ -55,17 +57,29 @@ Markdown, images, graph).
 | `install.sh`, `install.ps1` | link the clone to herdr and add the three key bindings                                 |
 | `src/hook.js`         | startup restore, `tab.created`, and the toggle, search and source control actions. Opens and places the explorer |
 | `src/launch.js`       | launcher that keeps the explorer and preview panes alive across self-restarts (exit code 75) |
-| `src/explorer.js`     | explorer pane: tree, git decorations, filter, menus, settings, width, follow, update UI      |
+| `src/explorer.js`     | explorer pane: startup, watchers, refresh, width, follow, root, menu items, file actions, update UI, render |
+| `src/explorer/tree.js` | folders read and cached, sorting, hidden and ignored entries, rows (expanded, filter, changed only), git status and decorations; pure |
+| `src/explorer/render.js` | header, rows, fields and prompts, filter and changed-files lines, menu drawing           |
+| `src/explorer/settings.js` | the settings view and its pages: icon themes, key bindings                         |
+| `src/explorer/input.js` | keys, mouse, menu keys, filter, preview following the selection                         |
 | `src/preview.js`      | preview pane: text, Markdown, images (Kitty graphics or half blocks), hex dump, Diff view; find, selection, review notes, live reload, request file |
 | `src/search.js`       | Go to file (fuzzy) and Search in files (text/regex, globs) popup                             |
-| `src/scm.js`          | source control pane: changes, commit, branches, remotes, history, stashes, refs, Claude messages |
+| `src/scm.js`          | source control pane: wires the modules of `src/scm/` and starts the screen                  |
+| `src/scm/parse.js`    | git output parsers: status, log, refs, remotes, worktrees, stashes, comparisons, numstat; pure |
+| `src/scm/context.js`  | settings, state `S`, the frame drawn, messages and questions, late-bound calls            |
+| `src/scm/state.js`    | git calls (hardened), loaders, refresh, diffs and comparisons, view switches              |
+| `src/scm/ops.js`      | git operations (stage, commit, push, merge, rebase, tag, cherry-pick, reset…) and the `m` menu |
+| `src/scm/render.js`   | rows, header, tabs, commit box, status, help, diff and comparison, branch picker          |
+| `src/scm/input.js`    | keys, mouse, selection                                                                     |
 | `src/diff.js`         | diff collection (`collect`), parser and renderer (inline, side by side, word highlights), shared with the preview's Diff view; and the Changes pane: cursor, notes, base |
 | `src/edit.js`         | Editor pane: runs the terminal editor on a file                                              |
 | `src/peek.js`         | shows a file in the tab's preview from outside the plugin (an agent's pane) and the peek action |
 | `skills/herdr-preview/` | Claude Code skill that calls `src/peek.js`                                                 |
 | `src/core/actions.js` | file and pane actions: open, preview, edit, insert, copy, reveal, create, rename, duplicate, trash, stage, unstage, discard; opens the plugin's other panes |
+| `src/core/buffer.js`  | the preview's editing: text buffer, cursor over wide characters, undo, line endings, find, changed lines, atomic save |
+| `src/core/tabs.js`    | the preview's tab list: open (temporary or kept), close, next, the strip's layout          |
 | `src/core/notes.js`   | review notes of a tab: stored in the state folder, typed into the agent's prompt             |
-| `src/core/icons.js`   | Nerd Font icons and VS Code icon theme loading                                               |
+| `src/core/icons.js`   | Nerd Font, emoji, Unicode and ASCII icons, and VS Code icon theme loading                    |
 | `src/core/ui.js`      | terminal helpers: colours, text width, lines, input decoding, text field, scrollbar, screen, restart |
 | `src/core/exec.js`    | safe program execution, git hardening, settings, pane state, key bindings                    |
 | `src/core/update.js`  | daily release check, self-update by fast-forward pull, version watch                         |
@@ -75,7 +89,7 @@ Markdown, images, graph).
 | `src/render/graph.js` | lanes of the history's branch graph                                                          |
 | `hook.js`, `explorer.js`, … | one-line stand-ins for the panes and hooks of a 0.5.x manifest, until its installer is run again; to remove in a later release |
 | `release-please-config.json`, `.release-please-manifest.json` | release automation                       |
-| `test/`               | `node --test` suite: scripts parse, text width, key hints, graph lanes, doc links            |
+| `test/`               | `node --test` suite: scripts parse, text width, key hints, graph lanes, doc links, icons, git parsers, explorer rows, preview tabs, editing, Markdown images |
 | `.github/workflows/ci.yml` | runs the tests on every pull request and push to `main`                                 |
 | `.github/workflows/release.yml` | runs release-please on every push to `main`, merges the release pull request and publishes the release |
 | `CHANGELOG.md`        | generated by release-please                                                                  |

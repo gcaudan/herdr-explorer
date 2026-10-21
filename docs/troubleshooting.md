@@ -80,8 +80,10 @@
   ```
 
   Or turn it off everywhere with `touch ~/.config/no-show-user-motd`.
-- **Icons show as boxes or question marks**: the terminal font is not a Nerd Font (v3). A VS Code icon theme still
-  needs one for the chevrons and header icons.
+- **Icons show as boxes or question marks**: the terminal font is not a Nerd Font (v3). Install one, or set
+  **Icon set** to emoji, Unicode or ASCII in the settings (see [Without a Nerd
+  Font](configuration.md#without-a-nerd-font)). Emoji that overlap the names: the terminal draws them one column
+  wide, choose Unicode or ASCII.
 - **The explorer does not refresh**: press `r`. With your home folder (or above it) as the root, or when a folder
   of the tree cannot be read, deeper changes show within 30 s (see [Limits](#limits)).
 - **Copy says `Clipboard unavailable` or `(OSC 52)`**: on Linux, install `wl-copy` (Wayland) or `xclip`. Without a

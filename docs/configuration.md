@@ -17,6 +17,7 @@ The pane where a setting changes applies it at once; the last column says when t
 | `follow` | `false` | Follow terminal | reveal the folder of the terminal next to the explorer, moving the root when it leaves the tree | within 2 s |
 | `side` | `"left"` | Dock side | `"left"` or `"right"`: where new explorers dock; an open explorer keeps its side | new tabs only |
 | `autoOpen` | `true` | Open automatically | open the explorer in every new tab that has a single pane; off: only with `prefix+f` | new tabs only |
+| `glyphs` | `"nerd"` | Icon set | `"nerd"` (Nerd Font glyphs), `"emoji"`, `"unicode"` or `"ascii"`: the file icons, chevrons and header icons for a terminal without a Nerd Font, see [Without a Nerd Font](#without-a-nerd-font) | explorers within a second; other panes at their next opening |
 | `icons` | `""` | Icon theme | `""` for the Nerd Font icons, or `{ "id", "label", "file" }` of a VS Code icon theme | explorers within a second; source control at its next opening |
 | `wrap` | `false` | Wrap lines; preview `w`, **View** menu | wrap long lines in the preview | other previews at their next opening |
 | `lineNumbers` | `true` | Line numbers; preview `L`, **View** menu | line number gutter in the preview | other previews at their next opening |
@@ -53,6 +54,19 @@ macOS application bundles, and next to the `code`, `code-insiders`, `codium`, `c
 `PATH`. Each icon takes the colour of its SVG or font glyph; popular icons, mostly from Material Icon Theme, get a
 Nerd Font glyph of their own, the others the default glyph. A theme moved by an extension update is found again;
 an uninstalled one falls back to the Nerd Font icons.
+
+### Without a Nerd Font
+
+**Icon set** draws the icons with characters any font has, each followed by a space, so the names stay aligned:
+
+| Set | Folders | Files | Chevrons, settings, find, branch |
+|---|---|---|---|
+| Nerd Font (default) | Nerd Font glyphs | Nerd Font glyphs, or the icon theme's | Nerd Font glyphs |
+| emoji | `📁` `📂` | an emoji per type (`📜` JavaScript, `🐍` Python, `📝` Markdown…), `📄` for the others | `▸` `▾` `⚙` `⌕` `⎇` |
+| Unicode | `■` closed, `□` open | `●` for a known type, `○` for the others, in the type's colour | `▸` `▾` `⚙` `⌕` `⎇` |
+| ASCII | `/` | `-`, in the type's colour | `>` `v` `=` `/` `*` |
+
+With Unicode or ASCII marks, a VS Code icon theme still gives its colours; emoji have their own.
 
 ### Width
 

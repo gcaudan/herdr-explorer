@@ -69,6 +69,8 @@ Inputs reach a pane through `--env` variables of `herdr plugin pane open`:
 | `EXPLORER_TREE` | explorer | the tree root, when *Set as root* moved it |
 | `EXPLORER_FILE` | preview, scm, diff, edit | the file to show, select or edit |
 | `EXPLORER_LINE` | preview | the line to scroll to (1-based) |
+| `EXPLORER_KEEP` | preview | `1`: the file opens in a kept tab rather than the temporary one |
+| `EXPLORER_TABS` | preview | the tabs to restore, `{ list, current }` (JSON), after a herdr restart or a self-restart |
 | `EXPLORER_TAB` | preview | the tab id, which names its request file |
 | `EXPLORER_SEEN` | preview | the last request handled, across a restart |
 | `EXPLORER_PANE` | search, scm, diff | the pane to act from (the diff's notes go to the terminal next to it) |
@@ -98,20 +100,34 @@ default: until the answer, or for 500 ms, an image is not drawn), half blocks (`
 explorer sends the same query, only to tell in its settings whether the terminal has the protocol. In pixels, the
 image is decoded, scaled to the pane's size in pixels (box filter), sent once as zlib-compressed RGBA in 4096-byte
 chunks (`a=t`, image id `0x4846`), then placed over blank rows (`a=p`, `C=1` so that the cursor stays); it is placed
-again when its place changes, and deleted when another file shows, under the key help and at exit. Without the
+again when its place changes, and deleted when another file shows, under the key help and at exit. In rendered
+Markdown, each image gets an id of its own and blank rows tagged with it (`figure`); after each frame the images in
+view are placed cut to their visible rows (source rectangle `x,y,w,h`, computed by `image.crop`), a placement is
+removed when its image scrolls out, and an image is deleted when it leaves the rows (another file, the source or
+Diff view, a resize, `p`). Without the
 protocol, it is drawn with half blocks. WebP files go through `dwebp <absolute path> -o -`, whose PNG output is then
 decoded like any PNG.
 
 ## Preview requests
 
 Each tab has at most one preview, reused for every file. To show a file, the explorer or the search
-looks for a pane labelled *Preview* in the tab. If there is one, it writes `{ file, root, line, marks, view, t }` to
+looks for a pane labelled *Preview* in the tab. If there is one, it writes `{ file, root, line, marks, view, keep, t }` to
 `preview-<tab id>.json` in the state folder, which the preview polls every 200 ms (`fs.watchFile`), loading each
 new request at its line; otherwise it opens a new preview pane with the file in its environment. `marks`, from
 `peek.js` only, are the parts to highlight, `{ from, to, a, b }` (lines, and columns, 0 for whole lines): the preview
 keeps at most 200 well-formed ones (`EXPLORER_MARKS` for a new pane). `view: 'diff'` opens the Diff view
 (`EXPLORER_VIEW`), whose changes come from `diff.collect`, the function the Changes pane uses too, run from the
-nearest folder of the file still on disk.
+nearest folder of the file still on disk. `keep` opens the file in a kept tab; otherwise it replaces the temporary
+tab. The tab list itself (`src/core/tabs.js`: open, keep, close, next, the strip's layout for a width) is pure and
+tested; the preview keeps each tab's scroll, view and marks beside it, and saves the list with its pane state, which
+`hook.js --restore` gives back as `EXPLORER_TABS`. At most 50 tabs: past it, the one furthest from the new tab goes.
+
+Editing (`i`) keeps a `buffer.Editor` in the tab: the lines, the cursor and selection, and the undo history. Its
+pure logic is in `src/core/buffer.js` and tested: reading (UTF-8 only, at most 2 MB, line endings detected),
+cursor columns over wide characters and tabs, the changed lines (Myers' diff of the lines' hashes against the text
+at opening, at most 1000 differences), find and replace, and saving (a temporary file with the same mode, renamed
+over the file, after checking that its mtime and size have not changed). Only the visible lines and 200 around them
+are highlighted again after an edit.
 
 The preview watches the folder of the file it shows rather than the file itself, because editors and
 agents often replace a file by renaming a new one over it. It reloads 80 ms after a change, keeping
@@ -183,7 +199,7 @@ stays as the launcher and runs the real script as a child process with an IPC ch
   it checks every second until the pane is idle (see [Pane restart](installation.md#pane-restart)).
 - To restart, the child releases the terminal and sends the launcher what the next process must show
   (`EXPLORER_TREE` for the explorer; `EXPLORER_FILE`, `EXPLORER_ROOT`, `EXPLORER_LINE` and
-  `EXPLORER_SEEN` for the preview), then exits with code **75**. The launcher starts the script again
+  `EXPLORER_SEEN`, `EXPLORER_MARKS`, `EXPLORER_VIEW` and `EXPLORER_TABS` for the preview), then exits with code **75**. The launcher starts the script again
   with that environment, in the same terminal, so the pane keeps its id, place and width.
 - Any other exit code ends the launcher, and the pane with it.
 

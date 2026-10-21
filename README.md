@@ -32,19 +32,22 @@ Plugin id `gcaudan.explorer` · herdr 0.9.3 or later · Linux, macOS and Windows
   line in the tab's preview, so that an agent points you at the code it talks about.
 - **Insert into terminal**: types a file's path, relative and quoted, into the terminal next to the explorer;
   prefixed with `@` when an agent such as Claude Code runs there.
-- **Preview**: one pane per tab, reused for every file: syntax highlighting for 27 languages and formats, rendered
-  Markdown (GFM tables, task lists, alerts, simple Mermaid flowcharts, local images), images in real pixels where the
+- **Preview**: one pane per tab, with VS Code-style tabs (temporary or kept): syntax highlighting for 27 languages and formats, rendered
+  Markdown (GFM tables, task lists, alerts, simple Mermaid flowcharts, local images, sharp where possible), images in real pixels where the
   terminal has the Kitty graphics protocol (else half blocks), WebP and TIFF included, a hex dump for binary files.
   Reloads as soon as the file changes on disk. Find, wrap, zoom, and mouse selection copied to the clipboard.
+  Quick edits in place (`i`): undo, find and replace, changed lines in the gutter, line endings kept.
 - **Search**: fuzzy *Go to file* (`path:line` supported) and *Search in files* (case, whole word, regex, globs),
   with a preview of the selected result on wide screens.
 - **Source control**: stage, unstage, discard, commit or amend (with an optional message written by Claude), fetch,
-  pull, push, branches, stashes and refs; a history with a branch graph, also for a single file, branch comparisons;
+  pull, push (also forced with lease), merge, rebase, cherry-pick, tags, undo the last commit, reset, branches,
+  stashes and refs; a history with a branch graph, also for a single file, branch comparisons;
   continue or abort a merge, rebase, cherry-pick or revert. Inline or side-by-side diffs with word-level highlights,
   compared with HEAD or with where the branch started.
 - **Editors**: your graphical editor (VS Code by default), a terminal editor in a full-tab pane, or the system's
   application for documents and media. Executables and scripts are never run.
-- **Icons**: Nerd Font icons, or the colours of any VS Code icon theme you have installed.
+- **Icons**: Nerd Font icons, or the colours of any VS Code icon theme you have installed; emoji, Unicode or ASCII
+  icons without a Nerd Font.
 - **Restored after a herdr restart**, at the same folder and file, and **updated** from GitHub releases in place.
 - **Safe on untrusted repositories**: no shell, hardened git calls and sanitized terminal output (see
   [SECURITY.md](SECURITY.md)).
@@ -52,7 +55,7 @@ Plugin id `gcaudan.explorer` · herdr 0.9.3 or later · Linux, macOS and Windows
 ## Requirements
 
 herdr 0.9.3 or later, Node.js 20 or later (`node` on the `PATH` that herdr gives plugins), and a
-[Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr. git, a graphical editor, a clipboard and
+[Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr, or emoji, Unicode or ASCII icons. git, a graphical editor, a clipboard and
 a trash tool, and the [Claude Code](https://claude.com/claude-code) CLI are optional: see
 [Requirements](docs/installation.md#requirements) for what each one adds.
 

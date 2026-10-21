@@ -10,7 +10,7 @@ updates are fast-forward pulls.
 |---|---|
 | herdr 0.9.3 or later | the host (`min_herdr_version` in `herdr-plugin.toml`) |
 | Node.js 20 or later, as `node` on the `PATH` herdr gives plugins | every pane and hook runs `node src/<script>.js` |
-| A [Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr | icons, chevrons and header icons; without one, they show as empty boxes |
+| A [Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr | icons, chevrons and header icons; without one, choose emoji, Unicode or ASCII icons in the settings ([Without a Nerd Font](configuration.md#without-a-nerd-font)) |
 | git (optional) | git status, the changes view, source control, updates. Without it, the explorer and preview still work |
 | VS Code or another graphical editor (optional) | the external editor (see [Editor command](configuration.md#editor-command)) |
 | A terminal editor (optional) | the [Editor pane](usage.md#editor-pane) |
@@ -33,7 +33,8 @@ Without a trash, deleting asks a second time before removing for good.
 
 Install a Nerd Font, for instance `JetBrainsMono Nerd Font` (from your package manager, from
 [nerdfonts.com](https://www.nerdfonts.com/), or with `winget install DEVCOM.JetBrainsMonoNerdFont` on Windows), and
-select it in your terminal.
+select it in your terminal. Or keep your font and set **Icon set** to emoji, Unicode or ASCII in the explorer's
+settings (`,`).
 
 ## From the herdr plugin index
 
