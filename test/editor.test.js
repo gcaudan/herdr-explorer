@@ -31,23 +31,43 @@ test('binary, other encodings and large files are refused', () => {
   assert.ok(!doc('héllo ✓ 中文').error);
 });
 
-test('the save replaces the file whole, keeping its mode, through a link', () => {
+// A scratch folder holding a.sh, removed after the test.
+const scratch = fn => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'edit-'));
   try {
     const file = path.join(dir, 'a.sh');
     fs.writeFileSync(file, 'old');
-    fs.chmodSync(file, 0o750);
-    fs.symlinkSync('a.sh', path.join(dir, 'link'));
-    const stat = buffer.save(path.join(dir, 'link'), 'new');
-    assert.strictEqual(fs.readFileSync(file, 'utf8'), 'new');
-    assert.ok(fs.lstatSync(path.join(dir, 'link')).isSymbolicLink(), 'still a link');
-    assert.strictEqual(fs.statSync(file).mode & 0o777, 0o750);
-    assert.strictEqual(stat.size, 3);
-    assert.deepStrictEqual(fs.readdirSync(dir).sort(), ['a.sh', 'link'], 'no temporary file left');
-    const r = buffer.read(file);
-    assert.deepStrictEqual(r.doc.lines, ['new']);
+    return fn(dir, file);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
-});
+};
+
+test('the save replaces the file whole, leaving no temporary file', () => scratch((dir, file) => {
+  const stat = buffer.save(file, 'new');
+  assert.strictEqual(fs.readFileSync(file, 'utf8'), 'new');
+  assert.strictEqual(stat.size, 3);
+  assert.deepStrictEqual(fs.readdirSync(dir), ['a.sh'], 'no temporary file left');
+  assert.deepStrictEqual(buffer.read(file).doc.lines, ['new']);
+}));
+
+// Windows' chmod only knows read-only.
+test('the save keeps the mode', { skip: process.platform === 'win32' && 'no Unix modes on Windows' }, () => scratch((dir, file) => {
+  fs.chmodSync(file, 0o750);
+  buffer.save(file, 'new');
+  assert.strictEqual(fs.statSync(file).mode & 0o777, 0o750);
+}));
+
+test('the save writes through a link, keeping it', t => scratch((dir, file) => {
+  const link = path.join(dir, 'link');
+  try { fs.symlinkSync('a.sh', link); } catch (e) {
+    // Windows without developer mode refuses links.
+    if (e.code === 'EPERM') return t.skip('symbolic links not allowed');
+    throw e;
+  }
+  buffer.save(link, 'new');
+  assert.strictEqual(fs.readFileSync(file, 'utf8'), 'new');
+  assert.ok(fs.lstatSync(link).isSymbolicLink(), 'still a link');
+  assert.deepStrictEqual(fs.readdirSync(dir).sort(), ['a.sh', 'link'], 'no temporary file left');
+}));
 
 test('columns over tabs, wide characters, combining marks and emoji', () => {
   const s = buffer.shown('a\tb中e\u0301x');
