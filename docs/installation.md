@@ -67,8 +67,9 @@ Keep the clone where it is, on `main`: herdr runs the plugin from that folder, a
 1. Stop with `herdr not found` when `herdr` is not on `PATH`.
 2. Run `herdr plugin unlink gcaudan.explorer` (errors ignored), then `herdr plugin link <clone folder>`.
    Running the script again is safe.
-3. Open the herdr config, `~/.config/herdr/config.toml` on Linux and macOS or
-   `%APPDATA%\herdr\config.toml` on Windows, and create it if missing.
+3. Open the herdr config, and create it if missing: the file `HERDR_CONFIG_PATH` names when set, else
+   `$XDG_CONFIG_HOME/herdr/config.toml` (`~/.config/herdr/config.toml` without it) on Linux and macOS, or
+   `%APPDATA%\herdr\config.toml` on Windows.
 4. Append one `[[keys.command]]` block per action (see [Key bindings](#key-bindings)), unless the config already
    mentions that action. A binding you already changed, for example to another key, is left alone.
 5. Run `herdr server reload-config`, ignoring errors.

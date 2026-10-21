@@ -9,7 +9,8 @@ herdr plugin unlink gcaudan.explorer >/dev/null 2>&1 || true
 herdr plugin link "$here" >/dev/null
 echo "  plugin  $here"
 
-config="$HOME/.config/herdr/config.toml"
+# Where herdr reads it: HERDR_CONFIG_PATH, else $XDG_CONFIG_HOME/herdr, else ~/.config/herdr (macOS included).
+config="${HERDR_CONFIG_PATH:-${XDG_CONFIG_HOME:-$HOME/.config}/herdr/config.toml}"
 mkdir -p "$(dirname "$config")"
 touch "$config"
 bind() { # key action description

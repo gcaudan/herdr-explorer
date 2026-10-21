@@ -175,6 +175,7 @@ folders. See [installation.md](installation.md#key-bindings).
 | `HERDR_BIN_PATH` | the herdr binary, else `herdr` from `PATH` |
 | `HERDR_PLUGIN_ID` | the plugin id, `gcaudan.explorer` when unset |
 | `XDG_STATE_HOME`, `LOCALAPPDATA` | where `peek.js` looks for the state folder when `state-dir` is missing (`LOCALAPPDATA` on Windows, also for VS Code) |
+| `HERDR_CONFIG_PATH`, `XDG_CONFIG_HOME` | the herdr `config.toml` the install scripts add the key bindings to, see [Installation](installation.md) (`XDG_CONFIG_HOME`: `install.sh` only) |
 
 herdr sets `HERDR_PLUGIN_STATE_DIR`, `HERDR_PLUGIN_CONFIG_DIR`, `HERDR_PLUGIN_CONTEXT_JSON` and
 `HERDR_PLUGIN_EVENT_JSON` for the plugin's own processes, and `HERDR_PANE_ID` in every pane; the plugin only reads them.
