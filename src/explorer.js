@@ -663,7 +663,7 @@ const { settingsPage, openSettings } = pages;
 
 const paint = ui.screen({
   key, mouse,
-  reply: text => { if (/^\x1b_Gi=31;OK/.test(text)) { graphics = true; render(); } },
+  reply: text => { if (ui.KITTY_OK.test(text)) { graphics = true; render(); } },
   focus: f => { state.focused = f; render(); },
   paste: text => {
     if (state.prompt) state.prompt.field.insert(text);
@@ -673,7 +673,7 @@ const paint = ui.screen({
   resize: () => { resized(); reveal(); render(); },
 }, { motion: true });
 // The Kitty graphics query, as the preview sends it.
-process.stdout.write('\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\');
+process.stdout.write(ui.KITTY_QUERY);
 setTimeout(() => { if (graphics === null) { graphics = false; render(); } }, 500);
 
 watchRoot();

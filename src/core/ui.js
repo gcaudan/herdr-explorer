@@ -2,6 +2,10 @@
 // field, and the alternate screen setup.
 'use strict';
 
+// The Kitty graphics protocol query (a 1×1 image, not kept), and the start of the answer of a terminal that has it.
+const KITTY_QUERY = '\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\';
+const KITTY_OK = /^\x1b_Gi=31;OK/;
+
 const fg = rgb => `\x1b[38;2;${rgb.join(';')}m`;
 const bg = rgb => `\x1b[48;2;${rgb.join(';')}m`;
 const glyph = code => String.fromCodePoint(code);
@@ -788,6 +792,7 @@ class Menu {
 }
 
 module.exports = {
+  KITTY_QUERY, KITTY_OK,
   fg, bg, glyph, G, useGlyphs, C, GIT, clean, cleanLine, cols, fit, textWidth, ellipsis, line, keys, keyAt, help, helpKey, helpMouse, wrap, empty, message, messageKind, messageTime, confirm, confirmKey, confirmMouse, ask, askKey, askMouse,
   segWidth, segText, slice, split, mark, Scrollbar, segmented, switchStyle, onOff, Menu,
   keyName, keyLabel, decode, printable, Field, screen, restart, size,

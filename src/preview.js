@@ -442,7 +442,7 @@ let restarting = false;
 const graphics = text => { if (!restarting) process.stdout.write(text); };
 
 function reply(text) {
-  if (/^\x1b_Gi=31;OK/.test(text)) { kitty.supported = true; kitty.probing = false; state.rows = null; render(); }
+  if (ui.KITTY_OK.test(text)) { kitty.supported = true; kitty.probing = false; state.rows = null; render(); }
   const m = /^\x1b\[6;(\d+);(\d+)t$/.exec(text);
   if (m && +m[1] && +m[2]) { kitty.cell = [+m[2], +m[1]]; state.rows = null; render(); }
 }
@@ -1689,7 +1689,7 @@ if (SETTINGS_FILE) fs.watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
 });
 
 // The Kitty graphics query, and the size of a cell in pixels.
-graphics('\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b[16t');
+graphics(`${ui.KITTY_QUERY}\x1b[16t`);
 setTimeout(settle, 500);
 process.on('exit', () => {
   saveFile();
