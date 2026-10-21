@@ -282,7 +282,8 @@ async function collect({ cwd, file = '', commit = '', staged = false, base = 'he
 // The layout chosen with s, kept in the settings for the next diffs (source control and the preview included), by
 // width: one for narrow diffs (under SPLIT_MIN columns, as a preview beside the terminal) and one for wide ones (a
 // zoomed preview, the Changes pane), so that each keeps its own. diffLayout: { narrow, wide }, each 'inline' or
-// 'split', unset to choose by width; a single value, from older versions, holds for both until one is chosen.
+// 'split', unset to choose by width; a single value (the settings view's, or older versions') holds for both until s
+// chooses one.
 const sizeOf = width => (width >= SPLIT_MIN ? 'wide' : 'narrow');
 function savedMode(width) {
   const m = readSettings().diffLayout, v = m && typeof m === 'object' ? m[sizeOf(width)] : m;
@@ -290,7 +291,8 @@ function savedMode(width) {
 }
 function saveMode(width, mode) {
   const s = readSettings(), old = s.diffLayout;
-  writeSettings({ ...s, diffLayout: { ...(old && typeof old === 'object' ? old : {}), [sizeOf(width)]: mode } });
+  const both = old && typeof old === 'object' ? old : old ? { narrow: old, wide: old } : {};
+  writeSettings({ ...s, diffLayout: { ...both, [sizeOf(width)]: mode } });
 }
 // The layout of a diff of that width: the one chosen for its size, else by width.
 const layoutOf = width => savedMode(width) || defaultMode(width);

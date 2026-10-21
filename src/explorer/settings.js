@@ -24,6 +24,15 @@ module.exports = ctx => {
     return { value: [shown(values[now]), fg(C.blue)], change: dir => setSetting(name, values[(now + dir + values.length) % values.length]) };
   };
   const dialog = (value, open) => ({ value: [value, fg(C.blue)], change: dir => (dir > 0 ? open() : null) });
+  // diffLayout: one value, or { narrow, wide } once s chose a layout in a diff (diff.js saveMode), read again as other
+  // panes write it. Both shown when they differ; a choice here holds for both.
+  const diffLayout = () => {
+    const values = ['', 'split', 'inline'], m = readSettings().diffLayout;
+    const [narrow, wide] = (m && typeof m === 'object' ? [m.narrow, m.wide] : [m, m]).map(v => (values.includes(v) ? v : ''));
+    const now = narrow === wide ? values.indexOf(narrow) : -1;
+    return { value: [now >= 0 ? values[now] || 'auto' : `narrow ${narrow || 'auto'} · wide ${wide || 'auto'}`, fg(C.blue)],
+      change: dir => setSetting('diffLayout', values[now < 0 ? (dir > 0 ? 0 : values.length - 1) : (now + dir + values.length) % values.length]) };
+  };
 
   // The rows of the settings view: a group title, or a setting with its value and its help.
   function settingsRows() {
@@ -55,7 +64,7 @@ module.exports = ctx => {
       { label: 'Images', help: `Images in the preview: pixelated (half blocks), or sharp with the Kitty graphics protocol of Kitty, Ghostty or WezTerm (p). ${
         graphics === null ? 'Checking this terminal…' : graphics ? 'This terminal has it.' : 'This terminal does not have it: sharp images would not show.'}`,
       ...choice('images', ['auto', 'blocks', 'pixels'], v => ({ blocks: 'pixelated', auto: 'sharp if possible', pixels: 'always sharp' })[v]) },
-      { label: 'Diff layout', help: 'Diffs inline or side by side (s). Auto: side by side when the pane is wide enough.', ...choice('diffLayout', ['', 'split', 'inline'], v => v || 'auto') },
+      { label: 'Diff layout', help: 'Diffs inline or side by side, for narrow and wide panes alike (s in a diff: for its size only). Auto: side by side when the pane is wide enough.', ...diffLayout() },
       { group: 'GENERAL' },
       { label: 'Key bindings', help: 'Change the explorer keys, saved in keys.json.',
         ...dialog(changedActions().length ? `${changedActions().length} changed` : 'default', () => openKeys()) },

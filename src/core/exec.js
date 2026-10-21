@@ -138,7 +138,7 @@ const DEFAULTS = {
   lineNumbers: true,  // preview: line number gutter
   images: 'auto',     // preview images: 'auto' (pixels when the terminal has the Kitty graphics protocol, else half
                       // blocks), 'blocks' (half blocks), 'pixels' (pixels without waiting for the terminal's answer)
-  diffLayout: '',     // diffs 'inline' or 'split' (side by side); empty: side by side when the pane is wide enough
+  diffLayout: '',     // diffs 'inline' or 'split' (side by side), or { narrow, wide } (diff.js); empty: by the pane's width
   updateCheck: true,  // check GitHub once a day for a newer release
   scmTree: false,     // source control: the changes as a folder tree rather than a list
   scmGraphAll: true,  // source control history: every branch, or only the current one
