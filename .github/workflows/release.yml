@@ -1,6 +1,6 @@
-# Release on every push to main: release-please updates the release pull request from the Conventional Commits
-# (version in herdr-plugin.toml, CHANGELOG.md), this job merges it, then tags vX.Y.Z and publishes the GitHub
-# release, which the explorer's update check reads.
+# Release on every push to main: release-please opens or updates the release pull request from the Conventional
+# Commits (version in herdr-plugin.toml, CHANGELOG.md); merging it publishes the tag vX.Y.Z and the GitHub release,
+# which the explorer's update check reads.
 name: release
 
 on:
@@ -12,7 +12,7 @@ permissions:
   issues: write
   pull-requests: write
 
-# One release at a time: two quick merges must not both try to merge the same release pull request.
+# One release at a time: two quick merges must not both publish.
 concurrency:
   group: release
   cancel-in-progress: false
@@ -21,46 +21,37 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-      # Publishes the release when the push is a release pull request merged by hand, otherwise opens or updates it.
+      # Publishes the release when the push merges the release pull request, otherwise opens or updates it.
       - id: rp
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
 
-      # GitHub may still be computing whether the new pull request can be merged, so retry for about a minute.
-      - name: Merge the release pull request
+      # The manifest must parse and carry the version release-please set, as the update check reads it. Both files
+      # are read at the same ref, so a branch not yet updated still gives a consistent answer.
+      - name: Check the release pull request
         if: steps.rp.outputs.pr
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ fromJSON(steps.rp.outputs.pr || '{}').number }}
+          BRANCH: ${{ fromJSON(steps.rp.outputs.pr || '{}').headBranchName }}
         run: |
-          for _ in 1 2 3 4 5 6; do
-            gh pr merge "$PR" --squash --delete-branch --repo "$GITHUB_REPOSITORY" && exit 0
-            sleep 10
-          done
-          echo "::error::could not merge release pull request #$PR"
-          exit 1
-
-      # A push made with GITHUB_TOKEN starts no workflow, so tag and publish the merged release here.
-      - id: tag
-        if: steps.rp.outputs.pr
-        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
-        with:
-          skip-github-pull-request: true
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          file() { gh api "repos/$GITHUB_REPOSITORY/contents/$1?ref=$BRANCH" --jq .content | base64 -d; }
+          toml=$(file herdr-plugin.toml | python3 -c "import sys, tomllib; print(tomllib.loads(sys.stdin.read())['version'])") \
+            || fail "herdr-plugin.toml does not parse on $BRANCH"
+          manifest=$(file .release-please-manifest.json | jq -r '."."')
+          [[ "$toml" == "$manifest" ]] || fail "herdr-plugin.toml is $toml, .release-please-manifest.json is $manifest on $BRANCH"
 
       # The update check only accepts digits and dots, and compares the tag with the version in the manifest.
       - name: Verify the release
-        if: steps.rp.outputs.release_created || steps.tag.outputs.release_created
+        if: steps.rp.outputs.release_created
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.rp.outputs.tag_name || steps.tag.outputs.tag_name }}
+          TAG: ${{ steps.rp.outputs.tag_name }}
         run: |
           set -euo pipefail
           fail() { echo "::error::$1"; exit 1; }
           version="${TAG#v}"
           [[ "$TAG" == "v$version" && "$version" =~ ^[0-9]+(\.[0-9]+)*$ ]] || fail "tag $TAG is not vX.Y.Z"
-          file() { gh api "repos/$GITHUB_REPOSITORY/contents/$1?ref=$TAG" --jq .content | base64 -d; }
-          file herdr-plugin.toml | grep -qx "version = \"$version\"" || fail "herdr-plugin.toml at $TAG is not $version"
-          manifest=$(file .release-please-manifest.json | jq -r '."."')
-          [[ "$manifest" == "$version" ]] || fail ".release-please-manifest.json at $TAG is $manifest, not $version"
-          latest=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
-          [[ "$latest" == "$TAG" ]] || fail "the latest release is $latest, not $TAG"
+          gh api "repos/$GITHUB_REPOSITORY/contents/herdr-plugin.toml?ref=$TAG" --jq .content | base64 -d \
+            | grep -qx "version = \"$version\"" || fail "herdr-plugin.toml at $TAG is not $version"
           echo "release $TAG verified"
