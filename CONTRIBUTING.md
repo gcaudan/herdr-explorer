@@ -162,7 +162,9 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
    `docs`, `revert`), release-please opens a release pull request titled `chore: release X.Y.Z`. It
    bumps `version` in `herdr-plugin.toml` (through `extra-files`) and in
    `.release-please-manifest.json`, and updates `CHANGELOG.md`.
-3. The same run merges that pull request (squash), tags `vX.Y.Z` (no component in the tag) and publishes the
+3. The same run tests that pull request's commit, which gets no CI run of its own: `node --test` on the CI
+   matrix, in a read-only job, and the `version` of `herdr-plugin.toml` against the manifest. Once the tests
+   pass, it merges that commit only (squash), tags `vX.Y.Z` (no component in the tag) and publishes the
    GitHub release. It then checks that the tag, the `version` in `herdr-plugin.toml`, the manifest
    and the latest release agree, and that the version has only digits and dots, as the update
    check requires.
@@ -172,6 +174,17 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 Every merged `feat`, `fix`, `perf`, `docs` or `revert` therefore ships a release. Group changes in one pull request, or merge
 them together, when they should go out as one version. Merging the release pull request by hand
 still works: the next run publishes the release.
+
+A failed test leaves the release pull request open. A flaky test: use **Re-run failed jobs** (**Re-run all jobs**
+tests nothing the same day, release-please finding the pull request unchanged until the date in it changes, after
+midnight UTC). A real failure: a `feat` or `fix` merged into `main` updates the release pull request and tests it
+again; a fix with no changelog entry (`test`, `chore`, `ci`) leaves it as it is the same day, so merge it by hand once
+its CI passes. As long as a release pull request stays open without being updated, every run of the release workflow
+in which release-please works fails and names it, so that none looks green with a release left behind. The `ci` check of the release pull request itself fails with no job, as the pull request is merged
+within seconds: the `test` job of the release workflow stands in for it. When `main` or the release branch moved
+during that test, or a re-run comes after such a move, the run merges nothing and says so: check the release pull
+request (`node --test` on its branch), then merge it by hand, which publishes the release; unless a `feat` or
+`fix` reached `main` since, whose run takes the release up by itself.
 
 Do not edit the version, `.release-please-manifest.json` or `CHANGELOG.md` by hand: release-please maintains them,
 and the update check and the panes' self-restart both depend on the version.

@@ -1,16 +1,13 @@
 # Release on every push to main: release-please updates the release pull request from the Conventional Commits
-# (version in herdr-plugin.toml, CHANGELOG.md), this job merges it, then tags vX.Y.Z and publishes the GitHub
-# release, which the explorer's update check reads.
+# (version in herdr-plugin.toml, CHANGELOG.md); the test job tests it, then the publish job merges it, tags vX.Y.Z
+# and publishes the GitHub release, which the explorer's update check reads.
 name: release
 
 on:
   push:
     branches: [main]
 
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+permissions: {}
 
 # One release at a time: two quick merges must not both try to merge the same release pull request.
 concurrency:
@@ -20,41 +17,194 @@ concurrency:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      pr: ${{ steps.rp.outputs.pr }}
+      sha: ${{ steps.head.outputs.sha }}
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
     steps:
       # Publishes the release when the push is a release pull request merged by hand, otherwise opens or updates it.
       - id: rp
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
 
-      # GitHub may still be computing whether the new pull request can be merged, so retry for about a minute.
-      - name: Merge the release pull request
+      # The commit to test, then to merge: the release branch's head, read from the branch itself (the pull request
+      # may still give the head before release-please's push for a few seconds).
+      - id: head
         if: steps.rp.outputs.pr
         env:
           GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ fromJSON(steps.rp.outputs.pr || '{}').headBranchName }}
           PR: ${{ fromJSON(steps.rp.outputs.pr || '{}').number }}
         run: |
+          for _ in 1 2 3; do
+            sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$BRANCH" --jq .object.sha || true)
+            [[ "$sha" =~ ^[0-9a-f]{40}$ ]] && { echo "sha=$sha" >> "$GITHUB_OUTPUT"; exit 0; }
+            sleep 5
+          done
+          # Running this workflow again the same day would release nothing: release-please finds the pull request
+          # unchanged (only its date changes it, after midnight UTC).
+          echo "::error::cannot read the head of $BRANCH: check release pull request #$PR, run node --test on its branch, then merge it by hand; that merge publishes the release"
+          exit 1
+
+      # A release pull request left open (a failed test, a stop) that this run did not update, so neither tests nor
+      # merges: a green run would hide it. Every run fails here until it is merged or updated.
+      - name: Check no release is left open
+        if: ${{ steps.rp.outcome == 'success' && !steps.rp.outputs.pr }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          open=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --label "autorelease: pending" --json number --jq '.[0].number // empty')
+          [[ -z "$open" ]] && exit 0
+          echo "::error::release pull request #$open is open and this run left it unchanged, so untested and unmerged: a feat or fix merged into main updates and tests it; otherwise run node --test on its branch, then merge it by hand, a merge that publishes the release"
+          exit 1
+
+      - name: Say what to do
+        if: ${{ failure() && steps.rp.outcome == 'failure' }}
+        run: |
+          echo "::error::release-please failed (see its step): Re-run failed jobs once the cause is gone"
+
+  # The release commit gets no ci run (its pull request is merged at once, and a push made with GITHUB_TOKEN starts
+  # no workflow): it is tested here as ci tests the others. Read-only: the tests run the repository's code, which
+  # could hand anything to later steps of its own job ($GITHUB_ENV, $GITHUB_PATH).
+  test:
+    needs: release-please
+    if: needs.release-please.outputs.pr
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20, 24]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+      - run: node --test
+      # The manifest must parse and carry the version release-please set, as the update check reads it.
+      - name: Check the manifest's version
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          toml=$(python3 -c "import tomllib; print(tomllib.load(open('herdr-plugin.toml', 'rb'))['version'])") \
+            || fail "herdr-plugin.toml does not parse"
+          manifest=$(jq -r '."."' .release-please-manifest.json) || fail ".release-please-manifest.json does not parse"
+          [[ "$toml" == "$manifest" ]] || fail "herdr-plugin.toml is $toml, .release-please-manifest.json is $manifest"
+      - name: Say what to do
+        if: failure()
+        shell: bash
+        env:
+          PR: ${{ fromJSON(needs.release-please.outputs.pr || '{}').number }}
+        run: |
+          echo "::error::release pull request #$PR not merged. A flaky test: Re-run failed jobs (Re-run all jobs releases nothing the same day). A real failure: merge a fix or feat into main, which updates and tests it again; or, for a fix with no changelog entry, merge the pull request by hand once that fix is in."
+
+  # Merges the release pull request once tested (a failed test leaves it open: a fix: or feat: commit on main updates
+  # and tests it again; a fix with no changelog entry leaves it as it is until the date in it changes, so merge it by
+  # hand then), tags and publishes. A release pull request merged by hand is only verified (whoever merges it runs
+  # node --test first, as the messages ask), even when reading the head of a new release pull request failed after
+  # (its outputs set before the failure stay).
+  publish:
+    needs: [release-please, test]
+    if: >-
+      always() && (needs.release-please.outputs.release_created ||
+      (needs.release-please.result == 'success' && needs.release-please.outputs.pr && needs.test.result == 'success'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      # Only the commit tested, on the main it was made from (checked before each try). GitHub may still be computing
+      # whether the new pull request can be merged, so retry for about a minute. A release branch or a main that moved
+      # since the test stops the release: the next run would not take it up when release-please finds the pull request
+      # unchanged, so the message says to merge it by hand, a merge that publishes the release.
+      - name: Merge the release pull request
+        id: merge
+        if: needs.release-please.outputs.pr && needs.test.result == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ fromJSON(needs.release-please.outputs.pr || '{}').number }}
+          SHA: ${{ needs.release-please.outputs.sha }}
+        run: |
+          stop() { echo "::error::release pull request #$PR not merged: $1. If a feat or fix reached main since, its run takes the release up; otherwise run node --test on the release branch, then merge it by hand, a merge that publishes the release"; exit 1; }
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || stop "no tested commit"
+          for _ in 1 2 3; do
+            base=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA" --jq '.parents[0].sha' || true)
+            [[ "$base" =~ ^[0-9a-f]{40}$ ]] && break
+            sleep 5
+          done
+          [[ "$base" =~ ^[0-9a-f]{40}$ ]] || stop "cannot read the parent of $SHA"
           for _ in 1 2 3 4 5 6; do
-            gh pr merge "$PR" --squash --delete-branch --repo "$GITHUB_REPOSITORY" && exit 0
+            # A try that merged but failed after (deleting the branch, the network): merged, go on to the tag, if it is
+            # the commit tested (a head merged by hand has its own run, which publishes it).
+            merged=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json state,headRefOid --jq 'select(.state == "MERGED") | .headRefOid' || true)
+            [[ "$merged" == "$SHA" ]] && exit 0
+            [[ -z "$merged" ]] || { echo "::error::release pull request #$PR was merged at $merged, not the commit tested ($SHA): nothing to merge here; check that $merged was tested and released"; exit 1; }
+            main=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha || true)
+            if [[ -z "$main" ]]; then sleep 10; continue; fi
+            [[ "$main" == "$base" ]] || stop "main moved since it was tested (made from $base, main is now $main)"
+            gh pr merge "$PR" --squash --delete-branch --match-head-commit "$SHA" --repo "$GITHUB_REPOSITORY" && exit 0
+            head=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json headRefOid --jq .headRefOid || true)
+            [[ -z "$head" || "$head" == "$SHA" ]] || stop "it moved since it was tested ($SHA, now $head)"
             sleep 10
           done
-          echo "::error::could not merge release pull request #$PR"
-          exit 1
+          stop "not merged within a minute (main unreadable, or GitHub refusing the merge)"
 
       # A push made with GITHUB_TOKEN starts no workflow, so tag and publish the merged release here.
       - id: tag
-        if: steps.rp.outputs.pr
+        if: needs.release-please.outputs.pr && needs.test.result == 'success'
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           skip-github-pull-request: true
 
-      # The update check only accepts digits and dots, and compares the tag with the version in the manifest.
-      - name: Verify the release
-        if: steps.rp.outputs.release_created || steps.tag.outputs.release_created
+      # The release of the commit merged, whatever the tag step did (released, failed after releasing, released by an
+      # earlier try of this run): the version in its manifest, then that release on GitHub.
+      - name: Find the release of the merged commit
+        id: release
+        if: ${{ !cancelled() && steps.merge.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.rp.outputs.tag_name || steps.tag.outputs.tag_name }}
+          PR: ${{ fromJSON(needs.release-please.outputs.pr || '{}').number }}
+          SHA: ${{ needs.release-please.outputs.sha }}
+        run: |
+          for _ in 1 2 3; do
+            version=$(gh api "repos/$GITHUB_REPOSITORY/contents/.release-please-manifest.json?ref=$SHA" --jq .content | base64 -d | jq -r '."."' || true)
+            if [[ -n "$version" ]] && gh api "repos/$GITHUB_REPOSITORY/releases/tags/v$version" --silent; then
+              echo "tag=v$version" >> "$GITHUB_OUTPUT"; exit 0
+            fi
+            sleep 5
+          done
+          [[ -n "$version" ]] || { echo "::error::release pull request #$PR merged, but the version of $SHA could not be read: Re-run failed jobs"; exit 1; }
+          echo "::error::release pull request #$PR merged, but no release v$version found: Re-run failed jobs, release-please then publishes the merged pull request still labelled autorelease: pending"
+          exit 1
+
+      - name: Say what to do
+        if: ${{ failure() && steps.tag.outcome == 'failure' && steps.release.outcome == 'success' }}
+        run: |
+          echo "::error::release-please failed after publishing the release: see its step; once the release is verified below, nothing is left to do"
+
+      # The update check only accepts digits and dots, and compares the tag with the version in the manifest. A run that
+      # both published a release merged by hand and merged a new one checks the newer, now the latest; one that published
+      # a release merged by hand checks it even when merging the new one failed.
+      - name: Verify the release
+        if: ${{ !cancelled() && (needs.release-please.outputs.release_created || steps.release.outputs.tag) }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag || needs.release-please.outputs.tag_name }}
         run: |
           set -euo pipefail
-          fail() { echo "::error::$1"; exit 1; }
+          fail() { echo "::error::release $TAG: $1. Fix the release or tag on GitHub, or delete them and let a new release go out; a GitHub hiccup: Re-run failed jobs"; exit 1; }
           version="${TAG#v}"
           [[ "$TAG" == "v$version" && "$version" =~ ^[0-9]+(\.[0-9]+)*$ ]] || fail "tag $TAG is not vX.Y.Z"
           file() { gh api "repos/$GITHUB_REPOSITORY/contents/$1?ref=$TAG" --jq .content | base64 -d; }
