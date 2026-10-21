@@ -113,6 +113,19 @@ test('editing: enter keeps the indentation, backspace joins lines, tab indents',
   assert.strictEqual(tabs.indent, '\t');
 });
 
+test('backspace after a selection shrunk to nothing erases before the cursor, again and again', () => {
+  // shift+→ then shift+← leave the selection's other end at the cursor: the erase must not take it as a selection.
+  const ed = editor('abcdef');
+  ed.place({ line: 0, at: 3 }); ed.place({ line: 0, at: 4 }, true); ed.place({ line: 0, at: 3 }, true);
+  ed.erase(-1); ed.erase(-1);
+  assert.strictEqual(buffer.serialize(ed), 'adef');
+  // Nor once the line it was on is gone.
+  const joined = editor('a\nb');
+  joined.place({ line: 1, at: 0 }); joined.place({ line: 1, at: 0 }, true);
+  joined.erase(-1); joined.erase(-1);
+  assert.strictEqual(buffer.serialize(joined), 'b');
+});
+
 test('undo groups typed characters by word, redo comes back', () => {
   const ed = editor('');
   for (const ch of 'hello world') ed.type(ch, 'type');

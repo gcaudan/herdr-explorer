@@ -361,6 +361,7 @@ class Editor {
   // joining two lines at their ends.
   erase(dir, word) {
     if (this.selection()) return this.type('');
+    this.anchor = null;
     const p = this.cur, text = this.lines[p.line];
     let q;
     if (dir < 0) q = p.at ? { line: p.line, at: word ? wordStart(text, p.at) : prevAt(text, p.at) } : p.line ? { line: p.line - 1, at: this.lines[p.line - 1].length } : null;
