@@ -63,7 +63,7 @@ async function last() {
   for (let i = 0; i < parts.length; i++) {
     const p = parts[i];
     if (p.length < 4) continue;
-    if ('RC'.includes(p[0])) i++; // the original path follows
+    if ('RC'.includes(p[0]) || 'RC'.includes(p[1])) i++; // the original path follows (renamed in the index or the tree)
     const abs = path.join(top, p.slice(3));
     let stat;
     try { stat = remoteLink(abs, top) ? null : fs.statSync(abs); } catch { continue; }
