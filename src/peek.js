@@ -9,6 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const { target } = require('./core/places');
 
 const fail = (text, code = 1) => { console.error(`peek: ${text}`); process.exit(code); };
 // Found in the absolute folders of PATH: on Windows a bare name would run a herdr.exe of the working directory.
@@ -74,34 +75,15 @@ async function last() {
   return [best.abs, 0];
 }
 
-// file[:places]: places are separated by commas, each a line (12), lines (12-14), or columns of a line (12:5-18,
-// counted in characters from 1); 12:5 is line 12, as compilers and grep write it. A name that exists as given is
-// taken whole, so that a colon in it is not read as places. Returns [file, marks].
-const PLACE = /^(\d+)(?:-(\d+))?(?::(\d+)(?:-(\d+))?)?$/;
-function target(arg) {
-  const whole = path.resolve(cwd, arg);
-  const at = arg.indexOf(':', /^[a-z]:[\\/]/i.test(arg) ? 2 : 0); // past a Windows drive
-  if (fs.existsSync(whole) || at < 1) return [whole, []];
-  const marks = [];
-  for (const place of arg.slice(at + 1).split(',')) {
-    const m = PLACE.exec(place);
-    if (!m) return [whole, []];
-    const from = +m[1], to = m[2] ? +m[2] : from;
-    // Columns only on one line, a range of them only (a single column is a position, not a part).
-    const cols = !m[2] && m[4];
-    if (!from || to < from || (cols && (!+m[3] || +m[4] < +m[3]))) fail(`wrong place: ${place}`, 2);
-    marks.push({ from, to, a: cols ? +m[3] : 0, b: cols ? +m[4] : 0 });
-  }
-  return [path.resolve(cwd, arg.slice(0, at)), marks];
-}
-
 (async () => {
   const args = process.argv.slice(2);
   // --diff: the file's git changes, at the places, rather than the file.
   const diff = args[0] === '--diff';
   if (diff) args.shift();
   if (args.length !== 1 || args[0] === '--help' || args[0] === '-h') fail('usage: peek.js [--diff] <file>[:<line>[-<line>][:<col>-<col>],…] | [--diff] --last', 2);
-  const [abs, marks] = args[0] === '--last' ? [(await last())[0], []] : target(args[0]);
+  let abs, marks;
+  if (args[0] === '--last') [abs, marks] = [(await last())[0], []];
+  else try { [abs, marks] = target(args[0], cwd); } catch (e) { fail(e.message, 2); }
   const line = marks.length ? marks[0].from : 0;
   // A deleted file still has changes to show.
   let stat = null;

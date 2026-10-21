@@ -250,8 +250,9 @@ async function collect({ cwd, file = '', base = 'head' }) {
   const env = { ...await gitEnv(cwd), GIT_LITERAL_PATHSPECS: '1' }; // a file named '*' or '[id]' means itself
   const target = file ? ['--', file] : [];
   // stdout even on a non-zero exit code: diff --no-index returns 1 when the files differ.
-  const git = (...args) => (GIT && spawnSync(GIT, ['-c', 'core.quotePath=false', ...args],
-    { cwd, env, encoding: 'utf8', maxBuffer: 64 << 20, windowsHide: true }).stdout) || '';
+  const gitIn = (dir, ...args) => (GIT && spawnSync(GIT, ['-c', 'core.quotePath=false', ...args],
+    { cwd: dir, env, encoding: 'utf8', maxBuffer: 64 << 20, windowsHide: true }).stdout) || '';
+  const git = (...args) => gitIn(cwd, ...args);
   const diff = (...args) => git('diff', ...DIFF_OPTS, ...args);
   const top = git('rev-parse', '--show-toplevel').trim() || cwd;
   let baseName = '';
@@ -267,8 +268,9 @@ async function collect({ cwd, file = '', base = 'head' }) {
   }
   // Without any commit, compare with the empty tree: staged changes, then unstaged ones.
   let text = from ? diff(from, ...target) : diff('--cached', ...target) + diff(...target);
-  const untracked = git('ls-files', '--others', '--exclude-standard', '-z', ...target).split('\0').filter(Boolean);
-  for (const f of untracked.slice(0, MAX_UNTRACKED)) text += diff('--no-index', '--', '/dev/null', f);
+  // Untracked files named from top, as git diff names the others (ls-files and diff --no-index name them from cwd).
+  const untracked = git('ls-files', '--others', '--exclude-standard', '--full-name', '-z', ...target).split('\0').filter(Boolean);
+  for (const f of untracked.slice(0, MAX_UNTRACKED)) text += gitIn(top, 'diff', ...DIFF_OPTS, '--no-index', '--', '/dev/null', f);
   if (untracked.length > MAX_UNTRACKED) text += `\n… and ${untracked.length - MAX_UNTRACKED} more untracked files\n`;
   return { text, top, baseName };
 }
@@ -309,8 +311,11 @@ function main() {
   // relative to. baseName: the default branch, once found.
   let base = 'head', top = cwd, baseName = '';
 
+  // The changes for the base chosen now; null when b chose another one meanwhile, whose run then shows its own.
+  let runs = 0;
   async function changes() {
-    const res = await collect({ cwd, file, base });
+    const run = ++runs, res = await collect({ cwd, file, base });
+    if (run !== runs) return null;
     top = res.top; baseName = res.baseName;
     return res.text;
   }
@@ -466,13 +471,15 @@ function main() {
   function copyReference() {
     const r = rows[cur];
     if (!r || !r.ref) return;
-    const rel = path.relative(cwd, path.join(top, r.ref.file)).split(path.sep).join('/');
+    // From the folder resolved as top is (git gives its real path): /home → /var/home would otherwise give ../../..
+    const rel = path.relative(notes.real(cwd), path.join(top, r.ref.file)).split(path.sep).join('/');
     act(actions.copy(noteWhere({ ...r.ref, file: rel }), r.ref.from ? 'Reference copied' : 'Path copied'));
   }
   async function switchBase() {
     base = base === 'head' ? 'branch' : 'head';
     parsed = null; cache = ''; draw();
     const text = await changes();
+    if (text === null) return;
     parsed = parse(text); cache = ''; draw();
     if (base === 'branch' && !baseName) say('No default branch: compared with HEAD');
   }
@@ -530,7 +537,7 @@ function main() {
     resize: draw,
   }, { focus: false, motion: true });
   draw();
-  changes().then(text => { parsed = parse(text); cache = ''; draw(); });
+  changes().then(text => { if (text !== null) { parsed = parse(text); cache = ''; draw(); } });
   // The tab, whose notes this pane shows and takes.
   if (PANE) {
     actions.tabOf(PANE).then(t => {

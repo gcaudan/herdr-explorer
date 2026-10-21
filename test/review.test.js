@@ -3,6 +3,10 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const zlib = require('zlib');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { spawnSync } = require('child_process');
 const ui = require('../src/core/ui');
 const notes = require('../src/core/notes');
 const diff = require('../src/diff');
@@ -28,6 +32,26 @@ test('notes go on one line, sorted, relative to the terminal', () => {
   assert.strictEqual(line, 'Review notes: README.md: add an example; src/a.js:12-14 (fix): rename it; src/b.js:3: why ');
   assert.ok(!/[\x00-\x1f]/.test(line));
   assert.strictEqual(notes.where(list[0], '/elsewhere'), '/r/src/b.js:3');
+});
+
+test('notes stay relative from a folder reached through a link', () => {
+  const real = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'notes-')));
+  fs.mkdirSync(path.join(real, 'src'));
+  const link = `${real}-link`;
+  try { fs.symlinkSync(real, link, 'dir'); } catch { return; } // links not allowed (Windows without developer mode)
+  const n = { file: notes.real(path.join(link, 'src', 'a.js')), from: 12, to: 12 };
+  assert.strictEqual(n.file, path.join(real, 'src', 'a.js'));
+  assert.strictEqual(notes.where(n, link), 'src/a.js:12');
+  fs.unlinkSync(link);
+});
+
+test('untracked files of a subfolder are named from the repository', async () => {
+  const top = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'diff-')));
+  if (spawnSync('git', ['init', '-q'], { cwd: top }).status !== 0) return;
+  fs.mkdirSync(path.join(top, 'app', 'src'), { recursive: true });
+  fs.writeFileSync(path.join(top, 'app', 'src', 'new.js'), 'x\n');
+  const { text } = await diff.collect({ cwd: path.join(top, 'app') });
+  assert.deepStrictEqual(diff.parse(text).files.map(f => f.to), ['app/src/new.js']);
 });
 
 test('diff rows know the lines they show', () => {

@@ -7,7 +7,7 @@ const fsp = fs.promises;
 const path = require('path');
 const ui = require('./core/ui');
 const actions = require('./core/actions');
-const { WIN, run, GIT, gitEnv, readSettings, remoteLink } = require('./core/exec');
+const { WIN, run, GIT, gitEnv, readSettings, remoteLink, writeAtomic } = require('./core/exec');
 
 const { C, fg, bg, line, textWidth, ellipsis, Field } = ui;
 ui.useGlyphs(readSettings().glyphs);
@@ -50,9 +50,8 @@ function save() {
   const f = state.fields, o = state.opts;
   const data = { files: f.files.value, content: f.content.value, include: f.include.value, exclude: f.exclude.value,
     case: o.case, word: o.word, regex: o.regex };
-  // Written to a temporary file then renamed, so that another popup never reads it half-written.
-  const tmp = `${SAVE}.${process.pid}`;
-  try { fs.writeFileSync(tmp, JSON.stringify(data)); fs.renameSync(tmp, SAVE); } catch { try { fs.unlinkSync(tmp); } catch { } }
+  // Whole or not at all, as another popup may read it.
+  writeAtomic(SAVE, JSON.stringify(data));
 }
 
 // --- file list

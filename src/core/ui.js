@@ -721,13 +721,13 @@ function head(text, n) {
   return `${out}\x1b[0m${' '.repeat(Math.max(0, n - w))}`;
 }
 
-// A menu in a frame over a pane, as the explorer's: items { label, run, key, value, danger }, or null for a rule. key:
+// A menu in a frame over a pane: items { label, run, key, value, danger }, or null for a rule. key:
 // the key that does the same outside the menu, dimmed after the label; value: [text, style] on the right, as in the
 // explorer's settings (onOff gives ● on / ○ off). at: the screen line (from 0) of its top border; right: its right
-// edge's column (from 1), else it starts at the left.
+// edge's column (from 1), else it starts at the column left (from 1).
 class Menu {
-  constructor({ title, items, at = 0, right = 0 }) {
-    Object.assign(this, { title, items, at, right, sel: Math.max(0, items.findIndex(Boolean)), off: 0, x: 1, inner: 0 });
+  constructor({ title, items, at = 0, right = 0, left = 1 }) {
+    Object.assign(this, { title, items, at, right, left, sel: Math.max(0, items.findIndex(Boolean)), off: 0, x: left, inner: 0 });
   }
   rows(H) { return Math.max(1, Math.min(this.items.length, H - 2 - this.at)); }
   draw(lines, W, H) {
@@ -736,9 +736,9 @@ class Menu {
     // space.
     const side = it => (it.key ? textWidth(it.key) + 2 : 0) + (it.value ? textWidth(it.value[0]) + 1 : 0);
     const want = Math.max(textWidth(this.title) + 4, ...this.items.map(it => (it ? textWidth(it.label) + side(it) + 3 : 0)));
-    const inner = this.inner = Math.min(W - 3, want);
+    const inner = this.inner = Math.min(W - 2 - (this.right ? 1 : this.left), want);
     // From its left column x (from 1): the frame takes inner + 2 columns after a space.
-    const x = this.x = this.right ? Math.max(1, this.right - inner - 2) : 1;
+    const x = this.x = this.right ? Math.max(1, this.right - inner - 2) : this.left;
     // Left of the frame, what the line showed; right of it, blank.
     const rest = ' '.repeat(Math.max(0, W - x - inner - 2));
     let pad = '';
@@ -765,13 +765,14 @@ class Menu {
     if (this.sel < this.off) this.off = this.sel;
     if (this.sel >= this.off + n) this.off = this.sel - n + 1;
   }
-  // A key: up and down (and k j) move, enter, space, left and right (h l) run the selection, the key shown beside an
+  // A key: up and down (and k j) move, enter and space run the selection, left and right (h l) an option's, the key shown beside an
   // item runs it; escape, q and , (which opens the menus of the panes) close. Returns { run } for an item to run, 'close', or null when the menu took the key. The menu stays
   // open after a run when keep is set on the item (an option changed in place).
   key(k, H) {
     if (k === 'escape' || k === 'q' || k === ',') return 'close';
-    // ← → change the selected option, as in the explorer's settings.
-    if (['left', 'right', 'h', 'l'].includes(k)) return this.items[this.sel] ? { run: this.items[this.sel].run, keep: this.items[this.sel].keep } : null;
+    // ← → change the selected option, as in the explorer's settings; on an action (no value), they do nothing, so that
+    // an arrow never pushes or checks out.
+    if (['left', 'right', 'h', 'l'].includes(k)) { const it = this.items[this.sel]; return it && it.value ? { run: it.run, keep: it.keep } : null; }
     if (k === 'up' || k === 'k') { this.move(-1, H); return null; }
     if (k === 'down' || k === 'j') { this.move(1, H); return null; }
     if (k === 'enter' || k === 'space') return this.items[this.sel] ? { run: this.items[this.sel].run, keep: this.items[this.sel].keep } : null;

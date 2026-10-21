@@ -148,7 +148,8 @@ the scroll position.
 agent's pane, where herdr gives `HERDR_PANE_ID` but not the plugin's state folder: it reads that folder's path from
 `state-dir` in the config folder (`herdr plugin config-dir`), which every hook run saves, else takes herdr's usual
 place. As the action, it takes the focused pane of the tab from `HERDR_PLUGIN_CONTEXT_JSON`, or the tab's first
-terminal when the focus is on one of the plugin's panes.
+terminal when the focus is on one of the plugin's panes. Its argument's places (`file:12-14,42:5-18`) are read by
+`src/core/places.js`, pure and tested.
 
 ## Restore after a herdr restart
 

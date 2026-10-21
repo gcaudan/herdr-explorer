@@ -8,6 +8,7 @@ const os = require('os');
 const path = require('path');
 const { C, G, glyph } = require('./ui');
 const { newer } = require('./exec');
+const { pathDirs } = require('./which');
 
 // [Nerd Font glyph, colour, emoji]. The emoji are wide by default (no U+FE0F selector): two columns.
 const FOLDER = [[0xf07b, C.folder, '📁'], [0xf07c, C.folder, '📂']];
@@ -84,8 +85,7 @@ function extensionDirs() {
   for (const app of APPS) roots.push(`/Applications/${app}.app/Contents/Resources/app/extensions`);
   // The command is in resources/app/bin (macOS, Cursor) or in a bin folder next to resources/app, or to a version
   // folder holding it (VS Code on Windows).
-  for (const dir of (process.env.PATH || '').split(path.delimiter)) {
-    if (!path.isAbsolute(dir)) continue;
+  for (const dir of pathDirs()) {
     for (const command of COMMANDS) {
       let up;
       try { up = path.dirname(path.dirname(fs.realpathSync(path.join(dir, command)))); } catch { continue; }
