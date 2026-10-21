@@ -349,14 +349,20 @@ const noPreview = why => (state.missing ? `${why || 'No preview'}: ${state.missi
 // placed over, see placeFigures; nothing until the terminal's answer in 'auto') or with half blocks. Decoded once
 // per file, width and way of drawing (pictures).
 const pictures = new Map();
+const within = (file, dir) => { const r = path.relative(dir, file); return !r.startsWith('..') && !path.isAbsolute(r); };
 function picture(url, width) {
   if (!image || /^[a-z][\w+.-]*:/i.test(url) || url.startsWith('//')) return null;
   let rel = url.replace(/[?#].*$/, '');
   try { rel = decodeURIComponent(rel); } catch { }
   if (!rel || !image.FORMATS.has(ext(rel)) || ext(rel) === 'svg') return null;
+  // Checked again once decoded, and kept in the project (or the Markdown file's folder): %5C%5Chost%5Cshare would
+  // otherwise reach a network share, which on Windows sends the user's credentials.
+  const abs = path.resolve(path.dirname(state.file), rel);
+  const base = state.root && within(state.file, state.root) ? state.root : path.dirname(state.file);
+  if (!within(abs, base)) return null;
   if (waiting()) return null;
   const pixels = sharp(), [cw, ch] = kitty.cell;
-  const abs = path.resolve(path.dirname(state.file), rel), key = `${abs}\0${width}${pixels ? `\0${cw}×${ch}` : ''}`;
+  const key = `${abs}\0${width}${pixels ? `\0${cw}×${ch}` : ''}`;
   if (pictures.has(key)) return pictures.get(key);
   let lines = null;
   try {
