@@ -135,6 +135,22 @@ async function copy(text, done = 'Path copied') {
   return ok ? done : 'Clipboard unavailable';
 }
 
+// The clipboard's text, line breaks as \n, or null without a tool to read it (over SSH, the terminal's own paste still
+// reaches the pane, as a bracketed paste).
+async function clipboard() {
+  const opts = { timeout: 2000 };
+  let text;
+  if (WIN) {
+    text = await run(which('powershell.exe'), ['-NoProfile', '-NonInteractive', '-Command', 'Get-Clipboard -Raw'], opts);
+    if (text !== null) text = text.replace(/\r?\n$/, '');
+  } else if (MAC) text = await run(which('pbpaste'), [], opts);
+  else {
+    text = process.env.WAYLAND_DISPLAY ? await run(which('wl-paste'), ['--no-newline'], opts) : null;
+    if (text === null && process.env.DISPLAY) text = await run(which('xclip'), ['-selection', 'clipboard', '-o'], opts);
+  }
+  return text === null ? null : text.replace(/\r\n?/g, '\n');
+}
+
 // Quoted for the shell unless made of plain characters: single quotes are literal in PowerShell (where the
 // typographic ones count as quotes too, each doubled to escape it) and in POSIX shells ('\'' to escape).
 // A leading dash would read as an option of the command being typed.
@@ -367,10 +383,12 @@ const requestFile = tab => process.env.HERDR_PLUGIN_STATE_DIR
 // preview. line: 1-based line to scroll to. focus: give the focus to the preview. open: false to only update a
 // preview already open, doing nothing without one. marks: the parts to highlight, [{ from, to, a, b }] (1-based lines,
 // and columns a to b included, 0 for whole lines). view: 'diff' to show the file's git changes rather than the file.
-async function preview(abs, root, pane, line = 0, focus = false, open = true, { marks = [], view = 'file' } = {}) {
+// keep: in a kept tab of the preview, rather than the temporary one that the next file replaces (a double-click, Enter).
+// tabs: the tabs of a new preview, { list, current }, as the preview saved them (restore after a herdr restart).
+async function preview(abs, root, pane, line = 0, focus = false, open = true, { marks = [], view = 'file', keep = false, tabs = null } = {}) {
   const tab = pane && await tabOf(pane);
   if (!tab) return 'Cannot preview';
-  const request = { file: abs, root, line, marks, view, t: Date.now() };
+  const request = { file: abs, root, line, marks, view, keep, t: Date.now() };
   const existing = tab.panes.find(p => p.label === 'Preview');
   if (existing) {
     try { fs.writeFileSync(requestFile(tab.me.tab_id), JSON.stringify(request)); } catch { return 'Cannot preview'; }
@@ -382,6 +400,7 @@ async function preview(abs, root, pane, line = 0, focus = false, open = true, { 
   const res = await openPane('preview', 'split', target, {
     EXPLORER_FILE: abs, EXPLORER_ROOT: root, EXPLORER_LINE: line, EXPLORER_TAB: tab.me.tab_id,
     ...(marks.length ? { EXPLORER_MARKS: JSON.stringify(marks) } : {}), ...(view === 'diff' ? { EXPLORER_VIEW: 'diff' } : {}),
+    ...(keep ? { EXPLORER_KEEP: '1' } : {}), ...(tabs ? { EXPLORER_TABS: JSON.stringify(tabs) } : {}),
   }, ['--direction', 'right', focus ? '--focus' : '--no-focus']);
   return res ? null : 'Cannot open the preview';
 }
@@ -520,7 +539,7 @@ async function discard(abs, root) {
 }
 
 module.exports = {
-  open, editor, system, web, canOpen, canPreview, reveal, copy, insert, type, relativeTo, diff, preview, edit, search, scm, requestFile, tabOf, terminalOf,
+  open, editor, system, web, canOpen, canPreview, reveal, copy, clipboard, insert, type, relativeTo, diff, preview, edit, search, scm, requestFile, tabOf, terminalOf,
   layoutOf, sideSplit, setWidth, widthKeeper,
   create, rename, duplicate, trash, remove, stage, unstage, discard, REVEAL: WIN ? 'Reveal in Explorer' : 'Open folder',
 };

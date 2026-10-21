@@ -7,9 +7,10 @@ const fsp = fs.promises;
 const path = require('path');
 const ui = require('./core/ui');
 const actions = require('./core/actions');
-const { WIN, run, GIT, gitEnv } = require('./core/exec');
+const { WIN, run, GIT, gitEnv, readSettings } = require('./core/exec');
 
 const { C, fg, bg, line, textWidth, ellipsis, Field } = ui;
+ui.useGlyphs(readSettings().glyphs);
 const ROOT = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());
 const PANE = process.env.EXPLORER_PANE;
 const SAVE = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'search.json');
@@ -519,7 +520,7 @@ function render() {
   chips.push(chip('hidden', state.opts.hidden, toggle('hidden')), [' ', '']);
   // Go to file: the count on the right of the field.
   const count = !content && state.files ? [`${state.fields.files.value ? `${state.results.length}${state.results.length >= MAX_ROWS ? '+' : ''} of ` : ''}${state.files.length}  `, DIM] : ['', ''];
-  const prompt = [` ${ui.SEARCH} `, DIM, () => focus('query')];
+  const prompt = [` ${ui.G.search} `, DIM, () => focus('query')];
   const qw = Math.max(1, W - 3 - width(chips) - width([count]) - 1);
   const qparts = fieldParts(queryField(), qw, !content || state.focus === 'query').map(p => [...p, () => focus('query')]);
   lines.push(bar(1, [prompt, ...qparts, [' '.repeat(Math.max(0, W - 3 - width(qparts) - width(chips) - width([count]))), '', () => focus('query')],

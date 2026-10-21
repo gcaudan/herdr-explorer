@@ -33,6 +33,7 @@ const widthOf = segs => segs.reduce((w, s) => w + textWidth(s[0]), 0);
 const prefixed = (lines, first, rest) => lines.map((l, k) => {
   const r = [...(k ? rest : first), ...l];
   if (l.anchor) r.anchor = l.anchor;
+  if (l.figure) r.figure = l.figure;
   return r;
 });
 
@@ -634,12 +635,14 @@ function clamp(segs, width) {
     if (part.length < t.length) break;
   }
   if (segs.anchor) out.anchor = segs.anchor;
+  if (segs.figure) out.figure = segs.figure;
   return out;
 }
 
 // Rendered lines of a Markdown text for width columns, and the line index of each heading by its slug
 // (GitHub style: "## Some title" → "some-title"). highlight: the highlight.js module, loaded when not given.
-// image(url, width): the lines drawing an image of the text, or null to show its name only.
+// image(url, width): the lines drawing an image of the text, or null to show its name only; a line's figure property
+// (an image placed in pixels over blank lines) is kept, whatever prefix a list or a quote adds.
 function render(text, width, { highlight, image } = {}) {
   width = Math.max(1, Math.floor(width) || 1);
   let hl = highlight;

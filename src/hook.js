@@ -156,9 +156,17 @@ if (process.argv.includes('--toggle')) {
           const home = exists(saved.home, true);
           anchor = open(rest, tab, home, home && exists(saved.root, true));
         }
+        // The preview's tabs whose file still exists, the one shown first among them.
         const preview = stale.find(p => p.label === 'Preview');
         const shown = preview && readPaneState(preview.pane_id);
-        if (shown && exists(shown.file, false)) await actions.preview(shown.file, shown.root, anchor, shown.line);
+        const saved = shown && shown.tabs && Array.isArray(shown.tabs.list) ? shown.tabs : null;
+        const list = saved ? saved.list.filter(t => t && exists(t.file, false)) : [];
+        const at = saved ? list.indexOf(saved.list[saved.current]) : -1;
+        const first = at >= 0 ? list[at] : list[0] || (shown && exists(shown.file, false) && shown);
+        if (first) {
+          await actions.preview(first.file, first.root, anchor, first.line, false, true,
+            { view: first.view === 'diff' ? 'diff' : 'file', keep: !!first.kept, tabs: list.length ? { list, current: Math.max(0, at) } : null });
+        }
       }
     }
     // The state of panes that no longer exist.

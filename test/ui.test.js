@@ -94,3 +94,10 @@ test('a menu drawn on the right keeps what is left of it', () => {
   assert.strictEqual(menu.key('s', 24).run(), 'b');
   assert.strictEqual(menu.key('escape', 24), 'close');
 });
+
+test('a menu item with a key and no value keeps its whole label', () => {
+  const plain = s => s.replace(/\x1b\[[0-9;]*m/g, '');
+  const lines = ['', '', ''];
+  new ui.Menu({ title: 'M', items: [{ label: 'Rebase onto…', key: 'R' }] }).draw(lines, 40, 24);
+  assert.strictEqual(plain(lines[1]).trimEnd(), '│ Rebase onto…  R  │');
+});

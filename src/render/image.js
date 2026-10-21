@@ -1072,4 +1072,34 @@ function render(buffer, cols, rows, { background = [30, 30, 30] } = {}) {
   }
 }
 
-module.exports = { FORMATS, MAX_BYTES, info, decode, convert, pixels, render };
+// --- images in scrolled text
+//
+// An image placed in pixels over rows cells of a scrolled text (rendered Markdown) shows only where those rows do.
+
+// The part of an image rows cells high, its first row at row start of the text, that shows when the rows top to
+// top + height - 1 do: { at, from, count, y, h }, the body row (from 0) where it shows, its rows from to
+// from + count - 1, and the pixels they hold, y to y + h - 1 of an image pixels high (the rows stretch the image
+// evenly, whatever the cell size); null when none shows.
+function crop(start, rows, pixels, top, height) {
+  const from = Math.max(0, top - start), to = Math.min(rows, top + height - start);
+  if (!(rows > 0) || to <= from) return null;
+  const y = Math.round(from * pixels / rows);
+  return { at: start + from - top, from, count: to - from, y, h: Math.max(1, Math.round(to * pixels / rows) - y) };
+}
+
+// The images showing among the rows top to top + height - 1 of a list: each row of an image carries
+// figure: { pic, row }, pic having rows and pixels (the image's height). Each image once, with where it starts in the
+// list (start, which tells two copies of an image apart) and its crop.
+function shown(list, top, height) {
+  const out = [], seen = new Set();
+  for (let i = Math.max(0, top); i < Math.min(list.length, top + height); i++) {
+    const f = list[i] && list[i].figure;
+    if (!f || seen.has(i - f.row)) continue;
+    seen.add(i - f.row);
+    const part = crop(i - f.row, f.pic.rows, f.pic.pixels, top, height);
+    if (part) out.push({ pic: f.pic, start: i - f.row, ...part });
+  }
+  return out;
+}
+
+module.exports = { FORMATS, MAX_BYTES, info, decode, convert, pixels, render, crop, shown };
