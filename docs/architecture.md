@@ -7,6 +7,7 @@ The plugin is a set of CommonJS Node.js scripts that use only Node's built-in mo
 | --------- | ---------- | ----------------------------- | ------------------------- |
 | startup   |            | `node src/hook.js --restore`  |                           |
 | event     | `tab.created` | `node src/hook.js`         |                           |
+| event     | `tab.closed`, `workspace.closed` | `node src/hook.js --closed` |        |
 | pane      | `tree`     | `node src/explorer.js`        | split                     |
 | pane      | `preview`  | `node src/preview.js`         | split                     |
 | pane      | `search`   | `node src/search.js`          | popup, 80% × 80%          |
@@ -164,7 +165,8 @@ they showed, each pane writes its state to `panes/<pane id>.json`:
 At startup, `hook.js --restore` closes, in every workspace, the panes labelled as the plugin's whose foreground
 process is not `node`. In each tab that had an explorer, it opens a new one, at the saved root when both saved
 folders still exist; in each tab that had a preview, it reopens the saved tabs whose file still exists, on the
-current one. The other plugin panes are not reopened. It then deletes the state files of panes that no longer exist.
+current one. The other plugin panes are not reopened. It then deletes the state files of tabs and panes that no longer exist, as `--closed` does on the
+`tab.closed` and `workspace.closed` events.
 herdr keeps pane ids across a restart, which is what lets each pane find its saved state.
 
 ## Updates

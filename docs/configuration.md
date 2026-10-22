@@ -99,8 +99,8 @@ saved, and the explorer's width falls back to 32 columns.
 | `notes-<tab id>.json`  | the tab's review notes, removed once sent                                                    |
 
 `settings.json`, `expanded.json`, `width`, `update.json`, `search.json`, `resizing`, `preview-*.json`, `notes-*.json`,
-`panes/*.json` and `keys.json` (in the config folder) are written to a temporary file and then renamed, so a pane never reads them half-written. At herdr startup, the state files of panes
-that no longer exist are deleted.
+`panes/*.json` and `keys.json` (in the config folder) are written to a temporary file and then renamed, so a pane never reads them half-written. When a tab or a space closes, and again at herdr
+startup, the files of tabs and panes that no longer exist are deleted (`notes-*.json`, `preview-*.json`, `panes/*.json`).
 
 ### Config folder
 

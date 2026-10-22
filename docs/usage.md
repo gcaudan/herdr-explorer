@@ -414,7 +414,8 @@ belong to the tab: the preview and the [Changes pane](#changes-diff-pane) of a t
   and keeps them.
 - `u` removes the last note taken.
 
-The notes live in the plugin's state folder until they are sent, so they survive closing the preview.
+The notes live in the plugin's state folder until they are sent, so they survive closing the preview. Closing the
+tab deletes them.
 
 ### Find
 

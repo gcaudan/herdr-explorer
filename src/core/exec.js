@@ -196,13 +196,42 @@ function writeSettings(settings) {
 // What each plugin pane shows, one file per pane in the state folder (panes/), since herdr does not keep it across a
 // restart: the explorer's space folder and tree root, which Set as root may have moved; the preview's file.
 const PANES_DIR = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'panes');
-const paneFile = pane => PANES_DIR && pane && path.join(PANES_DIR, `${pane.replace(/[^\w.-]/g, '_')}.json`);
+const paneName = pane => `${pane.replace(/[^\w.-]/g, '_')}.json`;
+const paneFile = pane => PANES_DIR && pane && path.join(PANES_DIR, paneName(pane));
 function readPaneState(pane) {
   try { return JSON.parse(fs.readFileSync(paneFile(pane), 'utf8')); } catch { return null; }
 }
 function writePaneState(pane, data) {
   const file = paneFile(pane);
   if (file) writeAtomic(file, JSON.stringify(data));
+}
+
+// What a tab keeps in the state folder, one file per tab and kind: <kind>-<tab id>.json. The kinds: the review notes
+// (notes.js), the preview's requests (actions.js). Read from the environment at each call, as peek.js sets the state
+// folder after loading this module.
+const TAB_KINDS = ['notes', 'preview'];
+const tabName = (kind, tab) => `${kind}-${String(tab).replace(/[^\w-]/g, '_')}.json`;
+const tabFile = (kind, tab) => process.env.HERDR_PLUGIN_STATE_DIR && tab
+  && path.join(process.env.HERDR_PLUGIN_STATE_DIR, tabName(kind, tab));
+
+// The state files left by tabs and panes that no longer exist: names, the files of the state folder; panes, those of
+// its panes folder; tabs and livePanes, the ids that still exist. Returns the paths to remove.
+function staleState(dir, names, panes, tabs, livePanes) {
+  const keepTabs = new Set(TAB_KINDS.flatMap(k => tabs.map(t => tabName(k, t))));
+  const kinds = new RegExp(`^(${TAB_KINDS.join('|')})-.+[.]json$`);
+  const keepPanes = new Set(livePanes.map(paneName));
+  return [...names.filter(n => kinds.test(n) && !keepTabs.has(n)).map(n => path.join(dir, n)),
+    ...panes.filter(n => !keepPanes.has(n)).map(n => path.join(dir, 'panes', n))];
+}
+
+// Removes the state of the tabs and panes that no longer exist (staleState); the ids of those that do, from herdr.
+function sweepState(tabs, livePanes) {
+  const dir = process.env.HERDR_PLUGIN_STATE_DIR;
+  if (!dir) return;
+  const list = d => { try { return fs.readdirSync(d); } catch { return []; } };
+  for (const f of staleState(dir, list(dir), list(path.join(dir, 'panes')), tabs, livePanes)) {
+    try { fs.rmSync(f, { recursive: true, force: true }); } catch { }
+  }
 }
 
 // Key bindings, editable by the user: keys.json in the plugin config folder, one object per pane (only the
@@ -256,5 +285,5 @@ function saveKeys(all) {
 
 module.exports = {
   WIN, PLUGIN, pathDirs, which, remoteLink, realPath, writeAtomic, addConfig, OWN_PANES, words, run, result, HERDR, GIT, gitEnv, gitOperation, version, newer, DEFAULT_WIDTH, WIDTH_FILE, readWidth,
-  SETTINGS_FILE, readSettings, writeSettings, PANES_DIR, paneFile, readPaneState, writePaneState, KEYS_FILE, readKeys, keysTemplate, writeKeys,
+  SETTINGS_FILE, readSettings, writeSettings, PANES_DIR, paneFile, readPaneState, writePaneState, TAB_KINDS, tabFile, staleState, sweepState, KEYS_FILE, readKeys, keysTemplate, writeKeys,
 };

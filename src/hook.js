@@ -7,13 +7,14 @@
 //   node hook.js --restore startup hook: reopens the explorer and preview panes that herdr restored as shells
 //   node hook.js --search  key binding action: Go to file popup of the current tab's folder
 //   node hook.js --scm     key binding action: source control of the current tab's folder
+//   node hook.js --closed  tab.closed and workspace.closed events: removes the state of the tabs and panes gone
 // Each run also saves the state folder for peek.js.
 'use strict';
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const { PLUGIN, HERDR, result, OWN_PANES: OWN, readWidth, readSettings, PANES_DIR, paneFile, readPaneState } = require('./core/exec');
+const { PLUGIN, HERDR, result, OWN_PANES: OWN, readWidth, readSettings, readPaneState, sweepState } = require('./core/exec');
 const { sideSplit } = require('./core/actions');
 const LABEL = 'Explorer';
 if (!HERDR) process.exit(0);
@@ -31,6 +32,12 @@ if (STATE && CONFIG) {
 const herdr = (...args) => result(execFileSync(HERDR, args, { encoding: 'utf8' }));
 const workspacePanes = workspaceId => herdr('pane', 'list', '--workspace', workspaceId).panes;
 const tabPanes = (workspaceId, tabId) => workspacePanes(workspaceId).filter(p => p.tab_id === tabId);
+
+// What the plugin keeps for tabs and panes that no longer exist (notes, pane state, preview tabs), removed.
+function sweep() {
+  const panes = herdr('workspace', 'list').workspaces.flatMap(ws => workspacePanes(ws.workspace_id));
+  sweepState([...new Set(panes.map(p => p.tab_id))], panes.map(p => p.pane_id));
+}
 
 function focusedTab() {
   const ws = herdr('workspace', 'list').workspaces.find(w => w.focused);
@@ -122,6 +129,8 @@ if (process.argv.includes('--toggle')) {
   const terminal = focused && !OWN.has(focused.label) ? focused : panes.find(p => !OWN.has(p.label));
   const root = (saved && saved.root) || (terminal && terminal.cwd) || ctx.workspace_cwd;
   if (pane && root) (process.argv.includes('--scm') ? actions.scm(root, pane) : actions.search(root, pane, 'files'));
+} else if (process.argv.includes('--closed')) {
+  sweep();
 } else if (process.argv.includes('--all')) {
   for (const ws of herdr('workspace', 'list').workspaces) {
     const tabs = new Map();
@@ -170,12 +179,8 @@ if (process.argv.includes('--toggle')) {
         }
       }
     }
-    // The state of panes that no longer exist.
-    const live = new Set(herdr('workspace', 'list').workspaces
-      .flatMap(ws => workspacePanes(ws.workspace_id).map(p => paneFile(p.pane_id))));
-    try {
-      for (const f of fs.readdirSync(PANES_DIR)) if (!live.has(path.join(PANES_DIR, f))) fs.unlinkSync(path.join(PANES_DIR, f));
-    } catch { }
+    // The state of tabs and panes that no longer exist, closed while the plugin was off or before a restart.
+    sweep();
   })();
 } else {
   // Also here, for a herdr session running for days: the check itself happens once a day at most.

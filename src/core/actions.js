@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const { WIN, PLUGIN, pathDirs, which, remoteLink, writeAtomic, OWN_PANES: OWN, words, run, result, HERDR, GIT, gitEnv, readSettings } = require('./exec');
+const { WIN, PLUGIN, pathDirs, which, remoteLink, writeAtomic, OWN_PANES: OWN, words, run, result, HERDR, GIT, gitEnv, readSettings, tabFile } = require('./exec');
 
 const MAC = process.platform === 'darwin';
 
@@ -382,8 +382,7 @@ async function tabOf(pane) {
 
 // The preview of a tab reads its requests from a file of the state folder, so that the explorer and the search
 // reuse one preview pane per tab instead of opening a new one for each file.
-const requestFile = tab => process.env.HERDR_PLUGIN_STATE_DIR
-  && path.join(process.env.HERDR_PLUGIN_STATE_DIR, `preview-${String(tab).replace(/[^\w-]/g, '_')}.json`);
+const requestFile = tab => tabFile('preview', tab);
 
 // Shows a file in the tab's preview pane, opened next to the terminal when there is none: explorer | terminal |
 // preview. line: 1-based line to scroll to. focus: give the focus to the preview. open: false to only update a

@@ -5,13 +5,12 @@
 const fs = require('fs');
 const path = require('path');
 const actions = require('./actions');
-const { realPath, writeAtomic } = require('./exec');
+const { realPath, writeAtomic, tabFile } = require('./exec');
 
 // The kinds a note can have, chosen with Tab while it is typed; '' for a plain remark.
 const KINDS = ['', 'fix', 'question', 'nit', 'verify'];
 
-const fileOf = tab => process.env.HERDR_PLUGIN_STATE_DIR && tab
-  && path.join(process.env.HERDR_PLUGIN_STATE_DIR, `notes-${String(tab).replace(/[^\w-]/g, '_')}.json`);
+const fileOf = tab => tabFile('notes', tab);
 
 // The notes of a tab: [{ file, from, to, kind, text, t }], from and to 1-based lines, 0 for the whole file.
 function read(tab) {

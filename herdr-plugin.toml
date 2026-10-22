@@ -12,6 +12,14 @@ command = ["node", "src/hook.js", "--restore"]
 on = "tab.created"
 command = ["node", "src/hook.js"]
 
+[[events]]
+on = "tab.closed"
+command = ["node", "src/hook.js", "--closed"]
+
+[[events]]
+on = "workspace.closed"
+command = ["node", "src/hook.js", "--closed"]
+
 [[panes]]
 id = "tree"
 title = "Explorer"
