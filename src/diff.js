@@ -142,9 +142,9 @@ function preRow(l) {
   return { segs: [[l, '']] };
 }
 
-function fileRow(f, width) {
+function fileRow(f, width, viewed = false) {
   const name = f.status === 'renamed' || f.status === 'copied' ? `${f.from} → ${f.to}` : f.to || f.from || '?';
-  const status = (f.status === 'modified' ? '' : `  ${f.status}`) + (f.sec ? `  ${f.sec}` : '');
+  const status = (f.status === 'modified' ? '' : `  ${f.status}`) + (f.sec ? `  ${f.sec}` : '') + (viewed ? '  ✓ viewed' : '');
   const counts = ` +${f.add} −${f.del} `;
   const label = ' ' + ui.ellipsis(ui.cleanLine(name), Math.max(1, width - counts.length - status.length - 2));
   const pad = ' '.repeat(Math.max(0, width - ui.textWidth(label) - status.length - counts.length));
@@ -158,7 +158,7 @@ function fileRow(f, width) {
 // caller's title already names the only file, whose own row is left out. view: { wrap, left } long lines wrapped
 // (onto rows marked more), else cut from column left of the text. What each row shows, for core/stage.js: f, the file
 // on its name's row; h, the hunk on its @@ row; lines, the hunk's lines on theirs (two on a side by side row). A file
-// of a section (changesOf) has it in its refs (sec).
+// of a section (changesOf) has it in its refs (sec). view.viewed(f): the file shows folded, its name's row alone.
 function render(d, width, mode = 'inline', titled = false, view = {}) {
   const rows = [];
   const single = titled && !d.pre.length && d.files.length === 1;
@@ -166,7 +166,9 @@ function render(d, width, mode = 'inline', titled = false, view = {}) {
   for (const f of d.files) {
     const file = f.to || f.from, sec = f.sec ? { sec: f.sec } : {};
     if (rows.length) rows.push({ segs: [] });
-    if (!single || f.sec) rows.push({ ...fileRow(f, width), hunk: !f.hunks.length, ref: { file, from: 0, to: 0, ...sec }, f });
+    const folded = !!(view.viewed && view.viewed(f));
+    if (!single || f.sec || folded) rows.push({ ...fileRow(f, width, folded), hunk: !f.hunks.length, ref: { file, from: 0, to: 0, ...sec }, f });
+    if (folded) continue;
     for (const note of f.notes) rows.push({ segs: [[`  ${note}`, DIM]] });
     if (!f.hunks.length && !f.notes.length && f.status !== 'renamed') rows.push({ segs: [['  (no content change)', DIM]] });
     let last = 1;
@@ -372,6 +374,7 @@ function main() {
   // The explorer's pane, whose terminal the notes go to; this pane's own when opened without it.
   const FROM = process.env.EXPLORER_PANE || PANE;
   const notes = require('./core/notes'), actions = require('./core/actions'), Scope = require('./core/scope'), stage = require('./core/stage');
+  const Viewed = require('./core/viewed');
   // scope: what the changes are compared with, the tab's (core/scope.js), HEAD until the tab is known. top: the
   // repository's folder, which the diff's paths are relative to. baseName: the default branch, once found.
   let scope = Scope.HEAD, top = cwd, baseName = '';
@@ -395,7 +398,9 @@ function main() {
   let anchor = null, stay = null;
   // wrap: long lines wrapped (the preview's setting, w in either); left: the first column shown of the text otherwise.
   let wrap = !!readSettings().wrap, left = 0;
-  const keyOf = (width, m) => `${width}:${m}:${wrap ? 'wrap' : left}`;
+  // viewed: the paths (relative to top) of the files marked viewed (m) and unchanged since, shown folded.
+  let viewed = new Set();
+  const keyOf = (width, m) => `${width}:${m}:${wrap ? 'wrap' : left}:${[...viewed].join('\0')}`;
   const scrollbar = new ui.Scrollbar(t => { top0 = t; draw(); });
 
   function layout(width, m) {
@@ -403,7 +408,7 @@ function main() {
     if (parsed && key !== cache) {
       // The cursor stays on the same lines when the layout changes.
       const was = rows[cur] && rows[cur].ref, hunk = !!(rows[cur] && rows[cur].hunk);
-      rows = render(parsed, width, m, false, { wrap, left }); cache = key;
+      rows = render(parsed, width, m, false, { wrap, left, viewed: f => viewed.has(f.to || f.from) }); cache = key;
       const at = r => r.ref && !r.more;
       let i = stay !== null ? rows.findIndex((r, k) => k >= stay && at(r))
         : was ? rows.findIndex(r => at(r) && r.ref.file === was.file && r.ref.from === was.from && r.ref.sec === was.sec && !!r.hunk === hunk) : -1;
@@ -417,7 +422,7 @@ function main() {
   // Lines covered by a note of the tab, by path relative to the repository.
   const reals = new Map(); // the real path of each file of the diff, looked up once
   const realOf = f => (reals.has(f) ? reals.get(f) : reals.set(f, notes.real(path.join(top, f))).get(f));
-  const noted = r => r.ref && r.ref.from && tabNotes.length && tabNotes.some(n => n.from && n.file === realOf(r.ref.file)
+  const noted = r => r.ref && r.ref.from && tabNotes.length && tabNotes.some(n => n.from && !n.stale && n.file === realOf(r.ref.file)
     && r.ref.from >= n.from && r.ref.to <= n.to);
 
   function draw() {
@@ -503,12 +508,34 @@ function main() {
     ['Stage (HEAD)', [['shift+↑↓ J K', 'select lines'], ['s', 'stage the line, hunk (@@ row) or file (name row)'],
       ['u', 'unstage it'], ['D', 'discard it from the working tree']]],
     ['Review', [['a', 'note on the line (hunk, file)'], ['tab', 'kind of note, while typing'], ['A', 'send the notes to the agent'],
-      ['C', 'copy the notes'], ['U', 'remove the last note'], ['y', 'copy path:line']]],
+      ['C', 'copy the notes'], ['U', 'remove the last note'], ['y', 'copy path:line'],
+      ['m', 'mark the file viewed: folded until it changes'], ['] [', 'next, previous file not viewed']]],
     ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
   ];
   // Go to file and Search in files from the diff's folder, as from the explorer.
   const search = mode => actions.search(cwd, PANE, mode);
 
+  // The files marked viewed and unchanged since, among those of the diff.
+  function readViewed() {
+    const map = tab ? Viewed.read(tab) : {};
+    viewed = new Set(parsed ? parsed.files.map(f => f.to || f.from).filter(n => n && Viewed.is(map, realOf(n))) : []);
+  }
+  // m: the cursor's file viewed, or no longer.
+  function markViewed() {
+    const r = rows[cur];
+    if (!r || !r.ref) return;
+    if (!tab) return say('Needs herdr');
+    const now = Viewed.toggle(tab, realOf(r.ref.file));
+    readViewed();
+    say(now ? 'Viewed: folded until it changes' : 'No longer viewed');
+  }
+  // ] and [: the next or previous file not viewed, its name at the top.
+  function nextFile(dir) {
+    const ok = (r, k) => r.f && !viewed.has(r.ref.file) && (dir > 0 ? k > cur : k < cur);
+    const i = dir > 0 ? rows.findIndex(ok) : rows.map((r, k) => (ok(r, k) ? k : -1)).filter(k => k >= 0).pop();
+    if (i === undefined || i < 0) return say(dir > 0 ? 'No next file to view' : 'No previous file to view');
+    cur = i; top0 = i; anchor = null; draw();
+  }
   // The rows selected: the cursor's, or from the anchor to it.
   const range = () => (anchor === null ? [cur, cur] : [Math.min(anchor, cur), Math.max(anchor, cur)]);
   // The cursor moves over the rows that show lines of a file, the first row of a wrapped line; the view follows it.
@@ -553,7 +580,7 @@ function main() {
       note = null;
       if (!n.field.value.trim()) return draw();
       const msg = notes.add(tab, { file: path.join(top, n.ref.file), from: n.ref.from, to: n.ref.to, kind: n.kind, text: n.field.value });
-      tabNotes = notes.read(tab);
+      tabNotes = notes.current(tab);
       return say(msg);
     }
     if (note.field.key(k)) draw();
@@ -572,7 +599,10 @@ function main() {
     parsed = null; cache = ''; draw();
     const d = await changes();
     if (d === null) return;
-    parsed = d; cache = ''; draw();
+    parsed = d; cache = '';
+    if (tab) tabNotes = notes.current(tab);
+    readViewed();
+    draw();
     if (scope.kind === 'branch' && !baseName) say('No default branch: compared with HEAD');
   }
   // s, u, D: the rows selected staged, unstaged or discarded (core/stage.js), with HEAD as the scope only (the others
@@ -587,7 +617,7 @@ function main() {
       say(await stage.apply(top, parsed, sel, mode).catch(() => `Cannot ${mode}`));
       const d = await changes();
       if (d === null) return;
-      parsed = d; cache = ''; stay = cur; draw();
+      parsed = d; cache = ''; stay = cur; readViewed(); draw();
     };
     if (mode !== 'discard') return go();
     const n = stage.count(parsed, sel, mode);
@@ -674,6 +704,9 @@ function main() {
     else if (k === 'A') act(notes.send(tab, FROM));
     else if (k === 'C') act(notes.copy(tab, top));
     else if (k === 'U') say(notes.undo(tab));
+    else if (k === 'm') markViewed();
+    else if (k === ']') nextFile(1);
+    else if (k === '[') nextFile(-1);
     else if (k === 'y') copyReference();
   }
 
@@ -714,14 +747,16 @@ function main() {
     resize: draw,
   }, { focus: false, motion: true });
   draw();
-  changes().then(d => { if (d !== null) { parsed = d; cache = ''; draw(); } });
+  changes().then(d => { if (d !== null) { parsed = d; cache = ''; readViewed(); draw(); } });
   // The tab, whose notes this pane shows and takes.
   if (PANE) {
     actions.tabOf(PANE).then(t => {
       tab = t && t.me.tab_id;
       if (!tab) return;
-      tabNotes = notes.read(tab);
-      notes.watch(tab, () => { tabNotes = notes.read(tab); draw(); });
+      tabNotes = notes.current(tab);
+      notes.watch(tab, () => { tabNotes = notes.current(tab); draw(); });
+      Viewed.watch(tab, () => { readViewed(); draw(); });
+      readViewed();
       // The tab's scope, and the one another pane chooses later.
       const follow = () => { const s = Scope.read(tab); if (!Scope.same(s, scope)) { scope = s; reload(); } };
       Scope.watch(tab, follow);

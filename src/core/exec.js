@@ -180,6 +180,7 @@ const DEFAULTS = {
   lineNumbers: true,  // preview: line number gutter
   images: 'auto',     // preview images: 'auto' (pixels when the terminal has the Kitty graphics protocol, else half
                       // blocks), 'blocks' (half blocks), 'pixels' (pixels without waiting for the terminal's answer)
+  reviewPrefix: '',   // review notes: text typed before them when sent to the agent (A), such as an instruction
   diffLayout: '',     // diffs 'inline' or 'split' (side by side), or { narrow, wide } (diff.js); empty: by the pane's width
   updateCheck: true,  // check GitHub once a day for a newer release
   scmTree: false,     // source control: the changes as a folder tree rather than a list
@@ -210,7 +211,7 @@ function writePaneState(pane, data) {
 // What a tab keeps in the state folder, one file per tab and kind: <kind>-<tab id>.json. The kinds: the review notes
 // (notes.js), the preview's requests (actions.js), the diff scope and the agent's last turn (scope.js). Read from the environment at each call, as peek.js sets the state
 // folder after loading this module.
-const TAB_KINDS = ['notes', 'preview', 'scope', 'turn'];
+const TAB_KINDS = ['notes', 'preview', 'scope', 'turn', 'viewed'];
 const tabName = (kind, tab) => `${kind}-${String(tab).replace(/[^\w-]/g, '_')}.json`;
 const tabFile = (kind, tab) => process.env.HERDR_PLUGIN_STATE_DIR && tab
   && path.join(process.env.HERDR_PLUGIN_STATE_DIR, tabName(kind, tab));

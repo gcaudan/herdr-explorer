@@ -387,26 +387,26 @@ function rows() {
   return (state.rows = list);
 }
 
-// The review notes shown in the text: each one under the last line it covers, those on the whole file (and every
-// one where the rows are not the file's lines: rendered Markdown) at the top.
+// The review notes shown in the text: each one under the last line it covers, those on the whole file, the stale ones
+// (their lines gone) and every one where the rows are not the file's lines (rendered Markdown) at the top.
 const NOTE = fg(C.yellow);
 function withNotes(list, width) {
   if (!state.notes.length || state.view === 'diff' || state.kind === 'image' || state.kind === 'error' || (list.length === 1 && list[0].empty)) return list;
   const lines = !markdownView() && state.kind !== 'binary';
-  const rowsOf = n => ui.split([[`✎ ${lines || !n.from ? '' : `${notes.where(n, path.dirname(n.file)).replace(/^.*:/, 'L')} `}`
-    + `${n.kind ? `${n.kind}: ` : ''}${ui.cleanLine(n.text)}`, NOTE]], Math.max(1, width - 2))
+  const rowsOf = n => ui.split([[`✎ ${(lines && !n.stale) || !n.from ? '' : `${notes.where(n, path.dirname(n.file)).replace(/^.*:/, 'L')} `}`
+    + `${n.stale ? 'stale, ' : ''}${n.kind ? `${n.kind}: ` : ''}${ui.cleanLine(n.text)}`, n.stale ? fg(C.dim) : NOTE]], Math.max(1, width - 2))
     .map(segs => ({ segs: [['  ', ''], ...segs], src: -1, note: true }));
-  const top = state.notes.filter(n => !lines || !n.from || n.to > state.plain.length).flatMap(rowsOf);
+  const top = state.notes.filter(n => !lines || !n.from || n.stale || n.to > state.plain.length).flatMap(rowsOf);
   if (!lines) return [...top, ...list];
   const out = [...top];
   list.forEach((r, i) => {
     out.push(r);
     const next = list[i + 1];
-    if (r.src >= 0 && !(next && next.src === r.src)) out.push(...state.notes.filter(n => n.from && n.to === r.src + 1).flatMap(rowsOf));
+    if (r.src >= 0 && !(next && next.src === r.src)) out.push(...state.notes.filter(n => n.from && !n.stale && n.to === r.src + 1).flatMap(rowsOf));
   });
   return out;
 }
-const noted = src => state.notes.some(n => n.from && src + 1 >= n.from && src + 1 <= n.to);
+const noted = src => state.notes.some(n => n.from && !n.stale && src + 1 >= n.from && src + 1 <= n.to);
 
 const rowOf = src => Math.max(0, rows().findIndex(r => r.src >= src));
 
@@ -1649,9 +1649,10 @@ function noteKey(k) {
   if (n.field.key(k)) render();
 }
 
-// The tab's notes on the shown file, read again when they change (taken or sent in another pane).
+// The tab's notes on the shown file, read again when they change (taken or sent in another pane) and placed again
+// when the file does (notes.current).
 function readNotes() {
-  const all = notes.read(TAB), file = state.file && notes.real(state.file);
+  const all = notes.current(TAB), file = state.file && notes.real(state.file);
   state.noteCount = all.length;
   state.notes = all.filter(n => n.file === file);
 }
@@ -1860,7 +1861,8 @@ function watch() {
     watcher = fs.watch(path.dirname(state.file), (ev, f) => {
       if (f && String(f) !== base) return;
       clearTimeout(reload);
-      reload = setTimeout(() => load(true), 80);
+      // The notes follow their lines (notes.current), the file's own reloaded with it.
+      reload = setTimeout(() => { readNotes(); load(true); }, 80);
     });
     watcher.on('error', () => { });
   } catch { }

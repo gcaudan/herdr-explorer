@@ -34,6 +34,37 @@ test('notes go on one line, sorted, relative to the terminal', () => {
   assert.strictEqual(notes.where(list[0], '/elsewhere'), '/r/src/b.js:3');
 });
 
+test('notes follow their lines, or go stale once they are gone', () => {
+  const n = { file: '/r/a.js', from: 3, to: 4, text: 'x', anchor: ['c', 'd'] };
+  assert.strictEqual(notes.locate(n, ['a', 'b', 'c', 'd']), n, 'in place: the same note');
+  assert.deepStrictEqual([notes.locate(n, ['new', 'a', 'b', 'c', 'd']).from, notes.locate(n, ['new', 'a', 'b', 'c', 'd']).to], [4, 5]);
+  // In several places: the nearest to where it was.
+  assert.strictEqual(notes.locate(n, ['c', 'd', 'x', 'x', 'x', 'c', 'd']).from, 1);
+  assert.strictEqual(notes.locate({ ...n, from: 5, to: 6 }, ['c', 'd', 'x', 'x', 'x', 'c', 'd']).from, 6);
+  const stale = notes.locate(n, ['a', 'b', 'c!', 'd']);
+  assert.strictEqual(stale.stale, true);
+  assert.strictEqual(stale.from, 3);
+  // Back once the lines are: no longer stale.
+  const back = notes.locate(stale, ['c', 'd']);
+  assert.deepStrictEqual([back.from, back.stale], [1, undefined]);
+  assert.strictEqual(notes.locate(n, null).stale, true, 'the file gone');
+  const whole = { file: '/r/a.js', from: 0, to: 0, text: 'x' };
+  assert.strictEqual(notes.locate(whole, []), whole);
+  assert.strictEqual(notes.format([{ ...stale, kind: 'fix' }], '/r', ' Fix these:'), 'Fix these: Review notes: a.js:3-4 (fix, stale): x ');
+});
+
+test('a file stays viewed until its content changes', () => {
+  const viewed = require('../src/core/viewed');
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'viewed-')), 'a.txt');
+  fs.writeFileSync(file, 'one\n');
+  const map = { [file]: viewed.sign(file) };
+  assert.ok(viewed.is(map, file));
+  fs.writeFileSync(file, 'two\n');
+  assert.ok(!viewed.is(map, file));
+  fs.unlinkSync(file);
+  assert.strictEqual(viewed.sign(file), 'gone');
+});
+
 test('notes stay relative from a folder reached through a link', () => {
   const real = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'notes-')));
   fs.mkdirSync(path.join(real, 'src'));

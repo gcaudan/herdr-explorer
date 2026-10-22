@@ -23,6 +23,7 @@ The pane where a setting changes applies it at once; the last column says when t
 | `wrap` | `false` | Wrap lines; preview `w`, **View** menu | wrap long lines in the preview, its Diff view and the Changes pane | other previews and Changes panes at their next opening |
 | `lineNumbers` | `true` | Line numbers; preview `L`, **View** menu | line number gutter in the preview | other previews at their next opening |
 | `images` | `"auto"` | Images; preview `p` (that pane only), the line under a pixelated image | `"blocks"` (pixelated), `"auto"` (sharp when the terminal has the Kitty graphics protocol) or `"pixels"` (always sharp), see [Sharp images](usage.md#sharp-images) | previews within a second |
+| `reviewPrefix` | `""` | Notes prefix | text typed before the [review notes](usage.md#review-notes) sent to the agent (`A`), such as an instruction | at once (read at each use) |
 | `diffLayout` | `""` | Diff layout (auto, split, inline); `v` in every diff (source control, Changes pane, preview's Diff view), **Inline · Split** switch, **View** menu | `""`: inline under 120 columns (a preview beside the terminal), side by side from 120 (zoomed, full tab). `"inline"` or `"split"`, as the settings view sets it: every diff. `{ "narrow": …, "wide": … }`, as `s` and the switch write it: one layout per size (under 120 columns, from 120), a size left out laid out by width; `s` on a single value keeps it for the other size. The settings view shows both sizes when they differ, and a choice there holds for both | other diffs at their next redraw |
 | `scmListShare` | `{}` | source control: drag the separator, `<` `>`, `shift+left` `shift+right` | share of the width taken by the list beside the diff, per view: `{ "changes": 0.3, "history": 0.6 }`; a view left out: 38 %, from 34 to 70 columns | other source control panes at their next opening |
 | `scmGraphAll` | `true` | source control History `a` | show every local and remote branch in History, or only the current one | other source control panes at their next opening |
@@ -97,13 +98,14 @@ saved, and the explorer's width falls back to 32 columns.
 | `update.lock`          | present while an update runs; taken over after 2 minutes (a killed update)                   |
 | `panes/<pane id>.json` | per pane: the explorer's tab folder (`home`) and tree root (`root`), the preview's `file`, `root`, `line` and tabs (`tabs`) |
 | `preview-<tab id>.json`| the last file the explorer, the search or `peek.js` asked the tab's preview to show        |
-| `notes-<tab id>.json`  | the tab's review notes, removed once sent                                                    |
+| `notes-<tab id>.json`  | the tab's review notes, removed once sent, each with the text of its lines (`anchor`) and `stale` once they are gone |
 | `scope-<tab id>.json`  | the tab's [diff scope](usage.md#diff-scope), `{ kind, rev }`, absent for HEAD                |
 | `turn-<tab id>.json`   | the working tree when the tab's agent last started working: `{ pane, top, tree, t, ended }`  |
+| `viewed-<tab id>.json` | the files marked viewed in the tab's Changes pane: `{ real path: hash of the content then }` |
 
-`settings.json`, `expanded.json`, `width`, `update.json`, `search.json`, `resizing`, `preview-*.json`, `notes-*.json`, `scope-*.json`, `turn-*.json`,
+`settings.json`, `expanded.json`, `width`, `update.json`, `search.json`, `resizing`, `preview-*.json`, `notes-*.json`, `scope-*.json`, `turn-*.json`, `viewed-*.json`,
 `panes/*.json` and `keys.json` (in the config folder) are written to a temporary file and then renamed, so a pane never reads them half-written. When a tab or a space closes, and again at herdr
-startup, the files of tabs and panes that no longer exist are deleted (`notes-*.json`, `preview-*.json`, `scope-*.json`, `turn-*.json`, `panes/*.json`).
+startup, the files of tabs and panes that no longer exist are deleted (`notes-*.json`, `preview-*.json`, `scope-*.json`, `turn-*.json`, `viewed-*.json`, `panes/*.json`).
 
 ### Config folder
 

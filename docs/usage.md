@@ -410,9 +410,13 @@ belong to the tab: the preview and the [Changes pane](#changes-diff-pane) of a t
   kind, `fix`, `question`, `nit` or `verify` (or none again), shown before the text; `enter` saves it, `escape` cancels.
 - Each note shows in yellow under the last line it covers, whose numbers turn yellow; notes on the whole file, and
   every note in rendered Markdown, show at the top.
+- A note keeps the text of its lines, and follows them when the file changes: lines added or removed above move it
+  (to the nearest place when the same lines are in several). Once its lines are changed or gone, it is **stale**: it
+  shows dimmed at the top, `stale` before its text, and stays at its old line numbers until the lines come back.
 - `A` types the tab's notes, sorted by file and line, into the terminal next to the explorer, on one line, without
-  submitting it, then clears them: `Review notes: src/app.js:12-14 (fix): rename it; README.md: add an example`. The
-  paths are relative to the terminal's folder. The footer shows `A send N notes` while there are some.
+  submitting it, then clears them: `Review notes: src/app.js:12-14 (fix): rename it; README.md: add an example`, a
+  stale one marked `(stale)`. The **Notes prefix** setting goes before them (an instruction, such as `Fix these:`).
+  The paths are relative to the terminal's folder. The footer shows `A send N notes` while there are some.
 - `C` copies the tab's notes instead, one per line under `Review notes:`, the paths relative to the preview's folder,
   and keeps them.
 - `U` removes the last note taken.
@@ -747,6 +751,8 @@ drag with the mouse, select the rows from the cursor's; `escape` keeps the curso
 | `s` / `u`  | stage / unstage the rows selected: a line, a hunk from its `@@` row, a file from its name ([Staging parts](#staging-parts)) |
 | `D`        | discard them from the working tree, once confirmed (`y`)                                       |
 | `A` / `C` / `U` | send the tab's notes to the agent / copy them (paths relative to the repository) / remove the last note |
+| `m`        | mark the cursor's file viewed: it shows folded, `✓ viewed` after its name, until its content changes (`m` again: no longer) |
+| `]` / `[`  | next / previous file not viewed, its name at the top                                           |
 | `y`        | copy the cursor's line as `path:line`, relative to the pane's folder                           |
 | `b`        | what to compare with: the menu of the [diff scopes](#diff-scope)                               |
 | `v`        | inline / side by side (kept for the next diffs)                                                |

@@ -1,18 +1,22 @@
 // Review notes of a tab: lines of a file (or a whole file) with a remark, taken in the preview and the Changes pane,
 // then typed together into the agent's prompt next to the explorer, without submitting it.
-// Stored in notes-<tab id>.json in the state folder, so that every pane of the tab sees the same list.
+// Stored in notes-<tab id>.json in the state folder, so that every pane of the tab sees the same list. Each note keeps
+// the text of its lines (anchor), so that it follows them when lines are added or removed above, and is marked stale
+// once they are gone (current).
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const actions = require('./actions');
-const { realPath, writeAtomic, tabFile } = require('./exec');
+const { realPath, writeAtomic, tabFile, readSettings } = require('./exec');
 
 // The kinds a note can have, chosen with Tab while it is typed; '' for a plain remark.
 const KINDS = ['', 'fix', 'question', 'nit', 'verify'];
 
 const fileOf = tab => tabFile('notes', tab);
 
-// The notes of a tab: [{ file, from, to, kind, text, t }], from and to 1-based lines, 0 for the whole file.
+// The notes of a tab: [{ file, from, to, kind, text, t, anchor, stale }], from and to 1-based lines, 0 for the whole
+// file; anchor, the text of those lines when the note was taken (none past MAX_ANCHOR lines); stale, they are no
+// longer in the file.
 function read(tab) {
   try {
     const list = JSON.parse(fs.readFileSync(fileOf(tab), 'utf8'));
@@ -32,15 +36,56 @@ function write(tab, list) {
 // A note's text keeps no control character, which could submit the prompt once typed.
 const clean = text => String(text).replace(/[\x00-\x1f\x7f-\x9f]/g, ' ').trim();
 
+const MAX_ANCHOR = 200;    // lines kept as a note's anchor
+const MAX_SIZE = 4 << 20;  // a larger file is not read to place its notes
+// The lines of a file, or null when it cannot be read (gone, too large).
+function linesOf(file) {
+  try {
+    if (fs.statSync(file).size > MAX_SIZE) return null;
+    return fs.readFileSync(file, 'utf8').split(/\r?\n/);
+  } catch { return null; }
+}
+
+// A note placed in the file's lines now: where its anchor is, the nearest place to where it was when the text is in
+// several; stale when nowhere. The same note when nothing changes, else a new one.
+function locate(n, lines) {
+  if (!n.from || !Array.isArray(n.anchor) || !n.anchor.length) return n;
+  const len = n.anchor.length, was = n.from - 1;
+  const at = i => n.anchor.every((l, k) => lines[i + k] === l);
+  let best = -1;
+  if (lines && at(was)) best = was;
+  else if (lines) {
+    for (let i = 0; i + len <= lines.length; i++) if (lines[i] === n.anchor[0] && at(i) && (best < 0 || Math.abs(i - was) < Math.abs(best - was))) best = i;
+  }
+  if (best < 0) return n.stale ? n : { ...n, stale: true };
+  if (best === was && !n.stale) return n;
+  const { stale, ...rest } = n;
+  return { ...rest, from: best + 1, to: best + len };
+}
+
+// The notes of a tab placed again in their files as they are now (locate), saved when one moved, for every pane.
+function current(tab) {
+  const list = read(tab), files = new Map();
+  const placed = list.map(n => {
+    if (!n.from || !n.anchor) return n;
+    if (!files.has(n.file)) files.set(n.file, linesOf(n.file));
+    return locate(n, files.get(n.file));
+  });
+  if (placed.some((n, i) => n !== list[i])) write(tab, placed);
+  return placed;
+}
+
 // A file as notes name it: its real path (realPath, exported as real), so that the preview (from the explorer's
 // folder, maybe through a symbolic link such as /home → /var/home) and the diff (from the repository's real folder)
-// agree.
+// agree. The lines are those of the file on disk.
 function add(tab, { file, from = 0, to = from, kind = '', text }) {
   text = clean(text);
   if (!text || !file) return 'Empty note';
   if (from > to) [from, to] = [to, from];
-  const list = read(tab);
-  list.push({ file: realPath(file), from, to, kind: KINDS.includes(kind) ? kind : '', text, t: Date.now() });
+  const list = read(tab), real = realPath(file);
+  const lines = from && to - from < MAX_ANCHOR ? linesOf(real) : null;
+  const anchor = lines && to <= lines.length ? lines.slice(from - 1, to) : null;
+  list.push({ file: real, from, to, kind: KINDS.includes(kind) ? kind : '', text, t: Date.now(), ...(anchor ? { anchor } : {}) });
   return write(tab, list) ? `Note added (${list.length})` : 'Cannot save the note';
 }
 
@@ -60,20 +105,22 @@ function where(n, dir, resolved = false) {
   return n.from ? `${ref}:${n.from}${n.to > n.from ? `-${n.to}` : ''}` : ref;
 }
 
-// Each note as "src/a.js:12-14 (fix): rename it", in file and line order.
+// Each note as "src/a.js:12-14 (fix): rename it", in file and line order; "(stale)" when its lines are gone.
 // The folder is resolved once for all of them.
 function items(list, dir) {
   const at = dir && realPath(dir);
-  return [...list].sort((a, b) => a.file.localeCompare(b.file) || a.from - b.from || a.t - b.t)
-    .map(n => `${clean(where(n, at, true))}${n.kind ? ` (${n.kind})` : ''}: ${clean(n.text)}`);
+  return [...list].sort((a, b) => a.file.localeCompare(b.file) || a.from - b.from || a.t - b.t).map(n => {
+    const tags = [n.kind, n.stale && 'stale'].filter(Boolean).join(', ');
+    return `${clean(where(n, at, true))}${tags ? ` (${tags})` : ''}: ${clean(n.text)}`;
+  });
 }
 
-// One line for the agent: "Review notes: src/a.js:12-14 (fix): rename it; …".
-const format = (list, dir) => `Review notes: ${items(list, dir).join('; ')} `;
+// One line for the agent: "Review notes: src/a.js:12-14 (fix): rename it; …", after the reviewPrefix setting.
+const format = (list, dir, prefix = '') => `${clean(prefix) ? `${clean(prefix)} ` : ''}Review notes: ${items(list, dir).join('; ')} `;
 
 // For the clipboard, one note per line under a title, the files relative to dir; the notes are kept.
 function copy(tab, dir) {
-  const list = read(tab);
+  const list = current(tab);
   if (!list.length) return Promise.resolve('No note to copy');
   return actions.copy(`Review notes:\n${items(list, dir).map(i => `- ${i}`).join('\n')}\n`,
     `${list.length} note${list.length > 1 ? 's' : ''} copied`);
@@ -81,9 +128,10 @@ function copy(tab, dir) {
 
 // Types every note of the tab into the terminal next to the explorer, then clears them.
 async function send(tab, pane) {
-  const list = read(tab);
+  const list = current(tab);
   if (!list.length) return 'No note to send';
-  const err = await actions.type(dir => format(list, dir), pane);
+  const prefix = readSettings().reviewPrefix || '';
+  const err = await actions.type(dir => format(list, dir, prefix), pane);
   if (err) return err;
   // Notes taken while sending are kept.
   const sent = new Set(list.map(n => n.t));
@@ -99,4 +147,4 @@ function watch(tab, fn) {
   return () => fs.unwatchFile(file, fn);
 }
 
-module.exports = { KINDS, real: realPath, read, add, undo, send, copy, where, format, watch };
+module.exports = { KINDS, real: realPath, read, current, locate, add, undo, send, copy, where, format, watch };

@@ -97,8 +97,10 @@ Inputs reach a pane through `--env` variables of `herdr plugin pane open`:
 ## Review notes
 
 The notes of a tab are kept in `notes-<tab id>.json` in the state folder, written to a temporary file then renamed:
-a list of `{ file, from, to, kind, text, t }`, the file's real path (symbolic links resolved) and the lines 1-based
-(0 for the whole file). The preview and the Changes pane add to it and poll it every 500 ms (`fs.watchFile`), so that
+a list of `{ file, from, to, kind, text, t, anchor, stale }`, the file's real path (symbolic links resolved) and the
+lines 1-based (0 for the whole file). `anchor` holds the text of the lines when the note was taken (up to 200 lines);
+`notes.current`, called when the notes or the file are read again, looks for it in the file as it is (the nearest
+place to the old one), moves the note there, or marks it `stale`, and saves the list when a note changed. The preview and the Changes pane add to it and poll it every 500 ms (`fs.watchFile`), so that
 a note taken in one shows in the other. Sending (`notes.send`) finds the terminal next to the explorer as **Insert into terminal** does,
 builds one line with the paths relative to that terminal's folder, types it with `herdr pane send-text` (no newline,
 so nothing is submitted, and control characters are removed from the notes), then removes the notes sent. Copying

@@ -41,6 +41,11 @@ module.exports = ctx => {
       writeSettings({ ...readSettings(), editor: settings.editor });
       return settings.editor ? `Editor: ${settings.editor}` : 'Editor: default';
     }, true);
+    const prefix = () => ask('Notes prefix', readSettings().reviewPrefix, text => {
+      settings.reviewPrefix = text.trim();
+      writeSettings({ ...readSettings(), reviewPrefix: settings.reviewPrefix });
+      return settings.reviewPrefix ? `Notes prefix: ${settings.reviewPrefix}` : 'Notes prefix: none';
+    }, true);
     const graphics = ctx.graphics;
     return [
       { group: 'TREE' },
@@ -65,7 +70,9 @@ module.exports = ctx => {
       { label: 'Images', help: `Images in the preview: pixelated (half blocks), or sharp with the Kitty graphics protocol of Kitty, Ghostty or WezTerm (p). ${
         graphics === null ? 'Checking this terminal…' : graphics ? 'This terminal has it.' : 'This terminal does not have it: sharp images would not show.'}`,
       ...choice('images', ['auto', 'blocks', 'pixels'], v => ({ blocks: 'pixelated', auto: 'sharp if possible', pixels: 'always sharp' })[v]) },
-      { label: 'Diff layout', help: 'Diffs inline or side by side, for narrow and wide panes alike (s in a diff: for its size only). Auto: side by side when the pane is wide enough.', ...diffLayout() },
+      { label: 'Diff layout', help: 'Diffs inline or side by side, for narrow and wide panes alike (v in a diff: for its size only). Auto: side by side when the pane is wide enough.', ...diffLayout() },
+      { label: 'Notes prefix', help: 'Text typed before the review notes sent to the agent (A), such as an instruction: "Fix these:", or a command of the agent.',
+        ...dialog(settings.reviewPrefix || 'none', prefix) },
       { group: 'GENERAL' },
       { label: 'Key bindings', help: 'Change the explorer keys, saved in keys.json.',
         ...dialog(changedActions().length ? `${changedActions().length} changed` : 'default', () => openKeys()) },
