@@ -26,14 +26,24 @@ function readVersion() {
 // The version of the code this process runs.
 const CURRENT = readVersion();
 
-// { checkedAt, latest } in the state folder.
+// { checkedAt, latest, notes, url, skip, updated, finish } in the state folder: the latest release, its changes and
+// page, the version the user skipped, the last update done here ({ from, to, t }), and the one to finish.
 const FILE = process.env.HERDR_PLUGIN_STATE_DIR ? path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'update.json') : null;
 function read() {
   try { return JSON.parse(fs.readFileSync(FILE, 'utf8')) || {}; } catch { return {}; }
 }
 const write = data => writeAtomic(FILE, JSON.stringify(data));
 
-// The version of the latest GitHub release, or null (offline, timeout, no release).
+// The changes listed in a release's text (release-please: "* **scope:** text ([#12](…)) ([abc123](…))"), as plain
+// lines: the links and the emphasis dropped, the scope kept, 20 at most.
+function releaseNotes(body) {
+  return String(body || '').split(/\r?\n/).map(l => /^\s*[*-]\s+(.+)$/.exec(l)).filter(Boolean)
+    .map(([, t]) => t.replace(/\s*\(\[[^\]]*\]\([^)]*\)\)/g, '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/\*\*([^*]+)\*\*/g, '$1').replace(/[`*_]/g, '').replace(/[\x00-\x1f\x7f]/g, ' ').trim())
+    .filter(Boolean).slice(0, 20);
+}
+
+// The latest GitHub release, { latest, notes, url }, or null (offline, timeout, no release).
 const latestRelease = repo => new Promise(resolve => {
   const req = https.get(`https://api.github.com/repos/${repo}/releases/latest`, {
     headers: { 'User-Agent': 'herdr-explorer', Accept: 'application/vnd.github+json' }, timeout: 3000,
@@ -43,9 +53,11 @@ const latestRelease = repo => new Promise(resolve => {
     res.setEncoding('utf8');
     res.on('data', d => { body += d; });
     res.on('end', () => {
-      let tag;
-      try { tag = String(JSON.parse(body).tag_name).replace(/^v/, ''); } catch { }
-      resolve(/^\d+(\.\d+)*$/.test(tag) ? tag : null);
+      let release = {};
+      try { release = JSON.parse(body) || {}; } catch { }
+      const tag = String(release.tag_name).replace(/^v/, '');
+      const url = /^https:\/\/github\.com\/[\w./%-]+$/.test(release.html_url) ? release.html_url : `https://github.com/${repo}/releases`;
+      resolve(/^\d+(\.\d+)*$/.test(tag) ? { latest: tag, notes: releaseNotes(release.body), url } : null);
     });
     res.on('error', () => resolve(null));
   });
@@ -59,16 +71,30 @@ async function check() {
   const saved = read();
   if (Date.now() - (saved.checkedAt || 0) < DAY) return;
   const origin = await git(['config', '--get', 'remote.origin.url']);
-  const latest = await latestRelease((origin.ok && repoOf(origin.out)) || REPO);
-  write({ ...read(), checkedAt: Date.now(), ...(latest ? { latest } : {}) });
+  const release = await latestRelease((origin.ok && repoOf(origin.out)) || REPO);
+  write({ ...read(), checkedAt: Date.now(), ...(release || {}) });
 }
 
 // The newer release found, or null: compared with the version on disk, so that it goes away once pulled. A clone
-// ahead of the release (development) shows nothing.
-function available() {
-  const { latest } = FILE ? read() : {};
+// ahead of the release (development) shows nothing. skipped: the one the user skipped (skip), else null.
+function newerRelease() {
+  const { latest, skip } = FILE ? read() : {};
   const current = readVersion();
-  return latest && current && newer(latest, current) ? latest : null;
+  return latest && current && newer(latest, current) ? { latest, skipped: skip === latest } : null;
+}
+const available = () => { const r = newerRelease(); return r && !r.skipped ? r.latest : null; };
+const skipped = () => { const r = newerRelease(); return r && r.skipped ? r.latest : null; };
+// The user skips a version: no ↑ for it, in every explorer; the next one shows again.
+const skip = version => write({ ...read(), skip: version });
+// The latest release's changes and page: { notes, url }.
+function release() {
+  const { notes, url } = FILE ? read() : {};
+  return { notes: Array.isArray(notes) ? notes.map(String) : [], url: typeof url === 'string' ? url : `https://github.com/${REPO}/releases` };
+}
+// The update done here that this code comes from, for a minute after it: { from, to }, else null.
+function justUpdated() {
+  const { updated } = FILE ? read() : {};
+  return updated && updated.to === CURRENT && Date.now() - updated.t < 60 * 1000 ? updated : null;
 }
 
 // git in the plugin's folder: { ok, out, err }. detached (not on Windows): a session without terminal, so that ssh
@@ -139,7 +165,7 @@ async function pull() {
   if (!gitdir.ok || gitOperation(gitdir.out.trim())) return { ok: false, message: 'A git operation is in progress' };
   const status = await git(['status', '--porcelain', '--untracked-files=no']);
   if (!status.ok || status.out.trim()) return { ok: false, message: 'Local changes in the plugin folder' };
-  const before = (await git(['rev-parse', 'HEAD'])).out.trim();
+  const before = (await git(['rev-parse', 'HEAD'])).out.trim(), from = readVersion();
   // ssh in batch mode: GIT_TERMINAL_PROMPT does not reach it, and on Windows git shares the pane's console, where a
   // passphrase prompt would read the keys. Left alone when the user sets an ssh command.
   const own = process.env.GIT_SSH_COMMAND || process.env.GIT_SSH || (await git(['config', '--get', 'core.sshCommand'])).ok;
@@ -156,8 +182,9 @@ async function pull() {
   const changed = !diff.ok || diff.out.split('\n')
     .some(l => /^[+-]/.test(l) && !/^(\+\+\+|---)/.test(l) && !/^[+-]version\s*=/.test(l));
   const to = readVersion();
-  // Rewritten even when unchanged, so that the explorers of the other tabs read it again and hide their ↑.
-  if (FILE) write({ ...read(), ...(changed ? { finish: to } : {}) });
+  // Rewritten even when unchanged, so that the explorers of the other tabs read it again and hide their ↑; updated
+  // for the explorers that restart on the new code.
+  if (FILE) write({ ...read(), updated: { from, to, t: Date.now() }, ...(changed ? { finish: to } : {}) });
   if (!changed) return { ok: true, message: `Updated to ${to}` };
   return { ok: true, message: `Updated to ${to}: rerun the installer` };
 }
@@ -180,5 +207,6 @@ function watch(idle, restart) {
 }
 
 module.exports = {
-  repoOf, DIR, HERDR_UPDATE, CURRENT, FILE, INSTALLER, readVersion, check, available, managed, install, finishing, finished, watch,
+  repoOf, DIR, HERDR_UPDATE, CURRENT, FILE, INSTALLER, readVersion, check, available, skipped, skip, release, justUpdated,
+  releaseNotes, managed, install, finishing, finished, watch,
 };

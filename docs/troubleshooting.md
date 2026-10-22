@@ -91,8 +91,8 @@
 - **VS Code or another graphical editor opens behind the terminal** (KDE Wayland): KWin's focus stealing prevention
   keeps a window started from a terminal in the background, as with `code <file>` typed in Konsole. Lower *Focus
   stealing prevention* in the KWin window behavior settings, or switch to the window by hand.
-- **No `↑` although a release is out**: `updateCheck` is off, the check already ran today, or the clone is ahead of
-  the release. Delete `update.json` to check again at the next tab creation.
+- **No `↑` although a release is out**: `updateCheck` is off, the check already ran today, the release was skipped
+  (**Settings**: `u` updates anyway), or the clone is ahead of the release. Delete `update.json` to check again at the next tab creation.
 - **A setting edited by hand has no effect**: some are read only when a pane starts (see
   [Settings](configuration.md#settings)): close and reopen the explorer.
 

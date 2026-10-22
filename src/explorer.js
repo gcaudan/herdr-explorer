@@ -88,14 +88,23 @@ if (SETTINGS_FILE) fs.watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
   theme = icons.load(chosen);
   render();
 });
-// A newer release, found by the hook's daily check: ↑ in the header.
-let latest = update.available();
-// An update that changed the manifest or the installer, which the installer must finish: ! in the header.
+// A newer release, found by the hook's daily check: ↑ and its version in the header; skipped: the one the user
+// skipped, only in the settings.
+let latest = update.available(), skipped = update.skipped();
+// An update that changed the manifest or the installer, which the installer must finish: ! finish in the header.
 let finish = update.finishing();
 let updating = false; // a pull running: no second one, ↑ hidden
+// Restarted on the code of an update done here: the version in a message, and the release's notes in the header's
+// pill for half a minute.
+let notice = update.justUpdated();
+if (notice) setTimeout(() => { notice = null; render(); }, 30 * 1000);
 // Restarted on new code: this process only waits for the new one, its async work still running stops there.
 let stopped = false;
-if (update.FILE) fs.watchFile(update.FILE, { interval: 1000 }, () => { latest = update.available(); finish = update.finishing(); render(); });
+if (update.FILE) {
+  fs.watchFile(update.FILE, { interval: 1000 }, () => {
+    latest = update.available(); skipped = update.skipped(); finish = update.finishing(); render();
+  });
+}
 
 const state = {
   expanded: new Set(['']), rows: [], cursor: 0, top: 0, selected: null, focused: true,
@@ -111,6 +120,7 @@ const state = {
   prompt: null,    // { label, field, done(value), inline }: a name typed in the tree (inline: { rel } or
                    // { dir, folder }) or at the bottom
   confirm: null,   // { title, name, where, note, action, tone, yes(), focus }: y, or Enter on the action's button
+  choice: null,    // a question with several answers (ui.ask): { title, name, list, note, buttons, focus, on: { key: fn } }
                    // (focus 'yes', moved with ← →), to confirm; any other key to cancel
 };
 const scrollbar = new ui.Scrollbar(top => { state.top = top; render(); });
@@ -342,7 +352,7 @@ async function follow() {
   const p = target && (result(await run(HERDR, ['pane', 'get', target])) || {}).pane;
   const cwd = p && (p.foreground_cwd || p.cwd);
   // Retried once the menu, the settings, the filter or the prompt is closed.
-  if (stopped || !cwd || cwd === lastCwd || state.filter || state.menu || state.settings || state.help || state.prompt || state.confirm) return;
+  if (stopped || !cwd || cwd === lastCwd || state.filter || state.menu || state.settings || state.help || state.prompt || state.confirm || state.choice) return;
   lastCwd = cwd;
   const inside = (dir, root) => { const r = path.relative(root, dir); return !r.startsWith('..') && !path.isAbsolute(r); };
   // Outside the root: back to the space folder when it holds the terminal folder, else the terminal folder itself.
@@ -367,6 +377,7 @@ function render() {
   const lines = state.settings ? settingsPage().view(W, H) : treeView(W, H);
   if (state.help) ui.help(lines, W, 'Explorer', helpGroups(), state.help);
   if (state.confirm) ui.confirm(lines, W, H, state.confirm);
+  if (state.choice) ui.ask(lines, W, H, state.choice);
   paint(lines);
 }
 
@@ -519,17 +530,19 @@ function menuItems(r) {
   return items;
 }
 
-// A fast-forward pull of the plugin's clone; the panes then restart on the new code by themselves (update.watch).
-// Refused: the reason only, since the command would bypass the checks. The pull failed: the command copied, to run in
-// the terminal. "Updating…" stays until the pull ends, which may take up to a minute. Installed by herdr: herdr's
-// update command copied instead, since only herdr may move its checkout (herdr not answering: the pull, whose checks
-// refuse such a checkout).
+// The newer release: the versions, its first changes (the release's text, kept by the daily check), and the answers:
+// update, its notes in the browser, skip it (not for one skipped already), later (focused, as escape).
+// The update: a fast-forward pull of the plugin's clone; the panes then restart on the new code by themselves
+// (update.watch). Refused: the reason only, since the command would bypass the checks. The pull failed: the command
+// copied, to run in the terminal. "Updating…" stays until the pull ends, which may take up to a minute. Installed by
+// herdr: herdr's update command copied instead, since only herdr may move its checkout (herdr not answering: the
+// pull, whose checks refuse such a checkout).
 async function askUpdate() {
   if (updating) return 'Update in progress';
   if (await update.managed()) return actions.copy(update.HERDR_UPDATE, 'Update command copied');
-  const to = latest;
-  confirm({ title: `Update to ${to}?`, name: 'herdr-explorer', note: 'The panes restart on the new code.', action: 'Update',
-    tone: 'go' }, async () => {
+  const to = latest || skipped, { notes, url } = update.release();
+  if (!to) return null;
+  const install = async () => {
     updating = true;
     clearTimeout(flash.timer);
     state.flash = 'Updating…';
@@ -539,16 +552,40 @@ async function askUpdate() {
     state.flash = null;
     if (ok || !retry) return message;
     return `${message}: ${await actions.copy(`git -C "${update.DIR}" pull --ff-only --no-rebase`, 'update command copied')}`;
-  });
+  };
+  const buttons = [{ key: 'y', label: 'Update', tone: 'go' }, { key: 'r', label: 'Notes' },
+    ...(latest ? [{ key: 's', label: 'Skip version' }] : []), { key: 'n', label: 'Later' }];
+  state.menu = null;
+  state.choice = {
+    title: 'Update herdr-explorer', name: `${update.CURRENT || '?'} → ${to}`, list: notes.slice(0, 3),
+    note: notes.length > 3 ? `and ${notes.length - 3} more (r)` : 'The panes restart on the new code.',
+    buttons, focus: buttons.length - 1,
+    on: { y: install, r: () => actions.web(url, 'the release notes'), s: () => { update.skip(to); return `${to} skipped: Settings to update anyway`; } },
+  };
+  render();
   return null;
 }
 
-// The installer command copied, to run in a terminal; the ! then goes away in every explorer.
-async function finishUpdate() {
-  const done = await actions.copy(update.INSTALLER, 'Installer command copied');
-  if (done !== 'Clipboard unavailable') update.finished();
-  return done;
+// The update the installer must finish: its command shown, then copied to run in a terminal; the ! finish then goes
+// away in every explorer.
+function finishUpdate() {
+  state.menu = null;
+  state.choice = {
+    title: `Finish the ${finish} update`, name: update.INSTALLER, note: 'Run it once in a terminal.',
+    buttons: [{ key: 'c', label: 'Copy command', tone: 'go' }, { key: 'n', label: 'Later' }], focus: 0,
+    on: { c: async () => {
+      const done = await actions.copy(update.INSTALLER, 'Installer command copied');
+      if (done !== 'Clipboard unavailable') update.finished();
+      return done;
+    } },
+  };
+  render();
+  return null;
 }
+
+// What the header's pill does (render.js pill): finish, update, or the notes of the update just done.
+const pillAction = () => (finish ? finishUpdate : latest && settings.updateCheck && !updating ? askUpdate
+  : () => actions.web(update.release().url, 'the release notes'));
 
 function openMenu(i) {
   const r = i === null ? null : state.rows[i];
@@ -659,10 +696,12 @@ const ctx = {
   get keys() { return keys; },
   set keys(k) { keys = k; },
   get latest() { return latest; },
+  get skipped() { return skipped; },
   get finish() { return finish; },
+  get notice() { return notice; },
   get updating() { return updating; },
   get graphics() { return graphics; },
-  keysOf, render, flash, runAction, ask, setSetting, askUpdate, finishUpdate, select, toggle, reveal, revealRel, buildRows,
+  keysOf, render, flash, runAction, ask, setSetting, askUpdate, finishUpdate, pillAction, select, toggle, reveal, revealRel, buildRows,
   close, schedule, openFile, openMenu, openHelp, newEntry, renameEntry, deleteEntry, setRoot, showChanged, viewChanges,
   nextChange, widen, absOf, parentOf,
 };
@@ -688,6 +727,7 @@ const paint = ui.screen({
 }, { motion: true });
 // The Kitty graphics query, as the preview sends it.
 process.stdout.write(ui.KITTY_QUERY);
+if (notice) flash(`Updated to ${notice.to}`);
 setTimeout(() => { if (graphics === null) { graphics = false; render(); } }, 500);
 
 watchRoot();
@@ -698,7 +738,7 @@ const timers = [
 
 // Updated plugin: this explorer starts again on the new code, at the same root, once nothing is being typed or
 // chosen. This process stops watching and acting, the new one taking over the pane.
-update.watch(() => !updating && !state.prompt && !state.confirm && !state.menu && !state.settings && !state.help && !(state.filter && state.filter.active), () => {
+update.watch(() => !updating && !state.prompt && !state.confirm && !state.choice && !state.menu && !state.settings && !state.help && !(state.filter && state.filter.active), () => {
   stopped = true;
   save();
   writePaneState(PANE, { home: HOME, root: ROOT });

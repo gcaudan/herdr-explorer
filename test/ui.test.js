@@ -138,3 +138,16 @@ test('useTheme swaps the colours in place and tells the modules that work styles
   assert.deepStrictEqual(C.strong, [255, 255, 255]);
   assert.deepStrictEqual(seen, ['dark', 'light', 'dark']);
 });
+
+test('a card with several answers wraps its buttons to fit the pane', () => {
+  const plain = l => l.replace(/\x1b\[[0-9;]*m/g, '');
+  for (const [W, H] of [[80, 30], [34, 24], [20, 12], [30, 5]]) {
+    const lines = Array.from({ length: H }, () => ' '.repeat(W));
+    const q = { title: 'Update herdr-explorer', name: '0.7.1 → 0.9.0', list: ['a change', 'another change'], note: 'and 2 more',
+      buttons: [{ key: 'y', label: 'Update', tone: 'go' }, { key: 'r', label: 'Notes' }, { key: 's', label: 'Skip version' }, { key: 'n', label: 'Later' }], focus: 3 };
+    ui.ask(lines, W, H, q);
+    for (const l of lines) assert.strictEqual(ui.textWidth(plain(l)), W, `${W}×${H}: ${plain(l)}`);
+    assert.deepStrictEqual(q.zones.buttons.map(b => b[2]).sort(), ['n', 'r', 's', 'y'], `${W}×${H}: every button clickable`);
+    for (const [x0, , key, y] of q.zones.buttons) assert.strictEqual(ui.askMouse({ press: true, button: 0, x: x0, y: y + 1 }, q), key);
+  }
+});

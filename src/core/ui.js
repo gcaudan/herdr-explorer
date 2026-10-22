@@ -303,34 +303,41 @@ function confirmMouse(m, q) {
 }
 
 // A question in a card with more answers than confirm's two, drawn as confirm draws its card: q: { title, name, where,
-// note, buttons: [{ key, label, tone }], focus (the index of the button lit) }. Each button shows its key and label,
-// the focused one lit in its tone ('go' green, 'danger' red, else grey). The columns of the buttons are kept for clicks
-// (zones), and the card's (box).
+// note, list, buttons: [{ key, label, tone }], focus (the index of the button lit) }; list: lines shown as bullets
+// under the name. Each button shows its key and label, the focused one lit in its tone ('go' green, 'danger' red,
+// else grey), on as many rows as the card's width needs. The columns of the buttons are kept for clicks (zones), and
+// the card's (box).
 function ask(lines, W, H, q) {
   q.zones = null; q.box = null;
   if (W < 2) return;
   const inner = Math.min(48, Math.max(W - 4, Math.min(12, W - 2), 0)), room = Math.max(1, inner - 2);
   const names = q.name ? wrap(q.name, room).slice(0, 3).map(l => [[` ${l}`, '']]) : [];
+  const list = (q.list || []).map(l => [[' • ', fg(C.dim)], [ellipsis(l, Math.max(1, room - 3)), '']]);
   const where = q.where ? [[[` ${ellipsis(q.where, room)}`, fg(C.dim)]]] : [];
   const note = q.note ? [[[` ${ellipsis(q.note, room)}`, fg(C.dim)]]] : [];
-  // A low pane: the same order as confirm's to leave things out, the buttons last.
+  // The buttons in rows that fit the card, 2 spaces apart (1 when that keeps them on one row).
+  const labels = q.buttons.map(b => ` ${keyLabel(b.key)} ${b.label} `);
+  const total = g => labels.reduce((s, l) => s + textWidth(l), 0) + g * (labels.length - 1);
+  const gap = total(2) <= inner - 2 || total(1) > inner - 2 ? 2 : 1, bands = [[]];
+  let used = 0;
+  labels.forEach((l, i) => {
+    const band = bands[bands.length - 1];
+    if (band.length && used + gap + textWidth(l) > inner - 2) { bands.push([i]); used = textWidth(l); } else { used += (band.length ? gap : 0) + textWidth(l); band.push(i); }
+  });
+  // A low pane: the list goes first, then the same order as confirm's to leave things out, the buttons last.
   let gaps = 2, title = true;
-  const rows = () => +title + 1 + gaps + names.length + where.length + note.length, fit = Math.max(1, H - 3);
+  const rows = () => +title + bands.length + gaps + names.length + list.length + where.length + note.length, fit = Math.max(1, H - 3);
+  while (rows() > fit && list.length) list.pop();
   while (rows() > fit && gaps) gaps--;
   if (rows() > fit) where.length = 0;
   while (rows() > fit && names.length > 1) names.pop();
   if (rows() > fit) note.length = 0;
   if (rows() > fit) names.length = 0;
   if (rows() > fit) title = false;
-  const text = [...(title ? [[[` ${ellipsis(q.title, room)}`, '\x1b[1m']]] : []), ...(gaps > 1 ? [[]] : []), ...names, ...where, ...note];
-  const labels = q.buttons.map(b => ` ${keyLabel(b.key)} ${b.label} `);
-  const gap = labels.reduce((s, l) => s + textWidth(l), 0) + 2 * (labels.length - 1) <= inner - 2 ? 2 : 1;
-  const lit = '\x1b[1m' + fg([255, 255, 255]), buttons = [['  ', '']];
-  q.buttons.forEach((b, i) => {
-    if (i) buttons.push([' '.repeat(gap), '']);
-    buttons.push([labels[i], i === q.focus ? lit + bg(BUTTON[b.tone] || C.buttonOn) : fg(DANGER_TEXT[b.tone] || C.dim) + bg(C.buttonOff)]);
-  });
-  text.push(...(gaps ? [[]] : []), buttons);
+  const text = [...(title ? [[[` ${ellipsis(q.title, room)}`, '\x1b[1m']]] : []), ...(gaps > 1 ? [[]] : []), ...names, ...list, ...where, ...note];
+  const lit = '\x1b[1m' + fg([255, 255, 255]);
+  text.push(...(gaps ? [[]] : []), ...bands.map(band => [['  ', ''], ...band.flatMap((i, k) => [[k ? ' '.repeat(gap) : '', ''],
+    [labels[i], i === q.focus ? lit + bg(BUTTON[q.buttons[i].tone] || C.buttonOn) : fg(DANGER_TEXT[q.buttons[i].tone] || C.dim) + bg(C.buttonOff)]])]));
   const h = text.length + 2, x = Math.max(0, Math.floor((W - inner - 2) / 2));
   const y = Math.max(1, Math.min(H - h, Math.floor((H - h) / 3)));
   const edge = fg(C.dim), left = ' '.repeat(x), right = ' '.repeat(Math.max(0, W - x - inner - 2));
@@ -341,15 +348,18 @@ function ask(lines, W, H, q) {
   // Screen columns from 1: the card's edge, then 2 spaces before the first button; a button cut by the edge is
   // clickable up to it, one past it not at all.
   const end = x + inner + 1;
-  let bx = x + 4;
   q.box = { x0: x + 1, x1: x + inner + 2, y0: y + 1, y1: y + h };
-  if (y + h - 2 < H) {
-    q.zones = { y: y + h - 2, buttons: [] };
-    labels.forEach((l, i) => {
-      if (bx <= end) q.zones.buttons.push([bx, Math.min(bx + textWidth(l) - 1, end), q.buttons[i].key]);
-      bx += textWidth(l) + gap;
-    });
-  }
+  q.zones = { buttons: [] };
+  bands.forEach((band, r) => {
+    const by = y + h - 1 - bands.length + r;
+    let bx = x + 4;
+    if (by < H) {
+      for (const i of band) {
+        if (bx <= end) q.zones.buttons.push([bx, Math.min(bx + textWidth(labels[i]) - 1, end), q.buttons[i].key, by]);
+        bx += textWidth(labels[i]) + gap;
+      }
+    }
+  });
 }
 // A key for the question: ← → (and tab) move between the buttons ('move'), Enter and space press the focused one,
 // a button's key presses it, escape and ctrl+c give 'escape'; other keys nothing (null), the card staying.
@@ -364,7 +374,7 @@ function askKey(k, q) {
 // A click: on a button, its key; out of the card, 'escape'; null for the rest.
 function askMouse(m, q) {
   if (!m.press || m.drag || m.wheel || m.button !== 0) return null;
-  const z = q.zones, hit = z && m.y - 1 === z.y && z.buttons.find(([a, b]) => m.x >= a && m.x <= b);
+  const z = q.zones, hit = z && z.buttons.find(([a, b, , y]) => m.y - 1 === y && m.x >= a && m.x <= b);
   if (hit) return hit[2];
   const b = q.box;
   return b && m.x >= b.x0 && m.x <= b.x1 && m.y >= b.y0 && m.y <= b.y1 ? null : 'escape';

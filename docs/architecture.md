@@ -194,11 +194,14 @@ changed since; its objects stay in the repository until `git gc` prunes them.
 ## Updates
 
 The startup and `tab.created` hooks, never the panes, run the update check (`update.check`): unless `updateCheck` is
-off, at most once a day, it asks the GitHub releases API for the latest release and saves it in `update.json`, which
-the explorers poll to show `↑` when it is newer than the version in `herdr-plugin.toml`. Updating is a
-`git pull --ff-only` of the clone, one at a time across tabs (`update.lock`, taken over after 2 minutes). When the
-manifest, other than its version, or the installer changed, `update.json` gets `finish` and the explorer shows `!`.
-The panes then restart on the new code (see [Launcher and self-restart](#launcher-and-self-restart)).
+off, at most once a day, it asks the GitHub releases API for the latest release and saves it in `update.json`, with
+the changes its text lists (`update.releaseNotes`: the bullets of release-please's notes, links and emphasis dropped)
+and its page. The explorers poll it to show `↑` and the version when it is newer than the version in
+`herdr-plugin.toml` and not the one skipped (`skip`). Updating is a `git pull --ff-only` of the clone, one at a time
+across tabs (`update.lock`, taken over after 2 minutes); it writes `updated` (`{ from, to, t }`), so that the explorers
+restarting on the new code show it for a while. When the manifest, other than its version, or the installer changed,
+`update.json` gets `finish` and the explorer shows `! finish`. The panes then restart on the new code (see
+[Launcher and self-restart](#launcher-and-self-restart)).
 
 ## Refresh and watchers
 

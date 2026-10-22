@@ -82,9 +82,12 @@ module.exports = ctx => {
     ];
   }
 
-  // The update to install, or the one the installer must finish: [text, colour, action], or null.
-  const pendingUpdate = () => (ctx.finish ? ['! Finish the update', C.yellow, finishUpdate]
-    : ctx.latest && settings.updateCheck && !ctx.updating ? [`↑ ${ctx.latest} available`, C.green, askUpdate] : null);
+  // The update to install (or skipped, still installable), or the one the installer must finish: [text, colour,
+  // action, key label], or null.
+  const pendingUpdate = () => (ctx.finish ? ['! Finish the update', C.yellow, finishUpdate, 'finish']
+    : ctx.updating || !settings.updateCheck ? null
+      : ctx.latest ? [`↑ ${ctx.latest} available`, C.green, askUpdate, 'update']
+        : ctx.skipped ? [`${ctx.skipped} skipped`, C.dim, askUpdate, 'update anyway'] : null);
 
   function openSettings() {
     state.menu = null;
@@ -216,7 +219,7 @@ module.exports = ctx => {
     if (s.find) lines.push(findLine(s, list, W));
     if (up) {
       // The key on the right, left out when it does not fit.
-      let hint = ui.keys([['u', ctx.finish ? 'finish' : 'update']]);
+      let hint = ui.keys([['u', up[3]]]);
       if (textWidth(up[0]) + 2 + ui.segWidth(hint) > W) hint = [];
       lines.push(line([[` ${up[0]}`.padEnd(Math.max(0, W - 1 - ui.segWidth(hint))), fg(up[1])], ...hint], W));
     }

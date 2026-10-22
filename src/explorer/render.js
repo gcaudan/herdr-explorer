@@ -6,7 +6,7 @@ const path = require('path');
 const icons = require('../core/icons');
 const ui = require('../core/ui');
 
-const { C, GIT, fg, line, fit, textWidth } = ui;
+const { C, GIT, fg, bg, line, fit, textWidth } = ui;
 const G = ui.G;
 const chevron = open => (open ? G.open : G.closed);
 
@@ -85,14 +85,24 @@ module.exports = ctx => {
     return line([[label, fg(C.dim)], ...state.prompt.field.segments(W - textWidth(label))], W, C.header);
   }
 
-  // Header: space name (or an action message), then the icons: ! when the installer must finish an
-  // update, else ↑ when a newer release exists (left out while a message shows), and the settings gear.
-  const showUpdate = () => !state.flash && (ctx.finish || (ctx.latest && settings.updateCheck && !ctx.updating));
+  // Header: space name (or an action message, cut to the room left), then a pill and the settings gear. The pill:
+  // ! finish when the installer must finish an update, else ↑ and the newer release (not a skipped one), else for a
+  // while after an update its notes (what's new); the mark alone in a narrow pane. pillWidth: its columns and the
+  // space after it, 0 without it.
+  const showUpdate = () => !!(ctx.finish || (ctx.latest && settings.updateCheck && !ctx.updating) || ctx.notice);
+  const shade = rgb => rgb.map((v, i) => Math.round(C.canvas[i] + (v - C.canvas[i]) * 0.25));
+  function pill(W) {
+    if (!showUpdate()) return null;
+    const [mark, text, rgb] = ctx.finish ? ['!', 'finish', C.yellow] : ctx.latest && settings.updateCheck && !ctx.updating
+      ? ['↑', ctx.latest, C.green] : ['✓', "what's new", C.blue];
+    const label = W >= 24 ? ` ${mark} ${text} ` : ` ${mark} `;
+    return [label, '\x1b[1m' + bg(shade(rgb)) + fg(rgb)];
+  }
+  const pillWidth = W => { const p = pill(W); return p ? textWidth(p[0]) + 1 : 0; };
   function header(W) {
-    const ROOT = ctx.ROOT;
-    const up = !showUpdate() ? [] : ctx.finish ? [['! ', fg(C.yellow)]] : [['↑ ', fg(C.green)]];
-    const icons = [...up, [`${G.gear} `, fg(C.dim)]];
-    const room = W - 3 - (up.length ? 2 : 0);
+    const ROOT = ctx.ROOT, p = pill(W);
+    const icons = [...(p ? [p, [' ', '']] : []), [`${G.gear} `, fg(C.dim)]];
+    const room = W - 3 - pillWidth(W);
     if (state.flash) {
       const msg = ui.slice(ui.message(state.flash), 0, room);
       return line([...msg, [' '.repeat(Math.max(0, room - ui.segWidth(msg) + 1)), ''], ...icons], W);
@@ -149,5 +159,5 @@ module.exports = ctx => {
     ], W, selected ? (state.focused ? C.select : C.selectBlur) : null);
   }
 
-  return { chevron, bodyHeight, treeView, promptLine, showUpdate };
+  return { chevron, bodyHeight, treeView, promptLine, showUpdate, pillWidth };
 };

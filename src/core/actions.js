@@ -95,12 +95,13 @@ async function editor(abs, pane) {
   return edit(abs, pane);
 }
 
-// A page of the plugin's documentation in the browser: https only, never a path or another scheme.
-async function web(url) {
+// A page of the plugin's documentation (or another of its pages) in the browser: https only, never a path or another
+// scheme.
+async function web(url, what = 'the documentation') {
   if (!/^https:\/\/[\w.-]+\/[\w./#%-]*$/.test(url)) return 'Not opened: not a web page';
   const ok = WIN ? await detached(which('explorer.exe'), [url], { windowsHide: false })
     : await detached(MAC ? 'open' : 'xdg-open', [url]);
-  return ok ? 'Opening the documentation' : 'Cannot open a browser';
+  return ok ? `Opening ${what}` : 'Cannot open a browser';
 }
 
 async function system(abs) {

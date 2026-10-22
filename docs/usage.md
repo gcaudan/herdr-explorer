@@ -26,13 +26,16 @@ keys can be rebound.
 The header shows the root folder's name in capitals and bold, in bold italic when **Set as root**
 moved the tree away from the tab's folder. After an action, a short message replaces it: `✓` done (2 s), `·`
 nothing to do (2 s), `✕` in red failed (4 s), `⋯` running. The preview and source control show their messages the
-same way, in their bottom line. The icons on the right are clickable, and hidden while a message shows:
+same way, in their bottom line, cut to leave room for the pill and the gear on the right, which are clickable:
 
-| Icon      | Click                                                                  |
-| --------- | ---------------------------------------------------------------------- |
-| `↑`       | update to the newer release (green, when one exists and **Check for updates** is on) |
-| `!`       | copy the installer command that finishes an update (yellow)            |
-| gear      | Settings                                                               |
+| Pill or icon     | Click                                                                  |
+| ---------------- | ---------------------------------------------------------------------- |
+| `↑ 0.9.0`        | the newer release (green, when one exists, is not skipped and **Check for updates** is on): the installed and new versions, its first changes, and `y` update, `r` its notes in the browser, `s` skip this version (no pill until the next one), `n` later |
+| `! finish`       | an update the installer must finish (yellow): its command, `c` copies it to run in a terminal |
+| `✓ what's new`   | for half a minute after an update done here (blue, the new version in a message): the release notes in the browser |
+| gear             | Settings                                                               |
+
+Below 24 columns, a pill shows its mark only (`↑`, `!`, `✓`).
 
 ### Tree
 
@@ -228,8 +231,8 @@ setting. The settings are shared by every explorer. See [configuration.md](confi
 `enter` give a setting its next value (on **Icon theme**, **Editor**, **Notes prefix** and **Key bindings**: open its
 page or prompt), `left`/`h` its previous one. **Theme** chooses dark or light colours for every pane (VS Code Dark+ or
 Light+, syntax and Markdown included); on **auto**, the default, each pane asks the terminal its background colour at
-start and turns light on a light one. A newer release shows a line under the title: `u` updates (or finishes the
-update). `escape`, and the keys bound to close and settings, go back to the tree. The wheel moves the selection, a
+start and turns light on a light one. A newer release shows a line under the title, a skipped one too (dimmed): `u`
+opens the update (or the update to finish), as the header's pill does. `escape`, and the keys bound to close and settings, go back to the tree. The wheel moves the selection, a
 click on a setting changes it, a click on the title goes back.
 
 **Icon theme** opens a page of its own: the Nerd Font default and the VS Code icon themes installed (see
