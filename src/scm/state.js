@@ -6,6 +6,8 @@ const path = require('path');
 const { spawn } = require('child_process');
 const ui = require('../core/ui');
 const diffs = require('../diff');
+const actions = require('../core/actions');
+const Scope = require('../core/scope');
 const graph = require('../render/graph');
 const { WIN, GIT, gitEnv, gitOperation, readSettings, writeSettings, realPath, addConfig } = require('../core/exec');
 const parse = require('./parse');
@@ -351,6 +353,14 @@ async function compare(row) {
   draw();
 }
 
+// = also has the Changes pane and the preview's Diff view of the tab show the branch's changes since it left the base
+// (the scope base...branch, core/scope.js); a branch merely selected leaves the scope alone.
+let myTab;
+async function shareCompare(row) {
+  if (myTab === undefined) myTab = (await actions.tabOf(process.env.HERDR_PANE_ID).catch(() => null) || { me: {} }).me.tab_id || null;
+  if (myTab) Scope.write(myTab, { kind: 'rev', rev: `${baseName()}...${row.ref.name}` });
+}
+
 // --- diffs
 
 async function showDiff(key, title, args, item, tag) {
@@ -415,6 +425,6 @@ function toggle(row, open = !row.open) {
 
 module.exports = {
   exec, english, git, errorOf, op, net, fromFile, nul, loadStatus, histName, renamed, allFiles, schedule, refresh, ongoing,
-  mergeOptions, continues, headName, filterPicker, openPicker, fullRef, baseName, compare, showDiff, openItemDiff,
+  mergeOptions, continues, headName, filterPicker, openPicker, fullRef, baseName, compare, shareCompare, showDiff, openItemDiff,
   closeDiff, comparable, diffable, showing, setView, toggleAllBranches, toggleTree, toggle,
 };

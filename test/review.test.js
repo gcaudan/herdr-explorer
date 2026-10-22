@@ -54,6 +54,34 @@ test('untracked files of a subfolder are named from the repository', async () =>
   assert.deepStrictEqual(diff.parse(text).files.map(f => f.to), ['app/src/new.js']);
 });
 
+test('diff scopes: a commit, a range, a branch, the last agent turn', async () => {
+  const top = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'scope-')));
+  const git = (...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd: top, encoding: 'utf8' });
+  if (git('init', '-q', '-b', 'main').status !== 0) return;
+  const commit = (file, text) => { fs.writeFileSync(path.join(top, file), text); git('add', '-A'); git('commit', '-q', '-m', file); };
+  commit('a.txt', 'one\n');
+  commit('b.txt', 'two\n');
+  git('switch', '-q', '-c', 'feature');
+  commit('c.txt', 'three\n');
+  const names = async scope => diff.parse((await diff.collect({ cwd: top, scope })).text).files.map(f => f.to);
+  assert.deepStrictEqual(await names({ kind: 'rev', rev: 'main' }), ['b.txt']);
+  assert.deepStrictEqual(await names({ kind: 'rev', rev: 'main...feature' }), ['c.txt']);
+  assert.deepStrictEqual(await names({ kind: 'rev', rev: 'HEAD~2..HEAD' }), ['b.txt', 'c.txt']);
+  fs.writeFileSync(path.join(top, 'new.txt'), 'x\n');
+  assert.deepStrictEqual(await names({ kind: 'ref', rev: 'main' }), ['c.txt', 'new.txt']);
+  assert.ok((await diff.collect({ cwd: top, scope: { kind: 'rev', rev: 'nope' } })).error);
+  // The turn: what changed since its snapshot, untracked files included; the index stays as it was.
+  const Scope = require('../src/core/scope');
+  const tree = await Scope.worktree(top, process.env);
+  assert.strictEqual(git('status', '--porcelain').stdout, '?? new.txt\n');
+  fs.writeFileSync(path.join(top, 'a.txt'), 'one!\n');
+  fs.writeFileSync(path.join(top, 'other.txt'), 'y\n');
+  const turn = { top, tree };
+  const res = await diff.collect({ cwd: top, scope: { kind: 'turn' }, turn });
+  assert.deepStrictEqual(diff.parse(res.text).files.map(f => f.to), ['a.txt', 'other.txt']);
+  assert.ok((await diff.collect({ cwd: top, scope: { kind: 'turn' }, turn: null })).error);
+});
+
 test('diff rows know the lines they show', () => {
   const text = ['diff --git a/x.js b/x.js', '--- a/x.js', '+++ b/x.js', '@@ -1,3 +1,3 @@', ' one', '-two', '+2', ' three', ''].join('\n');
   const parsed = diff.parse(text);

@@ -374,7 +374,7 @@ function helpGroups() {
   if (S.view === 'stashes') g.push(['Stashes', [['n', 'stash all changes'], ['a', 'apply'], ['o', 'pop'], ['d', 'drop'], ['⏎', 'show']]]);
   if (S.view === 'refs') {
     g.push(['Refs', [['⏎', 'check out'], ['M', 'merge into the current branch'], ['R', 'rebase the current branch onto it'],
-      ['=', 'compare with the base'], ['B', 'set as compare base'], ['D', 'delete the branch']]],
+      ['=', 'compare with the base, in the diffs of the tab too'], ['B', 'set as compare base'], ['D', 'delete the branch']]],
       ['Comparison', [['↑↓', 'select a commit'], ['⏎', 'show the commit'], ['q', 'back']]]);
   }
   g.push(['Repository', [['f', 'fetch'], ['L', 'pull'], ['P', 'push or publish'], ['b', 'branches'], ['T', 'tag HEAD'],

@@ -8,6 +8,7 @@ The plugin is a set of CommonJS Node.js scripts that use only Node's built-in mo
 | startup   |            | `node src/hook.js --restore`  |                           |
 | event     | `tab.created` | `node src/hook.js`         |                           |
 | event     | `tab.closed`, `workspace.closed` | `node src/hook.js --closed` |        |
+| event     | `pane.agent_status_changed` | `node src/hook.js --agent` |              |
 | pane      | `tree`     | `node src/explorer.js`        | split                     |
 | pane      | `preview`  | `node src/preview.js`         | split                     |
 | pane      | `search`   | `node src/search.js`          | popup, 80% × 80%          |
@@ -170,6 +171,12 @@ folders still exist; in each tab that had a preview, it reopens the saved tabs w
 current one. The other plugin panes are not reopened. It then deletes the state files of tabs and panes that no longer exist, as `--closed` does on the
 `tab.closed` and `workspace.closed` events.
 herdr keeps pane ids across a restart, which is what lets each pane find its saved state.
+
+`hook.js --agent` follows the agents' turns for the [Last agent turn](usage.md#diff-scope) scope
+(`core/scope.js`): when an agent starts working after having been idle or done, or another agent of the tab does, it
+writes the tree of the repository's working tree to `turn-<tab id>.json`. The tree is made from a copy of the index
+(`GIT_INDEX_FILE`, `git add -A`, `git write-tree`), so the real index is left alone and git rehashes only the files
+changed since; its objects stay in the repository until `git gc` prunes them.
 
 ## Updates
 

@@ -14,6 +14,7 @@ const notes = require('./core/notes');
 const Tabs = require('./core/tabs');
 const buffer = require('./core/buffer');
 const update = require('./core/update');
+const Scope = require('./core/scope');
 const { run, HERDR, readSettings, writeSettings, writePaneState, SETTINGS_FILE, remoteLink } = require('./core/exec');
 
 const PANE = process.env.HERDR_PANE_ID;
@@ -55,7 +56,8 @@ const state = {
   mark: 0,          // the mark n and N went to last
   view: process.env.EXPLORER_VIEW === 'diff' ? 'diff' : 'file', // the file, or its git changes (d)
   diff: null,       // the Diff view's changes: { parsed, top, baseName }, or { loading: true }
-  base: 'head',     // what the Diff view compares with: 'head', or 'branch' (where the branch started, b)
+  scope: Scope.HEAD, // what the Diff view compares with: the tab's scope (core/scope.js, b)
+  revPrompt: null,  // the field of a commit or range typed for the scope (b, Commit or range…)
   menu: null,       // the view's options (ui.Menu) while open
   wantTop: null,    // the scroll of a tab shown again in the Diff view, for once its changes are loaded
   edit: null,       // the edit mode (i, see startEdit): { ed (buffer.Editor), base, disk, prompt, hl }
@@ -78,15 +80,15 @@ try { state.marks = cleanMarks(JSON.parse(process.env.EXPLORER_MARKS || '[]')); 
 // italics) until kept: t, a double-click on it, e, o, a note, or an Enter or double-click in the explorer.
 // EXPLORER_TABS: the tabs saved before a restart, { list, current }.
 // edit: a tab being edited keeps its text, cursor and history while another tab shows (never saved for a restart).
-const VIEW = ['root', 'line', 'top', 'left', 'view', 'marks', 'mark', 'raw', 'base', 'edit'];
-const DEFAULTS = { line: 0, top: 0, left: 0, view: 'file', marks: [], mark: 0, raw: false, base: 'head', edit: null };
+const VIEW = ['root', 'line', 'top', 'left', 'view', 'marks', 'mark', 'raw', 'edit'];
+const DEFAULTS = { line: 0, top: 0, left: 0, view: 'file', marks: [], mark: 0, raw: false, edit: null };
 let tabs = { list: [], current: 0 };
 try {
   const t = JSON.parse(process.env.EXPLORER_TABS || 'null');
   const list = t && Array.isArray(t.list) ? t.list.filter(x => x && typeof x.file === 'string' && x.file).slice(0, Tabs.MAX) : [];
   tabs = { current: Math.max(0, Math.min((t && +t.current) || 0, list.length - 1)), list: list.map(x => ({
     file: x.file, kept: !!x.kept, root: typeof x.root === 'string' ? x.root : '', line: +x.line || 0, top: +x.top || 0, left: +x.left || 0,
-    view: x.view === 'diff' ? 'diff' : 'file', marks: cleanMarks(x.marks), mark: 0, raw: !!x.raw, base: x.base === 'branch' ? 'branch' : 'head',
+    view: x.view === 'diff' ? 'diff' : 'file', marks: cleanMarks(x.marks), mark: 0, raw: !!x.raw,
   })) };
 } catch { }
 // The file of the environment in its tab; restored: that tab was saved, with its scroll (see startup).
@@ -184,8 +186,10 @@ async function loadDiff(keepScroll) {
   let cwd = path.dirname(file);
   while (!fs.existsSync(cwd) && path.dirname(cwd) !== cwd) cwd = path.dirname(cwd);
   let res;
-  try { res = await diffs.collect({ cwd, file, base: state.base }); } catch { res = { text: '', top: cwd, baseName: '' }; }
+  const scope = state.scope, turn = scope.kind === 'turn' && TAB ? Scope.readTurn(TAB) : null;
+  try { res = await diffs.collect({ cwd, file, scope, turn }); } catch { res = { text: '', top: cwd, baseName: '' }; }
   if (run !== diffRun || state.file !== file) return;
+  if (res.error) flash(res.error);
   state.diff = { parsed: diffs.parse(res.text), top: res.top, baseName: res.baseName };
   state.rows = null;
   if (!keepScroll) goToLine();
@@ -219,7 +223,7 @@ function diffRows(W) {
   const mode = diffs.layoutOf(width);
   const list = diffs.render(state.diff.parsed, width, mode, true, { wrap: settings.wrap, left: state.left })
     .map(r => ({ segs: [[diffMarked(r) ? '▌' : ' ', fg(C.blue)], ...r.segs], back: r.back, ref: r.ref, hunk: r.hunk, more: r.more, src: -1 }));
-  return list.length ? list : [{ empty: 'No changes', pairs: [['d', 'file'], ['b', 'base'], ['q', 'close']], src: -1 }];
+  return list.length ? list : [{ empty: 'No changes', pairs: [['d', 'file'], ['b', 'compare with'], ['q', 'close']], src: -1 }];
 }
 // A row of the Diff view on a marked line (whole lines: the diff has no columns of the file).
 const diffMarked = r => r.ref && !r.hunk && r.ref.from && r.ref.from === r.ref.to && state.marks.some(m => r.ref.from >= m.from && r.ref.from <= m.to);
@@ -229,9 +233,38 @@ function nextHunk(dir) {
   const i = dir > 0 ? list.findIndex((r, k) => k > at && r.hunk) : list.map((r, k) => (k < at && r.hunk ? k : -1)).filter(k => k >= 0).pop();
   if (i !== undefined && i >= 0) { state.top = i; render(); }
 }
-function switchBase() {
-  state.base = state.base === 'head' ? 'branch' : 'head';
-  loadDiff(false).then(() => { if (state.base === 'branch' && state.diff && !state.diff.baseName) flash('No default branch: compared with HEAD'); });
+// b: the menu of the scopes (Scope.items); a scope chosen holds for every pane of the tab (scope-<tab>.json).
+function pickScope(s) {
+  state.menu = null; state.revPrompt = null;
+  if (!Scope.same(s, state.scope)) {
+    state.scope = s;
+    if (TAB) Scope.write(TAB, s);
+    return reloadScope();
+  }
+  render();
+}
+function reloadScope() {
+  if (state.view !== 'diff') return render();
+  loadDiff(false).then(() => { if (state.scope.kind === 'branch' && state.diff && !state.diff.baseName) flash('No default branch: compared with HEAD'); });
+}
+function openScopes() {
+  state.menu = new ui.Menu({ title: 'Compare with', items: Scope.items(state.scope, branchName(), pickScope, askScope), at: 1, right: ui.size().W });
+  render();
+}
+async function askScope(kind) {
+  state.menu = null;
+  if (kind === 'rev') { state.revPrompt = new ui.Field(state.scope.kind === 'rev' ? state.scope.rev : ''); return render(); }
+  const list = await Scope.branches(path.dirname(state.file));
+  if (!list.length) return flash('No branch');
+  state.menu = new ui.Menu({ title: 'Branch', at: 1, right: ui.size().W,
+    items: list.map(b => ({ label: b, value: state.scope.kind === 'ref' && state.scope.rev === b ? ['●', ''] : null, run: () => pickScope({ kind: 'ref', rev: b }) })) });
+  render();
+}
+// The tab's scope chosen in another pane (the Changes pane, source control's compare).
+if (TAB) {
+  const followScope = () => { const s = Scope.read(TAB); if (!Scope.same(s, state.scope)) { state.scope = s; reloadScope(); } };
+  state.scope = Scope.read(TAB);
+  Scope.watch(TAB, followScope);
 }
 function switchLayout() {
   if (!diffs) return;
@@ -630,9 +663,9 @@ const HELP = [
   ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
 ];
 
-// What the Diff view compares with: HEAD, or the default branch (main, master) where the branch started.
+// What the Diff view compares with: the tab's scope, vs HEAD, vs main base, vs last turn, vs abc123, vs feature.
 const branchName = () => (state.diff && state.diff.baseName) || 'main';
-const base = () => (state.base === 'branch' ? `vs ${branchName()}` : 'vs HEAD');
+const base = () => (state.scope.kind === 'ref' ? Scope.label(state.scope) : `vs ${Scope.label(state.scope, branchName())}`);
 const diffMode = W => (diffs ? diffs.layoutOf(Math.max(10, W - 2)) : 'inline');
 
 // What the Diff view compares with, in the header (vs HEAD, vs main): the only option that does not show in the
@@ -770,7 +803,8 @@ function openMenu(sel = 0) {
   const { W } = ui.size(), items = [], choice = text => [text, fg(C.blue)];
   if (state.view === 'diff') {
     items.push({ label: 'Layout', key: 's', value: choice(diffMode(W)), run: switchLayout },
-      { label: 'Compare with', key: 'b', value: choice(state.base === 'branch' ? branchName() : 'HEAD'), run: switchBase });
+      { label: 'Wrap lines', key: 'w', value: ui.onOff(settings.wrap), run: () => toggle('wrap') },
+      { label: 'Compare with', key: 'b', value: choice(Scope.label(state.scope, branchName())), run: openScopes, stay: false });
   } else {
     if (state.kind === 'markdown' && markdown && !state.edit) {
       items.push({ label: 'Markdown', key: 'm', value: choice(state.raw ? 'raw' : 'rendered'), run: () => { state.raw = !state.raw; state.rows = null; state.top = 0; } });
@@ -804,6 +838,10 @@ function menuKey(k) {
 function footer(W) {
   // The keys shown, for clicks: none while the find or a message takes the line.
   state.hints = null;
+  if (state.revPrompt) {
+    const lead = ' Commit or range (abc123, main..HEAD): ';
+    return ui.line([[lead, fg(C.blue)], ...state.revPrompt.segments(Math.max(1, W - ui.textWidth(lead)))], W, C.header);
+  }
   if (state.find && state.find.active) {
     const count = state.find.field.value ? ` ${state.matches.length ? state.match + 1 : 0}/${state.matches.length}` : '';
     return ui.line([[` ${ui.G.search} `, fg(C.dim)], ...state.find.field.segments(W - 4 - count.length), [count, fg(C.dim)]], W, C.header);
@@ -1443,6 +1481,12 @@ function scroll(n) {
 function key(k) {
   if (state.ask) return askKey(k);
   if (state.note) return noteKey(k);
+  if (state.revPrompt) {
+    if (k === 'escape' || k === 'ctrl+c') { state.revPrompt = null; return render(); }
+    if (k === 'enter') { const rev = state.revPrompt.value.trim(); state.revPrompt = null; return rev ? pickScope({ kind: 'rev', rev }) : render(); }
+    if (state.revPrompt.key(k)) render();
+    return;
+  }
   if (state.menu) return menuKey(k);
   if (state.edit && !state.help) return editKey(k);
   if (state.find && state.find.active) {
@@ -1486,7 +1530,7 @@ function key(k) {
     case 't': return flash(keepTab() ? 'Tab kept: the next file clicked opens in another tab' : 'Tab already kept');
     case 'x': return closeTab();
     case ',': return openMenu();
-    case 'b': if (state.view === 'diff') switchBase(); return;
+    case 'b': if (state.view === 'diff') openScopes(); return;
     case 's': if (state.view === 'diff') switchLayout(); return;
     case 'w': return toggle('wrap');
     case 'L': return toggle('lineNumbers');
@@ -1682,7 +1726,7 @@ const paint = ui.screen({
   paste: (text, raw) => {
     if (state.ask) return;
     if (state.edit) return editPaste(text, raw);
-    if (state.note) { state.note.field.insert(text); render(); } else if (state.find && state.find.active) { state.find.field.insert(text); search(); }
+    if (state.revPrompt) { state.revPrompt.insert(text); render(); } else if (state.note) { state.note.field.insert(text); render(); } else if (state.find && state.find.active) { state.find.field.insert(text); search(); }
   },
   resize: () => { state.rows = null; render(); keeper.check(); },
 }, { motion: true });
@@ -1794,7 +1838,7 @@ if (!state.file) { state.file = ''; setError('No file'); } else {
   watch();
   // A tab saved before a restart: at its scroll.
   if (restored) {
-    Object.assign(state, { top: restored.top, left: restored.left, raw: restored.raw, base: restored.base });
+    Object.assign(state, { top: restored.top, left: restored.left, raw: restored.raw });
     if (state.view === 'diff') state.wantTop = state.top;
   }
   load(!!restored);

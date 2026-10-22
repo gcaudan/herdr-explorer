@@ -310,13 +310,13 @@ Header: with several tabs, the tabs (the current one bold on a lighter backgroun
 details when they fit; with one, the file path relative to the root, then details (lines, size, image format and size; in the Diff view, the
 added and removed lines). On the right:
 
-- in the Diff view, what the changes are compared with, dimmed: `vs HEAD` or `vs main` (the rest shows in the content
-  itself);
+- in the Diff view, what the changes are compared with, dimmed: `vs HEAD`, `vs main base`, `vs last turn`, `vs abc123`
+  or `vs feature` ([diff scope](#diff-scope); the rest shows in the content itself);
 - the **File · Diff** switch, the active choice filled: a click on the other one switches ([Diff view](#diff-view));
 - `⚙` (or `,`, as the explorer's settings), which opens the **View** menu of the view's options, as the explorer's settings show them: a choice
   in blue, or `● on` / `○ off`. **Markdown** (rendered or raw, `m`), **Wrap lines** (`w`) and **Line numbers** (`L`)
-  for text, **Edit here** (`i`), **Image** (sharp or pixelated, `p`); in the Diff view, **Layout** (inline or split, `s`) and **Compare
-  with** (HEAD or the default branch, `b`). The key beside each does the same outside the menu. `left` / `right`,
+  for text, **Edit here** (`i`), **Image** (sharp or pixelated, `p`); in the Diff view, **Layout** (inline or split, `s`), **Wrap lines** (`w`)
+  and **Compare with** (the [diff scope](#diff-scope), `b`). The key beside each does the same outside the menu. `left` / `right`,
   `enter`, `space` or a click changes the option in place, the menu staying open; `up` / `down` move, `escape`, `q`,
   `,` or a click elsewhere close it. The footer's actions are not repeated there, and the footer leaves out what the
   header's controls do (`d`, `,`): the key help (`?`) lists every key.
@@ -343,7 +343,7 @@ a click runs, and the scroll percentage.
 | `/`                          | find in file                                             |
 | `n` / `N`                    | next / previous match; without a find, next / previous mark of [`peek.js`](#show-a-file-from-an-agent-or-a-script), else hunk in the Diff view |
 | `d`                          | the file or its changes ([Diff view](#diff-view))        |
-| `b` / `s`                    | Diff view: compare with HEAD or where the branch started / inline or split (saved by width) |
+| `b` / `s`                    | Diff view: what to compare with ([diff scope](#diff-scope)) / inline or split (saved by width) |
 | `,`                          | the View menu of the view's options (or `⚙`)            |
 | `w`                          | toggle line wrap (saved), also of the Diff view's lines  |
 | `L`                          | toggle line numbers (saved)                              |
@@ -448,8 +448,8 @@ Every match is highlighted, the current one brighter, also in wrapped lines and 
 
 `d` (or **File · Diff** in the header) shows the file's git changes in place of the file, as the Changes pane does:
 compared with HEAD, staged and unstaged together, an untracked file in full, a deleted one as removed lines. The
-header shows the added and removed line counts and `vs HEAD` or `vs main`; the View menu (`⚙`, `,`) chooses the **Layout**, inline or split
-(side by side, `s`), and what to **Compare with**, HEAD or the default branch (`b`). The layout is saved for every
+header shows the added and removed line counts and what they are compared with; the View menu (`⚙`, `,`) chooses the
+**Layout**, inline or split (side by side, `s`), and what to **Compare with** (the [diff scope](#diff-scope), `b`). The layout is saved for every
 diff, one for narrow diffs and one for wide ones: inline beside the terminal and split once zoomed (`z`), for
 example. `n` and `N` jump
 between hunks, `a` notes the lines of the rows selected with the mouse (or of the top row), and it reloads with the
@@ -668,7 +668,9 @@ one, `R` rebases the current branch onto it.
 commits ahead and behind, the commits only on each side (`=` marks a change also on the other side, as after a
 cherry-pick), and the files it changed since it left the current branch. `=` opens the comparison at any width and focuses it; there, `up`/`down` select a commit,
 `enter` shows it, and `q` or `escape` on that commit goes back to the comparison. `B` makes the selected branch the
-base of the comparisons instead of the current branch (`B` again on it, or on the current branch, goes back).
+base of the comparisons instead of the current branch (`B` again on it, or on the current branch, goes back). `=` also
+sets the [diff scope](#diff-scope) of the tab to `base...branch`, so that the Changes pane and the preview's Diff view
+show the branch's changes too; a branch merely selected leaves the scope alone.
 
 ### Git operations
 
@@ -727,7 +729,7 @@ Opened by **View changes** on a folder (a file's changes show in the preview's [
 folder, it compares tracked files with HEAD (index and working tree;
 before the first commit, the staged then the unstaged changes) and shows untracked files in full, up to 200. The
 header shows the name and the added and removed line counts, then two switches, the active choice filled, which a
-click changes: **HEAD · main** (what the changes are compared with, `b`) and **Inline · Split** (`s`, saved for the
+click changes: what the changes are compared with (the [diff scope](#diff-scope); a click opens `b`'s menu) and **Inline · Split** (`s`, saved for the
 diffs of that width, see [`diffLayout`](configuration.md#settings)); the footer, the keys and how far down the diff
 is. The diff is inline, or
 side by side from 120 columns, with changed words highlighted.
@@ -741,7 +743,7 @@ wheel scrolls 3 rows. `n`/`N` put it on the next or previous hunk.
 | `a`        | a [review note](#review-notes) on the cursor's line (a removed line: the line now in its place), on the whole hunk from its `@@` row, on the whole file from its name |
 | `A` / `C` / `u` | send the tab's notes to the agent / copy them (paths relative to the repository) / remove the last note |
 | `y`        | copy the cursor's line as `path:line`, relative to the pane's folder                           |
-| `b`        | compare with HEAD, or with the point where the branch left the default branch (the remote's `HEAD`, else `main` or `master`): every change of the branch, committed or not |
+| `b`        | what to compare with: the menu of the [diff scopes](#diff-scope)                               |
 | `s`        | inline / side by side (kept for the next diffs)                                                |
 | `w`        | wrap long lines, on each side in a side by side diff (the preview's **Wrap lines** setting)    |
 | `left` `h` / `right` `l` | without wrap, scroll the lines 8 columns sideways, the line numbers staying         |
@@ -750,6 +752,25 @@ wheel scrolls 3 rows. `n`/`N` put it on the next or previous hunk.
 | `?` `f1`   | all the keys                                                                                   |
 
 Lines with a note have a yellow bar in the first column.
+
+
+### Diff scope
+
+What the Changes pane and the preview's Diff view compare the files with. `b` (or the header's scope, or **Compare
+with** in the View menu) opens its menu; the scope chosen holds for every pane of the tab, until changed:
+
+- **HEAD** (the default): the last commit, staged and unstaged changes together;
+- **Merge base with main**: the point where the branch left the default branch (the remote's `HEAD`, else `main` or
+  `master`), so every change of the branch, committed or not;
+- **Last agent turn**: the working tree as it was when the agent of the tab last started working, so only what it
+  changed since. herdr tells the plugin when an agent's status changes; when it starts working after having been idle
+  or done (or for another agent of the tab), the plugin records a snapshot of the repository's working tree, tracked
+  and untracked files, without touching the index. Before any turn, it says so;
+- **Commit or range…**: a commit (its own changes, against its parent), `a..b` or `a...b` (since `b` left `a`), typed in
+  the footer (`enter` to apply, `escape` to cancel);
+- **Branch…**: a branch, local or remote, compared with the working tree.
+
+Source control's `=` sets it too ([Comparing branches](#source-control)).
 
 ## Show a file from an agent or a script
 

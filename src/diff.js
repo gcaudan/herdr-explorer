@@ -253,12 +253,18 @@ function splitRows(rows, b, width, nw, view) {
 
 const defaultMode = width => (width >= SPLIT_MIN ? 'split' : 'inline');
 
-// The changes to show, as git diff writes them: those of the working tree compared with base, 'head' (the last
-// commit) or 'branch' (where the branch left the default one, so every change of the branch, committed or not),
-// untracked files in full. file: a file or folder to limit them to. Returns { text, top, baseName }: top, the
-// repository's folder, which the diff's paths are relative to; baseName, the default branch ('' when none was found,
-// or when compared with it but no common commit).
-async function collect({ cwd, file = '', base = 'head' }) {
+// The tree of an empty commit, compared with for a commit that has no parent.
+const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+
+// The changes to show, as git diff writes them, for a scope (core/scope.js): those of the working tree compared with
+// the last commit ('head'), where the branch left the default one ('branch', so every change of the branch,
+// committed or not) or a branch ('ref'), untracked files in full; those since the agent's last turn started ('turn',
+// turn: its snapshot, untracked files within); those of a commit or a range ('rev'). file: a file or folder to limit
+// them to. Returns { text, top, baseName, error }: top, the repository's folder, which the diff's paths are relative
+// to; baseName, the default branch ('' when none was found, or when compared with it but no common commit); error,
+// why the scope could not be compared (nothing then compared).
+async function collect({ cwd, file = '', base = 'head', scope = null, turn = null }) {
+  const kind = scope ? scope.kind : base;
   const env = { ...await gitEnv(cwd), GIT_LITERAL_PATHSPECS: '1' }; // a file named '*' or '[id]' means itself
   const target = file ? ['--', file] : [];
   // stdout even on a non-zero exit code: diff --no-index returns 1 when the files differ.
@@ -274,9 +280,35 @@ async function collect({ cwd, file = '', base = 'head' }) {
     baseName = git('rev-parse', '--abbrev-ref', '-q', '--verify', 'refs/remotes/origin/HEAD').trim()
       || ['main', 'master', 'origin/main', 'origin/master'].find(b => git('rev-parse', '--verify', '-q', `${b}^{commit}`).trim()) || '';
   }
-  if (from && base === 'branch') {
+  if (from && kind === 'branch') {
     const fork = baseName && git('merge-base', 'HEAD', baseName).trim();
     if (fork) from = fork; else baseName = '';
+  }
+  // A commit the user typed: its id, or null. --end-of-options keeps a name starting with - from reading as an option.
+  const commit = rev => (rev && git('rev-parse', '--verify', '-q', '--end-of-options', `${rev}^{commit}`).trim()) || null;
+  if (kind === 'turn') {
+    if (!turn || path.resolve(turn.top) !== path.resolve(top)) return { text: '', top, baseName, error: 'No agent turn recorded in this repository' };
+    const now = await require('./core/scope').worktree(top, env);
+    if (!now) return { text: '', top, baseName, error: 'Cannot read the working tree' };
+    return { text: diff(turn.tree, now, ...target), top, baseName };
+  }
+  if (kind === 'rev') {
+    // a..b, a...b (from where they parted), or one commit: its own changes, against its first parent.
+    const m = /^(.+?)(\.\.\.?)(.+)$/.exec(scope.rev);
+    if (m) {
+      const [a, b] = [commit(m[1]), commit(m[3])];
+      if (!a || !b) return { text: '', top, baseName, error: `Unknown commit: ${!a ? m[1] : m[3]}` };
+      const start = m[2] === '...' ? git('merge-base', a, b).trim() : a;
+      if (!start) return { text: '', top, baseName, error: 'No common commit' };
+      return { text: diff(start, b, ...target), top, baseName };
+    }
+    const c = commit(scope.rev);
+    if (!c) return { text: '', top, baseName, error: `Unknown commit: ${scope.rev}` };
+    return { text: diff(commit(`${c}^`) || EMPTY_TREE, c, ...target), top, baseName };
+  }
+  if (kind === 'ref') {
+    from = commit(scope.rev);
+    if (!from) return { text: '', top, baseName, error: `Unknown branch: ${scope.rev}` };
   }
   // Without any commit, compare with the empty tree: staged changes, then unstaged ones.
   let text = from ? diff(from, ...target) : diff('--cached', ...target) + diff(...target);
@@ -317,18 +349,19 @@ function main() {
   const PANE = process.env.HERDR_PANE_ID;
   // The explorer's pane, whose terminal the notes go to; this pane's own when opened without it.
   const FROM = process.env.EXPLORER_PANE || PANE;
-  const notes = require('./core/notes'), actions = require('./core/actions');
-  // base: what the changes are compared with, 'head' (the last commit) or 'branch' (where the branch left the default
-  // one, so every change of the branch, committed or not). top: the repository's folder, which the diff's paths are
-  // relative to. baseName: the default branch, once found.
-  let base = 'head', top = cwd, baseName = '';
+  const notes = require('./core/notes'), actions = require('./core/actions'), Scope = require('./core/scope');
+  // scope: what the changes are compared with, the tab's (core/scope.js), HEAD until the tab is known. top: the
+  // repository's folder, which the diff's paths are relative to. baseName: the default branch, once found.
+  let scope = Scope.HEAD, top = cwd, baseName = '';
 
-  // The changes for the base chosen now; null when b chose another one meanwhile, whose run then shows its own.
+  // The changes for the scope chosen now; null when b chose another one meanwhile, whose run then shows its own.
   let runs = 0;
   async function changes() {
-    const run = ++runs, res = await collect({ cwd, file, base });
+    const run = ++runs;
+    const res = await collect({ cwd, file, scope, turn: scope.kind === 'turn' && tab ? Scope.readTurn(tab) : null });
     if (run !== runs) return null;
     top = res.top; baseName = res.baseName;
+    if (res.error) say(res.error);
     return res.text;
   }
 
@@ -368,11 +401,11 @@ function main() {
     if (rows.length > body) layout(W - 2, m);
     top0 = Math.max(0, Math.min(top0, rows.length - body));
     const bw = scrollbar.set(rows.length, body, top0);
-    // Header: the name and the counts, then the switches of the base (HEAD or the default branch) and the layout,
-    // the active choice filled (clickable), the base's left out when they do not fit.
+    // Header: the name and the counts, then the scope (a click opens b's menu) and the layout switch, the active
+    // choice filled (clickable), the scope left out when they do not fit.
     const counts = parsed ? [[` +${parsed.add}`, GREEN], [` −${parsed.del}`, RED]] : [];
     const head = [[` ${title()}`, '\x1b[1m'], ...counts];
-    const switches = [ui.segmented([['head', 'HEAD'], ['branch', baseName || 'main']], base),
+    const switches = [ui.segmented([['scope', Scope.label(scope, baseName)]], 'scope'),
       ui.segmented([['inline', 'Inline'], ['split', 'Split']], m)];
     const width = () => switches.reduce((w, s) => w + s.width + 1, 0);
     while (switches.length && W - ui.segWidth(head) - width() < 1) switches.shift();
@@ -386,7 +419,7 @@ function main() {
     }
     const lines = [ui.line(segs, W, ui.C.header)];
     if (!parsed) lines.push(...ui.empty(W, body, 'Loading…'));
-    else if (!rows.length) lines.push(...ui.empty(W, body, 'No changes', [['b', 'base'], ['q', 'close']]));
+    else if (!rows.length) lines.push(...ui.empty(W, body, 'No changes', [['b', 'compare with'], ['q', 'close']]));
     // The cursor's row and the noted ones: a bar in the first column.
     rows.slice(top0, top0 + body).forEach((r, k) => {
       const i = top0 + k, mark = i === cur ? ['▌', ui.fg(ui.C.blue)] : noted(r) ? ['▎', NOTE] : [' ', ''];
@@ -395,12 +428,17 @@ function main() {
     while (lines.length < H - 1) lines.push(ui.line([], W));
     lines.length = H - 1;
     lines.push(footer(W));
+    if (menu) menu.draw(lines, W, H);
     if (help) ui.help(lines, W, 'Changes', HELP, help);
     paint(lines);
   }
 
   function footer(W) {
     hints = [];
+    if (prompt) {
+      const lead = ' Commit or range (abc123, main..HEAD): ';
+      return ui.line([[lead, CYAN], ...prompt.field.segments(Math.max(1, W - ui.textWidth(lead)))], W, ui.C.header);
+    }
     if (note) {
       const lead = ` ✎ ${noteWhere(note.ref)} `, kind = note.kind ? `[${note.kind}] ` : '[tab: kind] ';
       return ui.line([[lead, NOTE], [kind, DIM], ...note.field.segments(Math.max(1, W - ui.textWidth(lead + kind)))], W, ui.C.header);
@@ -429,7 +467,7 @@ function main() {
   const HELP = [
     ['Move', [['↑↓ j k', 'line'], ['pgup pgdn', 'page'], ['space', 'page down'], ['ctrl+u/d', 'half page'], ['g G', 'top, bottom']]],
     ['Diff', [['n N', 'next, previous hunk'], ['s', 'inline, split (side by side)'], ['w', 'wrap long lines'], ['← → h l', 'left, right (no wrap)'],
-      ['b', 'compare with HEAD or the default branch']]],
+      ['b', 'compare with: HEAD, merge base, last agent turn, a commit or range, a branch']]],
     ['Review', [['a', 'note on the line (hunk, file)'], ['tab', 'kind of note, while typing'], ['A', 'send the notes to the agent'],
       ['C', 'copy the notes'], ['u', 'remove the last note'], ['y', 'copy path:line']]],
     ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
@@ -491,18 +529,57 @@ function main() {
     const rel = path.relative(notes.real(cwd), path.join(top, r.ref.file)).split(path.sep).join('/');
     act(actions.copy(noteWhere({ ...r.ref, file: rel }), r.ref.from ? 'Reference copied' : 'Path copied'));
   }
-  async function switchBase() {
-    base = base === 'head' ? 'branch' : 'head';
+  // The changes loaded again, for a new scope.
+  async function reload() {
     parsed = null; cache = ''; draw();
     const text = await changes();
     if (text === null) return;
     parsed = parse(text); cache = ''; draw();
-    if (base === 'branch' && !baseName) say('No default branch: compared with HEAD');
+    if (scope.kind === 'branch' && !baseName) say('No default branch: compared with HEAD');
+  }
+  // A scope chosen here, for every pane of the tab.
+  function pick(s) {
+    menu = null; prompt = null;
+    if (Scope.same(s, scope)) return draw();
+    scope = s;
+    if (tab) Scope.write(tab, s);
+    reload();
+  }
+  // menu: b's (ui.Menu), or the branches of Branch…; prompt: { field } while a commit or range is typed.
+  let menu = null, prompt = null;
+  function openScopes() {
+    menu = new ui.Menu({ title: 'Compare with', items: Scope.items(scope, baseName, pick, ask), at: 1, right: ui.size().W });
+    draw();
+  }
+  async function ask(kind) {
+    menu = null;
+    if (kind === 'rev') { prompt = { field: new ui.Field(scope.kind === 'rev' ? scope.rev : '') }; return draw(); }
+    const list = await Scope.branches(cwd);
+    if (!list.length) return say('No branch');
+    menu = new ui.Menu({ title: 'Branch', items: list.map(b => ({ label: b, value: scope.kind === 'ref' && scope.rev === b ? ['●', ''] : null,
+      run: () => pick({ kind: 'ref', rev: b }) })), at: 1, right: ui.size().W });
+    draw();
+  }
+  function promptKey(k) {
+    if (k === 'escape' || k === 'ctrl+c') { prompt = null; return draw(); }
+    if (k === 'enter') {
+      const rev = prompt.field.value.trim();
+      prompt = null;
+      return rev ? pick({ kind: 'rev', rev }) : draw();
+    }
+    if (prompt.field.key(k)) draw();
   }
 
   function onKey(k) {
     const page = ui.size().H - 3;
     if (note) return noteKey(k);
+    if (prompt) return promptKey(k);
+    if (menu) {
+      const r = menu.key(k, ui.size().H);
+      if (r === 'close') { menu = null; return draw(); }
+      if (r && r.run) return r.run();
+      return draw();
+    }
     if (k === 'ctrl+c') process.exit(0);
     if (help) { if (!ui.helpKey(k, help)) help = null; return draw(); }
     if (k === '?' || k === 'f1') { help = { top: 0, find: null }; draw(); }
@@ -520,7 +597,7 @@ function main() {
     else if (k === 'n') jump(1);
     else if (k === 'N') jump(-1);
     else if (k === 's') { const W = ui.size().W; saveMode(W, layoutOf(W) === 'split' ? 'inline' : 'split'); draw(); }
-    else if (k === 'b') switchBase();
+    else if (k === 'b') openScopes();
     else if (k === 'w') { wrap = !wrap; left = 0; writeSettings({ ...readSettings(), wrap }); draw(); }
     else if (k === 'left' || k === 'h') { if (!wrap && left) { left = Math.max(0, left - 8); draw(); } }
     else if (k === 'right' || k === 'l') { if (!wrap) { left += 8; draw(); } }
@@ -533,16 +610,22 @@ function main() {
 
   const paint = ui.screen({
     key: onKey,
-    paste(text) { if (note) { note.field.insert(text); draw(); } },
+    paste(text) { const f = prompt ? prompt.field : note && note.field; if (f) { f.insert(text); draw(); } },
     mouse(m) {
       if (help) { if (!ui.helpMouse(m, help)) help = null; return draw(); }
+      if (menu) {
+        const r = menu.mouse(m, ui.size().H);
+        if (r === 'close') { menu = null; return draw(); }
+        if (r && r.run) return r.run();
+        return draw();
+      }
       if (m.wheel) return scroll(m.wheel * 3);
       const click = m.press && !m.drag && m.button === 0;
       // The header's switches: a click on a choice takes it.
       const chip = click && m.y === 1 && chips.find(c => m.x >= c.from && m.x <= c.to);
       if (chip) {
         if ((chip.id === 'inline' || chip.id === 'split') && chip.id !== layoutOf(ui.size().W)) { saveMode(ui.size().W, chip.id); draw(); }
-        if ((chip.id === 'head' || chip.id === 'branch') && chip.id !== base) switchBase();
+        if (chip.id === 'scope') openScopes();
         return;
       }
       // A click on a hint of the footer does what its key does.
@@ -567,6 +650,10 @@ function main() {
       if (!tab) return;
       tabNotes = notes.read(tab);
       notes.watch(tab, () => { tabNotes = notes.read(tab); draw(); });
+      // The tab's scope, and the one another pane chooses later.
+      const follow = () => { const s = Scope.read(tab); if (!Scope.same(s, scope)) { scope = s; reload(); } };
+      Scope.watch(tab, follow);
+      follow();
       draw();
     });
   }

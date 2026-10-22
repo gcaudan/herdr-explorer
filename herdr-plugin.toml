@@ -20,6 +20,10 @@ command = ["node", "src/hook.js", "--closed"]
 on = "workspace.closed"
 command = ["node", "src/hook.js", "--closed"]
 
+[[events]]
+on = "pane.agent_status_changed"
+command = ["node", "src/hook.js", "--agent"]
+
 [[panes]]
 id = "tree"
 title = "Explorer"

@@ -8,6 +8,7 @@
 //   node hook.js --search  key binding action: Go to file popup of the current tab's folder
 //   node hook.js --scm     key binding action: source control of the current tab's folder
 //   node hook.js --closed  tab.closed and workspace.closed events: removes the state of the tabs and panes gone
+//   node hook.js --agent   pane.agent_status_changed event: the working tree when the agent starts a turn (scope.js)
 // Each run also saves the state folder for peek.js.
 'use strict';
 const { execFileSync } = require('child_process');
@@ -131,6 +132,14 @@ if (process.argv.includes('--toggle')) {
   if (pane && root) (process.argv.includes('--scm') ? actions.scm(root, pane) : actions.search(root, pane, 'files'));
 } else if (process.argv.includes('--closed')) {
   sweep();
+} else if (process.argv.includes('--agent')) {
+  const ev = JSON.parse(process.env.HERDR_PLUGIN_EVENT_JSON || '{}');
+  const d = ev.data || {};
+  let pane = null;
+  try { pane = d.pane_id && herdr('pane', 'get', d.pane_id).pane; } catch { }
+  if (pane && pane.tab_id && pane.cwd) {
+    require('./core/scope').agentStatus(pane.tab_id, pane.pane_id, d.agent_status, pane.cwd).then(r => console.log(r), () => { });
+  }
 } else if (process.argv.includes('--all')) {
   for (const ws of herdr('workspace', 'list').workspaces) {
     const tabs = new Map();

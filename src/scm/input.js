@@ -5,7 +5,7 @@ const diffs = require('../diff');
 const { GIT, gitEnv } = require('../core/exec');
 const { ROOT, SPLIT, VIEWS, S, frame, draw, wide, flash, confirm, quit } = require('./context');
 const {
-  exec, english, errorOf, schedule, filterPicker, openPicker, compare, showDiff, closeDiff, comparable, diffable, showing, allFiles,
+  exec, english, errorOf, schedule, filterPicker, openPicker, compare, shareCompare, showDiff, closeDiff, comparable, diffable, showing, allFiles,
   setView, toggleAllBranches, toggleTree, toggle,
 } = require('./state');
 const {
@@ -257,6 +257,7 @@ function viewKey(k, row) {
     if (k === 'D' && row && row.type === 'branch') return deleteBranch(row.ref);
     if (k === '=' && row && row.type === 'branch') {
       if (!comparable(row)) return flash(`${row.ref.name} is the base of the comparisons: select another branch`);
+      shareCompare(row);
       return compare(row).then(() => { if (S.diff) { S.diff.focus = true; draw(); } });
     }
     if (k === 'B' && row && row.type === 'branch') return setBase(row);

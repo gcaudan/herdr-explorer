@@ -98,10 +98,12 @@ saved, and the explorer's width falls back to 32 columns.
 | `panes/<pane id>.json` | per pane: the explorer's tab folder (`home`) and tree root (`root`), the preview's `file`, `root`, `line` and tabs (`tabs`) |
 | `preview-<tab id>.json`| the last file the explorer, the search or `peek.js` asked the tab's preview to show        |
 | `notes-<tab id>.json`  | the tab's review notes, removed once sent                                                    |
+| `scope-<tab id>.json`  | the tab's [diff scope](usage.md#diff-scope), `{ kind, rev }`, absent for HEAD                |
+| `turn-<tab id>.json`   | the working tree when the tab's agent last started working: `{ pane, top, tree, t, ended }`  |
 
-`settings.json`, `expanded.json`, `width`, `update.json`, `search.json`, `resizing`, `preview-*.json`, `notes-*.json`,
+`settings.json`, `expanded.json`, `width`, `update.json`, `search.json`, `resizing`, `preview-*.json`, `notes-*.json`, `scope-*.json`, `turn-*.json`,
 `panes/*.json` and `keys.json` (in the config folder) are written to a temporary file and then renamed, so a pane never reads them half-written. When a tab or a space closes, and again at herdr
-startup, the files of tabs and panes that no longer exist are deleted (`notes-*.json`, `preview-*.json`, `panes/*.json`).
+startup, the files of tabs and panes that no longer exist are deleted (`notes-*.json`, `preview-*.json`, `scope-*.json`, `turn-*.json`, `panes/*.json`).
 
 ### Config folder
 
