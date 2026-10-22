@@ -9,7 +9,9 @@ const { readSettings } = require('../core/exec');
 
 const ROOT = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());
 const { C, fg, bg } = ui;
-const DIM = fg(C.dim), BOLD = '\x1b[1m';
+const BOLD = '\x1b[1m';
+let DIM;
+ui.onTheme(() => { DIM = fg(C.dim); });
 const G = ui.G;
 const settings = readSettings();
 ui.useGlyphs(settings.glyphs);
@@ -82,6 +84,6 @@ function confirm(q, yes) { S.confirm = { ...q, yes, focus: 'no' }; draw(); }
 function quit() { process.exit(0); }
 
 module.exports = {
-  ROOT, C, fg, bg, DIM, BOLD, G, settings, theme, SPLIT, MAX_PROMPT, NET_TIMEOUT, VIEWS, shares, S, frame, late, draw,
+  ROOT, C, fg, bg, BOLD, G, settings, theme, SPLIT, MAX_PROMPT, NET_TIMEOUT, VIEWS, shares, S, frame, late, draw,
   select, follow, wide, base, dirOf, files, flash, confirm, quit,
 };

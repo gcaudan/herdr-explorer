@@ -18,6 +18,7 @@ The pane where a setting changes applies it at once; the last column says when t
 | `follow` | `false` | Follow terminal | reveal the folder of the terminal next to the explorer, moving the root when it leaves the tree | within 2 s |
 | `side` | `"left"` | Dock side | `"left"` or `"right"`: where new explorers dock; an open explorer keeps its side | new tabs only |
 | `autoOpen` | `true` | Open automatically | open the explorer in every new tab that has a single pane; off: only with `prefix+f` | new tabs only |
+| `theme` | `"auto"` | Theme | `"dark"` (VS Code Dark+ colours), `"light"` (Light+), or `"auto"`: by the terminal's background, as last read (the `background` file), dark until a pane has read it | the explorer at once; a pane opened on auto turns at once when the terminal's background differs; other panes at their next opening |
 | `glyphs` | `"nerd"` | Icon set | `"nerd"` (Nerd Font glyphs), `"emoji"`, `"unicode"` or `"ascii"`: the file icons, chevrons and header icons for a terminal without a Nerd Font, see [Without a Nerd Font](#without-a-nerd-font) | explorers within a second; other panes at their next opening |
 | `icons` | `""` | Icon theme | `""` for the Nerd Font icons, or `{ "id", "label", "file" }` of a VS Code icon theme | explorers within a second; source control at its next opening |
 | `wrap` | `false` | Wrap lines; preview `w`, **View** menu | wrap long lines in the preview, its Diff view and the Changes pane | other previews and Changes panes at their next opening |
@@ -91,6 +92,7 @@ saved, and the explorer's width falls back to 32 columns.
 | ---------------------- | -------------------------------------------------------------------------------------------- |
 | `settings.json`        | the settings above                                                                           |
 | `width`                | explorer width in columns (minimum 10, default 32)                                           |
+| `background`           | `dark` or `light`: the terminal's background, as the last pane opened on the auto theme read it |
 | `expanded.json`        | expanded folders, per tree root                                                              |
 | `search.json`          | last Go to file query, search query, include/exclude globs, case/word/regex options          |
 | `update.json`          | `checkedAt`, `latest` release found, and `finish` (an update the installer must finish)      |

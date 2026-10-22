@@ -591,6 +591,7 @@ function setSetting(name, value) {
   settings[name] = value;
   writeSettings({ ...readSettings(), [name]: value });
   if (name === 'glyphs') ui.useGlyphs(value);
+  if (name === 'theme') ui.useTheme(ui.settingTheme(value));
   cache.clear();
   buildRows();
   if (name === 'follow') { lastCwd = null; follow(); }
@@ -683,6 +684,7 @@ const paint = ui.screen({
     render();
   },
   resize: () => { resized(); reveal(); render(); },
+  theme: () => { cache.clear(); buildRows(); render(); },
 }, { motion: true });
 // The Kitty graphics query, as the preview sends it.
 process.stdout.write(ui.KITTY_QUERY);

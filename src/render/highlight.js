@@ -2,21 +2,33 @@
 // numbers), not a parser. Strings and comments spanning lines carry a state from one line to the next.
 // Output: one array of [text, style] segments per source line, ready for ui.line().
 'use strict';
-const { fg, cleanLine } = require('../core/ui');
+const { fg, cleanLine, onTheme } = require('../core/ui');
 
-// VS Code Dark+ token colours.
+// Token colours of VS Code Dark+ and Light+, by theme (ui.useTheme).
 const COLORS = {
-  keyword: [86, 156, 214], control: [197, 134, 192], string: [206, 145, 120], number: [181, 206, 168],
-  comment: [106, 153, 85], type: [78, 201, 176], function: [220, 220, 170], variable: [156, 220, 254],
-  constant: [79, 193, 255], regexp: [209, 105, 105], escape: [215, 186, 125], tag: [86, 156, 214],
-  attribute: [156, 220, 254], punctuation: [128, 128, 128], selector: [215, 186, 125], heading: [86, 156, 214],
-  added: [129, 184, 139], removed: [244, 135, 113], meta: [155, 155, 155],
+  dark: {
+    keyword: [86, 156, 214], control: [197, 134, 192], string: [206, 145, 120], number: [181, 206, 168],
+    comment: [106, 153, 85], type: [78, 201, 176], function: [220, 220, 170], variable: [156, 220, 254],
+    constant: [79, 193, 255], regexp: [209, 105, 105], escape: [215, 186, 125], tag: [86, 156, 214],
+    attribute: [156, 220, 254], punctuation: [128, 128, 128], selector: [215, 186, 125], heading: [86, 156, 214],
+    added: [129, 184, 139], removed: [244, 135, 113], meta: [155, 155, 155],
+  },
+  light: {
+    keyword: [0, 0, 255], control: [175, 0, 219], string: [163, 21, 21], number: [9, 134, 88],
+    comment: [0, 128, 0], type: [38, 127, 153], function: [121, 94, 38], variable: [0, 16, 128],
+    constant: [0, 112, 193], regexp: [129, 31, 63], escape: [238, 0, 0], tag: [128, 0, 0],
+    attribute: [229, 0, 0], punctuation: [110, 110, 110], selector: [128, 0, 0], heading: [128, 0, 0],
+    added: [9, 134, 88], removed: [163, 21, 21], meta: [110, 110, 110],
+  },
 };
+// The styles of the theme, changed in place so that the compiled languages keep them.
 const S = {};
-for (const [k, rgb] of Object.entries(COLORS)) S[k] = fg(rgb);
-S.heading = '\x1b[1m' + S.heading;
-S.bold = '\x1b[1m';
-S.italic = '\x1b[3m';
+onTheme(theme => {
+  for (const [k, rgb] of Object.entries(COLORS[theme])) S[k] = fg(rgb);
+  S.heading = '\x1b[1m' + S.heading;
+  S.bold = '\x1b[1m';
+  S.italic = '\x1b[3m';
+});
 
 const LONG = 2000; // longer lines are left plain: minified files would cost too much for nothing readable
 

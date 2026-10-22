@@ -11,9 +11,7 @@ const G = ui.G;
 const chevron = open => (open ? G.open : G.closed);
 
 // A row being named: the field's colours.
-const FIELD = [60, 60, 60];
 // The part of a name matching the filter.
-const HIT = '\x1b[1m' + fg([24, 163, 255]);
 
 module.exports = ctx => {
   const { state, out, scrollbar, tree, git, settings, HOME, keysOf } = ctx;
@@ -71,7 +69,7 @@ module.exports = ctx => {
     const f = state.prompt.field, r = e.r, dir = r ? r.dir : e.dir, open = r ? r.open : false;
     const icon = icons.icon(ctx.theme, f.value || (r ? r.name : ''), dir, open);
     const lead = ' '.repeat(1 + (r ? r.depth : e.depth) * 2) + (dir ? chevron(open) : ' ') + ' ';
-    return line([[lead, fg(C.dim)], [icon[0], fg(icon[1])], ...f.segments(Math.max(1, W - textWidth(lead) - textWidth(icon[0]) - 1))], W, FIELD);
+    return line([[lead, fg(C.dim)], [icon[0], fg(icon[1])], ...f.segments(Math.max(1, W - textWidth(lead) - textWidth(icon[0]) - 1))], W, C.field);
   }
 
   // The keys of a name typed in the tree, and where a new entry goes.
@@ -143,7 +141,7 @@ module.exports = ctx => {
     const pad = Math.max(0, W - lead - textWidth(name) - (badge ? 2 : 0) - 1);
     // The part matching the filter in bold blue, as in Go to file; a folder shown only for what it holds, dimmed.
     const parts = r.hit && r.hit[1] <= name.length
-      ? [[name.slice(0, r.hit[0]), color], [name.slice(r.hit[0], r.hit[1]), HIT], [name.slice(r.hit[1]), color]]
+      ? [[name.slice(0, r.hit[0]), color], [name.slice(r.hit[0], r.hit[1]), '\x1b[1m' + fg(C.hit)], [name.slice(r.hit[1]), color]]
       : [[name, state.filter && state.filter.field.value && !r.hit ? fg(C.dim) : color]];
     return line([
       [indent + mark + ' ', fg(C.dim)], [icon[0], fg(deco === '!' ? GIT['!'] : icon[1])],

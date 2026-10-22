@@ -26,6 +26,7 @@ late.paint = ui.screen({
   focus(on) { if (on) schedule(); },
   // Below SPLIT columns, a diff the selection opened by itself would hide the list.
   resize() { if (S.diff && S.diff.auto && !wide()) S.diff = null; draw(); follow(); },
+  theme() { if (S.diff) S.diff.cache = ''; draw(); },
 }, { motion: true });
 draw();
 refresh();

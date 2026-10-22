@@ -2,20 +2,34 @@
 // highlighted by highlight.js, GFM tables and task lists, simple Mermaid flowcharts. A small CommonMark-like
 // parser, not a complete one. Output: lines of [text, style] segments that fit the width, for ui.line().
 'use strict';
-const { fg, bg, cleanLine, textWidth, fit } = require('../core/ui');
+const { fg, bg, cleanLine, textWidth, fit, onTheme } = require('../core/ui');
 
 const BOLD = '\x1b[1m', ITALIC = '\x1b[3m', UNDER = '\x1b[4m', STRIKE = '\x1b[9m';
-const COL = {
-  h: [[86, 156, 214], [78, 201, 176], [220, 220, 170], [197, 134, 192], [156, 220, 254], [160, 160, 160]],
-  link: [55, 148, 255], image: [197, 134, 192], code: [206, 145, 120], codeBg: [50, 50, 50], blockBg: [36, 36, 36],
-  border: [90, 90, 90], dim: [140, 140, 140], marker: [86, 156, 214], green: [129, 184, 139],
+// Colours by theme (ui.useTheme), and the alerts' ([!NOTE]…).
+const PALETTES = {
+  dark: {
+    h: [[86, 156, 214], [78, 201, 176], [220, 220, 170], [197, 134, 192], [156, 220, 254], [160, 160, 160]],
+    link: [55, 148, 255], image: [197, 134, 192], code: [206, 145, 120], codeBg: [50, 50, 50], blockBg: [36, 36, 36],
+    border: [90, 90, 90], dim: [140, 140, 140], marker: [86, 156, 214], green: [129, 184, 139],
+    note: [55, 148, 255], tip: [129, 184, 139], important: [197, 134, 192], warning: [220, 180, 90], caution: [244, 135, 113],
+  },
+  light: {
+    h: [[0, 0, 255], [38, 127, 153], [121, 94, 38], [175, 0, 219], [0, 16, 128], [100, 100, 100]],
+    link: [0, 102, 204], image: [175, 0, 219], code: [163, 21, 21], codeBg: [236, 236, 236], blockBg: [245, 245, 245],
+    border: [190, 190, 190], dim: [110, 110, 110], marker: [0, 0, 255], green: [9, 134, 88],
+    note: [9, 105, 218], tip: [26, 127, 55], important: [130, 80, 223], warning: [154, 103, 0], caution: [207, 34, 46],
+  },
 };
-const LINK = fg(COL.link) + UNDER, CODE = fg(COL.code) + bg(COL.codeBg), DIM = fg(COL.dim), BORDER = fg(COL.border);
+const COL = {};
+let LINK, CODE, DIM, BORDER;
+const ALERTS = {};
+onTheme(theme => {
+  Object.assign(COL, PALETTES[theme]);
+  LINK = fg(COL.link) + UNDER; CODE = fg(COL.code) + bg(COL.codeBg); DIM = fg(COL.dim); BORDER = fg(COL.border);
+  Object.assign(ALERTS, { note: ['ℹ Note', COL.note], tip: ['✔ Tip', COL.tip], important: ['❖ Important', COL.important],
+    warning: ['⚠ Warning', COL.warning], caution: ['⛔ Caution', COL.caution] });
+});
 const BULLETS = ['•', '◦', '▪'];
-const ALERTS = {
-  note: ['ℹ Note', [55, 148, 255]], tip: ['✔ Tip', [129, 184, 139]], important: ['❖ Important', [197, 134, 192]],
-  warning: ['⚠ Warning', [220, 180, 90]], caution: ['⛔ Caution', [244, 135, 113]],
-};
 const MAX_INLINE = 20000; // longer paragraphs are shown without inline markup
 const MAX_DEPTH = 16;     // nested inline spans
 

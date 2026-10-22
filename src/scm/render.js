@@ -7,7 +7,7 @@ const ui = require('../core/ui');
 const diffs = require('../diff');
 const icons = require('../core/icons');
 const { WIN, readSettings, writeSettings } = require('../core/exec');
-const { ROOT, C, fg, bg, DIM, BOLD, G, theme, SPLIT, VIEWS, shares, S, frame, late, wide, base, dirOf, flash, quit } = require('./context');
+const { ROOT, C, fg, bg, BOLD, G, theme, SPLIT, VIEWS, shares, S, frame, late, wide, base, dirOf, flash, quit } = require('./context');
 const {
   schedule, histName, renamed, allFiles, ongoing, continues, headName, openPicker, baseName, closeDiff, setView, toggleTree,
 } = require('./state');
@@ -107,18 +107,19 @@ function viewRows() {
 
 const SELECT = () => (S.diff && S.diff.focus ? C.selectBlur : C.select);
 const badgeColor = code => fg(ui.GIT[code] || C.text);
-const KEY = BOLD + fg(C.text);
+let KEY, DIM;
+ui.onTheme(() => { KEY = BOLD + fg(C.text); DIM = fg(C.dim); });
 const UNDERLINE = '\x1b[4m\x1b[58;2;55;148;255m'; // the active tab, underlined in blue where the terminal can
 const PRIMARY = bg([14, 99, 156]) + fg([255, 255, 255]) + BOLD; // the main button of the header and the commit box
-const PILLS = { heads: [[32, 58, 40], C.green], remotes: [[28, 50, 68], C.blue], tags: [[58, 54, 26], C.yellow] };
-const pill = (name, kind, style = '') => [` ${name} `, bg(PILLS[kind][0]) + fg(PILLS[kind][1]) + style];
-// Colours of the graph's lanes, in turn; a branch's pill takes the colour of its lane, on a darker shade of it.
-const LANES = [C.blue, C.green, C.purple, C.orange, C.yellow, [86, 182, 194], [224, 108, 117]];
-const laneRgb = n => LANES[n % LANES.length];
-const shade = rgb => rgb.map(v => Math.round(30 + (v - 30) * 0.25));
+// A pill: its colour on a shade of it, close to the theme's background.
+const shade = rgb => rgb.map((v, i) => Math.round(C.canvas[i] + (v - C.canvas[i]) * 0.25));
+const PILLS = { heads: () => C.green, remotes: () => C.blue, tags: () => C.yellow };
+const pill = (name, kind, style = '') => [` ${name} `, bg(shade(PILLS[kind]())) + fg(PILLS[kind]()) + style];
+// Colours of the graph's lanes, in turn; a branch's pill takes the colour of its lane, on a shade of it.
+const LANES = () => [C.blue, C.green, C.purple, C.orange, C.yellow, [86, 182, 194], [224, 108, 117]];
+const laneRgb = n => LANES()[n % 7];
 const lanePill = (name, n, style = '') => [` ${name} `, bg(shade(laneRgb(n))) + fg(laneRgb(n)) + style];
 const MAX_GRAPH = 24; // columns of the graph at most: lanes further right are cut
-const PULSE = [32, 58, 40]; // rows just staged or unstaged
 const SPIN = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏';
 const spinner = () => SPIN[Math.floor(Date.now() / 100) % SPIN.length];
 const pad = (text, w) => { const t = ui.ellipsis(text, w); return t + ' '.repeat(Math.max(0, w - ui.textWidth(t))); };
@@ -160,7 +161,7 @@ function buttons(list, y, width, rightAfter) {
 }
 
 function rowLine(row, width, y, selected) {
-  const back = selected ? SELECT() : S.pulse && S.pulse.has(row.key) ? PULSE : null;
+  const back = selected ? SELECT() : S.pulse && S.pulse.has(row.key) ? C.pulse : null; // rows just staged or unstaged
   const indent = ' '.repeat(row.depth ? row.depth * 2 : 0);
   const act = selected && S.view === 'changes' ? rowButtons(row) : [];
   if (row.type === 'section') {
@@ -250,7 +251,7 @@ function header(W) {
     const x0 = ui.textWidth(left[0][0]) + 1;
     const label = ` ${G.branch} ${name} `;
     frame.hits.push({ y: 0, x0, x1: x0 + ui.textWidth(label), fn: openPicker });
-    left.push([' ', ''], [label, bg(PILLS.remotes[0]) + fg(C.blue)]);
+    left.push([' ', ''], [label, bg(shade(C.blue)) + fg(C.blue)]);
     if (r.upstream) left.push(r.ahead || r.behind ? [`  ↑${r.ahead} ↓${r.behind}`, fg(C.yellow)] : ['  up to date', DIM]);
     else if (!r.hasHead) left.push(['  no commits yet', DIM]);
     else if (!r.detached) left.push(['  not published', DIM]);
@@ -297,7 +298,7 @@ function commitLabel(short) {
 function commitRows(W) {
   const o = ongoing(), fw = Math.max(4, W - 2);
   frame.hits.push({ y: 2, x0: 0, x1: W, fn: () => { S.editing = true; } });
-  const box = bg([49, 49, 49]);
+  const box = bg(C.panel);
   const cut = text => ui.ellipsis(text, fw - 1);
   let field;
   if (S.generating) field = [[cut('✧ generating…'), fg(C.purple) + box]];
@@ -448,8 +449,7 @@ function compareRows(d, width) {
   const c = d.cmp, out = [];
   if (!c) return out;
   if (c.failed) return [{ segs: [[` ${c.failed}`, fg(C.red)]] }];
-  const SECTION = [30, 36, 44];
-  const section = (title, n) => out.push({ segs: [[` ${title}`, BOLD], [`  ${n}`, DIM]], back: SECTION });
+  const section = (title, n) => out.push({ segs: [[` ${title}`, BOLD], [`  ${n}`, DIM]], back: C.section });
   const commits = (list, total) => {
     if (!list.length) out.push({ segs: [['   none', DIM]] });
     for (const x of list) {
@@ -581,12 +581,12 @@ function drawPicker(lines, W, H) {
   const box = [];
   const title = p.mode === 'merge' ? ` Merge into ${headName()}` : p.mode === 'rebase' ? ` Rebase ${headName()} onto` : ' Switch branch';
   box.push(ui.line([[title, BOLD], ['  (local, then remote)', DIM]], w, C.header));
-  box.push(ui.line([[` ${G.search} `, DIM], ...(p.typing ? p.field.segments(w - 4) : [[p.field.value || 'type / to filter', DIM]])], w, [49, 49, 49]));
+  box.push(ui.line([[` ${G.search} `, DIM], ...(p.typing ? p.field.segments(w - 4) : [[p.field.value || 'type / to filter', DIM]])], w, C.panel));
   for (let i = p.top; i < p.top + body; i++) {
     const b = p.items[i];
-    if (!b) { box.push(ui.line([], w, [30, 30, 30])); continue; }
-    const back = i === p.sel ? C.select : [30, 30, 30];
-    if (b.create && S.inline && S.inline.kind === 'branch') box.push(inlineRow(w, ' + ', [30, 30, 30]));
+    if (!b) { box.push(ui.line([], w, C.menu)); continue; }
+    const back = i === p.sel ? C.select : C.menu;
+    if (b.create && S.inline && S.inline.kind === 'branch') box.push(inlineRow(w, ' + ', C.menu));
     else if (b.create) box.push(ui.line([[' + ', fg(C.green)], [b.name, fg(C.green)]], w, back));
     else {
       box.push(split([[b.current ? ' ● ' : '   ', fg(C.green)], [b.name, b.remote ? fg(C.purple) : b.current ? BOLD : ''],
@@ -604,7 +604,7 @@ function drawPicker(lines, W, H) {
 const LEADS = { stash: '  new        ', tag: '  tag        ', message: '  message    ' };
 // The row of the name being typed, width w, on back.
 function inlineRow(w, lead, back) {
-  const it = S.inline, right = ` ${it.right} `, FIELD = [60, 60, 60];
+  const it = S.inline, right = ` ${it.right} `, FIELD = C.field;
   const fw = Math.max(4, w - ui.textWidth(lead) - ui.textWidth(right) - 1);
   const field = it.field.segments(fw - 1).map(([t, st]) => [t, bg(FIELD) + (st || '')]);
   return ui.line([[lead, DIM], [' ', bg(FIELD)], ...field, [' '.repeat(Math.max(0, fw - 1 - ui.segWidth(field))), bg(FIELD)],

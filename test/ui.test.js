@@ -119,3 +119,22 @@ test('arrows change an option of a menu, never run an action', () => {
   menu.move(1, 24);
   assert.strictEqual(menu.key('left', 24).run(), 'wrap');
 });
+
+test('backgroundOf reads the terminal background from its OSC 11 answer', () => {
+  assert.strictEqual(ui.backgroundOf('\x1b]11;rgb:0c0c/0c0c/0c0c\x1b\\'), 'dark');
+  assert.strictEqual(ui.backgroundOf('\x1b]11;rgb:ffff/ffff/ffff\x07'), 'light');
+  assert.strictEqual(ui.backgroundOf('\x1b]11;rgb:fd/f6/e3\x07'), 'light');
+  assert.strictEqual(ui.backgroundOf('\x1b]10;rgb:ffff/ffff/ffff\x07'), null);
+});
+
+test('useTheme swaps the colours in place and tells the modules that work styles out once', () => {
+  const C = ui.C, seen = [];
+  ui.onTheme(t => seen.push(t));
+  ui.useTheme('light');
+  assert.strictEqual(ui.C, C);
+  assert.deepStrictEqual(C.strong, [0, 0, 0]);
+  assert.strictEqual(ui.themeName(), 'light');
+  ui.useTheme('nope');
+  assert.deepStrictEqual(C.strong, [255, 255, 255]);
+  assert.deepStrictEqual(seen, ['dark', 'light', 'dark']);
+});

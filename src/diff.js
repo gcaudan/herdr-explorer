@@ -15,7 +15,10 @@ const MAX_ROWS = 200000; // beyond, a huge diff would take seconds to lay out at
 const SPLIT_MIN = 120;   // columns from which side by side is the default
 
 // Colours of the rows: tinted backgrounds, stronger on the changed words.
-const TINT = { add: ui.C.added, del: ui.C.removed, addWord: [46, 105, 52], delWord: [125, 42, 42], gap: [30, 30, 30] };
+const TINT = {
+  get add() { return ui.C.added; }, get del() { return ui.C.removed; },
+  get addWord() { return ui.C.addedWord; }, get delWord() { return ui.C.removedWord; }, get gap() { return ui.C.gap; },
+};
 // Options of every git diff, show or stash show: no colours, external tools or textconv filters (from the
 // repository config, they could run commands), and the a/ b/ prefixes whatever diff.noprefix or
 // diff.mnemonicPrefix say, so that the parser finds the paths.
@@ -131,7 +134,8 @@ function cells(spans, width, style, base, strong, { wrap = false, left = 0 } = {
 }
 
 const num = (v, w) => (v === null || v === undefined ? '' : String(v)).padStart(w);
-const DIM = ui.fg(ui.C.dim), GREEN = ui.fg(ui.C.green), RED = ui.fg(ui.GIT.D), CYAN = ui.fg(ui.C.blue);
+let DIM, GREEN, RED, CYAN;
+ui.onTheme(() => { DIM = ui.fg(ui.C.dim); GREEN = ui.fg(ui.C.green); RED = ui.fg(ui.GIT.D); CYAN = ui.fg(ui.C.blue); });
 
 // Header lines of a commit (show) and its stat, coloured here.
 function preRow(l) {
@@ -176,7 +180,7 @@ function render(d, width, mode = 'inline', titled = false, view = {}) {
     const nw = String(last).length;
     for (const h of f.hunks) {
       const places = h.lines.filter(l => l[0] !== '\\').map(l => l[4]);
-      rows.push({ segs: [[' ' + ui.cleanLine(h.head), CYAN]], back: [30, 36, 44], hunk: true, h,
+      rows.push({ segs: [[' ' + ui.cleanLine(h.head), CYAN]], back: ui.C.section, hunk: true, h,
         ref: { file, from: places.length ? Math.min(...places) : 0, to: places.length ? Math.max(...places) : 0, ...sec } });
       for (const block of blocksOf(h)) {
         if (rows.length > MAX_ROWS) { rows.push({ segs: [[' … diff too long, truncated', DIM]] }); return rows; }
@@ -745,6 +749,7 @@ function main() {
       }
     },
     resize: draw,
+    theme() { cache = ''; draw(); },
   }, { focus: false, motion: true });
   draw();
   changes().then(d => { if (d !== null) { parsed = d; cache = ''; readViewed(); draw(); } });

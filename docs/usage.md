@@ -218,15 +218,17 @@ setting. The settings are shared by every explorer. See [configuration.md](confi
 
 | Group     | Settings                                                      |
 | --------- | ------------------------------------------------------------- |
-| Tree      | Hidden files, Git-ignored files, Compact folders, Follow terminal, Icon set, Icon theme |
+| Tree      | Hidden files, Git-ignored files, Compact folders, Follow terminal, Theme, Icon set, Icon theme |
 | Opening   | Enter opens (preview or editor), Editor, Preview follows selection |
 | Next tabs | Dock side (left or right), Open automatically                 |
-| Preview   | Wrap lines, Line numbers, Images, Diff layout (auto, split, inline) |
+| Preview   | Wrap lines, Line numbers, Images, Diff layout (auto, split, inline), Notes prefix |
 | General   | Key bindings, Check for updates                               |
 
 `up`/`down` (and their bound keys, page and first/last included) move, `/` finds a setting, `right`/`l` and
-`enter` give a setting its next value (on **Icon theme**, **Editor** and **Key bindings**: open its page or
-prompt), `left`/`h` its previous one. A newer release shows a line under the title: `u` updates (or finishes the
+`enter` give a setting its next value (on **Icon theme**, **Editor**, **Notes prefix** and **Key bindings**: open its
+page or prompt), `left`/`h` its previous one. **Theme** chooses dark or light colours for every pane (VS Code Dark+ or
+Light+, syntax and Markdown included); on **auto**, the default, each pane asks the terminal its background colour at
+start and turns light on a light one. A newer release shows a line under the title: `u` updates (or finishes the
 update). `escape`, and the keys bound to close and settings, go back to the tree. The wheel moves the selection, a
 click on a setting changes it, a click on the title goes back.
 

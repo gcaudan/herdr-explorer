@@ -21,9 +21,8 @@ const MAX_ROWS = 1000;        // Go to file results kept
 const BATCH = 24;             // files read at once
 const DEBOUNCE = 150;
 
-const HI = '\x1b[1m' + fg([24, 163, 255]);   // fuzzy-matched characters
-const FOUND = bg([120, 70, 20]) + fg([255, 255, 255]); // text matches
-const DIM = fg(C.dim);
+let HI, FOUND, DIM; // fuzzy-matched characters, text matches
+ui.onTheme(() => { HI = '\x1b[1m' + fg(C.hit); FOUND = bg(C.found) + fg(C.strong); DIM = fg(C.dim); });
 
 // --- state
 
@@ -489,9 +488,8 @@ function bar(y, parts, W, back) {
   return line(parts, W, back);
 }
 const width = parts => parts.reduce((w, [t]) => w + textWidth(t), 0);
-const FIELD = [60, 60, 60], CHIP_OFF = [45, 45, 45];
 // An option: blue when on, grey when off.
-const chip = (label, on, fn) => [` ${label} `, on ? bg(C.select) + fg([255, 255, 255]) : bg(CHIP_OFF) + DIM, fn];
+const chip = (label, on, fn) => [` ${label} `, on ? bg(C.select) + fg(C.strong) : bg(C.buttonOff) + DIM, fn];
 
 // The visible part of a field, the cursor shown only in the focused one; restored text shown selected:
 // typing replaces it.
@@ -514,7 +512,7 @@ function render() {
   const content = state.mode === 'content';
 
   // Tabs, and the space folder on the right.
-  const tab = (label, mode) => [` ${label} `, state.mode === mode ? '\x1b[1m' + bg(C.select) + fg([255, 255, 255]) : DIM, () => setMode(mode)];
+  const tab = (label, mode) => [` ${label} `, state.mode === mode ? '\x1b[1m' + bg(C.select) + fg(C.strong) : DIM, () => setMode(mode)];
   const tabs = [[' ', ''], tab('Go to file', 'files'), [' ', ''], tab('Search in files', 'content')];
   const name = ellipsis(path.basename(ROOT), Math.max(0, W - width(tabs) - 2));
   lines.push(bar(0, [...tabs, [' '.repeat(Math.max(0, W - width(tabs) - textWidth(name) - 1)), ''], [name, DIM]], W, C.header));
@@ -539,8 +537,8 @@ function render() {
     // Each glob a field on a lighter background, after its label.
     const globField = (label, k, w) => {
       const l = [label, DIM, () => focus(k)], fw = Math.max(1, w - textWidth(label) - 2);
-      const parts = fieldParts(state.fields[k], fw - 1, state.focus === k).map(([t, st]) => [t, bg(FIELD) + (st || ''), () => focus(k)]);
-      return [l, [' ', bg(FIELD), () => focus(k)], ...parts, [' '.repeat(Math.max(0, fw - 1 - width(parts))), bg(FIELD), () => focus(k)], [' ', '']];
+      const parts = fieldParts(state.fields[k], fw - 1, state.focus === k).map(([t, st]) => [t, bg(C.field) + (st || ''), () => focus(k)]);
+      return [l, [' ', bg(C.field), () => focus(k)], ...parts, [' '.repeat(Math.max(0, fw - 1 - width(parts))), bg(C.field), () => focus(k)], [' ', '']];
     };
     lines.push(bar(2, [...globField('   in ', 'include', half), ...globField('  not in ', 'exclude', W - half)], W));
   }

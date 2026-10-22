@@ -1,6 +1,9 @@
 // Terminal helpers shared by the plugin's panes: colours, text width, lines, input decoding, a one-line text
 // field, and the alternate screen setup.
 'use strict';
+const fs = require('fs');
+const path = require('path');
+const { readSettings, writeAtomic } = require('./exec');
 
 // The Kitty graphics protocol query (a 1×1 image, not kept), and the start of the answer of a terminal that has it.
 const KITTY_QUERY = '\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\';
@@ -21,17 +24,69 @@ const G = {};
 const useGlyphs = set => Object.assign(G, GLYPHS[set] || GLYPHS.nerd, { set: GLYPHS[set] ? set : 'nerd' });
 useGlyphs('nerd');
 
-// Colours from the VS Code Dark+ theme (git decorations) and the Seti theme (icons).
-const C = {
+// Colours of the dark theme, from VS Code Dark+ (git decorations) and Seti (icons), and of the light one, from
+// Light+. C and GIT hold the theme's (useTheme): a pane reading C.x at each render follows it, a module that works
+// styles out once does it again in onTheme.
+const DARK = {
   yellow: [203, 203, 65], blue: [81, 154, 186], orange: [227, 121, 51], green: [141, 193, 73],
   purple: [160, 116, 196], red: [204, 62, 68], grey: [109, 128, 134], folder: [220, 182, 122],
   dim: [140, 140, 140], text: [212, 212, 212], select: [4, 57, 94], selectBlur: [55, 55, 61],
   header: [37, 37, 38], added: [35, 60, 36], removed: [72, 30, 30], find: [120, 90, 20],
+  addedWord: [46, 105, 52], removedWord: [125, 42, 42], gap: [30, 30, 30], section: [30, 36, 44], // diffs
+  rail: [60, 60, 60], thumb: [130, 130, 130], switch: [58, 58, 62], field: [60, 60, 60], panel: [49, 49, 49],
+  menu: [30, 30, 30], hit: [24, 163, 255], current: [200, 140, 30], found: [120, 70, 20], warn: [64, 48, 16],
+  pulse: [32, 58, 40], strong: [255, 255, 255], canvas: [30, 30, 30],
+  buttonOn: [96, 96, 96], buttonOff: [45, 45, 45], danger: [138, 47, 42], go: [46, 110, 58],
+  dangerText: [229, 120, 109], goText: [111, 191, 142],
 };
-const GIT = {
+const LIGHT = {
+  yellow: [148, 116, 0], blue: [0, 106, 177], orange: [196, 90, 0], green: [56, 128, 30],
+  purple: [128, 60, 180], red: [205, 49, 49], grey: [110, 120, 125], folder: [184, 134, 60],
+  dim: [110, 110, 110], text: [40, 40, 40], select: [173, 214, 255], selectBlur: [228, 230, 236],
+  header: [243, 243, 243], added: [221, 243, 221], removed: [252, 225, 225], find: [250, 222, 140],
+  addedWord: [172, 226, 170], removedWord: [245, 180, 180], gap: [240, 240, 240], section: [226, 234, 244],
+  rail: [215, 215, 215], thumb: [160, 160, 160], switch: [225, 225, 228], field: [232, 232, 232], panel: [236, 236, 236],
+  menu: [248, 248, 248], hit: [0, 102, 204], current: [240, 160, 40], found: [250, 200, 120], warn: [253, 236, 200],
+  pulse: [214, 240, 214], strong: [0, 0, 0], canvas: [255, 255, 255],
+  buttonOn: [110, 110, 110], buttonOff: [225, 225, 225], danger: [196, 43, 28], go: [46, 125, 50],
+  dangerText: [180, 35, 24], goText: [30, 120, 50],
+};
+const GIT_DARK = {
   M: [226, 192, 141], A: [129, 184, 139], U: [115, 201, 145], R: [115, 201, 145],
   D: [199, 78, 57], C: [228, 103, 107], '!': [140, 140, 140],
 };
+const GIT_LIGHT = { M: [137, 85, 3], A: [88, 124, 12], U: [0, 113, 0], R: [0, 113, 0], D: [173, 7, 7], C: [173, 7, 7], '!': [142, 142, 144] };
+const THEMES = { dark: [DARK, GIT_DARK], light: [LIGHT, GIT_LIGHT] };
+const C = { ...DARK }, GIT = { ...GIT_DARK };
+
+let theme = 'dark';
+const themed = [];
+function useTheme(name) {
+  theme = THEMES[name] ? name : 'dark';
+  Object.assign(C, THEMES[theme][0]);
+  Object.assign(GIT, THEMES[theme][1]);
+  for (const fn of themed) fn(theme);
+}
+// fn(theme) now and whenever the theme changes: for the styles a module works out once.
+function onTheme(fn) { themed.push(fn); fn(theme); }
+const themeName = () => theme;
+
+// The theme setting: 'dark', 'light', or 'auto', the terminal's background as last seen (the background file of the
+// state folder, written when a pane reads it from the terminal, see screen), dark until then.
+const BACKGROUND = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'background');
+const themeSetting = () => { const t = readSettings().theme; return t === 'dark' || t === 'light' ? t : 'auto'; };
+function seenBackground() {
+  try { return fs.readFileSync(BACKGROUND, 'utf8').trim() === 'light' ? 'light' : 'dark'; } catch { return 'dark'; }
+}
+const settingTheme = (t = themeSetting()) => (t === 'auto' ? seenBackground() : t);
+useTheme(settingTheme());
+// The terminal's background from its answer to OSC 11 (rgb:rrrr/gggg/bbbb): 'light' or 'dark', null when unreadable.
+function backgroundOf(reply) {
+  const m = /^\x1b\]11;rgb:([0-9a-f]+)\/([0-9a-f]+)\/([0-9a-f]+)/i.exec(reply);
+  if (!m) return null;
+  const [r, g, b] = m.slice(1, 4).map(h => parseInt(h, 16) / (16 ** h.length - 1));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5 ? 'light' : 'dark';
+}
 
 // Control characters from file names or contents are never written to the terminal: they could move the
 // cursor, change colours or hide text.
@@ -192,8 +247,8 @@ function helpMouse(m, state) {
 // 'no') }. Its title, the name concerned and where it is, a note, then the buttons,
 // the action in red (green for tone 'go'), the focused one lit, the other dimmed. Their columns are kept for clicks
 // (zones).
-const BUTTON = { danger: [138, 47, 42], go: [46, 110, 58] }, BUTTON_ON = [96, 96, 96], BUTTON_OFF = [45, 45, 45];
-const DANGER_TEXT = { danger: [229, 120, 109], go: [111, 191, 142] };
+const BUTTON = { get danger() { return C.danger; }, get go() { return C.go; } };
+const DANGER_TEXT = { get danger() { return C.dangerText; }, get go() { return C.goText; } };
 function confirm(lines, W, H, q) {
   // No room for the card's edges: keys only.
   q.zones = null;
@@ -217,8 +272,8 @@ function confirm(lines, W, H, q) {
   const yes = ` y ${q.action} `, no = ' n Cancel ';
   const gap = Math.max(1, Math.min(3, inner - 3 - textWidth(yes) - textWidth(no)));
   const tone = BUTTON[q.tone] ? q.tone : 'danger', lit = '\x1b[1m' + fg([255, 255, 255]);
-  const yesStyle = q.focus === 'yes' ? lit + bg(BUTTON[tone]) : fg(DANGER_TEXT[tone]) + bg(BUTTON_OFF);
-  const noStyle = q.focus === 'yes' ? fg(C.dim) + bg(BUTTON_OFF) : lit + bg(BUTTON_ON);
+  const yesStyle = q.focus === 'yes' ? lit + bg(BUTTON[tone]) : fg(DANGER_TEXT[tone]) + bg(C.buttonOff);
+  const noStyle = q.focus === 'yes' ? fg(C.dim) + bg(C.buttonOff) : lit + bg(C.buttonOn);
   text.push(...(gaps ? [[]] : []), [['  ', ''], [yes, yesStyle], [' '.repeat(gap), ''], [no, noStyle]]);
   const h = text.length + 2, x = Math.max(0, Math.floor((W - inner - 2) / 2));
   const y = Math.max(1, Math.min(H - h, Math.floor((H - h) / 3)));
@@ -273,7 +328,7 @@ function ask(lines, W, H, q) {
   const lit = '\x1b[1m' + fg([255, 255, 255]), buttons = [['  ', '']];
   q.buttons.forEach((b, i) => {
     if (i) buttons.push([' '.repeat(gap), '']);
-    buttons.push([labels[i], i === q.focus ? lit + bg(BUTTON[b.tone] || BUTTON_ON) : fg(DANGER_TEXT[b.tone] || C.dim) + bg(BUTTON_OFF)]);
+    buttons.push([labels[i], i === q.focus ? lit + bg(BUTTON[b.tone] || C.buttonOn) : fg(DANGER_TEXT[b.tone] || C.dim) + bg(C.buttonOff)]);
   });
   text.push(...(gaps ? [[]] : []), buttons);
   const h = text.length + 2, x = Math.max(0, Math.floor((W - inner - 2) / 2));
@@ -458,8 +513,11 @@ function mark(segs, ranges, style) {
 // The scrollbar of a list shown height rows at a time, in a column on its right, hidden while the list fits: a thin
 // rail, its thumb, and ▴ ▾ buttons at its ends when there is room. One per list, set again at each render; it keeps a
 // drag or a held button going from one mouse event to the next. scrollTo(top): moves the list and renders it.
-const RAIL = fg([60, 60, 60]) + '│\x1b[0m', THUMB = fg([130, 130, 130]) + '┃\x1b[0m';
-const UP = fg([140, 140, 140]) + '▴\x1b[0m', DOWN = fg([140, 140, 140]) + '▾\x1b[0m';
+let RAIL, THUMB, UP, DOWN;
+onTheme(() => {
+  RAIL = fg(C.rail) + '│\x1b[0m'; THUMB = fg(C.thumb) + '┃\x1b[0m';
+  UP = fg(C.dim) + '▴\x1b[0m'; DOWN = fg(C.dim) + '▾\x1b[0m';
+});
 const scrollbars = new Set(); // all of them, let go when the pane loses the focus (see screen())
 class Scrollbar {
   constructor(scrollTo) { this.scrollTo = scrollTo; this.bar = null; this.held = null; scrollbars.add(this); }
@@ -547,7 +605,7 @@ const SEQ = {
   '\r': 'enter', '\n': 'enter', '\t': 'tab', '\x7f': 'backspace', '\x08': 'backspace', '\x1b': 'escape',
   '\x1b\x7f': 'alt+backspace', '\x1b\r': 'alt+enter', ' ': 'space',
 };
-const TOKEN = /\x1b\[200~[\s\S]*?\x1b\[201~|\x1b_[^\x1b]*\x1b\\|\x1b\[(\d+(?:;\d+)*)t|\x1b\[<(\d+);(\d+);(\d+)([Mm])|\x1b\[([IO])|\x1b\[[\d;]*[A-Za-z~]|\x1bO[A-Za-z]|\x1b[^\x1b]|[\s\S]/gu;
+const TOKEN = /\x1b\[200~[\s\S]*?\x1b\[201~|\x1b_[^\x1b]*\x1b\\|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b\[(\d+(?:;\d+)*)t|\x1b\[<(\d+);(\d+);(\d+)([Mm])|\x1b\[([IO])|\x1b\[[\d;]*[A-Za-z~]|\x1bO[A-Za-z]|\x1b[^\x1b]|[\s\S]/gu;
 
 function keyName(k) {
   if (SEQ[k]) return SEQ[k];
@@ -568,7 +626,7 @@ function keyName(k) {
 function decode(data, handlers) {
   for (const m of data.matchAll(TOKEN)) {
     const t = m[0];
-    if (t.startsWith('\x1b_') || m[1] !== undefined) { if (handlers.reply) handlers.reply(t); continue; }
+    if (t.startsWith('\x1b_') || t.startsWith('\x1b]') || m[1] !== undefined) { if (handlers.reply) handlers.reply(t); continue; }
     if (t.startsWith('\x1b[200~')) {
       const raw = t.slice(6, -6).replace(/\r\n?/g, '\n');
       if (handlers.paste) handlers.paste(raw.replace(/[\x00-\x09\x0b-\x1f\x7f-\x9f]/g, ''), raw);
@@ -641,13 +699,24 @@ function screen(handlers, { mouse = true, motion = false, focus = true } = {}) {
     + (focus ? '\x1b[?1004h' : '');
   off = (focus ? '\x1b[?1004l' : '') + (mouse ? '\x1b[?1006l\x1b[?1002l\x1b[?1000l' : '')
     + '\x1b[?2004l\x1b[?7h\x1b[?25h\x1b[?1049l';
-  out.write(on);
+  // With the theme on auto, the terminal's background asked (OSC 11): a pane opened in a light terminal turns light,
+  // and the next ones open light at once.
+  out.write(on + (themeSetting() === 'auto' ? '\x1b]11;?\x07' : ''));
   process.on('exit', () => { if (!handed) out.write(off); });
   for (const sig of ['SIGTERM', 'SIGHUP', 'SIGINT']) process.on(sig, () => process.exit(0));
   if (process.stdin.isTTY) process.stdin.setRawMode(true);
   process.stdin.setEncoding('utf8');
   // A button released out of the pane may never be reported: a held scrollbar stops with the focus.
-  const input = { ...handlers, focus: f => { if (!f) for (const b of scrollbars) b.stop(); if (handlers.focus) handlers.focus(f); } };
+  const input = { ...handlers, focus: f => { if (!f) for (const b of scrollbars) b.stop(); if (handlers.focus) handlers.focus(f); },
+    reply: t => {
+      const seen = t.startsWith('\x1b]11;') ? backgroundOf(t) : null;
+      if (!seen) return handlers.reply && handlers.reply(t);
+      if (BACKGROUND && seen !== seenBackground()) writeAtomic(BACKGROUND, seen);
+      if (seen === theme || themeSetting() !== 'auto') return;
+      useTheme(seen);
+      shown = [];
+      (handlers.theme || handlers.resize || (() => { }))();
+    } };
   // A long paste arrives in several reads: held until its end marker, so that its text never reads as keys.
   let pending = '';
   process.stdin.on('data', data => {
@@ -692,10 +761,9 @@ const size = () => ({ W: process.stdout.columns || 80, H: process.stdout.rows ||
 
 // Two or more ways to see the same thing, the active one filled: [id, label] choices. Returns { segs, width, hits },
 // hits: the columns of each choice from 0, { id, from, to }, for clicks.
-const SWITCH = [58, 58, 62];
 // An option's value as the explorer's settings show it.
 const onOff = on => (on ? ['● on', fg(C.green)] : ['○ off', fg(C.dim)]);
-const switchStyle = on => (on ? bg(C.select) + fg(C.text) + '\x1b[1m' : bg(SWITCH) + fg(C.dim));
+const switchStyle = on => (on ? bg(C.select) + fg(C.text) + '\x1b[1m' : bg(C.switch) + fg(C.dim));
 function segmented(choices, active) {
   const segs = [], hits = [];
   let x = 0;
@@ -794,7 +862,7 @@ class Menu {
 
 module.exports = {
   KITTY_QUERY, KITTY_OK,
-  fg, bg, glyph, G, useGlyphs, C, GIT, clean, cleanLine, cols, fit, textWidth, ellipsis, line, keys, keyAt, help, helpKey, helpMouse, wrap, empty, message, messageKind, messageTime, confirm, confirmKey, confirmMouse, ask, askKey, askMouse,
+  fg, bg, glyph, G, useGlyphs, C, GIT, useTheme, onTheme, themeName, settingTheme, backgroundOf, clean, cleanLine, cols, fit, textWidth, ellipsis, line, keys, keyAt, help, helpKey, helpMouse, wrap, empty, message, messageKind, messageTime, confirm, confirmKey, confirmMouse, ask, askKey, askMouse,
   segWidth, segText, slice, split, mark, Scrollbar, segmented, switchStyle, onOff, Menu,
   keyName, keyLabel, decode, printable, Field, screen, restart, size,
 };

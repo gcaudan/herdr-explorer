@@ -10,27 +10,27 @@ const { C, G, glyph } = require('./ui');
 const { newer } = require('./exec');
 const { pathDirs } = require('./which');
 
-// [Nerd Font glyph, colour, emoji]. The emoji are wide by default (no U+FE0F selector): two columns.
-const FOLDER = [[0xf07b, C.folder, '📁'], [0xf07c, C.folder, '📂']];
-const FILE = [0xf15b, C.grey, '📄'];
+// [Nerd Font glyph, colour (a key of ui.C, the theme's), emoji]. The emoji are wide by default (no U+FE0F selector): two columns.
+const FOLDER = [[0xf07b, 'folder', '📁'], [0xf07c, 'folder', '📂']];
+const FILE = [0xf15b, 'grey', '📄'];
 // Without prototype: a file named "constructor" is a name like another.
 const EXTS = Object.create(null);
 for (const [exts, icon] of [
-  ['js mjs cjs jsx', [0xe74e, C.yellow, '📜']], ['ts tsx mts cts', [0xe628, C.blue, '📘']],
-  ['json jsonc', [0xe60b, C.yellow, '🧾']], ['md mdx', [0xe609, C.blue, '📝']], ['py', [0xe606, C.blue, '🐍']],
-  ['html htm', [0xe736, C.orange, '🌐']], ['css scss sass less', [0xe749, C.blue, '🎨']],
-  ['sh bash zsh fish', [0xe795, C.green, '🐚']], ['ps1 psm1 psd1 bat cmd', [0xebc7, C.blue, '🐚']],
-  ['png jpg jpeg gif svg webp ico bmp', [0xf1c5, C.purple, '📷']], ['pdf', [0xf1c1, C.red, '📕']],
-  ['zip gz tgz 7z tar rar xz', [0xf1c6, C.orange, '📦']], ['xlsx xls csv', [0xf1c3, C.green, '📊']],
-  ['docx doc odt', [0xf1c2, C.blue, '📃']], ['lock', [0xf023, C.grey, '🔒']],
-  ['toml yaml yml ini cfg conf env xml rules service', [0xf013, C.grey, '🔧']], ['sql db sqlite', [0xf1c0, C.orange, '💾']],
-  ['rs', [0xe7a8, C.orange, '🦀']], ['cs csproj sln', [0xf031b, C.purple, '💜']], ['java', [0xe738, C.red, '☕']],
-  ['vue', [0xe6a0, C.green, '💚']], ['txt log', [0xf0f6, C.grey, '📋']],
-  ['c h cpp hpp go rb php kt swift lua qml', [0xf121, C.blue, '💻']],
+  ['js mjs cjs jsx', [0xe74e, 'yellow', '📜']], ['ts tsx mts cts', [0xe628, 'blue', '📘']],
+  ['json jsonc', [0xe60b, 'yellow', '🧾']], ['md mdx', [0xe609, 'blue', '📝']], ['py', [0xe606, 'blue', '🐍']],
+  ['html htm', [0xe736, 'orange', '🌐']], ['css scss sass less', [0xe749, 'blue', '🎨']],
+  ['sh bash zsh fish', [0xe795, 'green', '🐚']], ['ps1 psm1 psd1 bat cmd', [0xebc7, 'blue', '🐚']],
+  ['png jpg jpeg gif svg webp ico bmp', [0xf1c5, 'purple', '📷']], ['pdf', [0xf1c1, 'red', '📕']],
+  ['zip gz tgz 7z tar rar xz', [0xf1c6, 'orange', '📦']], ['xlsx xls csv', [0xf1c3, 'green', '📊']],
+  ['docx doc odt', [0xf1c2, 'blue', '📃']], ['lock', [0xf023, 'grey', '🔒']],
+  ['toml yaml yml ini cfg conf env xml rules service', [0xf013, 'grey', '🔧']], ['sql db sqlite', [0xf1c0, 'orange', '💾']],
+  ['rs', [0xe7a8, 'orange', '🦀']], ['cs csproj sln', [0xf031b, 'purple', '💜']], ['java', [0xe738, 'red', '☕']],
+  ['vue', [0xe6a0, 'green', '💚']], ['txt log', [0xf0f6, 'grey', '📋']],
+  ['c h cpp hpp go rb php kt swift lua qml', [0xf121, 'blue', '💻']],
 ]) for (const ext of exts.split(' ')) EXTS[ext] = icon;
 const NAMES = Object.assign(Object.create(null), {
-  '.gitignore': [0xe702, C.orange, '🔀'], '.gitattributes': [0xe702, C.orange, '🔀'], '.gitmodules': [0xe702, C.orange, '🔀'],
-  'package.json': [0xe718, C.green, '📦'], 'dockerfile': [0xe7b0, C.blue, '🐳'], 'readme.md': [0xf02d, C.blue, '📖'],
+  '.gitignore': [0xe702, 'orange', '🔀'], '.gitattributes': [0xe702, 'orange', '🔀'], '.gitmodules': [0xe702, 'orange', '🔀'],
+  'package.json': [0xe718, 'green', '📦'], 'dockerfile': [0xe7b0, 'blue', '🐳'], 'readme.md': [0xf02d, 'blue', '📖'],
 });
 // The Unicode and ASCII marks: a folder (closed, open), a file of a known type, another file.
 const MARKS = { unicode: [['■', '□'], '●', '○'], ascii: [['/', '/'], '-', '-'] };
@@ -203,10 +203,10 @@ function icon(theme, name, dir, open) {
   const [code, rgb] = theme && G.set !== 'emoji' ? (dir ? theme.folder(name) : theme.file(name)) : [];
   const known = !dir && (NAMES[name.toLowerCase()] || EXTS[path.extname(name).slice(1).toLowerCase()]);
   const own = dir ? FOLDER[open ? 1 : 0] : known || FILE;
-  if (G.set === 'emoji') return [`${own[2]} `, own[1]];
+  if (G.set === 'emoji') return [`${own[2]} `, C[own[1]]];
   const marks = MARKS[G.set];
   const mark = !marks ? glyph(code || own[0]) : dir ? marks[0][open ? 1 : 0] : known || code ? marks[1] : marks[2];
-  return [`${mark} `, rgb || own[1]];
+  return [`${mark} `, rgb || C[own[1]]];
 }
 
 module.exports = { themes, load, icon };

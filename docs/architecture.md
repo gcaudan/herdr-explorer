@@ -107,6 +107,17 @@ so nothing is submitted, and control characters are removed from the notes), the
 (`notes.copy`) puts them on the clipboard, one per line, and keeps them. The diff pane finds its tab with
 `herdr pane get`.
 
+## Theme
+
+`ui.C` and `ui.GIT` hold the colours of the theme in use, dark or light; `ui.useTheme` swaps them in place, and calls
+back the modules that work styles out once (`ui.onTheme`: syntax colours, Markdown, diff colours, scrollbars…). A pane
+reads the `theme` setting at start (`ui.settingTheme`): on `auto`, the `background` file of the state folder, dark
+without it. `ui.screen` then asks the terminal its background colour (OSC 11, `ESC ] 11 ; ? BEL`; herdr answers for
+the outer terminal) when the setting is `auto`. `ui.decode` passes the answer (`ESC ] 11 ; rgb:rrrr/gggg/bbbb`) to the
+pane's `reply`; a luminance above one half means light. The pane writes `background` when it changed, so that the next
+panes open in the right theme at once, and, when its own theme differs, swaps it and redraws everything (its `theme`
+handler, else `resize`). A terminal that does not answer leaves the theme as it was.
+
 ## Images
 
 The preview asks the terminal, at start, whether it handles the Kitty graphics protocol (`a=q` query) and the size of

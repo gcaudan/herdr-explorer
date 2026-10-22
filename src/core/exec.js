@@ -175,6 +175,7 @@ const DEFAULTS = {
   compact: true,      // compact folders: a folder whose only entry is a folder shows on one row with it
   follow: false,      // reveal the folder of the terminal next to the explorer when it changes
   glyphs: 'nerd',     // icon set: 'nerd' (Nerd Font glyphs), 'emoji', 'unicode' or 'ascii', for terminals without a Nerd Font
+  theme: 'auto',      // colours: 'dark', 'light', or 'auto', by the terminal's background (ui.settingTheme)
   icons: '',          // explorer icon theme: { id, label, file } of a VS Code one; empty: Nerd Font icons
   wrap: false,        // preview: wrap long lines
   lineNumbers: true,  // preview: line number gutter

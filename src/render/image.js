@@ -5,7 +5,7 @@
 'use strict';
 const zlib = require('zlib');
 const { execFile } = require('child_process');
-const { fg, bg } = require('../core/ui');
+const { fg, bg, C } = require('../core/ui');
 
 const FORMATS = new Set('png apng jpg jpeg jpe jfif gif bmp dib ico cur webp tif tiff svg'.split(' '));
 const MAX_BYTES = 50 * 1024 * 1024;
@@ -1007,7 +1007,7 @@ const describe = (meta, why) => (meta
 
 // Lines of half blocks fitting in cols × rows cells: { lines, width, height (cells), imageWidth, imageHeight,
 // format }; or { info } when the image cannot be shown. Each line is a list of [text, style] segments for ui.line.
-function render(buffer, cols, rows, { background = [30, 30, 30] } = {}) {
+function render(buffer, cols, rows, { background = C.canvas } = {}) {
   try {
     const meta = info(buffer);
     if (!buffer || !buffer.length) return { info: 'Empty file' };

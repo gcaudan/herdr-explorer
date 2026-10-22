@@ -55,6 +55,8 @@ module.exports = ctx => {
       { label: 'Follow terminal', help: 'Reveal the folder of the terminal beside the explorer, moving the root when it leaves the tree.', ...onOff('follow') },
       { label: 'Icon set', help: 'Nerd Font glyphs, or emoji, Unicode or ASCII marks for a terminal without a Nerd Font. Other panes at their next opening.',
         ...choice('glyphs', ['nerd', 'emoji', 'unicode', 'ascii'], v => ({ nerd: 'Nerd Font', emoji: 'emoji', unicode: 'Unicode', ascii: 'ASCII' })[v]) },
+      { label: 'Theme', help: 'Colours for a dark or a light terminal background. Auto: by the terminal\'s background, as each pane reads it. Other panes at their next opening.',
+        ...choice('theme', ['auto', 'dark', 'light']) },
       { label: 'Icon theme', help: 'Nerd Font icons, or a file icon theme installed for VS Code (its colours only with Unicode or ASCII marks, none with emoji).',
         ...dialog((settings.icons && settings.icons.label) || 'Nerd Font', () => openIconThemes()) },
       { group: 'OPENING' },

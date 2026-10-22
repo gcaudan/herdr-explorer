@@ -389,7 +389,8 @@ function rows() {
 
 // The review notes shown in the text: each one under the last line it covers, those on the whole file, the stale ones
 // (their lines gone) and every one where the rows are not the file's lines (rendered Markdown) at the top.
-const NOTE = fg(C.yellow);
+let NOTE;
+ui.onTheme(() => { NOTE = fg(C.yellow); });
 function withNotes(list, width) {
   if (!state.notes.length || state.view === 'diff' || state.kind === 'image' || state.kind === 'error' || (list.length === 1 && list[0].empty)) return list;
   const lines = !markdownView() && state.kind !== 'binary';
@@ -632,7 +633,7 @@ function render() {
     let segs = r.segs;
     if ((md || r.src >= 0) && ranges.has(at)) {
       segs = ui.mark(segs, ranges.get(at).map(([a, b]) => [a - off, b - off]), bg(C.find));
-      if (current && current[0] === at) segs = ui.mark(segs, [[current[1] - off, current[2] - off]], bg(CURRENT) + '\x1b[1m');
+      if (current && current[0] === at) segs = ui.mark(segs, [[current[1] - off, current[2] - off]], bg(C.current) + '\x1b[1m'); // the current match, over C.find for the others
     }
     // The caller's marks: parts of the line on the selection's colour, whole lines on the line highlight's (back).
     const cols = !md && r.src >= 0 ? marksOf(r.src).filter(m => m.a).map(m => [m.a - 1 - off, m.b - off]) : [];
@@ -751,7 +752,6 @@ function header(W) {
 // background, a temporary one in italics; ‹ and › where tabs are hidden, which show the nearest of them. The strip
 // moves only when the tab shown would leave it (stripFirst). Returns { segs, width, chips }.
 let stripFirst = 0;
-const TAB_BACK = [55, 55, 61]; // the tab shown's background
 function tabStrip(room) {
   const names = Tabs.labels(tabs.list.map(t => t.file)).map(n => ui.cleanLine(n));
   const s = Tabs.strip(names.map(n => ui.textWidth(n) + 4), tabs.current, room, stripFirst);
@@ -765,7 +765,7 @@ function tabStrip(room) {
   };
   if (s.first > 0) put('‹ ', fg(C.dim), { id: 'tab', tab: s.first - 1 });
   for (let i = s.first; i <= s.last; i++) {
-    const on = i === tabs.current, back = on ? bg(TAB_BACK) : '';
+    const on = i === tabs.current, back = on ? bg(C.selectBlur) : '';
     const name = on && s.cut ? ui.ellipsis(names[i], Math.max(1, ui.textWidth(names[i]) - s.cut)) : names[i];
     put(` ${name} `, back + fg(on ? C.text : C.dim) + (on ? '\x1b[1m' : '') + (tabs.list[i].kept ? '' : '\x1b[3m'), { id: 'tab', tab: i });
     // ● for unsaved edits, as VS Code: the click still closes, asking first.
@@ -921,7 +921,6 @@ function search(jump = true) {
 }
 
 // Matches by line (by row in rendered Markdown): [[start, end)].
-const CURRENT = [200, 140, 30]; // the current match, over C.find for the others
 function matchRanges() {
   const map = new Map();
   if (!state.matches.length) return map;
@@ -1232,14 +1231,13 @@ function found() {
 
 // The rows above the footer: the bar of a file changed on disk, and the replacement's field. Each with its hints, and
 // what a click on one does (act).
-const DISK_BACK = [64, 48, 16];
 function editBars(W) {
   const e = state.edit, out = [];
   if (e.disk) {
     const gone = e.disk === 'gone', lead = gone ? ' ⚠ Deleted on disk ' : ' ⚠ Changed on disk ';
     const hints = ui.keys(gone ? [['ctrl+s', 'save it again'], ['alt+k', 'dismiss']] : [['alt+r', 'reload, dropping your edits'], ['alt+k', 'keep yours']],
       W - ui.textWidth(lead));
-    out.push({ segs: [[lead, fg(C.orange) + '\x1b[1m'], ...hints], hints, from: ui.textWidth(lead), back: DISK_BACK, act: k => editKey(k) });
+    out.push({ segs: [[lead, fg(C.orange) + '\x1b[1m'], ...hints], hints, from: ui.textWidth(lead), back: C.warn, act: k => editKey(k) });
   }
   const p = e.prompt;
   if (p && p.with) {
@@ -1763,6 +1761,8 @@ const paint = ui.screen({
     if (state.revPrompt) { state.revPrompt.insert(text); render(); } else if (state.note) { state.note.field.insert(text); render(); } else if (state.find && state.find.active) { state.find.field.insert(text); search(); }
   },
   resize: () => { state.rows = null; render(); keeper.check(); },
+  // The highlighted source too is in the theme's colours: read again.
+  theme: () => { state.rows = null; if (state.edit) state.edit.hl = null; if (state.file) load(true); else render(); },
 }, { motion: true });
 
 // The preview keeps its width when another resize moves it (actions.widthKeeper): the width herdr gave it at first,
