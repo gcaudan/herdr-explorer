@@ -1,7 +1,8 @@
 // Opens the explorer to the left (or the right, depending on the settings) of a tab.
 //   node hook.js           tab.created event (creating a space also emits it for its first tab), unless the
 //                          autoOpen setting is off
-//   node hook.js --toggle  key binding action: closes the current tab's explorer, or opens it
+//   node hook.js --toggle  key binding action: opens the current tab's explorer, focuses it when the focus is
+//                          elsewhere, closes it when it has the focus
 //   node hook.js --all     adds it to existing tabs that have a single pane
 //   node hook.js --restore startup hook: reopens the explorer and preview panes that herdr restored as shells
 //   node hook.js --search  key binding action: Go to file popup of the current tab's folder
@@ -101,7 +102,9 @@ if (process.argv.includes('--toggle')) {
   if (!ctx.tab_id) process.exit(0);
   const panes = tabPanes(ctx.workspace_id, ctx.tab_id);
   const explorer = panes.find(p => p.label === LABEL);
-  if (explorer) {
+  if (explorer && ctx.focused_pane_id && ctx.focused_pane_id !== explorer.pane_id) {
+    herdr('plugin', 'pane', 'focus', explorer.pane_id);
+  } else if (explorer) {
     // The preview closes with the explorer (see close in explorer.js).
     for (const p of panes) if (p.label === 'Preview') herdr('pane', 'close', p.pane_id);
     herdr('pane', 'close', explorer.pane_id);

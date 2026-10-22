@@ -12,7 +12,7 @@ The plugin has six panes:
 | Editor          | full tab (zoomed)            | `e`, **Edit in terminal**, `o` with a terminal editor         |
 
 Its four herdr actions can be bound to keys (see [Key bindings](installation.md#key-bindings)):
-`gcaudan.explorer.toggle` shows or hides the explorer (`prefix+f`), `gcaudan.explorer.search` opens Go to file
+`gcaudan.explorer.toggle` opens the explorer, focuses it, or closes it when it already has the focus (`prefix+f`), `gcaudan.explorer.search` opens Go to file
 (`prefix+a`), `gcaudan.explorer.scm` source control (`prefix+d`), and `gcaudan.explorer.peek` previews the changed
 file written last (left unbound by the installer).
 

@@ -34,8 +34,9 @@ Changes, Editor). [CONTRIBUTING.md](../CONTRIBUTING.md#project-structure) gives 
 ## Placement
 
 **Explorer** (`hook.js`, which exits at once when herdr is not found). When a tab is created, the hook skips the
-tab unless `autoOpen` is on and the tab has a single pane that is not already an explorer. `--toggle` closes the
-tab's explorer, and its preview, if there is one, and opens one otherwise. `--all`, bound to no action, opens one in
+tab unless `autoOpen` is on and the tab has a single pane that is not already an explorer. `--toggle` opens the
+tab's explorer when it has none, focuses it when the focus is elsewhere, and closes it, with its preview, when it has
+the focus. `--all`, bound to no action, opens one in
 every tab that has a single pane.
 
 1. The hook takes the top-left pane, or the top-right pane when docked on the right.

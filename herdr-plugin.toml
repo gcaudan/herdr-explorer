@@ -52,7 +52,7 @@ command = ["node", "src/edit.js"]
 
 [[actions]]
 id = "toggle"
-title = "Show or hide the explorer"
+title = "Open, focus or close the explorer"
 contexts = ["tab"]
 command = ["node", "src/hook.js", "--toggle"]
 
