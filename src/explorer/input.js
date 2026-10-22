@@ -4,6 +4,7 @@
 const path = require('path');
 const actions = require('../core/actions');
 const ui = require('../core/ui');
+const { holds } = require('./tree');
 
 // While filtering, typed characters go to the filter; arrows and Enter act on the list.
 const FILTER_EDIT = new Set(['backspace', 'delete', 'ctrl+u', 'ctrl+d']);
@@ -140,7 +141,7 @@ module.exports = ctx => {
         break;
       case 'collapse':
         if (r && r.dir && r.open && !state.filter) toggle(r, false);
-        else if (r) { const p = state.rows.findIndex(x => x.rel === parentOf(r.rel)); if (p >= 0) select(p); }
+        else if (r) { const up = parentOf(r.from || r.rel), p = state.rows.findIndex(x => holds(x, up)); if (p >= 0) select(p); }
         break;
       case 'refresh': schedule(); return;
       case 'filter': state.filter = { field: new ui.Field(state.filter ? state.filter.field.value : ''), active: true }; buildRows(); break;

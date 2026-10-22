@@ -138,7 +138,7 @@ module.exports = ctx => {
     const badge = !deco || deco === '!' ? '' : r.dir ? '●' : deco === 'C' ? '!' : deco;
     const lead = indent.length + 2 + textWidth(icon[0]); // the chevron, a space and the icon
     const room = W - lead - (badge ? 2 : 0) - 1;
-    let name = r.name;
+    let name = (r.chain || '') + r.name;
     if (textWidth(name) > room) name = fit(name, Math.max(1, room - 1))[0] + '…';
     const pad = Math.max(0, W - lead - textWidth(name) - (badge ? 2 : 0) - 1);
     // The part matching the filter in bold blue, as in Go to file; a folder shown only for what it holds, dimmed.

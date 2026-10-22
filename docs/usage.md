@@ -37,7 +37,9 @@ same way, in their bottom line. The icons on the right are clickable, and hidden
 ### Tree
 
 Folders come first, then files, sorted by name with numbers in natural order. The `.git` folder is
-never shown. Git decorations follow VS Code:
+never shown. With **Compact folders** (on by default), a folder whose only entry is a folder shares its row, as in
+VS Code: `src/main/java` opens and closes as one, and `←` goes to the folder above the chain. The filter shows every
+folder on its own row. Git decorations follow VS Code:
 
 | Badge | Meaning                                                            |
 | ----- | ------------------------------------------------------------------ |
@@ -216,7 +218,7 @@ setting. The settings are shared by every explorer. See [configuration.md](confi
 
 | Group     | Settings                                                      |
 | --------- | ------------------------------------------------------------- |
-| Tree      | Hidden files, Git-ignored files, Follow terminal, Icon set, Icon theme |
+| Tree      | Hidden files, Git-ignored files, Compact folders, Follow terminal, Icon set, Icon theme |
 | Opening   | Enter opens (preview or editor), Editor, Preview follows selection |
 | Next tabs | Dock side (left or right), Open automatically                 |
 | Preview   | Wrap lines, Line numbers, Images, Diff layout (auto, split, inline) |

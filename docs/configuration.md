@@ -14,6 +14,7 @@ The pane where a setting changes applies it at once; the last column says when t
 | `open` | `"preview"` | Enter opens | what `Enter` and a double-click do on a text file: `"preview"` or `"editor"` | explorers within a second |
 | `editor` | `""` | Editor | external editor command, see below | at once (read at each use) |
 | `singleClick` | `false` | Preview follows selection | a file selected by a click or the arrow keys shows in the preview; the arrow keys only update a preview already open | explorers within a second |
+| `compact` | `true` | Compact folders | a folder whose only entry is a folder shows on one row with it (`src/main/java`), not while filtering | at their next opening |
 | `follow` | `false` | Follow terminal | reveal the folder of the terminal next to the explorer, moving the root when it leaves the tree | within 2 s |
 | `side` | `"left"` | Dock side | `"left"` or `"right"`: where new explorers dock; an open explorer keeps its side | new tabs only |
 | `autoOpen` | `true` | Open automatically | open the explorer in every new tab that has a single pane; off: only with `prefix+f` | new tabs only |

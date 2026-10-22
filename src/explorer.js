@@ -119,7 +119,7 @@ const { git, cache, decoration, changedFiles } = tree;
 
 // The repository config is read again before each call, as it may change while the explorer runs.
 const gitRun = async args => run(GIT_BIN, args, { cwd: ROOT, env: await gitEnv(ROOT) });
-const { parentOf, treeBefore } = Tree;
+const { parentOf, treeBefore, holds } = Tree;
 const absOf = rel => path.join(ROOT, rel);
 
 // --- tree
@@ -129,7 +129,8 @@ const absOf = rel => path.join(ROOT, rel);
 function buildRows() {
   const query = state.filter && state.filter.field.value.toLowerCase();
   const rows = state.rows = tree.rows({ query, changed: state.changed, expanded: state.expanded });
-  const i = state.selected === null ? -1 : rows.findIndex(r => r.rel === state.selected);
+  // An entry within a compact folder row: that row.
+  const i = state.selected === null ? -1 : rows.findIndex(r => holds(r, state.selected));
   select(i >= 0 ? i : query ? rows.findIndex(r => r.hit) : state.cursor);
 }
 
@@ -141,7 +142,9 @@ function select(i) {
 function toggle(row, open) {
   if (!row || !row.dir || state.filter || state.changed) return;
   if (open === undefined) open = !state.expanded.has(row.rel);
-  if (open) state.expanded.add(row.rel); else state.expanded.delete(row.rel);
+  // Opened, a compact folder row unfolds each folder of its chain, as they show when the setting is off.
+  if (open) for (let a = row.rel; a && a !== parentOf(row.from || row.rel); a = parentOf(a)) state.expanded.add(a);
+  else state.expanded.delete(row.rel);
   buildRows();
   save();
 }

@@ -46,6 +46,7 @@ module.exports = ctx => {
       { group: 'TREE' },
       { label: 'Hidden files', help: 'Show dot files in the tree.', ...onOff('hidden') },
       { label: 'Git-ignored files', help: 'Show the files git ignores, greyed out.', ...onOff('ignored') },
+      { label: 'Compact folders', help: 'Show a folder whose only entry is a folder on one row with it (src/main/java). Not while filtering.', ...onOff('compact') },
       { label: 'Follow terminal', help: 'Reveal the folder of the terminal beside the explorer, moving the root when it leaves the tree.', ...onOff('follow') },
       { label: 'Icon set', help: 'Nerd Font glyphs, or emoji, Unicode or ASCII marks for a terminal without a Nerd Font. Other panes at their next opening.',
         ...choice('glyphs', ['nerd', 'emoji', 'unicode', 'ascii'], v => ({ nerd: 'Nerd Font', emoji: 'emoji', unicode: 'Unicode', ascii: 'ASCII' })[v]) },

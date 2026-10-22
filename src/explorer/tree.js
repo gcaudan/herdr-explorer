@@ -12,6 +12,10 @@ const RANK = { U: 1, A: 2, R: 2, M: 3, D: 4, C: 5 };
 
 const parentOf = rel => (rel === '' ? null : rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : '');
 
+// Whether a row shows the entry rel: its own, or a folder of its compact chain (from, the chain's first folder).
+const holds = (row, rel) => row.rel === rel
+  || (!!row.from && (rel === row.from || rel.startsWith(`${row.from}/`)) && row.rel.startsWith(`${rel}/`));
+
 // Folders first, then names, numbers in their order.
 const ENTRY_ORDER = (a, b) => (b.dir - a.dir) || a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
 
@@ -65,7 +69,8 @@ function treeBefore(a, aDir, b, bDir) {
   return x.length < y.length;
 }
 
-// The tree of the folder root() returns (Set as root changes it). settings: hidden and ignored, read at each call.
+// The tree of the folder root() returns (Set as root changes it). settings: hidden, ignored and compact, read at each
+// call.
 function create(root, settings) {
   // gone: the deleted files no longer on disk, which the tree shows only among the changed files.
   const git = { top: null, prefix: '', files: new Map(), dirs: new Map(), untracked: new Set(), ignored: new Set(), gone: [] };
@@ -110,8 +115,24 @@ function create(root, settings) {
     return [...list, ...[...gone].map(([name, dir]) => ({ name, dir, rel: pre + name, gone: true }))].sort(ENTRY_ORDER);
   }
 
-  // The rows of a view: { query } the filter's text in lower case, { changed } the changed files only, { expanded }
-  // the folders unfolded.
+  // Compact folders: a folder whose only entry (in list) is a folder shows on one row with it, src/main/java, as the
+  // last one (its rel, expanded or not), chain the names before it ('src/main/'), from the first one's rel. At most
+  // 32 folders, as a link to a folder above would make the chain endless.
+  function compact(e, list) {
+    if (!settings.compact || !e.dir) return e;
+    let last = e;
+    const names = [];
+    for (let n = 0; n < 32; n++) {
+      const kids = list(last.rel);
+      if (kids.length !== 1 || !kids[0].dir) break;
+      names.push(last.name);
+      last = kids[0];
+    }
+    return last === e ? e : { ...last, from: e.rel, chain: `${names.join('/')}/` };
+  }
+
+  // The rows of a view: { query } the filter's text in lower case (no compact folders), { changed } the changed files
+  // only, { expanded } the folders unfolded.
   function rows({ query, changed, expanded }) {
     const rows = [];
     if (query) {
@@ -132,10 +153,12 @@ function create(root, settings) {
     } else if (changed) {
       // Only the changed entries, every folder unfolded, within the filter's budget.
       let budget = FILTER_BUDGET;
+      const list = rel => withGone(rel).filter(isChanged);
       const walk = (rel, depth) => {
-        for (const e of withGone(rel)) {
+        for (const entry of withGone(rel)) {
           if (--budget < 0) return;
-          if (!isChanged(e)) continue;
+          if (!isChanged(entry)) continue;
+          const e = compact(entry, list);
           rows.push({ ...e, depth, open: e.dir });
           if (e.dir) walk(e.rel, depth + 1);
         }
@@ -143,7 +166,8 @@ function create(root, settings) {
       walk('', 0);
     } else {
       const walk = (rel, depth) => {
-        for (const e of visible(rel)) {
+        for (const entry of visible(rel)) {
+          const e = compact(entry, visible);
           rows.push({ ...e, depth, open: e.dir && expanded.has(e.rel) });
           if (e.dir && expanded.has(e.rel)) walk(e.rel, depth + 1);
         }
@@ -195,4 +219,4 @@ function create(root, settings) {
   return { git, cache, readDir, visible, isChanged, withGone, rows, applyStatus, decoration, hidden, changedFiles };
 }
 
-module.exports = { FILTER_BUDGET, RANK, parentOf, ENTRY_ORDER, NAME_ORDER, code, parseStatus, treeBefore, create };
+module.exports = { FILTER_BUDGET, RANK, parentOf, holds, ENTRY_ORDER, NAME_ORDER, code, parseStatus, treeBefore, create };

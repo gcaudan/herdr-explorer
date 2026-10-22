@@ -114,3 +114,30 @@ test('tree order: folders before files at each level, names in numeric order', (
   assert.deepStrictEqual(entries.sort(Tree.ENTRY_ORDER).map(e => e.name), ['B2', 'a9', 'a10', 'b']);
   assert.deepStrictEqual(['', 'a', 'a/b', 'a/b/c'].map(Tree.parentOf), [null, '', 'a', 'a/b']);
 });
+
+test('compact folders: a folder holding only a folder shares its row, as the last one', t => {
+  const root = folder(['src/main/java/App.java', 'src/main/java/Util.java', 'lib/a.js', 'lib/sub/b.js', 'only/one.txt', 'readme.md']);
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const settings = { hidden: false, ignored: true, compact: true };
+  const tree = Tree.create(() => root, settings);
+  const rows = tree.rows({ expanded: new Set(['', 'src/main/java']) });
+  assert.deepStrictEqual(rows.map(r => `${'  '.repeat(r.depth)}${r.chain || ''}${r.name}${r.dir ? (r.open ? '/-' : '/+') : ''}`),
+    ['lib/+', 'only/+', 'src/main/java/-', '  App.java', '  Util.java', 'readme.md']);
+  const java = rows[2];
+  assert.deepStrictEqual([java.rel, java.from, java.chain], ['src/main/java', 'src', 'src/main/']);
+  // The row stands for every folder of its chain, no other entry.
+  assert.ok(['src', 'src/main', 'src/main/java'].every(rel => Tree.holds(java, rel)));
+  assert.ok(!Tree.holds(java, 'src/main/java/App.java') && !Tree.holds(rows[0], 'lib/sub'));
+  // Not while filtering, nor with the setting off.
+  assert.deepStrictEqual(tree.rows({ query: 'app', expanded: new Set() }).map(r => r.name), ['src', 'main', 'java', 'App.java']);
+  settings.compact = false;
+  assert.deepStrictEqual(tree.rows({ expanded: new Set(['src']) }).map(r => r.name), ['lib', 'only', 'src', 'main', 'readme.md']);
+});
+
+test('compact folders among the changed files: the changed entries only count', t => {
+  const root = folder(['a/b/c.js', 'a/keep.js', 'z.js']);
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const tree = Tree.create(() => root, { hidden: false, ignored: true, compact: true });
+  tree.applyStatus(status([' M a/b/c.js']));
+  assert.deepStrictEqual(tree.rows({ changed: true, expanded: new Set() }).map(r => `${r.depth}:${r.chain || ''}${r.name}`), ['0:a/b', '1:c.js']);
+});
