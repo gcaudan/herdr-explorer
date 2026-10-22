@@ -64,6 +64,26 @@ test('diff rows know the lines they show', () => {
   }
 });
 
+test('diff rows wrap long lines, or scroll them from a column', () => {
+  const long = 'abcdefghij'.repeat(6);
+  const text = ['diff --git a/x.js b/x.js', '--- a/x.js', '+++ b/x.js', '@@ -1,2 +1,2 @@', ' short', `-${long}`, `+${long}!`, ''].join('\n');
+  const parsed = diff.parse(text);
+  const plain = r => r.segs.map(([t]) => t).join('');
+  for (const mode of ['inline', 'split']) {
+    const rows = diff.render(parsed, 40, mode, true, { wrap: true });
+    // Every row fills the width; a wrapped line goes on with rows marked more, at the same place.
+    assert.ok(rows.filter(r => r.place).every(r => ui.segWidth(r.segs) === 40), mode);
+    const more = rows.filter(r => r.more);
+    assert.ok(more.length >= 2 && more.every(r => r.place === 2), mode);
+    assert.strictEqual(diff.render(parsed, 40, mode, true).filter(r => r.more).length, 0, mode);
+  }
+  const cut = diff.render(parsed, 40, 'inline', true, { left: 10 });
+  // The hunk's header, then the lines: the gutter stays, the text starts at its 11th column.
+  assert.ok(!plain(cut[1]).includes('short'), 'the short line scrolled out');
+  assert.ok(plain(cut[2]).includes(` ${long.slice(10, 30)}`));
+  assert.ok(cut.filter(r => r.place).every(r => ui.segWidth(r.segs) === 40));
+});
+
 // A little-endian TIFF of the given pixels, one strip, with the tags given (tag → [type, values]).
 function tiff(strip, tags) {
   const entries = Object.entries(tags).map(([t, v]) => [+t, ...v]).sort((a, b) => a[0] - b[0]);

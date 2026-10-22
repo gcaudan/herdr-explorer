@@ -210,14 +210,15 @@ function toggleView() {
   else if (state.line) state.top = Math.max(0, rowOf(state.line - 1) - Math.floor((ui.size().H - 2) / 3));
   render();
 }
-// The diff's rows: one column for the marks' bar on the left.
+// The diff's rows: one column for the marks' bar on the left. Long lines wrap with the file's setting (w), else the
+// text scrolls from state.left (← →), rendered again at each step.
 function diffRows(W) {
   if (!diffs) return [{ empty: 'No diff renderer', pairs: [['d', 'file'], ['q', 'close']], src: -1 }];
   if (!state.diff || state.diff.loading) return [{ empty: 'Loading…', pairs: [['d', 'file']], src: -1 }];
   const width = Math.max(10, W - 2);
   const mode = diffs.layoutOf(width);
-  const list = diffs.render(state.diff.parsed, width, mode, true)
-    .map(r => ({ segs: [[diffMarked(r) ? '▌' : ' ', fg(C.blue)], ...r.segs], back: r.back, ref: r.ref, hunk: r.hunk, src: -1 }));
+  const list = diffs.render(state.diff.parsed, width, mode, true, { wrap: settings.wrap, left: state.left })
+    .map(r => ({ segs: [[diffMarked(r) ? '▌' : ' ', fg(C.blue)], ...r.segs], back: r.back, ref: r.ref, hunk: r.hunk, more: r.more, src: -1 }));
   return list.length ? list : [{ empty: 'No changes', pairs: [['d', 'file'], ['b', 'base'], ['q', 'close']], src: -1 }];
 }
 // A row of the Diff view on a marked line (whole lines: the diff has no columns of the file).
@@ -273,7 +274,9 @@ const gutter = () => (state.view === 'file' && settings.lineNumbers && !markdown
 function rows() {
   const { W, H } = ui.size();
   const width = Math.max(1, W - gutter() - 1);
-  if (state.rows && state.rows.width === width && state.rows.height === H) return state.rows;
+  // The Diff view cuts its rows at state.left itself (diffRows), the file view when drawing them.
+  const left = state.view === 'diff' && !settings.wrap ? state.left : 0;
+  if (state.rows && state.rows.width === width && state.rows.height === H && state.rows.left === left) return state.rows;
   // A selection holds positions in the old rows.
   state.select = null;
   let list = [];
@@ -316,7 +319,7 @@ function rows() {
     });
   } else list = state.source.map((segs, i) => ({ segs, src: i, first: true }));
   list = withNotes(list, width);
-  list.width = width; list.height = H;
+  list.width = width; list.height = H; list.left = left;
   // The ids of the images of rendered Markdown in pixels that the rows hold, for placeFigures.
   list.figures = new Set(list.filter(r => r.figure).map(r => r.figure.pic.id));
   return (state.rows = list);

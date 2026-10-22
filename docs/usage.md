@@ -339,13 +339,13 @@ a click runs, and the scroll percentage.
 | `t`                          | keep the temporary tab                                   |
 | `x`                          | close the tab (the last one: the preview)                |
 | `home` `g` / `end` `G`       | top / bottom                                             |
-| `left` `h` / `right` `l`     | scroll 8 columns sideways (when not wrapping)            |
+| `left` `h` / `right` `l`     | scroll 8 columns sideways (when not wrapping), also in the Diff view |
 | `/`                          | find in file                                             |
 | `n` / `N`                    | next / previous match; without a find, next / previous mark of [`peek.js`](#show-a-file-from-an-agent-or-a-script), else hunk in the Diff view |
 | `d`                          | the file or its changes ([Diff view](#diff-view))        |
 | `b` / `s`                    | Diff view: compare with HEAD or where the branch started / inline or split (saved by width) |
 | `,`                          | the View menu of the view's options (or `⚙`)            |
-| `w`                          | toggle line wrap (saved)                                 |
+| `w`                          | toggle line wrap (saved), also of the Diff view's lines  |
 | `L`                          | toggle line numbers (saved)                              |
 | `m`                          | Markdown: rendered / source                              |
 | `p`                          | image: sharp / pixelated, in this pane only (see [Sharp images](#sharp-images)) |
@@ -743,6 +743,8 @@ wheel scrolls 3 rows. `n`/`N` put it on the next or previous hunk.
 | `y`        | copy the cursor's line as `path:line`, relative to the pane's folder                           |
 | `b`        | compare with HEAD, or with the point where the branch left the default branch (the remote's `HEAD`, else `main` or `master`): every change of the branch, committed or not |
 | `s`        | inline / side by side (kept for the next diffs)                                                |
+| `w`        | wrap long lines, on each side in a side by side diff (the preview's **Wrap lines** setting)    |
+| `left` `h` / `right` `l` | without wrap, scroll the lines 8 columns sideways, the line numbers staying         |
 | `q` `escape` `ctrl+c` | close                                                                               |
 | `ctrl+p` / `ctrl+f` | Go to file / Search in files                                                          |
 | `?` `f1`   | all the keys                                                                                   |

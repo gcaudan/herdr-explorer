@@ -116,19 +116,16 @@ function words(a, b) {
   return same < 0.4 * Math.max(a.trim().length, b.trim().length) ? null : [sa, sb];
 }
 
-// Segments filling exactly width columns: spans [text, changed] on the base background, changed parts on the
-// strong one.
-function cell(spans, width, style, base, strong) {
-  const segs = [];
-  let used = 0;
-  for (const [text, changed] of spans) {
-    const [part, w] = ui.fit(text, width - used);
-    if (part) segs.push([part, style + (changed && strong ? ui.bg(strong) : base ? ui.bg(base) : '')]);
-    used += w;
-    if (used >= width) break;
-  }
-  if (used < width) segs.push([' '.repeat(width - used), base ? ui.bg(base) : '']);
-  return segs;
+// Rows of segments filling exactly width columns each: spans [text, changed] on the base background, changed parts on
+// the strong one. view: { wrap } the text on as many rows as it needs, else on one row from column left.
+function cells(spans, width, style, base, strong, { wrap = false, left = 0 } = {}) {
+  const segs = spans.filter(([text]) => text)
+    .map(([text, changed]) => [text, style + (changed && strong ? ui.bg(strong) : base ? ui.bg(base) : '')]);
+  const parts = wrap && width > 0 ? ui.split(segs, width) : [ui.slice(segs, left, width)];
+  return parts.map(p => {
+    const used = ui.segWidth(p);
+    return used < width ? [...p, [' '.repeat(width - used), base ? ui.bg(base) : '']] : p;
+  });
 }
 
 const num = (v, w) => (v === null || v === undefined ? '' : String(v)).padStart(w);
@@ -156,8 +153,9 @@ function fileRow(f, width) {
 // Rows of a parsed diff for a width: { segs, back } for ui.line(segs, width, back), hunk: true on the rows
 // n and N jump to, ref: what a row shows, { file, from, to } (the path as git gives it, lines of the new version,
 // 0 for the whole file). mode: 'inline', or 'split' (old version on the left, new on the right). titled: the
-// caller's title already names the only file, whose own row is left out.
-function render(d, width, mode = 'inline', titled = false) {
+// caller's title already names the only file, whose own row is left out. view: { wrap, left } long lines wrapped
+// (onto rows marked more), else cut from column left of the text.
+function render(d, width, mode = 'inline', titled = false, view = {}) {
   const rows = [];
   const single = titled && !d.pre.length && d.files.length === 1;
   for (const l of d.pre) rows.push(preRow(ui.cleanLine(l)));
@@ -174,10 +172,10 @@ function render(d, width, mode = 'inline', titled = false) {
       const places = h.lines.filter(l => l[0] !== '\\').map(l => l[4]);
       rows.push({ segs: [[' ' + ui.cleanLine(h.head), CYAN]], back: [30, 36, 44], hunk: true,
         ref: { file, from: places.length ? Math.min(...places) : 0, to: places.length ? Math.max(...places) : 0 } });
-      for (const block of blocks(h.lines)) {
+      for (const block of blocksOf(h)) {
         if (rows.length > MAX_ROWS) { rows.push({ segs: [[' … diff too long, truncated', DIM]] }); return rows; }
         const at = rows.length;
-        if (mode === 'split') splitRows(rows, block, width, nw); else inlineRows(rows, block, width, nw);
+        if (mode === 'split') splitRows(rows, block, width, nw, view); else inlineRows(rows, block, width, nw, view);
         for (let k = at; k < rows.length; k++) if (rows[k].place) rows[k].ref = { file, from: rows[k].place, to: rows[k].place };
       }
     }
@@ -203,39 +201,53 @@ function blocks(lines) {
   }
   return out;
 }
+// A hunk's blocks, worked out once: the changed words take the longest, and ← → render the diff again at each step.
+const BLOCKS = new WeakMap();
+const blocksOf = h => BLOCKS.get(h) || BLOCKS.set(h, blocks(h.lines)).get(h);
 
-function inlineRows(rows, b, width, nw) {
+// A line too long for its row wraps onto rows marked more, with a blank gutter.
+function inlineRows(rows, b, width, nw, view) {
   const row = ([s, text, a, n, place], spans, back, strong, sign) => {
     const gutter = s === '\\' ? ' '.repeat(nw * 2 + 2) : `${num(a, nw)} ${num(n, nw)} `;
     const style = s === '\\' ? DIM : '';
     const rest = Math.max(0, width - nw * 2 - 4);
-    rows.push({ segs: [[gutter, DIM], [s === '\\' ? ' ' : s, sign], [' ', ''],
-      ...cell(spans || [[ui.cleanLine(text), false]], rest, style, back, strong)], back, place: s === '\\' ? 0 : place });
+    cells(spans || [[ui.cleanLine(text), false]], rest, style, back, strong, view).forEach((c, k) => {
+      rows.push({ segs: [[k ? ' '.repeat(gutter.length) : gutter, DIM], [k || s === '\\' ? ' ' : s, sign], [' ', ''], ...c],
+        back, place: s === '\\' ? 0 : place, ...(k ? { more: true } : {}) });
+    });
   };
   if (b.line) return row(b.line, null, null, null, DIM);
   b.dels.forEach((l, i) => row(l, b.words[i] && b.words[i][0], TINT.del, TINT.delWord, RED));
   b.adds.forEach((l, i) => row(l, b.words[i] && b.words[i][1], TINT.add, TINT.addWord, GREEN));
 }
 
-function splitRows(rows, b, width, nw) {
+// Each side wraps on its own: the shorter one is padded with blank rows, on its background.
+function splitRows(rows, b, width, nw, view) {
   const half = Math.floor((width - 1) / 2), right = width - 1 - half;
+  // The rows of one side, and the blank cell padding it.
   const side = (l, w, spans, base, strong, isNew) => {
-    if (!l) return [[' '.repeat(w), ui.bg(TINT.gap)]];
+    if (!l) return { parts: [], blank: [[' '.repeat(w), ui.bg(TINT.gap)]] };
     const [s, text, a, n] = l;
     const no = s === '+' || (s === ' ' && isNew) ? n : a;
-    return [[`${num(s === '\\' ? null : no, nw)} `, DIM + (base ? ui.bg(base) : '')],
-      ...cell(spans || [[ui.cleanLine(text), false]], Math.max(0, w - nw - 1), s === '\\' ? DIM : '', base, strong)];
+    const lead = DIM + (base ? ui.bg(base) : '');
+    const parts = cells(spans || [[ui.cleanLine(text), false]], Math.max(0, w - nw - 1), s === '\\' ? DIM : '', base, strong, view)
+      .map((c, k) => [[k ? ' '.repeat(nw + 1) : `${num(s === '\\' ? null : no, nw)} `, lead], ...c]);
+    return { parts, blank: [[' '.repeat(w), base ? ui.bg(base) : '']] };
   };
   const bar = ['│', DIM];
+  const push = (l, r, place) => {
+    for (let k = 0; k < Math.max(l.parts.length, r.parts.length, 1); k++) {
+      rows.push({ segs: [...(l.parts[k] || l.blank), bar, ...(r.parts[k] || r.blank)], place, ...(k ? { more: true } : {}) });
+    }
+  };
   if (b.line) {
-    rows.push({ segs: [...side(b.line, half, null, null, null, false), bar, ...side(b.line, right, null, null, null, true)],
-      place: b.line[0] === '\\' ? 0 : b.line[4] });
+    push(side(b.line, half, null, null, null, false), side(b.line, right, null, null, null, true), b.line[0] === '\\' ? 0 : b.line[4]);
     return;
   }
   for (let i = 0; i < Math.max(b.dels.length, b.adds.length); i++) {
     const w = b.words[i];
-    rows.push({ segs: [...side(b.dels[i], half, w && w[0], TINT.del, TINT.delWord, false), bar,
-      ...side(b.adds[i], right, w && w[1], TINT.add, TINT.addWord, true)], place: (b.adds[i] || b.dels[i])[4] });
+    push(side(b.dels[i], half, w && w[0], TINT.del, TINT.delWord, false), side(b.adds[i], right, w && w[1], TINT.add, TINT.addWord, true),
+      (b.adds[i] || b.dels[i])[4]);
   }
 }
 
@@ -323,15 +335,18 @@ function main() {
   const title = () => (file ? path.relative(cwd, file) || path.basename(file) : path.basename(cwd));
   // cur: the row of the cursor, which notes and references take; note: { field, kind, ref } while one is typed.
   let parsed = null, rows = [], cache = '', top0 = 0, cur = -1, note = null, flash = null, tab = null, tabNotes = [];
+  // wrap: long lines wrapped (the preview's setting, w in either); left: the first column shown of the text otherwise.
+  let wrap = !!readSettings().wrap, left = 0;
+  const keyOf = (width, m) => `${width}:${m}:${wrap ? 'wrap' : left}`;
   const scrollbar = new ui.Scrollbar(t => { top0 = t; draw(); });
 
   function layout(width, m) {
-    const key = `${width}:${m}`;
+    const key = keyOf(width, m);
     if (parsed && key !== cache) {
       // The cursor stays on the same lines when the layout changes.
       const was = rows[cur] && rows[cur].ref, hunk = !!(rows[cur] && rows[cur].hunk);
-      rows = render(parsed, width, m); cache = key;
-      const i = was ? rows.findIndex(r => r.ref && r.ref.file === was.file && r.ref.from === was.from && !!r.hunk === hunk) : -1;
+      rows = render(parsed, width, m, false, { wrap, left }); cache = key;
+      const i = was ? rows.findIndex(r => r.ref && !r.more && r.ref.file === was.file && r.ref.from === was.from && !!r.hunk === hunk) : -1;
       cur = i >= 0 ? i : rows.findIndex(r => r.ref);
     }
   }
@@ -349,7 +364,7 @@ function main() {
     const body = H - 2;
     // The first column holds the cursor's bar, the last the scrollbar when it shows (a narrower layout never has
     // fewer rows): one column narrower then, kept while it shows.
-    if (cache !== `${W - 2}:${m}` || rows.length <= body) layout(W - 1, m);
+    if (cache !== keyOf(W - 2, m) || rows.length <= body) layout(W - 1, m);
     if (rows.length > body) layout(W - 2, m);
     top0 = Math.max(0, Math.min(top0, rows.length - body));
     const bw = scrollbar.set(rows.length, body, top0);
@@ -413,7 +428,8 @@ function main() {
   let help = null, hints = [], chips = [];
   const HELP = [
     ['Move', [['↑↓ j k', 'line'], ['pgup pgdn', 'page'], ['space', 'page down'], ['ctrl+u/d', 'half page'], ['g G', 'top, bottom']]],
-    ['Diff', [['n N', 'next, previous hunk'], ['s', 'inline, split (side by side)'], ['b', 'compare with HEAD or the default branch']]],
+    ['Diff', [['n N', 'next, previous hunk'], ['s', 'inline, split (side by side)'], ['w', 'wrap long lines'], ['← → h l', 'left, right (no wrap)'],
+      ['b', 'compare with HEAD or the default branch']]],
     ['Review', [['a', 'note on the line (hunk, file)'], ['tab', 'kind of note, while typing'], ['A', 'send the notes to the agent'],
       ['C', 'copy the notes'], ['u', 'remove the last note'], ['y', 'copy path:line']]],
     ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
@@ -421,10 +437,10 @@ function main() {
   // Go to file and Search in files from the diff's folder, as from the explorer.
   const search = mode => actions.search(cwd, PANE, mode);
 
-  // The cursor moves over the rows that show lines of a file; the view follows it.
+  // The cursor moves over the rows that show lines of a file, the first row of a wrapped line; the view follows it.
   function move(n) {
     const dir = Math.sign(n);
-    for (let i = cur + dir, left = Math.abs(n); left > 0 && i >= 0 && i < rows.length; i += dir) if (rows[i].ref) { cur = i; left--; }
+    for (let i = cur + dir, todo = Math.abs(n); todo > 0 && i >= 0 && i < rows.length; i += dir) if (rows[i].ref && !rows[i].more) { cur = i; todo--; }
     follow();
     draw();
   }
@@ -505,6 +521,9 @@ function main() {
     else if (k === 'N') jump(-1);
     else if (k === 's') { const W = ui.size().W; saveMode(W, layoutOf(W) === 'split' ? 'inline' : 'split'); draw(); }
     else if (k === 'b') switchBase();
+    else if (k === 'w') { wrap = !wrap; left = 0; writeSettings({ ...readSettings(), wrap }); draw(); }
+    else if (k === 'left' || k === 'h') { if (!wrap && left) { left = Math.max(0, left - 8); draw(); } }
+    else if (k === 'right' || k === 'l') { if (!wrap) { left += 8; draw(); } }
     else if (k === 'a') startNote();
     else if (k === 'A') act(notes.send(tab, FROM));
     else if (k === 'C') act(notes.copy(tab, top));
@@ -532,7 +551,10 @@ function main() {
       if (scrollbar.mouse(m, m.y - 2, m.x === ui.size().W)) return;
       // A click on a row puts the cursor there.
       const i = top0 + m.y - 2;
-      if (click && !note && m.y >= 2 && m.y < ui.size().H && rows[i] && rows[i].ref) { cur = i; draw(); }
+      if (click && !note && m.y >= 2 && m.y < ui.size().H && rows[i] && rows[i].ref) {
+        while (rows[cur = i].more) i--;
+        draw();
+      }
     },
     resize: draw,
   }, { focus: false, motion: true });
