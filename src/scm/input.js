@@ -120,7 +120,7 @@ function diffKey(k) {
   if (k === 'ctrl+d') return scroll(Math.ceil(page / 2));
   if (k === 'home' || k === 'g') { d.top = 0; return draw(); }
   if (k === 'end' || k === 'G') { d.top = Infinity; return draw(); }
-  if (k === 's') {
+  if (k === 'v') {
     const width = ui.size().W < SPLIT ? ui.size().W : ui.size().W - frame.listW - 1;
     diffs.saveMode(width, diffs.layoutOf(width) === 'split' ? 'inline' : 'split');
     return draw();

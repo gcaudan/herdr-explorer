@@ -1,0 +1,97 @@
+// Staging, unstaging and discarding parts of a diff: the patches made from the rows selected, applied in a repository.
+const test = require('node:test');
+const assert = require('node:assert');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const diff = require('../src/diff');
+const stage = require('../src/core/stage');
+
+// A repository with one commit of the files given.
+function repo(files) {
+  const top = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'stage-')));
+  const git = (...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'core.autocrlf=false', ...a],
+    { cwd: top, encoding: 'utf8' });
+  if (git('init', '-q').status !== 0) return null;
+  git('config', 'core.autocrlf', 'false'); // the patches applied to the working tree too, whatever the global config
+  for (const [f, text] of Object.entries(files)) fs.writeFileSync(path.join(top, f), text);
+  git('add', '-A');
+  git('commit', '-q', '-m', 'init');
+  return { top, git, write: (f, text) => fs.writeFileSync(path.join(top, f), text), read: f => fs.readFileSync(path.join(top, f), 'utf8') };
+}
+// What the rows whose text includes one of the strings given select, in a section.
+const plain = r => r.segs.map(([t]) => t).join('');
+const pick = (list, sec, ...texts) => stage.picked(list.filter(r => r.ref && r.ref.sec === sec && texts.some(t => plain(r).includes(t))));
+const lines = n => Array.from({ length: n }, (_, i) => `line ${i + 1}`).join('\n') + '\n';
+
+test('a hunk, then a line, go to the index; the rest stays unstaged', async () => {
+  const r = repo({ 'a.txt': lines(30) });
+  if (!r) return;
+  r.write('a.txt', r.read('a.txt').replace('line 2\n', 'line two\n').replace('line 28\n', 'line 28 changed\nline 28b\n'));
+  const parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+  // The second hunk, from its @@ row.
+  let list = diff.render(parsed, 200, 'inline');
+  const hunks = list.filter(x => x.h && x.ref.sec === 'unstaged');
+  assert.strictEqual(hunks.length, 2);
+  assert.strictEqual(await stage.apply(r.top, parsed, stage.picked([hunks[1]]), 'stage'), 'Staged 3 lines');
+  assert.match(r.git('diff', '--cached').stdout, /\+line 28b/);
+  assert.doesNotMatch(r.git('diff', '--cached').stdout, /line two/);
+  // One added line of the first hunk: the removed one stays in the index.
+  const p2 = diff.changesOf(await diff.collect({ cwd: r.top }));
+  list = diff.render(p2, 200, 'inline');
+  assert.strictEqual(await stage.apply(r.top, p2, pick(list, 'unstaged', 'line two'), 'stage'), 'Staged 1 line');
+  const index = r.git('show', ':a.txt').stdout;
+  assert.match(index, /line 1\nline 2\nline two\nline 3\n/);
+  assert.match(index, /line 28 changed\nline 28b\n/);
+});
+
+test('a staged line goes back, an unstaged one is discarded', async () => {
+  const r = repo({ 'a.txt': lines(5) });
+  if (!r) return;
+  r.write('a.txt', 'line 1\nnew A\nline 2\nline 3\nnew B\nline 4\nline 5\n');
+  r.git('add', 'a.txt');
+  let parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+  let list = diff.render(parsed, 200, 'split');
+  assert.strictEqual(await stage.apply(r.top, parsed, pick(list, 'staged', 'new A'), 'unstage'), 'Unstaged 1 line');
+  assert.strictEqual(r.git('show', ':a.txt').stdout, 'line 1\nline 2\nline 3\nnew B\nline 4\nline 5\n');
+  parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+  list = diff.render(parsed, 200, 'inline');
+  assert.strictEqual(stage.count(parsed, pick(list, 'unstaged', 'new A'), 'discard'), '1 line');
+  assert.strictEqual(await stage.apply(r.top, parsed, pick(list, 'unstaged', 'new A'), 'discard'), 'Discarded 1 line');
+  assert.strictEqual(r.read('a.txt'), 'line 1\nline 2\nline 3\nnew B\nline 4\nline 5\n');
+  // Nothing of the other section.
+  assert.strictEqual(await stage.apply(r.top, parsed, pick(list, 'staged', 'new B'), 'stage'), 'Nothing unstaged selected');
+});
+
+test('part of an untracked file is staged; a whole one is discarded from the disk', async () => {
+  const r = repo({ 'a.txt': 'x\n' });
+  if (!r) return;
+  r.write('new.txt', 'one\ntwo\nthree\n');
+  r.write('gone.txt', 'bye\n');
+  let parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+  let list = diff.render(parsed, 200, 'inline');
+  assert.strictEqual(await stage.apply(r.top, parsed, pick(list, 'unstaged', '+ two'), 'stage'), 'Staged 1 line');
+  assert.strictEqual(r.git('show', ':new.txt').stdout, 'two\n');
+  parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+  list = diff.render(parsed, 200, 'inline');
+  const file = list.filter(x => x.f && x.f.to === 'gone.txt');
+  assert.strictEqual(await stage.apply(r.top, parsed, stage.picked(file), 'discard'), 'Discarded 1 line');
+  assert.ok(!fs.existsSync(path.join(r.top, 'gone.txt')));
+});
+
+test('lines ending with CRLF keep it in the patch', async () => {
+  const r = repo({ 'w.txt': 'a\r\nb\r\nc\r\n' });
+  if (!r) return;
+  r.write('w.txt', 'a\r\nB\r\nc\r\nd\r\n');
+  const parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+  const list = diff.render(parsed, 200, 'inline');
+  assert.strictEqual(await stage.apply(r.top, parsed, pick(list, 'unstaged', '+ d'), 'stage'), 'Staged 1 line');
+  assert.strictEqual(r.git('show', ':w.txt').stdout, 'a\r\nb\r\nc\r\nd\r\n');
+});
+
+test('paths with quotes or backslashes are quoted as git does', () => {
+  assert.strictEqual(stage.quote('a/plain name.txt'), 'a/plain name.txt');
+  assert.strictEqual(stage.quote('a/say "hi"\\.txt'), '"a/say \\"hi\\"\\\\.txt"');
+  assert.strictEqual(stage.quote('a/tab\there'), '"a/tab\\there"');
+});

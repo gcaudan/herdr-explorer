@@ -381,7 +381,7 @@ function helpGroups() {
     ['m', 'more: merge, rebase, force push, undo commit, reset --hard'], ['r', 'refresh']]],
     ['Move', [['↑↓ j k', 'move'], ['← → h l', 'fold, unfold'], ['pgup pgdn', 'page'], ['ctrl+u/d', 'half page'], ['g G', 'first, last'],
       ['1-4', 'switch view']]],
-    ['Diff', [['tab', 'focus the diff'], ['n N', 'next, previous hunk'], ['s', 'inline, split (side by side)'], ['< >', 'narrower, wider list'], ['shift+← →', 'move the separator'],
+    ['Diff', [['tab', 'focus the diff'], ['n N', 'next, previous hunk'], ['v', 'inline, split (side by side)'], ['< >', 'narrower, wider list'], ['shift+← →', 'move the separator'],
       ['q', 'back to the list']]],
     ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]]);
   return g;

@@ -15,6 +15,7 @@ const Tabs = require('./core/tabs');
 const buffer = require('./core/buffer');
 const update = require('./core/update');
 const Scope = require('./core/scope');
+const stage = require('./core/stage');
 const { run, HERDR, readSettings, writeSettings, writePaneState, SETTINGS_FILE, remoteLink } = require('./core/exec');
 
 const PANE = process.env.HERDR_PANE_ID;
@@ -58,6 +59,7 @@ const state = {
   diff: null,       // the Diff view's changes: { parsed, top, baseName }, or { loading: true }
   scope: Scope.HEAD, // what the Diff view compares with: the tab's scope (core/scope.js, b)
   revPrompt: null,  // the field of a commit or range typed for the scope (b, Commit or range…)
+  hunk: null,       // the hunk n or N went to in the Diff view, which s, u and D take without a selection
   menu: null,       // the view's options (ui.Menu) while open
   wantTop: null,    // the scroll of a tab shown again in the Diff view, for once its changes are loaded
   edit: null,       // the edit mode (i, see startEdit): { ed (buffer.Editor), base, disk, prompt, hl }
@@ -190,7 +192,7 @@ async function loadDiff(keepScroll) {
   try { res = await diffs.collect({ cwd, file, scope, turn }); } catch { res = { text: '', top: cwd, baseName: '' }; }
   if (run !== diffRun || state.file !== file) return;
   if (res.error) flash(res.error);
-  state.diff = { parsed: diffs.parse(res.text), top: res.top, baseName: res.baseName };
+  state.diff = { parsed: diffs.changesOf(res), top: res.top, baseName: res.baseName };
   state.rows = null;
   if (!keepScroll) goToLine();
   else if (state.wantTop !== null) state.top = state.wantTop;
@@ -222,16 +224,20 @@ function diffRows(W) {
   const width = Math.max(10, W - 2);
   const mode = diffs.layoutOf(width);
   const list = diffs.render(state.diff.parsed, width, mode, true, { wrap: settings.wrap, left: state.left })
-    .map(r => ({ segs: [[diffMarked(r) ? '▌' : ' ', fg(C.blue)], ...r.segs], back: r.back, ref: r.ref, hunk: r.hunk, more: r.more, src: -1 }));
+    .map(r => ({ segs: [[diffMarked(r) ? '▌' : ' ', fg(C.blue)], ...r.segs], back: r.back, ref: r.ref, hunk: r.hunk, more: r.more, src: -1,
+      f: r.f, h: r.h, lines: r.lines }));
   return list.length ? list : [{ empty: 'No changes', pairs: [['d', 'file'], ['b', 'compare with'], ['q', 'close']], src: -1 }];
 }
-// A row of the Diff view on a marked line (whole lines: the diff has no columns of the file).
-const diffMarked = r => r.ref && !r.hunk && r.ref.from && r.ref.from === r.ref.to && state.marks.some(m => r.ref.from >= m.from && r.ref.from <= m.to);
-// n and N in the Diff view without marks: the next or previous hunk, its header at the top.
+// A row of the Diff view on a marked line (whole lines: the diff has no columns of the file), or the @@ row of the
+// hunk n went to.
+const diffMarked = r => (r.h && r.h === state.hunk)
+  || (r.ref && !r.hunk && r.ref.from && r.ref.from === r.ref.to && state.marks.some(m => r.ref.from >= m.from && r.ref.from <= m.to));
+// n and N in the Diff view without marks: the next or previous hunk, its header at the top, marked (state.hunk) for
+// s, u and D, even when the diff is too short to scroll.
 function nextHunk(dir) {
-  const list = rows(), at = state.top;
+  const list = rows(), was = state.hunk ? list.findIndex(r => r.h === state.hunk) : -1, at = was >= 0 ? was : state.top;
   const i = dir > 0 ? list.findIndex((r, k) => k > at && r.hunk) : list.map((r, k) => (k < at && r.hunk ? k : -1)).filter(k => k >= 0).pop();
-  if (i !== undefined && i >= 0) { state.top = i; render(); }
+  if (i !== undefined && i >= 0) { state.top = i; state.hunk = list[i].h || null; state.rows = null; render(); }
 }
 // b: the menu of the scopes (Scope.items); a scope chosen holds for every pane of the tab (scope-<tab>.json).
 function pickScope(s) {
@@ -265,6 +271,29 @@ if (TAB) {
   const followScope = () => { const s = Scope.read(TAB); if (!Scope.same(s, state.scope)) { state.scope = s; reloadScope(); } };
   state.scope = Scope.read(TAB);
   Scope.watch(TAB, followScope);
+}
+// s, u, D in the Diff view: the rows selected with the mouse, else the hunk n went to, else the hunk at the top or the
+// file whose name is there, staged, unstaged or discarded (core/stage.js), compared with HEAD only; D asks first.
+function editDiff(mode) {
+  const d = state.diff;
+  if (!d || !d.parsed) return;
+  if (state.scope.kind !== 'head') return flash('Not with this scope: stage compared with HEAD (b)');
+  const list = rows(), sel = state.select && state.select.moved ? state.select : null;
+  const chosen = state.hunk ? list.findIndex(r => r.h === state.hunk) : -1;
+  let a = chosen >= 0 ? chosen : state.top, b = a;
+  if (sel) [a, b] = before(sel.from, sel.to) ? [sel.from.row, sel.to.row] : [sel.to.row, sel.from.row];
+  else if (chosen < 0) { while (a > 0 && list[a] && !list[a].h && !list[a].f) a--; b = a; }
+  const picked = stage.picked(list.slice(a, b + 1));
+  const go = async () => {
+    state.select = null;
+    flash(await stage.apply(d.top, d.parsed, picked, mode).catch(() => `Cannot ${mode}`));
+    loadDiff(true);
+  };
+  if (mode !== 'discard') return go();
+  const n = stage.count(d.parsed, picked, mode);
+  if (!n) return flash('Nothing unstaged selected');
+  ask({ title: 'Discard from the working tree?', name: n, where: path.basename(state.file),
+    buttons: [{ key: 'd', label: 'Discard', tone: 'danger' }, { key: 'escape', label: 'Cancel' }], on: { d: go } });
 }
 function switchLayout() {
   if (!diffs) return;
@@ -647,8 +676,9 @@ const HELP = [
   ['Scroll', [['↑↓ j k', 'line'], ['pgup pgdn', 'page'], ['space', 'page down'], ['ctrl+u/d', 'half page'], ['g G', 'top, bottom'],
     ['← → h l', 'left, right']]],
   ['Find', [['/', 'find in the file'], ['n N', 'next, previous match (else mark)'], ['esc', 'stop finding, clear the marks']]],
-  ['Diff', [[',', 'the view\'s options (or ⚙)'], ['d', 'the file or its changes'], ['n N', 'next, previous hunk'], ['b', 'compare with HEAD or the default branch'],
-    ['s', 'inline, side by side']]],
+  ['Diff', [[',', 'the view\'s options (or ⚙)'], ['d', 'the file or its changes'], ['n N', 'next, previous hunk'],
+    ['b', 'compare with: HEAD, merge base, last agent turn, a commit or range, a branch'], ['v', 'inline, side by side'],
+    ['s', 'stage the lines selected (drag), else the hunk at the top (HEAD)'], ['u', 'unstage them'], ['D', 'discard them from the working tree']]],
   ['Tabs', [['tab shift+tab', 'next, previous tab'], ['ctrl+pgdn/pgup', 'next, previous tab'], ['t', 'keep the tab (in italics: the next file clicked replaces it)'],
     ['x', 'close the tab (middle click)']]],
   ['View', [['w', 'wrap'], ['L', 'line numbers'], ['m', 'Markdown source'], ['p', 'image sharp or pixelated'], ['z', 'zoom the pane'], ['< >', 'narrower, wider'], ['shift+← →', 'move the border'], ['r', 'reload']]],
@@ -659,7 +689,7 @@ const HELP = [
   ['File', [['e', 'edit in the terminal'], ['o', 'open in the editor (media: in its app)'], ['O', 'open with the system'], ['y', 'copy path'],
     ['Y', 'copy relative path, with the selected lines'], ['H', 'history of the file']]],
   ['Review', [['a', 'note on the selected lines (or the file)'], ['tab', 'kind of note, while typing'], ['A', 'send the notes to the agent'],
-    ['C', 'copy the notes'], ['u', 'remove the last note']]],
+    ['C', 'copy the notes'], ['U', 'remove the last note']]],
   ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
 ];
 
@@ -802,7 +832,7 @@ function quit() {
 function openMenu(sel = 0) {
   const { W } = ui.size(), items = [], choice = text => [text, fg(C.blue)];
   if (state.view === 'diff') {
-    items.push({ label: 'Layout', key: 's', value: choice(diffMode(W)), run: switchLayout },
+    items.push({ label: 'Layout', key: 'v', value: choice(diffMode(W)), run: switchLayout },
       { label: 'Wrap lines', key: 'w', value: ui.onOff(settings.wrap), run: () => toggle('wrap') },
       { label: 'Compare with', key: 'b', value: choice(Scope.label(state.scope, branchName())), run: openScopes, stay: false });
   } else {
@@ -1531,7 +1561,10 @@ function key(k) {
     case 'x': return closeTab();
     case ',': return openMenu();
     case 'b': if (state.view === 'diff') openScopes(); return;
-    case 's': if (state.view === 'diff') switchLayout(); return;
+    case 'v': if (state.view === 'diff') switchLayout(); return;
+    case 's': if (state.view === 'diff') editDiff('stage'); return;
+    case 'u': if (state.view === 'diff') editDiff('unstage'); return;
+    case 'D': if (state.view === 'diff') editDiff('discard'); return;
     case 'w': return toggle('wrap');
     case 'L': return toggle('lineNumbers');
     case 'p': return toggleSharp();
@@ -1547,7 +1580,7 @@ function key(k) {
     case 'a': return startNote();
     case 'A': return act(notes.send(TAB, PANE));
     case 'C': return act(notes.copy(TAB, state.root || path.dirname(state.file)));
-    case 'u': return act(Promise.resolve(notes.undo(TAB)));
+    case 'U': return act(Promise.resolve(notes.undo(TAB)));
     case 'z': if (PANE) herdr('pane', 'zoom', PANE, '--toggle'); return;
     case '<': case '>': return widen(k === '<' ? -4 : 4);
     // The inner border pushed: on the left of a preview that is the right part of its split, as it is most often.
