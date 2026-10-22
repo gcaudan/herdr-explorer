@@ -354,11 +354,12 @@ async function compare(row) {
 }
 
 // = also has the Changes pane and the preview's Diff view of the tab show the branch's changes since it left the base
-// (the scope base...branch, core/scope.js); a branch merely selected leaves the scope alone.
+// (the scope base...branch, core/scope.js, in full names as compare has them: a tag of the same name does not stand
+// in); a branch merely selected leaves the scope alone.
 let myTab;
 async function shareCompare(row) {
   if (myTab === undefined) myTab = (await actions.tabOf(process.env.HERDR_PANE_ID).catch(() => null) || { me: {} }).me.tab_id || null;
-  if (myTab) Scope.write(myTab, { kind: 'rev', rev: `${baseName()}...${row.ref.name}` });
+  if (myTab) Scope.write(myTab, { kind: 'rev', rev: `${baseRef()}...${fullRef(row.ref)}` });
 }
 
 // --- diffs

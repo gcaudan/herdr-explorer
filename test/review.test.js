@@ -48,6 +48,7 @@ test('notes follow their lines, or go stale once they are gone', () => {
   const back = notes.locate(stale, ['c', 'd']);
   assert.deepStrictEqual([back.from, back.stale], [1, undefined]);
   assert.strictEqual(notes.locate(n, null).stale, true, 'the file gone');
+  assert.strictEqual(notes.locate(n, undefined), n, 'the lines not known: as it was');
   const whole = { file: '/r/a.js', from: 0, to: 0, text: 'x' };
   assert.strictEqual(notes.locate(whole, []), whole);
   assert.strictEqual(notes.format([{ ...stale, kind: 'fix' }], '/r', ' Fix these:'), 'Fix these: Review notes: a.js:3-4 (fix, stale): x ');

@@ -53,14 +53,18 @@ function quote(p) {
 // they are in the index: a removed line becomes context, an added one goes. Applied with -R (unstage, discard), the
 // patch must match what is there now, so the other way round: an added line left out becomes context, a removed one
 // goes. A whole added or deleted file keeps its headers; part of one is a change of the file (for an untracked file,
-// once git add -N has put it in the index, empty).
+// once git add -N has put it in the index, empty), but for part of a deletion taken back (-R), which brings back the
+// file with the lines kept. A whole file takes its mode change with it.
 function patchOf({ f, keep, all }, mode) {
   const reverse = mode !== 'stage';
   const name = f.to || f.from, a = `a/${name}`, b = `b/${name}`;
   const head = [`diff --git ${quote(a)} ${quote(b)}`];
   if (all && f.status === 'added') head.push(`new file mode ${f.mode || '100644'}`, '--- /dev/null', `+++ ${quote(b)}`);
-  else if (all && f.status === 'deleted') head.push(`deleted file mode ${f.mode || '100644'}`, `--- ${quote(a)}`, '+++ /dev/null');
-  else head.push(`--- ${quote(a)}`, `+++ ${quote(b)}`);
+  else if ((all || reverse) && f.status === 'deleted') head.push(`deleted file mode ${f.mode || '100644'}`, `--- ${quote(a)}`, '+++ /dev/null');
+  else {
+    if (all && f.oldMode && f.newMode) head.push(`old mode ${f.oldMode}`, `new mode ${f.newMode}`);
+    head.push(`--- ${quote(a)}`, `+++ ${quote(b)}`);
+  }
   const body = [];
   let delta = 0; // lines added by the hunks before, on the side that changes
   for (const h of f.hunks) {
@@ -78,6 +82,14 @@ function patchOf({ f, keep, all }, mode) {
       lines.push(sign + text + (cr ? '\r' : ''));
       if (sign !== '+') oldN++;
       if (sign !== '-') newN++;
+    }
+    // A line without newline at the end of the file ends both sides when it is context: with lines kept after it
+    // (an added line, the old last line turned context), it is the removed line, then the same line added with its
+    // newline, as git would write it.
+    const nl = lines.indexOf('\\ No newline at end of file');
+    if (nl > 0 && nl < lines.length - 1 && lines[nl - 1][0] === ' ') {
+      const text = lines[nl - 1].slice(1);
+      lines.splice(nl - 1, 2, `-${text}`, '\\ No newline at end of file', `+${text}`);
     }
     // The side the patch is matched on keeps its place; the other moves with the lines kept before. A side with no
     // line starts at the line before (git's convention).
@@ -145,7 +157,8 @@ async function apply(top, parsed, sel, mode) {
   if (patch) {
     const res = await git(top, env, ['apply', ...(mode === 'discard' ? [] : ['--cached']), ...(mode === 'stage' ? [] : ['-R']),
       '--whitespace=nowarn', '-'], patch);
-    if (res.code !== 0) return fail(res);
+    // The files git add -N put in the index for it go back to untracked.
+    if (res.code !== 0) { if (ita.length) await git(top, env, ['rm', '--cached', '-q', '--', ...ita]); return fail(res); }
   }
   if (whole.length) {
     const hasHead = (await git(top, env, ['rev-parse', '--verify', '-q', 'HEAD'])).code === 0;

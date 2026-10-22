@@ -279,7 +279,10 @@ function editDiff(mode) {
   if (!d || !d.parsed) return;
   if (state.scope.kind !== 'head') return flash('Not with this scope: stage compared with HEAD (b)');
   const list = rows(), sel = state.select && state.select.moved ? state.select : null;
-  const chosen = state.hunk ? list.findIndex(r => r.h === state.hunk) : -1;
+  // The hunk n went to while some of it is in view: scrolled away from, the top's.
+  let chosen = state.hunk ? list.findIndex(r => r.h === state.hunk) : -1;
+  const after = chosen < 0 ? -1 : list.findIndex((r, i) => i > chosen && (r.h || r.f));
+  if (chosen >= state.top + ui.size().H - 2 || (after >= 0 && after <= state.top)) chosen = -1;
   let a = chosen >= 0 ? chosen : state.top, b = a;
   if (sel) [a, b] = before(sel.from, sel.to) ? [sel.from.row, sel.to.row] : [sel.to.row, sel.from.row];
   else if (chosen < 0) { while (a > 0 && list[a] && !list[a].h && !list[a].f) a--; b = a; }

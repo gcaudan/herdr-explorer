@@ -38,18 +38,18 @@ const clean = text => String(text).replace(/[\x00-\x1f\x7f-\x9f]/g, ' ').trim();
 
 const MAX_ANCHOR = 200;    // lines kept as a note's anchor
 const MAX_SIZE = 4 << 20;  // a larger file is not read to place its notes
-// The lines of a file, or null when it cannot be read (gone, too large).
+// The lines of a file; null when it is gone, undefined when they are not known (too large, unreadable for now).
 function linesOf(file) {
   try {
-    if (fs.statSync(file).size > MAX_SIZE) return null;
+    if (fs.statSync(file).size > MAX_SIZE) return undefined;
     return fs.readFileSync(file, 'utf8').split(/\r?\n/);
-  } catch { return null; }
+  } catch (e) { return e.code === 'ENOENT' || e.code === 'ENOTDIR' ? null : undefined; }
 }
 
 // A note placed in the file's lines now: where its anchor is, the nearest place to where it was when the text is in
-// several; stale when nowhere. The same note when nothing changes, else a new one.
+// several; stale when nowhere. The same note when nothing changes, else a new one, and when the lines are not known.
 function locate(n, lines) {
-  if (!n.from || !Array.isArray(n.anchor) || !n.anchor.length) return n;
+  if (!n.from || !Array.isArray(n.anchor) || !n.anchor.length || lines === undefined) return n;
   const len = n.anchor.length, was = n.from - 1;
   const at = i => n.anchor.every((l, k) => lines[i + k] === l);
   let best = -1;

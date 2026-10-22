@@ -84,8 +84,8 @@ function parse(text) {
     else if (l.startsWith('copy from ')) { f.from = unquote(l.slice(10)); f.status = 'copied'; }
     else if (l.startsWith('copy to ')) f.to = unquote(l.slice(8));
     else if (l.startsWith('Binary files')) f.notes.push('Binary file');
-    else if (l.startsWith('old mode ')) f.notes.push(`mode ${l.slice(9)}`);
-    else if (l.startsWith('new mode ')) f.notes[f.notes.length - 1] += ` → ${l.slice(9)}`;
+    else if (l.startsWith('old mode ')) { f.oldMode = l.slice(9); f.notes.push(`mode ${f.oldMode}`); }
+    else if (l.startsWith('new mode ')) { f.newMode = l.slice(9); f.notes[f.notes.length - 1] += ` → ${f.newMode}`; }
     else if (l.trim() && !/^(index |similarity |dissimilarity |new file|deleted file)/.test(l)) d.pre.push(l);
   }
   for (const file of d.files) {
@@ -300,6 +300,7 @@ async function collect({ cwd, file = '', base = 'head', scope = null, turn = nul
   const commit = rev => (rev && git('rev-parse', '--verify', '-q', '--end-of-options', `${rev}^{commit}`).trim()) || null;
   if (kind === 'turn') {
     if (!turn || path.resolve(turn.top) !== path.resolve(top)) return { text: '', top, baseName, error: 'No agent turn recorded in this repository' };
+    if (!turn.tree) return { text: '', top, baseName, error: 'The agent turn is still being recorded' };
     const now = await require('./core/scope').worktree(top, env);
     if (!now) return { text: '', top, baseName, error: 'Cannot read the working tree' };
     return { text: diff(turn.tree, now, ...target), top, baseName };

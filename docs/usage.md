@@ -414,7 +414,7 @@ belong to the tab: the preview and the [Changes pane](#changes-diff-pane) of a t
   every note in rendered Markdown, show at the top.
 - A note keeps the text of its lines, and follows them when the file changes: lines added or removed above move it
   (to the nearest place when the same lines are in several). Once its lines are changed or gone, it is **stale**: it
-  shows dimmed at the top, `stale` before its text, and stays at its old line numbers until the lines come back.
+  shows dimmed at the top, `stale` before its text, and stays at its old line numbers until the lines come back. In a file over 4 MB, notes stay where they are.
 - `A` types the tab's notes, sorted by file and line, into the terminal next to the explorer, on one line, without
   submitting it, then clears them: `Review notes: src/app.js:12-14 (fix): rename it; README.md: add an example`, a
   stale one marked `(stale)`. The **Notes prefix** setting goes before them (an instruction, such as `Fix these:`).

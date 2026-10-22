@@ -95,3 +95,34 @@ test('paths with quotes or backslashes are quoted as git does', () => {
   assert.strictEqual(stage.quote('a/say "hi"\\.txt'), '"a/say \\"hi\\"\\\\.txt"');
   assert.strictEqual(stage.quote('a/tab\there'), '"a/tab\\there"');
 });
+
+test('a line added after a last line without newline is staged on a line of its own', async () => {
+  const r = repo({ 'f.txt': 'a\nb' });
+  if (!r) return;
+  r.write('f.txt', 'a\nb\nc\n');
+  const parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+  const f = parsed.files.find(x => x.sec === 'unstaged');
+  const c = f.hunks[0].lines.find(l => l[0] === '+' && l[1] === 'c');
+  const sel = { files: new Set(), hunks: new Set(), lines: new Set([c]) };
+  assert.strictEqual(await stage.apply(r.top, parsed, sel, 'stage'), 'Staged 1 line');
+  assert.strictEqual(r.git('show', ':f.txt').stdout, 'a\nb\nc\n');
+});
+
+test('part of a staged deletion goes back to the index', async () => {
+  const r = repo({ 'g.txt': 'x\ny\nz\n' });
+  if (!r) return;
+  r.git('rm', '-q', 'g.txt');
+  const parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+  const g = parsed.files.find(x => x.sec === 'staged');
+  const y = g.hunks[0].lines.find(l => l[1] === 'y');
+  const sel = { files: new Set(), hunks: new Set(), lines: new Set([y]) };
+  assert.strictEqual(await stage.apply(r.top, parsed, sel, 'unstage'), 'Unstaged 1 line');
+  assert.strictEqual(r.git('show', ':g.txt').stdout, 'y\n');
+});
+
+test('a whole file takes its mode change with it', () => {
+  const l = ['+', 'n'];
+  const f = { from: 'h.sh', to: 'h.sh', status: 'modified', oldMode: '100644', newMode: '100755', hunks: [{ head: '@@ -1 +1,2 @@', lines: [[' ', 'm'], l] }] };
+  assert.match(stage.patchOf({ f, keep: new Set([l]), all: true }, 'stage'), /^old mode 100644\nnew mode 100755\n--- a\/h.sh/m);
+  assert.doesNotMatch(stage.patchOf({ f, keep: new Set([l]), all: false }, 'stage'), /old mode/);
+});

@@ -46,7 +46,7 @@ function label(scope, baseName = '') {
   switch (scope.kind) {
     case 'branch': return `${baseName || 'main'} base`;
     case 'turn': return 'last turn';
-    case 'rev': return scope.rev;
+    case 'rev': return scope.rev.replace(/refs\/(heads|remotes)\//g, ''); // the full names source control writes
     case 'ref': return `vs ${scope.rev}`;
     default: return 'HEAD';
   }
@@ -93,7 +93,8 @@ async function worktree(top, env) {
 }
 
 // What turn-<tab id>.json keeps: { pane, top, tree, t, ended }, the working tree of the repository of the pane whose
-// agent started working last, taken when it did; ended once that agent is idle or done again.
+// agent started working last, taken when it did (tree null while it is being taken); ended once that agent is idle
+// or done again.
 function readTurn(tab) {
   try { return JSON.parse(fs.readFileSync(tabFile('turn', tab), 'utf8')); } catch { return null; }
 }
@@ -112,10 +113,15 @@ async function agentStatus(tab, pane, status, cwd) {
   const env = await gitEnv(cwd);
   const top = (await run(GIT, ['rev-parse', '--show-toplevel'], { cwd, env }) || '').trim();
   if (!top) return 'not a repository';
+  // The turn is written at once, its tree once taken: the hooks of the events that follow, run while git hashes the
+  // files, see the turn started (a working one keeps it, an idle one ends it), and the tree does not undo them.
+  const t = Date.now(), file = tabFile('turn', tab);
+  writeAtomic(file, JSON.stringify({ pane, top: path.resolve(top), tree: null, t, ended: false }));
   const tree = await worktree(top, env);
-  if (!tree) return 'no snapshot';
-  writeAtomic(tabFile('turn', tab), JSON.stringify({ pane, top: path.resolve(top), tree, t: Date.now(), ended: false }));
-  return 'snapshot';
+  const now = readTurn(tab);
+  if (!now || now.pane !== pane || now.t !== t) return 'snapshot dropped: a newer turn';
+  writeAtomic(file, JSON.stringify({ ...now, tree }));
+  return tree ? 'snapshot' : 'no snapshot';
 }
 
 module.exports = { KINDS, HEAD, read, write, watch, same, label, items, branches, worktree, readTurn, agentStatus };

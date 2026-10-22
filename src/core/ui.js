@@ -717,13 +717,24 @@ function screen(handlers, { mouse = true, motion = false, focus = true } = {}) {
       shown = [];
       (handlers.theme || handlers.resize || (() => { }))();
     } };
-  // A long paste arrives in several reads: held until its end marker, so that its text never reads as keys.
-  let pending = '';
+  // A long paste arrives in several reads: held until its end marker, so that its text never reads as keys. So does
+  // a terminal's answer (OSC, APC) cut between reads, for 100 ms at most: alt+] or alt+_ alone then reads as keys.
+  let pending = '', flush = null;
+  const unended = data => {
+    const start = Math.max(data.lastIndexOf('\x1b]'), data.lastIndexOf('\x1b_'));
+    return start >= 0 && !/\x07|\x1b\\/.test(data.slice(start + 2)) ? start : -1;
+  };
   process.stdin.on('data', data => {
+    clearTimeout(flush);
     data = pending + data;
     pending = '';
     const start = data.lastIndexOf('\x1b[200~');
     if (start >= 0 && data.indexOf('\x1b[201~', start) < 0) { pending = data.slice(start); data = data.slice(0, start); }
+    const reply = pending ? -1 : unended(data);
+    if (reply >= 0) {
+      pending = data.slice(reply); data = data.slice(0, reply);
+      flush = setTimeout(() => { const d = pending; pending = ''; decode(d, input); }, 100);
+    }
     if (data) decode(data, input);
   });
   // Only the lines changed since the last frame are written, each at its row: a whole frame is large, and on Windows
