@@ -1,7 +1,7 @@
 id = "gcaudan.explorer"
 name = "Explorer"
 version = "0.7.1"
-min_herdr_version = "0.9.3"
+min_herdr_version = "0.9.4"
 description = "VS Code-style file explorer, preview, search and source control for every tab"
 platforms = ["linux", "macos", "windows"]
 
@@ -81,3 +81,15 @@ id = "peek"
 title = "Preview the last changed file"
 contexts = ["tab"]
 command = ["node", "src/peek.js", "--last"]
+
+[[actions]]
+id = "open-link"
+title = "Preview the file of a clicked link"
+command = ["node", "src/peek.js", "--url"]
+
+# Ctrl-click on a file:// hyperlink (OSC 8) in any pane: the file in the tab's preview.
+[[link_handlers]]
+id = "file"
+title = "Preview the file"
+pattern = "^file://"
+action = "open-link"

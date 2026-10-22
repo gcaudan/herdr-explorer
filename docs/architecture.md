@@ -18,6 +18,8 @@ The plugin is a set of CommonJS Node.js scripts that use only Node's built-in mo
 | action    | `search`   | `node src/hook.js --search`   | tab context               |
 | action    | `scm`      | `node src/hook.js --scm`      | tab context               |
 | action    | `peek`     | `node src/peek.js --last`     | tab context               |
+| action    | `open-link` | `node src/peek.js --url`     | link handler `file`       |
+| link      | `file`     | `^file://` → `open-link`      | ctrl+click on a link      |
 
 The scripts herdr runs are at the root of `src/`, with `launch.js` (the launcher of the explorer and preview, see
 [Launcher and self-restart](#launcher-and-self-restart)). Shared modules are in `src/core/` (programs and state files,

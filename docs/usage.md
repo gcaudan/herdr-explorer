@@ -766,6 +766,7 @@ node "$dir/src/peek.js" src/app.js:42
   `42:5`, as compilers write it, is line 42. A name that exists as given is taken whole, a colon included. The
   preview scrolls to the first place and highlights them all: whole lines on the line highlight's colour, columns on the selection's. `n` and `N` go from one to the next (when no
   find is open), `escape` clears them; a Markdown file shows as source, so that they match its lines.
+- `--url` reads the link clicked in a terminal from `HERDR_PLUGIN_CLICKED_URL` (see **Links in the terminal** below).
 - `--last` shows the changed file of the repository (modified, added or untracked) written last.
 - `--diff` before the file (or before `--last`) shows its changes ([Diff view](#diff-view)) rather than the file: the view goes to the
   first place, and the rows of the new version's lines the places cover carry a blue bar (whole lines only). A
@@ -777,6 +778,11 @@ node "$dir/src/peek.js" src/app.js:42
 
 **Peek action**: `gcaudan.explorer.peek` runs `peek.js --last` for the focused tab, in the folder of its focused
 terminal: bind it to a key to see what an agent just wrote (see [Key bindings](installation.md#key-bindings)).
+
+**Links in the terminal** (herdr 0.9.4 or later, with herdr's mouse capture on): `ctrl`+click on a `file://`
+hyperlink (OSC 8, as `ls --hyperlink` or some agents print them) shows the file in the tab's preview, at the line of a
+`#L12` or `#L12-L14` fragment. It runs `peek.js --url` through the `gcaudan.explorer.open-link` action. A link to
+another host is refused. herdr makes links only of URLs, so a plain `src/app.js:12` in the text cannot be clicked.
 
 **Claude Code skill**: [`skills/herdr-preview`](../skills/herdr-preview/SKILL.md) tells Claude Code when and how to
 call it, to show you the code it talks about or a file it just wrote. The install script links it into

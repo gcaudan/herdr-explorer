@@ -8,7 +8,7 @@ updates are fast-forward pulls.
 
 | Requirement | Used for |
 |---|---|
-| herdr 0.9.3 or later, as `herdr` on `PATH` (or its path in `HERDR_BIN_PATH`) | the host (`min_herdr_version` in `herdr-plugin.toml`) |
+| herdr 0.9.4 or later, as `herdr` on `PATH` (or its path in `HERDR_BIN_PATH`) | the host (`min_herdr_version` in `herdr-plugin.toml`) |
 | Node.js 20 or later, as `node` on the `PATH` herdr gives plugins | every pane and hook runs `node src/<script>.js` |
 | A [Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr | icons, chevrons and header icons; without one, choose emoji, Unicode or ASCII icons in the settings ([Without a Nerd Font](configuration.md#without-a-nerd-font)) |
 | git (optional), in an absolute folder of `PATH` (relative entries are ignored) | git status, the changes view, source control, `peek --last`, updates. Without it, the explorer and preview still work |

@@ -125,7 +125,7 @@
 | `No editor: set one in the settings`             | opening a folder needs an external editor. Set **Editor**                          |
 | `No terminal editor found: set $EDITOR.`         | (Editor pane) no `nano`/`nvim`/`vim`/`vi` found (`edit`/`nvim`/`vim`/`nano` on Windows). Set `$EDITOR` or the editor command |
 | `Cannot start <editor>: <code>`                  | (Editor pane) the editor could not start                                           |
-| `Cannot open the editor` / `the preview` / `the search` / `source control`, `Cannot show changes` | herdr refused to open the pane: check that it runs and is 0.9.3 or later |
+| `Cannot open the editor` / `the preview` / `the search` / `source control`, `Cannot show changes` | herdr refused to open the pane: check that it runs and is 0.9.4 or later |
 | `Cannot preview`                                 | herdr did not report the pane's tab, or the request file could not be written     |
 | `Invalid name`                                   | empty, absolute, containing a control character, or leaving the folder (`..`)     |
 | `Already exists`                                 | choose another name                                                                |

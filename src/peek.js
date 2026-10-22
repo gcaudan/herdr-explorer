@@ -3,13 +3,15 @@
 //                                 12:5-18 (columns of line 12), several separated by commas (12-14,30,42:5-18)
 //   node peek.js --last           the changed file of the repository written last (the peek action)
 //   node peek.js --diff …         the same, showing the file's git changes (the preview's Diff view) at the places
+//   node peek.js --url            the link clicked in a terminal (HERDR_PLUGIN_CLICKED_URL, the open-link action):
+//                                 a file:// URL, or a path[:places] the terminal's folder resolves
 // Run from a herdr pane (an agent's terminal): the preview of that pane's tab shows the file, opened next to it
 // when there is none. Prints what it showed, or why not, with exit code 1 (2: wrong use).
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { target } = require('./core/places');
+const { target, clicked } = require('./core/places');
 
 const fail = (text, code = 1) => { console.error(`peek: ${text}`); process.exit(code); };
 // Found in the absolute folders of PATH: on Windows a bare name would run a herdr.exe of the working directory.
@@ -80,7 +82,12 @@ async function last() {
   // --diff: the file's git changes, at the places, rather than the file.
   const diff = args[0] === '--diff';
   if (diff) args.shift();
-  if (args.length !== 1 || args[0] === '--help' || args[0] === '-h') fail('usage: peek.js [--diff] <file>[:<line>[-<line>][:<col>-<col>],…] | [--diff] --last', 2);
+  if (args[0] === '--url' && args.length === 1) {
+    const arg = clicked(process.env.HERDR_PLUGIN_CLICKED_URL);
+    if (!arg) fail(`not a local file: ${process.env.HERDR_PLUGIN_CLICKED_URL || '(no link)'}`);
+    args[0] = arg;
+  }
+  if (args.length !== 1 || args[0] === '--help' || args[0] === '-h') fail('usage: peek.js [--diff] <file>[:<line>[-<line>][:<col>-<col>],…] | [--diff] --last | --url', 2);
   let abs, marks;
   if (args[0] === '--last') [abs, marks] = [(await last())[0], []];
   else try { [abs, marks] = target(args[0], cwd); } catch (e) { fail(e.message, 2); }

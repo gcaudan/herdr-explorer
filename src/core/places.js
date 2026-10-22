@@ -25,4 +25,22 @@ function target(arg, cwd) {
   return [path.resolve(cwd, arg.slice(0, at)), marks];
 }
 
-module.exports = { target };
+// A link clicked in a terminal (HERDR_PLUGIN_CLICKED_URL), as peek.js's argument: a file:// URL (an OSC 8 hyperlink),
+// its line from a #L12, #L12-L14 or #12-14 fragment, or the text clicked, path[:places], as it is. A file:// URL on
+// another host is refused (on Windows it would reach a network share); so is any other scheme. Returns the argument,
+// or null.
+function clicked(url, hostname = require('os').hostname()) {
+  url = String(url || '').trim();
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) return url || null;
+  let u;
+  try { u = new URL(url); } catch { return null; }
+  if (u.protocol !== 'file:' || (u.hostname && u.hostname !== 'localhost' && u.hostname.toLowerCase() !== hostname.toLowerCase())) return null;
+  const hash = u.hash;
+  u.hash = ''; u.search = ''; u.hostname = '';
+  let file;
+  try { file = require('url').fileURLToPath(u); } catch { return null; }
+  const m = /^#L?(\d+)(?:-L?(\d+))?$/i.exec(hash);
+  return m ? `${file}:${m[1]}${m[2] ? `-${m[2]}` : ''}` : file;
+}
+
+module.exports = { target, clicked };

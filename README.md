@@ -18,7 +18,7 @@ herdr. Plain Node.js, with no dependencies and no build step.
 └──────────────┴───────────────────────────┴──────────────────────┘
 ```
 
-Plugin id `gcaudan.explorer` · herdr 0.9.3 or later · Linux, macOS and Windows.
+Plugin id `gcaudan.explorer` · herdr 0.9.4 or later · Linux, macOS and Windows.
 
 ## Features
 
@@ -55,7 +55,7 @@ Plugin id `gcaudan.explorer` · herdr 0.9.3 or later · Linux, macOS and Windows
 
 ## Requirements
 
-herdr 0.9.3 or later, Node.js 20 or later (`node` on the `PATH` that herdr gives plugins), and a
+herdr 0.9.4 or later, Node.js 20 or later (`node` on the `PATH` that herdr gives plugins), and a
 [Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr, or emoji, Unicode or ASCII icons. git, a graphical editor, a clipboard and
 a trash tool, and the [Claude Code](https://claude.com/claude-code) CLI are optional: see
 [Requirements](docs/installation.md#requirements) for what each one adds.
