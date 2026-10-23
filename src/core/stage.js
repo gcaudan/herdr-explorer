@@ -7,8 +7,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
-const { GIT, gitEnv } = require('./exec');
+const { GIT, gitEnv, exec } = require('./exec');
 
 // The section each mode works on.
 const SECTION = { stage: 'unstaged', unstage: 'staged', discard: 'unstaged' };
@@ -144,20 +143,9 @@ function patchOf({ f, keep, all }, mode) {
   return body.length ? [...head, ...body, ''].join('\n') : null;
 }
 
-// Runs git in top, input on its standard input: { code, out, err }.
-function git(top, env, args, input = '') {
-  return new Promise(resolve => {
-    if (!GIT) return resolve({ code: -1, out: '', err: 'git not found' });
-    const p = spawn(GIT, args, { cwd: top, env, windowsHide: true });
-    let out = '', err = '';
-    p.stdout.on('data', d => { out += d; });
-    p.stderr.on('data', d => { err += d; });
-    p.on('error', e => resolve({ code: -1, out, err: e.message }));
-    p.on('close', code => resolve({ code, out, err }));
-    p.stdin.on('error', () => { });
-    p.stdin.end(input);
-  });
-}
+// Runs git in top, input on its standard input: { code, out, err }, code null when it could not start or took more
+// than 2 minutes.
+const git = (top, env, args, input = '') => exec(GIT, args, { cwd: top, env, input, timeout: 120000 });
 
 const VERB = { stage: 'Staged', unstage: 'Unstaged', discard: 'Discarded' };
 const plural = (n, w) => `${n} ${w}${n > 1 ? 's' : ''}`;

@@ -72,20 +72,40 @@ function current(tab, only = null) {
     if (!files.has(n.file)) files.set(n.file, linesOf(n.file));
     return locate(n, files.get(n.file));
   });
-  if (placed.some((n, i) => n !== list[i])) write(tab, placed);
-  return placed;
+  const moved = placed.filter((n, i) => n !== list[i]);
+  return moved.length ? update(tab, moved) : placed;
+}
+
+// The same note in two readings of the list: taken at the same time, on the same file, with the same text.
+const same = (a, b) => a.t === b.t && a.file === b.file && a.text === b.text;
+// Writes the notes moved into the list read again just before, so that a note taken, sent or removed meanwhile by
+// another pane is kept; read back after, to write again if another pane wrote over it meanwhile. Returns the list.
+function update(tab, moved) {
+  let list = read(tab);
+  for (let tries = 0; tries < 3; tries++) {
+    list = list.map(n => moved.find(m => same(m, n)) || n);
+    write(tab, list);
+    const back = read(tab);
+    if (moved.every(m => !back.some(n => same(m, n)) || back.some(n => n === m || JSON.stringify(n) === JSON.stringify(m)))) return back;
+    list = back;
+  }
+  return list;
 }
 
 // A file as notes name it: its real path (realPath, exported as real), so that the preview (from the explorer's
 // folder, maybe through a symbolic link such as /home → /var/home) and the diff (from the repository's real folder)
-// agree. The lines are those of the file on disk.
-function add(tab, { file, from = 0, to = from, kind = '', text }) {
+// agree. The lines are those of the file on disk, or given (lines: the text from to to of the version shown, as a diff
+// of the index or of a commit shows it; null when it is not known, for no anchor).
+function add(tab, { file, from = 0, to = from, kind = '', text, lines: shown }) {
   text = clean(text);
   if (!text || !file) return 'Empty note';
   if (from > to) [from, to] = [to, from];
   const list = read(tab), real = realPath(file);
-  const lines = from && to - from < MAX_ANCHOR ? linesOf(real) : null;
-  const anchor = lines && to <= lines.length ? lines.slice(from - 1, to) : null;
+  let anchor = null;
+  if (from && to - from < MAX_ANCHOR) {
+    if (shown !== undefined) anchor = shown && shown.length === to - from + 1 ? shown : null;
+    else { const lines = linesOf(real); anchor = lines && to <= lines.length ? lines.slice(from - 1, to) : null; }
+  }
   list.push({ file: real, from, to, kind: KINDS.includes(kind) ? kind : '', text, t: Date.now(), ...(anchor ? { anchor } : {}) });
   return write(tab, list) ? `Note added (${list.length})` : 'Cannot save the note';
 }

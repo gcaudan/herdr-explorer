@@ -46,6 +46,19 @@ test('rows: dot files with the hidden setting, never .git; the cache until clear
   assert.deepStrictEqual(shown(tree.rows({ expanded: new Set() })), ['a.txt', 'b.txt']);
 });
 
+test('rows: a folded compact folder is chained only through folders already read', t => {
+  const root = folder(['a/b/c/x.txt', 'z.txt']);
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const tree = Tree.create(() => root, { hidden: true, ignored: true, compact: true });
+  const names = rows => rows.map(r => `${r.chain || ''}${r.name}${r.dir ? (r.open ? '/-' : '/+') : ''}`);
+  assert.deepStrictEqual(names(tree.rows({ expanded: new Set(['']) })), ['a/+', 'z.txt']);
+  assert.ok(!tree.cache.has('a'), 'a folded folder is not read');
+  // Unfolded from its row (a): the whole chain, open.
+  assert.deepStrictEqual(names(tree.rows({ expanded: new Set(['', 'a']) })), ['a/b/c/-', 'x.txt', 'z.txt']);
+  // Folded again, the chain read stays.
+  assert.deepStrictEqual(names(tree.rows({ expanded: new Set(['']) })), ['a/b/c/+', 'z.txt']);
+});
+
 test('stale: a folder is read again only when its modification time moved', t => {
   const root = folder(['a.txt']);
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

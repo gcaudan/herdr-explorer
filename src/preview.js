@@ -293,7 +293,7 @@ function editDiff(mode) {
     const noTrash = names => new Promise(resolve => ask({ title: 'No trash: delete for good?',
       name: names.length > 1 ? `${names.length} files` : names[0], note: 'This cannot be undone.',
       buttons: [{ key: 'd', label: 'Delete', tone: 'danger' }, { key: 'escape', label: 'Cancel' }],
-      on: { d: () => resolve(true), escape: () => { resolve(false); render(); } } }));
+      on: { d: () => resolve(true) }, dropped: () => resolve(false) }));
     flash(await stage.apply(d.top, d.parsed, picked, mode, { noTrash }).catch(() => `Cannot ${mode}`));
     loadDiff(true);
   };
@@ -1132,13 +1132,21 @@ function stopEdit() {
 }
 
 // A question in a card (ui.ask): q.on, what each button's key does; Cancel (escape) leaves things as they were.
-function ask(q) { state.ask = { focus: 0, ...q }; render(); }
+// q.dropped: called when it goes without an answer (canceled, or another question or a request taking its place).
+function ask(q) { dropAsk(); state.ask = { focus: 0, ...q }; render(); }
+function dropAsk() {
+  const q = state.ask;
+  state.ask = null;
+  if (q && q.dropped) q.dropped();
+}
 function askChoice(k) {
   const q = state.ask;
   if (!k) return;
   if (k === 'move') return render();
   state.ask = null;
-  if (q.on[k]) q.on[k](); else render();
+  if (q.on[k]) return q.on[k]();
+  if (q.dropped) q.dropped();
+  render();
 }
 const askKey = k => askChoice(ui.askKey(k, state.ask));
 // The folder of a file for a card: relative to the root, nothing for the root itself.
@@ -1606,7 +1614,10 @@ function selectedLines() {
     const list = rows(), sel = state.select && state.select.moved ? state.select : null;
     const [a, b] = sel ? (before(sel.from, sel.to) ? [sel.from.row, sel.to.row] : [sel.to.row, sel.from.row]) : [state.top, state.top];
     const refs = list.slice(a, b + 1).map(r => r.ref).filter(r => r && r.from);
-    return refs.length ? [Math.min(...refs.map(r => r.from)), Math.max(...refs.map(r => r.to))] : null;
+    if (!refs.length) return null;
+    // The section of the lines (staged or not), for their text in the diff (notes' anchor); '' when both are selected.
+    const sec = refs.every(r => (r.sec || '') === (refs[0].sec || '')) ? refs[0].sec || '' : null;
+    return [Math.min(...refs.map(r => r.from)), Math.max(...refs.map(r => r.to)), sec];
   }
   if (state.select && state.select.moved) {
     const { from, to } = state.select;
@@ -1630,7 +1641,11 @@ function startNote() {
   if (!TAB) return flash('Notes need the explorer');
   if (!state.file || state.kind === 'error') return;
   const at = selectedLines();
-  state.note = { field: new ui.Field(), kind: '', from: at ? at[0] : 0, to: at ? at[1] : 0 };
+  // In the Diff view, the anchor is the text of the lines in the version shown, not on disk (notes.add).
+  const d = state.view === 'diff' && at && state.diff && state.diff.parsed;
+  const lines = !d ? undefined : at[2] === null || !diffs ? null
+    : diffs.shownLines(d, { file: path.relative(state.diff.top, notes.real(state.file)).split(path.sep).join('/'), sec: at[2], from: at[0], to: at[1] });
+  state.note = { field: new ui.Field(), kind: '', from: at ? at[0] : 0, to: at ? at[1] : 0, lines };
   render();
 }
 
@@ -1647,7 +1662,7 @@ function noteKey(k) {
     state.note = null;
     if (!n.field.value.trim()) return render();
     state.select = null;
-    const msg = notes.add(TAB, { file: state.file, from: n.from, to: n.to, kind: n.kind, text: n.field.value });
+    const msg = notes.add(TAB, { file: state.file, from: n.from, to: n.to, kind: n.kind, text: n.field.value, lines: n.lines });
     keepTab();
     loadNotes();
     return flash(msg);
@@ -1833,7 +1848,7 @@ function take(stat) {
   try { req = JSON.parse(fs.readFileSync(REQUEST, 'utf8')); } catch { return; }
   if (!req.file) return;
   // A question of the tab shown is dropped, as canceled: its answer would go to another tab.
-  state.ask = null;
+  dropAsk();
   // In its tab, the temporary one, or a new one (Tabs.open). same: a tab that already showed the file, as it was left;
   // other: the pane shows another file than before.
   const prev = state.file, was = tabs.current;

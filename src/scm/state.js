@@ -3,47 +3,17 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
 const ui = require('../core/ui');
 const diffs = require('../diff');
 const actions = require('../core/actions');
 const Scope = require('../core/scope');
 const graph = require('../render/graph');
-const { WIN, GIT, gitEnv, gitOperation, readSettings, writeSettings, realPath, addConfig } = require('../core/exec');
+const { WIN, GIT, gitEnv, gitOperation, readSettings, writeSettings, realPath, addConfig, exec } = require('../core/exec');
 const parse = require('./parse');
 const { errorOf } = parse;
 const { ROOT, NET_TIMEOUT, S, frame, late, draw, select, follow, base, flash } = require('./context');
 
 // --- running git
-
-// Runs a program: { code, out, err }, code null when it could not start or timed out; input goes to stdin.
-// exec.js's run() returns stdout only, and git's error messages and stdin (commit message, pathspecs) are
-// needed here. detached (not on Windows): a session without terminal, so that ssh, gpg or a credential helper
-// cannot take over the pane to ask for a password; they fail instead, or use their graphical prompt.
-function exec(cmd, args, { cwd, env, input, timeout = 0, detached = false, shell = false } = {}) {
-  return new Promise(resolve => {
-    if (!cmd) return resolve({ code: null, out: '', err: 'not found' });
-    let child;
-    try { child = spawn(cmd, args, { cwd, env, shell, windowsHide: true, detached: detached && !WIN }); }
-    catch (e) { return resolve({ code: null, out: '', err: e.message }); }
-    const out = [], err = [];
-    let size = 0, done = false, timer = null;
-    const finish = code => {
-      if (done) return;
-      done = true; clearTimeout(timer);
-      resolve({ code, out: Buffer.concat(out).toString('utf8'), err: Buffer.concat(err).toString('utf8') });
-    };
-    // Detached, the child leads its own process group: killed with it, ssh started by git does not outlive it.
-    const kill = () => { try { if (detached && !WIN) process.kill(-child.pid); else child.kill(); } catch { } };
-    if (timeout) timer = setTimeout(() => { kill(); finish(null); }, timeout);
-    child.stdout.on('data', d => { if ((size += d.length) <= 64 << 20) out.push(d); });
-    child.stderr.on('data', d => err.push(d));
-    child.on('error', e => { err.push(Buffer.from(e.message)); finish(null); });
-    child.on('close', code => finish(code));
-    child.stdin.on('error', () => { });
-    child.stdin.end(input || '');
-  });
-}
 
 // Config keys that run a program and that the repository could set in its own config: for the commands that
 // write (commit, switch, stash, fetch, pull, push), each one the repository sets is replaced by the user's

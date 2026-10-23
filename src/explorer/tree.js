@@ -82,12 +82,21 @@ function create(root, settings) {
   let check = new Set(); // folders read, to compare with their modification time before reuse
   const mtime = rel => fs.statSync(path.join(root(), rel), { throwIfNoEntry: false })?.mtimeMs ?? null;
 
+  // Whether a link leads to a folder; a link to a network share stays a plain entry, never followed (see remoteLink).
+  const isDir = full => {
+    if (remoteLink(full, root())) return false;
+    try { return fs.statSync(full).isDirectory(); } catch { return false; }
+  };
+
   function readDir(rel) {
     if (cache.has(rel)) {
       if (!check.has(rel)) return cache.get(rel);
       check.delete(rel);
       const was = stamps.get(rel);
-      if (was != null && mtime(rel) === was) return cache.get(rel);
+      // A link keeps its folder's time when its target changes: it is looked at again.
+      if (was != null && mtime(rel) === was && cache.get(rel).every(e => !e.link || isDir(path.join(root(), e.rel)) === e.dir)) {
+        return cache.get(rel);
+      }
     }
     const t = mtime(rel);
     stamps.set(rel, t !== null && Date.now() - t > 2000 ? t : null);
@@ -96,11 +105,8 @@ function create(root, settings) {
       entries = fs.readdirSync(path.join(root(), rel), { withFileTypes: true })
         .filter(e => e.name !== '.git')
         .map(e => {
-          let dir = e.isDirectory();
-          // A link to a network share stays a plain entry, never followed (see remoteLink).
-          const full = path.join(root(), rel, e.name);
-          if (e.isSymbolicLink() && !remoteLink(full, root())) try { dir = fs.statSync(full).isDirectory(); } catch { }
-          return { name: e.name, dir, rel: rel ? `${rel}/${e.name}` : e.name };
+          const full = path.join(root(), rel, e.name), link = e.isSymbolicLink();
+          return { name: e.name, dir: link ? isDir(full) : e.isDirectory(), rel: rel ? `${rel}/${e.name}` : e.name, ...(link ? { link } : {}) };
         })
         .sort(ENTRY_ORDER);
     } catch { }
@@ -130,12 +136,16 @@ function create(root, settings) {
 
   // Compact folders: a folder whose only entry (in list) is a folder shows on one row with it, src/main/java, as the
   // last one (its rel, expanded or not), chain the names before it ('src/main/'), from the first one's rel. At most
-  // 32 folders, as a link to a folder above would make the chain endless.
-  function compact(e, list) {
+  // 32 folders, as a link to a folder above would make the chain endless. expanded, for the tree as it is unfolded:
+  // a folder folded (nothing of it unfolded) is chained only through folders already read, so that the rows never
+  // read a folder they do not show; it shows its chain once unfolded.
+  function compact(e, list, expanded = null) {
     if (!settings.compact || !e.dir) return e;
+    const lazy = expanded && ![...expanded].some(r => r === e.rel || r.startsWith(`${e.rel}/`));
     let last = e;
     const names = [];
     for (let n = 0; n < 32; n++) {
+      if (lazy && !cache.has(last.rel)) break;
       const kids = list(last.rel);
       if (kids.length !== 1 || !kids[0].dir) break;
       names.push(last.name);
@@ -180,9 +190,11 @@ function create(root, settings) {
     } else {
       const walk = (rel, depth) => {
         for (const entry of visible(rel)) {
-          const e = compact(entry, visible);
-          rows.push({ ...e, depth, open: e.dir && expanded.has(e.rel) });
-          if (e.dir && expanded.has(e.rel)) walk(e.rel, depth + 1);
+          const e = compact(entry, visible, expanded);
+          // A chain is open when its last folder is, or its first one (unfolded while it showed alone).
+          const open = e.dir && (expanded.has(e.rel) || (!!e.from && expanded.has(e.from)));
+          rows.push({ ...e, depth, open });
+          if (open) walk(e.rel, depth + 1);
         }
       };
       walk('', 0);

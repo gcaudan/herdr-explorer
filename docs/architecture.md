@@ -40,8 +40,7 @@ Changes, Editor). [CONTRIBUTING.md](../CONTRIBUTING.md#project-structure) gives 
 **Explorer** (`hook.js`, which exits at once when herdr is not found). When a tab is created, the hook skips the
 tab unless `autoOpen` is on and the tab has a single pane that is not already an explorer. `--toggle` opens the
 tab's explorer when it has none, focuses it when the focus is elsewhere, and closes it, with its preview, when it has
-the focus. `--all`, bound to no action, opens one in
-every tab that has a single pane.
+the focus.
 
 1. The hook takes the top-left pane, or the top-right pane when docked on the right.
 2. It opens the `tree` pane as a split to the right of that pane, without focus. The root is the

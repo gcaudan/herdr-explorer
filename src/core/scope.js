@@ -154,7 +154,7 @@ async function agentStatus(tab, pane, status, cwd) {
   // files, see the turn started (a working one keeps it, an idle one ends it), and the tree does not undo them.
   const t = Date.now();
   writeAtomic(tabFile('turn', tab), JSON.stringify({ pane, top: path.resolve(top), tree: null, t, ended: false }));
-  const tree = await worktree(top, env);
+  const tree = await worktree(top, env, true);
   if (!updateTurn(tab, t, { tree })) return 'snapshot dropped: a newer turn';
   return tree ? 'snapshot' : 'no snapshot';
 }

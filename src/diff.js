@@ -193,6 +193,19 @@ function render(d, width, mode = 'inline', titled = false, view = {}) {
   return rows;
 }
 
+// The text of a note's lines (ref: { file, from, to, sec }) in the version a diff shows, its new side (the index for
+// a staged line, b for a range), so that the note's anchor is not read from the file on disk, which may differ; null
+// when the diff does not hold them all (lines between two hunks).
+function shownLines(parsed, ref) {
+  const f = parsed.files.find(x => (x.to || x.from) === ref.file && (x.sec || '') === (ref.sec || ''));
+  if (!f) return null;
+  const byLine = new Map();
+  for (const h of f.hunks) for (const l of h.lines) if (l[0] !== '\\' && l[3] != null) byLine.set(l[3], l[1]);
+  const out = [];
+  for (let n = ref.from; n <= ref.to; n++) { if (!byLine.has(n)) return null; out.push(byLine.get(n)); }
+  return out;
+}
+
 // Lines of a hunk grouped: unchanged lines, notes ("No newline at end of file"), and changes (removed lines
 // followed by added ones, paired for the word highlight and the side-by-side rows).
 function blocks(lines) {
@@ -222,9 +235,11 @@ function inlineRows(rows, b, width, nw, view) {
     const gutter = s === '\\' ? ' '.repeat(nw * 2 + 2) : `${num(a, nw)} ${num(n, nw)} `;
     const style = s === '\\' ? DIM : '';
     const rest = Math.max(0, width - nw * 2 - 4);
-    cells(spans || [[ui.cleanLine(text), false]], rest, style, back, strong, view).forEach((c, k) => {
-      rows.push({ segs: [[k ? ' '.repeat(gutter.length) : gutter, DIM], [k || s === '\\' ? ' ' : s, sign], [' ', ''], ...c],
-        back, place: s === '\\' ? 0 : place, ...(k ? { more: true } : { lines: [l] }) });
+    const make = left => cells(spans || [[ui.cleanLine(text), false]], rest, style, back, strong, { ...view, left });
+    const lead = k => [[k ? ' '.repeat(gutter.length) : gutter, DIM], [k || s === '\\' ? ' ' : s, sign], [' ', '']];
+    make(view.left || 0).forEach((c, k) => {
+      rows.push({ segs: [...lead(k), ...c], back, place: s === '\\' ? 0 : place, ...(k ? { more: true } : { lines: [l] }),
+        ...(view.wrap ? {} : { redo: left => [...lead(0), ...make(left)[0]] }) });
     });
   };
   if (b.line) return row(b.line, null, null, null, DIM);
@@ -236,28 +251,34 @@ function inlineRows(rows, b, width, nw, view) {
 function splitRows(rows, b, width, nw, view) {
   const half = Math.floor((width - 1) / 2), right = width - 1 - half;
   // The rows of one side, and the blank cell padding it.
-  const side = (l, w, spans, base, strong, isNew) => {
+  const side = (l, w, spans, base, strong, isNew, left) => {
     if (!l) return { parts: [], blank: [[' '.repeat(w), ui.bg(TINT.gap)]] };
     const [s, text, a, n] = l;
     const no = s === '+' || (s === ' ' && isNew) ? n : a;
     const lead = DIM + (base ? ui.bg(base) : '');
-    const parts = cells(spans || [[ui.cleanLine(text), false]], Math.max(0, w - nw - 1), s === '\\' ? DIM : '', base, strong, view)
+    const parts = cells(spans || [[ui.cleanLine(text), false]], Math.max(0, w - nw - 1), s === '\\' ? DIM : '', base, strong, { ...view, left })
       .map((c, k) => [[k ? ' '.repeat(nw + 1) : `${num(s === '\\' ? null : no, nw)} `, lead], ...c]);
     return { parts, blank: [[' '.repeat(w), base ? ui.bg(base) : '']] };
   };
   const bar = ['│', DIM];
-  const push = (l, r, place, lines) => {
+  // pair(left): both sides cut from column left. Not wrapped, a row is made again from another column when drawn
+  // (redo), rather than the whole diff at each ← →.
+  const push = (pair, place, lines) => {
+    const [l, r] = pair(view.left || 0);
+    const join = (a, c, k) => [...(a.parts[k] || a.blank), bar, ...(c.parts[k] || c.blank)];
     for (let k = 0; k < Math.max(l.parts.length, r.parts.length, 1); k++) {
-      rows.push({ segs: [...(l.parts[k] || l.blank), bar, ...(r.parts[k] || r.blank)], place, ...(k ? { more: true } : { lines }) });
+      rows.push({ segs: join(l, r, k), place, ...(k ? { more: true } : { lines }),
+        ...(view.wrap ? {} : { redo: left => join(...pair(left), 0) }) });
     }
   };
   if (b.line) {
-    push(side(b.line, half, null, null, null, false), side(b.line, right, null, null, null, true), b.line[0] === '\\' ? 0 : b.line[4], [b.line]);
+    push(left => [side(b.line, half, null, null, null, false, left), side(b.line, right, null, null, null, true, left)],
+      b.line[0] === '\\' ? 0 : b.line[4], [b.line]);
     return;
   }
   for (let i = 0; i < Math.max(b.dels.length, b.adds.length); i++) {
     const w = b.words[i];
-    push(side(b.dels[i], half, w && w[0], TINT.del, TINT.delWord, false), side(b.adds[i], right, w && w[1], TINT.add, TINT.addWord, true),
+    push(left => [side(b.dels[i], half, w && w[0], TINT.del, TINT.delWord, false, left), side(b.adds[i], right, w && w[1], TINT.add, TINT.addWord, true, left)],
       (b.adds[i] || b.dels[i])[4], [b.dels[i], b.adds[i]].filter(Boolean));
   }
 }
@@ -368,7 +389,7 @@ function saveMode(width, mode) {
 // The layout of a diff of that width: the one chosen for its size, else by width.
 const layoutOf = width => savedMode(width) || defaultMode(width);
 
-module.exports = { DIFF_OPTS, MAX_UNTRACKED, SPLIT_MIN, parse, render, collect, changesOf, defaultMode, savedMode, saveMode, layoutOf, unquote, main };
+module.exports = { DIFF_OPTS, MAX_UNTRACKED, SPLIT_MIN, parse, render, collect, changesOf, shownLines, defaultMode, savedMode, saveMode, layoutOf, unquote, main };
 
 // --- pane
 
@@ -407,15 +428,27 @@ function main() {
   let wrap = !!readSettings().wrap, left = 0;
   // viewed: the paths (relative to top) of the files marked viewed (m) and unchanged since, shown folded.
   let viewed = new Set();
-  const keyOf = (width, m) => `${width}:${m}:${wrap ? 'wrap' : left}:${[...viewed].join('\0')}`;
+  // left is not in it: the rows cut from another column are made again when drawn (redo).
+  const keyOf = (width, m) => `${width}:${m}:${wrap}:${[...viewed].join('\0')}`;
   const scrollbar = new ui.Scrollbar(t => { top0 = t; draw(); });
+  // The width of the longest line of the changes, the most ← → can scroll.
+  const WIDEST = new WeakMap();
+  const widest = () => {
+    if (!parsed) return 0;
+    if (!WIDEST.has(parsed)) {
+      let w = 0;
+      for (const f of parsed.files) for (const h of f.hunks) for (const l of h.lines) w = Math.max(w, ui.textWidth(ui.cleanLine(l[1])));
+      WIDEST.set(parsed, w);
+    }
+    return WIDEST.get(parsed);
+  };
 
   function layout(width, m) {
     const key = keyOf(width, m);
     if (parsed && key !== cache) {
       // The cursor stays on the same lines when the layout changes.
       const was = rows[cur] && rows[cur].ref, hunk = !!(rows[cur] && rows[cur].hunk);
-      rows = render(parsed, width, m, false, { wrap, left, viewed: f => viewed.has(f.to || f.from) }); cache = key;
+      rows = render(parsed, width, m, false, { wrap, viewed: f => viewed.has(f.to || f.from) }); cache = key;
       const at = r => r.ref && !r.more;
       let i = stay !== null ? rows.findIndex((r, k) => k >= stay && at(r))
         : was ? rows.findIndex(r => at(r) && r.ref.file === was.file && r.ref.from === was.from && r.ref.sec === was.sec && !!r.hunk === hunk) : -1;
@@ -465,7 +498,7 @@ function main() {
     const [from, to] = range();
     rows.slice(top0, top0 + body).forEach((r, k) => {
       const i = top0 + k, mark = i >= from && i <= to ? ['▌', ui.fg(ui.C.blue)] : noted(r) ? ['▎', NOTE] : [' ', ''];
-      lines.push(ui.line([mark, ...r.segs], W - bw, i === cur && !r.back ? ui.C.selectBlur : r.back) + scrollbar.cell(k));
+      lines.push(ui.line([mark, ...(left && r.redo ? r.redo(left) : r.segs)], W - bw, i === cur && !r.back ? ui.C.selectBlur : r.back) + scrollbar.cell(k));
     });
     while (lines.length < H - 1) lines.push(ui.line([], W));
     lines.length = H - 1;
@@ -586,7 +619,8 @@ function main() {
       const n = note;
       note = null;
       if (!n.field.value.trim()) return draw();
-      const msg = notes.add(tab, { file: path.join(top, n.ref.file), from: n.ref.from, to: n.ref.to, kind: n.kind, text: n.field.value });
+      const msg = notes.add(tab, { file: path.join(top, n.ref.file), from: n.ref.from, to: n.ref.to, kind: n.kind, text: n.field.value,
+        lines: parsed ? shownLines(parsed, n.ref) : undefined });
       tabNotes = notes.current(tab);
       return say(msg);
     }
@@ -714,7 +748,7 @@ function main() {
     else if (k === 'b') openScopes();
     else if (k === 'w') { wrap = !wrap; left = 0; writeSettings({ ...readSettings(), wrap }); draw(); }
     else if (k === 'left' || k === 'h') { if (!wrap && left) { left = Math.max(0, left - 8); draw(); } }
-    else if (k === 'right' || k === 'l') { if (!wrap) { left += 8; draw(); } }
+    else if (k === 'right' || k === 'l') { if (!wrap && left + 8 < widest()) { left += 8; draw(); } }
     else if (k === 'a') startNote();
     else if (k === 'A') act(notes.send(tab, FROM));
     else if (k === 'C') act(notes.copy(tab, top));

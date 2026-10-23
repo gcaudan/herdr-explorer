@@ -2,7 +2,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { execFile } = require('child_process');
+const { execFile, spawn } = require('child_process');
 
 const WIN = process.platform === 'win32';
 const PLUGIN = process.env.HERDR_PLUGIN_ID || 'gcaudan.explorer';
@@ -79,6 +79,35 @@ const run = (cmd, args, opts = {}) => new Promise(resolve => {
   if (!cmd) return resolve(null);
   execFile(cmd, args, { windowsHide: true, maxBuffer: 64 << 20, ...opts }, (err, stdout) => resolve(err ? null : stdout));
 });
+
+// Runs a program: { code, out, err }, code null when it could not start or timed out; input goes to stdin.
+// run() returns stdout only, and git's error messages and stdin (commit message, pathspecs) are
+// needed here. detached (not on Windows): a session without terminal, so that ssh, gpg or a credential helper
+// cannot take over the pane to ask for a password; they fail instead, or use their graphical prompt.
+function exec(cmd, args, { cwd, env, input, timeout = 0, detached = false, shell = false } = {}) {
+  return new Promise(resolve => {
+    if (!cmd) return resolve({ code: null, out: '', err: 'not found' });
+    let child;
+    try { child = spawn(cmd, args, { cwd, env, shell, windowsHide: true, detached: detached && !WIN }); }
+    catch (e) { return resolve({ code: null, out: '', err: e.message }); }
+    const out = [], err = [];
+    let size = 0, done = false, timer = null;
+    const finish = code => {
+      if (done) return;
+      done = true; clearTimeout(timer);
+      resolve({ code, out: Buffer.concat(out).toString('utf8'), err: Buffer.concat(err).toString('utf8') });
+    };
+    // Detached, the child leads its own process group: killed with it, ssh started by git does not outlive it.
+    const kill = () => { try { if (detached && !WIN) process.kill(-child.pid); else child.kill(); } catch { } };
+    if (timeout) timer = setTimeout(() => { kill(); finish(null); }, timeout);
+    child.stdout.on('data', d => { if ((size += d.length) <= 64 << 20) out.push(d); });
+    child.stderr.on('data', d => err.push(d));
+    child.on('error', e => { err.push(Buffer.from(e.message)); finish(null); });
+    child.on('close', code => finish(code));
+    child.stdin.on('error', () => { });
+    child.stdin.end(input || '');
+  });
+}
 
 // The result of a herdr command's JSON answer, or null.
 function result(stdout) {
@@ -289,6 +318,6 @@ function saveKeys(all) {
 }
 
 module.exports = {
-  WIN, PLUGIN, pathDirs, which, remoteLink, realPath, writeAtomic, addConfig, OWN_PANES, words, run, result, HERDR, GIT, gitEnv, gitOperation, version, newer, DEFAULT_WIDTH, WIDTH_FILE, readWidth,
+  WIN, PLUGIN, pathDirs, which, remoteLink, realPath, writeAtomic, addConfig, OWN_PANES, words, run, exec, result, HERDR, GIT, gitEnv, gitOperation, version, newer, DEFAULT_WIDTH, WIDTH_FILE, readWidth,
   SETTINGS_FILE, readSettings, writeSettings, PANES_DIR, paneFile, readPaneState, writePaneState, TAB_KINDS, tabFile, staleState, sweepState, KEYS_FILE, readKeys, keysTemplate, writeKeys,
 };

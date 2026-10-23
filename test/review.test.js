@@ -207,3 +207,20 @@ test('progressive JPEG decodes', () => {
     assert.ok(got.every((v, i) => Math.abs(v - want[i]) <= 24), `(${x}, ${y}): ${got} instead of ${want}`);
   }
 });
+
+test('the lines a note takes from a diff are those of the version shown', () => {
+  const parsed = diff.changesOf({ staged: 'diff --git a/f b/f\n--- a/f\n+++ b/f\n@@ -1,3 +1,3 @@\n a\n-b\n+B\n c\n', text: '' });
+  assert.deepStrictEqual(diff.shownLines(parsed, { file: 'f', sec: 'staged', from: 2, to: 3 }), ['B', 'c']);
+  assert.strictEqual(diff.shownLines(parsed, { file: 'f', sec: 'staged', from: 3, to: 5 }), null, 'past the hunk');
+  assert.strictEqual(diff.shownLines(parsed, { file: 'f', sec: 'unstaged', from: 2, to: 2 }), null, 'another section');
+});
+
+test('a diff row cut from another column is made again alike (redo)', () => {
+  const parsed = diff.parse('diff --git a/f b/f\n--- a/f\n+++ b/f\n@@ -1,2 +1,2 @@\n ' + 'x'.repeat(90) + '\n-' + 'old '.repeat(30) + '\n+' + 'new '.repeat(30) + '\n');
+  for (const mode of ['inline', 'split']) {
+    const at0 = diff.render(parsed, 80, mode), at16 = diff.render(parsed, 80, mode, false, { left: 16 });
+    assert.strictEqual(at0.length, at16.length);
+    at0.forEach((r, i) => { if (r.redo) assert.deepStrictEqual(r.redo(16), at16[i].segs, `${mode} row ${i}`); });
+    assert.ok(at0.some(r => r.redo));
+  }
+});

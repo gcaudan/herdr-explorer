@@ -152,10 +152,12 @@ function select(i) {
 
 function toggle(row, open) {
   if (!row || !row.dir || state.filter || state.changed) return;
-  if (open === undefined) open = !state.expanded.has(row.rel);
-  // Opened, a compact folder row unfolds each folder of its chain, as they show when the setting is off.
-  if (open) for (let a = row.rel; a && a !== parentOf(row.from || row.rel); a = parentOf(a)) state.expanded.add(a);
-  else state.expanded.delete(row.rel);
+  if (open === undefined) open = !row.open;
+  // Opened, a compact folder row unfolds each folder of its chain, as they show when the setting is off; closed, it
+  // folds them all.
+  for (let a = row.rel; a && a !== parentOf(row.from || row.rel); a = parentOf(a)) {
+    if (open) state.expanded.add(a); else state.expanded.delete(a);
+  }
   buildRows();
   save();
 }

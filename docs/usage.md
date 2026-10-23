@@ -41,7 +41,8 @@ Below 24 columns, a pill shows its mark only (`↑`, `!`, `✓`).
 
 Folders come first, then files, sorted by name with numbers in natural order. The `.git` folder is
 never shown. With **Compact folders** (on by default), a folder whose only entry is a folder shares its row, as in
-VS Code: `src/main/java` opens and closes as one, and `←` goes to the folder above the chain. The filter shows every
+VS Code: `src/main/java` opens and closes as one, and `←` goes to the folder above the chain. A folder not yet
+opened shows alone until it is: the tree reads only the folders it shows. The filter shows every
 folder on its own row. Git decorations follow VS Code:
 
 | Badge | Meaning                                                            |
