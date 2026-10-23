@@ -9,27 +9,27 @@ The pane where a setting changes applies it at once; the last column says when t
 
 | Key | Default | Setting | Effect | Other open panes |
 |---|---|---|---|---|
-| `hidden` | `true` | Hidden files; explorer `.` | show dot files in the tree | at their next opening |
-| `ignored` | `true` | Git-ignored files; explorer `i` | show git-ignored files, greyed out | at their next opening |
-| `open` | `"preview"` | Enter opens | what `Enter` and a double-click do on a text file: `"preview"` or `"editor"` | explorers within a second |
-| `editor` | `""` | Editor | external editor command, see below | at once (read at each use) |
-| `singleClick` | `false` | Preview follows selection | a file selected by a click or the arrow keys shows in the preview; the arrow keys only update a preview already open | explorers within a second |
-| `compact` | `true` | Compact folders | a folder whose only entry is a folder shows on one row with it (`src/main/java`), not while filtering | at their next opening |
-| `follow` | `false` | Follow terminal | reveal the folder of the terminal next to the explorer, moving the root when it leaves the tree | within 2 s |
-| `side` | `"left"` | Dock side | `"left"` or `"right"`: where new explorers dock; an open explorer keeps its side | new tabs only |
-| `autoOpen` | `true` | Open automatically | open the explorer in every new tab that has a single pane; off: only with `prefix+f` | new tabs only |
 | `theme` | `"auto"` | Theme | `"dark"` (VS Code Dark+ colours), `"light"` (Light+), or `"auto"`: by the terminal's background, as last read (the `background` file), dark until a pane has read it | the explorer at once; a pane opened on auto turns at once when the terminal's background differs; other panes at their next opening |
 | `glyphs` | `"nerd"` | Icon set | `"nerd"` (Nerd Font glyphs), `"emoji"`, `"unicode"` or `"ascii"`: the file icons, chevrons and header icons for a terminal without a Nerd Font, see [Without a Nerd Font](#without-a-nerd-font) | explorers within a second; other panes at their next opening |
 | `icons` | `""` | Icon theme | `""` for the Nerd Font icons, or `{ "id", "label", "file" }` of a VS Code icon theme | explorers within a second; source control at its next opening |
+| `hidden` | `true` | Hidden files; explorer `.` | show dot files in the tree | at their next opening |
+| `ignored` | `true` | Git-ignored files; explorer `i` | show git-ignored files, greyed out | at their next opening |
+| `compact` | `true` | Compact folders | a folder whose only entry is a folder shows on one row with it (`src/main/java`), not while filtering | at their next opening |
+| `follow` | `false` | Follow terminal | reveal the folder of the terminal next to the explorer, moving the root when it leaves the tree | within 2 s |
+| `open` | `"preview"` | Enter opens | what `Enter` and a double-click do on a text file: `"preview"` or `"editor"` | explorers within a second |
+| `singleClick` | `false` | Preview follows selection | a file selected by a click or the arrow keys shows in the preview; the arrow keys only update a preview already open | explorers within a second |
+| `editor` | `""` | Editor | external editor command, see below | at once (read at each use) |
 | `wrap` | `false` | Wrap lines; preview `w`, **View** menu | wrap long lines in the preview, its Diff view and the Changes pane | other previews and Changes panes at their next opening |
 | `lineNumbers` | `true` | Line numbers; preview `L`, **View** menu | line number gutter in the preview | other previews at their next opening |
 | `images` | `"auto"` | Images; preview `p` (that pane only), the line under a pixelated image | `"blocks"` (pixelated), `"auto"` (sharp when the terminal has the Kitty graphics protocol) or `"pixels"` (always sharp), see [Sharp images](usage.md#sharp-images) | previews within a second |
-| `reviewPrefix` | `""` | Notes prefix | text typed before the [review notes](usage.md#review-notes) sent to the agent (`A`), such as an instruction | at once (read at each use) |
 | `diffLayout` | `""` | Diff layout (auto, split, inline); `v` in every diff (source control, Changes pane, preview's Diff view), **Inline · Split** switch, **View** menu | `""`: inline under 120 columns (a preview beside the terminal), side by side from 120 (zoomed, full tab). `"inline"` or `"split"`, as the settings view sets it: every diff. `{ "narrow": …, "wide": … }`, as `s` and the switch write it: one layout per size (under 120 columns, from 120), a size left out laid out by width; `s` on a single value keeps it for the other size. The settings view shows both sizes when they differ, and a choice there holds for both | other diffs at their next redraw |
+| `reviewPrefix` | `""` | Notes prefix | text typed before the [review notes](usage.md#review-notes) sent to the agent (`A`), such as an instruction | at once (read at each use) |
+| `autoOpen` | `true` | Open automatically | open the explorer in every new tab that has a single pane; off: only with `prefix+f` | new tabs only |
+| `side` | `"left"` | Dock side | `"left"` or `"right"`: where new explorers dock; an open explorer keeps its side | new tabs only |
+| `updateCheck` | `true` | Check for updates | check GitHub once a day for a newer release | explorers within a second |
 | `scmListShare` | `{}` | source control: drag the separator, `<` `>`, `shift+left` `shift+right` | share of the width taken by the list beside the diff, per view: `{ "changes": 0.3, "history": 0.6 }`; a view left out: 38 %, from 34 to 70 columns | other source control panes at their next opening |
 | `scmGraphAll` | `true` | source control History `a` | show every local and remote branch in History, or only the current one | other source control panes at their next opening |
 | `scmTree` | `false` | source control `t`, **List · Tree** switch | show the Changes view as a tree of folders | other source control panes at their next opening |
-| `updateCheck` | `true` | Check for updates | check GitHub once a day for a newer release | explorers within a second |
 
 A missing or unreadable `settings.json` means all defaults, and keys left out keep their default. `scmListShare`,
 `scmGraphAll` and `scmTree` are not in the settings view: only the source control pane changes them.
