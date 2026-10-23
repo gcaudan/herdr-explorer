@@ -240,7 +240,7 @@ function viewKey(k, row) {
     if (k === 'd') return row && row.items && discard(row.items, row.sec);
     if (k === 't') return toggleTree();
     if (k === 'X') return abort();
-    if (['y', 'Y', 'e', 'o'].includes(k)) return fileAction(k, row);
+    if (['y', 'Y', 'e', 'E', 'o'].includes(k)) return fileAction(k, row);
   } else if (S.view === 'history') {
     if (k === 'a') return toggleAllBranches();
     if (k === 'x' && S.histFile) return allFiles();

@@ -364,7 +364,7 @@ function helpGroups() {
   const g = [];
   if (S.view === 'changes') {
     g.push(['Files', [['space s', 'stage'], ['u', 'unstage'], ['a A', 'stage, unstage all'], ['d', 'discard'], ['t', 'list or tree'],
-      ['y', 'copy path'], ['Y', 'copy relative path'], ['e', 'edit in the terminal'], ['o', 'open in the editor']]],
+      ['y', 'copy path'], ['Y', 'copy relative path'], ['e', 'open in the editor'], ['E', 'edit in the terminal'], ['o', 'open in its app']]],
       ['Commit', [['c', 'type the message'], ['⏎', 'commit, when typing'], ['ctrl+g', '✧ write with Claude'], ['alt+a', 'amend'],
         ['X', 'abort the operation']]]);
   }

@@ -583,7 +583,7 @@ function render() {
   }
 
   // Keys.
-  const keys = [['↵', 'open'], content ? ['ctrl+p', 'go to file'] : ['ctrl+f', 'search in files'], ['ctrl+o', 'editor'], ['ctrl+t', 'insert'], ['ctrl+y', 'copy relative path'],
+  const keys = [['↵', 'open'], content ? ['ctrl+p', 'go to file'] : ['ctrl+f', 'search in files'], ['ctrl+e', 'editor'], ['ctrl+o', 'app'], ['ctrl+t', 'insert'], ['ctrl+y', 'copy relative path'],
     ...(content ? [['tab', 'fields'], ['alt+←→', 'fold']] : []), ['esc', 'close'], ['f1', 'keys']];
   while (lines.length < H - 1) lines.push(line([], W));
   lines.length = H - 1;
@@ -597,7 +597,7 @@ function render() {
 const HELP = [
   ['Results', [['↑↓', 'select'], ['ctrl+n', 'next'], ['ctrl+k', 'previous'], ['pgup pgdn', 'page'], ['ctrl+home', 'first'],
     ['ctrl+end', 'last'], ['alt+← →', 'fold, unfold a file']]],
-  ['Open', [['⏎', 'in the preview'], ['ctrl+o', 'in the editor'], ['alt+⏎', 'in the editor'], ['ctrl+t', 'insert in terminal'],
+  ['Open', [['⏎', 'in the preview'], ['ctrl+e', 'in the editor'], ['alt+⏎', 'in the editor'], ['ctrl+o', 'in its app (else the editor)'], ['ctrl+t', 'insert in terminal'],
     ['ctrl+y', 'copy the relative path']]],
   ['Search', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['tab', 'next field'], ['alt+c', 'match case'],
     ['alt+w', 'whole word'], ['alt+r', 'regular expression'], ['alt+h', 'hidden files']]],
@@ -664,10 +664,12 @@ async function act(kind) {
     if (kind === 'open') msg = await actions.preview(abs, ROOT, PANE, t.line || undefined);
     else if (kind === 'insert') msg = await actions.insert(abs, PANE);
     else if (kind === 'editor') msg = await actions.editor(abs, PANE);
+    else if (kind === 'app') msg = await actions.app(abs, PANE);
     else if (kind === 'copy') return flash(await actions.copy(t.rel));
   } catch { msg = 'Action failed'; }
-  // An outside editor answers with its name and the file's when it was started.
-  if (!msg || (kind === 'editor' && msg.endsWith(`: ${path.basename(abs)}`))) process.exit(0);
+  // An outside editor answers with its name and the file's when it was started, an app with Opening and the file's.
+  if (!msg || (kind === 'editor' && msg.endsWith(`: ${path.basename(abs)}`))
+    || (kind === 'app' && (msg.endsWith(`: ${path.basename(abs)}`) || msg === `Opening ${path.basename(abs)}`))) process.exit(0);
   flash(msg);
 }
 
@@ -707,7 +709,8 @@ function key(k) {
     case 'alt+left': fold(true); break;
     case 'alt+right': fold(false); break;
     case 'enter': return act('open');
-    case 'alt+enter': case 'ctrl+o': return act('editor');
+    case 'alt+enter': case 'ctrl+e': return act('editor');
+    case 'ctrl+o': return act('app');
     case 'ctrl+t': return act('insert');
     case 'ctrl+y': return act('copy');
     default: {

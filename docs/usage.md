@@ -9,7 +9,7 @@ The plugin has six panes:
 | Search          | popup, 80% × 80%             | `ctrl+p`, `ctrl+f`, `prefix+a`                                |
 | Source Control  | full tab (zoomed)            | `s`, `prefix+d`                                               |
 | Changes         | full tab (zoomed)            | `d` or **View changes** on a folder                           |
-| Editor          | full tab (zoomed)            | `e`, **Edit in terminal**, `o` with a terminal editor         |
+| Editor          | full tab (zoomed)            | `E`, **Edit in terminal**, `e` with a terminal editor         |
 
 Its four herdr actions can be bound to keys (see [Key bindings](installation.md#key-bindings)):
 `gcaudan.explorer.toggle` opens the explorer, focuses it, or closes it when it already has the focus (`prefix+f`), `gcaudan.explorer.search` opens Go to file
@@ -84,9 +84,9 @@ The last column is the action's name in [`keys.json`](configuration.md#config-fo
 | `n` / `N`                | new file / new folder, in the selected folder (or the selected file's folder)  | `newFile` / `newFolder` |
 | `R` `f2`                 | rename                                                                         | `rename` |
 | `delete`                 | move to the trash                                                              | `delete` |
-| `e`                      | edit the file in the terminal editor                                           | `edit` |
-| `o`                      | open in the external editor                                                    | `openInEditor` |
-| `O`                      | open the file with its system application (documents, media, text formats)     | `openInApp` |
+| `e`                      | open in the external editor                                                    | `openInEditor` |
+| `E`                      | edit the file in the terminal editor                                           | `edit` |
+| `o`                      | open with the system application (documents, media, text formats), other files in the editor, a folder in the file manager | `openInApp` |
 | `p`                      | preview the file in a kept tab and focus the preview                           | `preview` |
 | `y` / `Y`                | copy the absolute / relative path                                              | `copyPath` / `copyRelativePath` |
 | `backspace`              | make the parent folder the tree root                                           | `parentRoot` |
@@ -178,6 +178,7 @@ Source control asks the same way.
 | Preview                  | files the preview can show        | show in the tab's preview                                    |
 | Open in editor           | files and folders                 | external editor: the settings' command, else VS Code when found, else the Editor pane (see [configuration](configuration.md#editor-command)) |
 | Open in app              | `txt md csv log json xml html htm` and the media types above | system application |
+| Open in file manager     | folders                           | the folder in the system's file manager                      |
 | Edit in terminal         | files                             | Editor pane                                                  |
 | Insert into terminal     | all                               | type the path into the terminal next to the explorer         |
 | New file… / New folder…  | all                               | in the folder (or the file's folder)                         |
@@ -219,13 +220,15 @@ The settings take the place of the tree, by group, each with its value on the ri
 `○ off` for a switch, the value chosen otherwise. A line under the list explains the selected
 setting. The settings are shared by every explorer. See [configuration.md](configuration.md#settings).
 
-| Group     | Settings                                                      |
-| --------- | ------------------------------------------------------------- |
-| Tree      | Hidden files, Git-ignored files, Compact folders, Follow terminal, Theme, Icon set, Icon theme |
-| Opening   | Enter opens (preview or editor), Editor, Preview follows selection |
-| Next tabs | Dock side (left or right), Open automatically                 |
-| Preview   | Wrap lines, Line numbers, Images, Diff layout (auto, split, inline), Notes prefix |
-| General   | Key bindings, Check for updates                               |
+| Group      | Settings                                                            |
+| ---------- | ------------------------------------------------------------------- |
+| Appearance | Theme, Icon set, Icon theme                                         |
+| Tree       | Hidden files, Git-ignored files, Compact folders, Follow terminal   |
+| Opening    | Enter opens (preview or editor), Preview follows selection, Editor  |
+| Preview    | Wrap lines, Line numbers, Images, Diff layout (auto, split, inline) |
+| Review     | Notes prefix                                                        |
+| New tabs   | Open automatically, Dock side (left or right)                       |
+| General    | Key bindings, Check for updates                                     |
 
 `up`/`down` (and their bound keys, page and first/last included) move, `/` finds a setting, `right`/`l` and
 `enter` give a setting its next value (on **Icon theme**, **Editor**, **Notes prefix** and **Key bindings**: open its
@@ -304,7 +307,7 @@ collapse and menu; the key of settings opens **Settings…**. A long menu scroll
 The preview, one per herdr tab, keeps its files in tabs, as VS Code's editors. A file opened by a single click,
 by following the selection, with `]`/`[`, from the search or by an agent (`peek.js`) replaces the **temporary** tab,
 its name in italics; `enter`, a double-click, the explorer's `p` or its menu's **Preview** open a **kept** tab, which
-the next file does not replace. In the preview, `t`, a double-click on the tab, `i`, `e`, `o` or a review note keep the
+the next file does not replace. In the preview, `t`, a double-click on the tab, `i`, `e`, `E`, `o` or a review note keep the
 temporary tab. Each tab keeps its scroll, line, File or Diff view, comparison, Markdown mode and marks; the tabs come
 back after a herdr restart (those whose file still exists). Past 50 tabs, the one furthest from the tab opened
 closes, unless it has unsaved edits: those tabs never close this way, the list growing past 50 when all the others
@@ -357,9 +360,9 @@ a click runs, and the scroll percentage.
 | `p`                          | image: sharp / pixelated, in this pane only (see [Sharp images](#sharp-images)) |
 | `r`                          | reload                                                   |
 | `i`                          | edit here, in the preview (see [Editing in the preview](#editing-in-the-preview)) |
-| `e`                          | edit in the terminal editor                              |
-| `o`                          | open (system application for documents and media, else the editor) |
-| `O`                          | open in app (allowed types only)                         |
+| `e`                          | open in the external editor                              |
+| `E`                          | edit in the terminal editor                              |
+| `o`                          | open in app (allowed types only), else in the editor     |
 | `y` / `Y`                    | copy the absolute / relative path; `Y` adds the selected lines (`src/app.js:12-14`) |
 | `H`                          | history of the file, in source control                   |
 | `a`                          | take a review note, see [Review notes](#review-notes)    |
@@ -550,12 +553,13 @@ and the search stops at 5000 matches.
 | `ctrl+home` / `ctrl+end`    | first / last result                                          |
 | `alt+left` / `alt+right`    | fold / unfold the file's results                             |
 | `enter`                     | open in the preview at the line                              |
-| `alt+enter` `ctrl+o`        | open in the editor                                           |
+| `alt+enter` `ctrl+e`        | open in the editor                                           |
+| `ctrl+o`                    | open in app (allowed types only), else in the editor         |
 | `ctrl+t`                    | insert the path into the terminal                            |
 | `ctrl+y`                    | copy the path, relative to the folder searched               |
 
-Other keys edit the focused field (see [Prompts](#prompts)). `ctrl+o` is there because Windows Terminal keeps
-`alt+enter` for full screen. Opening a result or inserting its path closes the popup; on failure, the popup stays
+Other keys edit the focused field (see [Prompts](#prompts)). `ctrl+e` is there because Windows Terminal keeps
+`alt+enter` for full screen; it no longer moves to the end of the field (`end` does). Opening a result or inserting its path closes the popup; on failure, the popup stays
 and shows the message.
 
 Go to file counts the files on the right of the field (`12 of 840`, or `840` with no query). In Search in files,
@@ -647,8 +651,8 @@ selected file, folder or section; the files staged or unstaged are highlighted f
 *Changes*, `d` puts tracked files back to the index and, unlike the explorer's *Discard changes*, **deletes
 untracked files for good**, not to the trash, with the folders left empty; in *Staged Changes*, the index and the
 file go back to the last commit, and files added since are deleted. Conflicts cannot be discarded. On a file, as
-in the explorer and the preview, `y` / `Y` copy its absolute / relative path, `e` edits it in the terminal editor
-and `o` opens it in the editor.
+in the explorer and the preview, `y` / `Y` copy its absolute / relative path, `e` opens it in the editor, `E`
+edits it in the terminal editor and `o` opens it in its app (else the editor).
 
 **Stashes view**: `n` new stash, named on a row above the list (the message is optional): `enter`
 stashes the untracked files too, `alt+enter` or `ctrl+o` leaves them. `a` apply, `o` pop, `d` drop.

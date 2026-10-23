@@ -194,11 +194,11 @@
 | `git am in progress: continue or abort it in the terminal`         | `git am` is not handled by the pane                                 |
 | `No merge, rebase, cherry-pick or revert in progress`              | nothing to abort                                                    |
 | `<branch> is the base of the comparisons: select another branch`   | `B` on another branch changes the base                              |
-| `<file> is deleted`                                                | `e` and `o` need the file on disk                                   |
+| `<file> is deleted`                                                | `e`, `E` and `o` need the file on disk                              |
 | `Claude not available: message from the file names`               | the `claude` CLI is missing or failed. The fallback message is used |
 | `Branch name starting with "-": not switched`, `A branch name cannot start with "-"` | rename the branch in a terminal                  |
 | `Remote branches are not deleted from here`, `Cannot delete the current branch` | use a terminal, or switch first                        |
-| `Select a file first`                                              | `y`, `Y`, `e` or `o` on a row that is not a file                    |
+| `Select a file first`                                              | `y`, `Y`, `e`, `E` or `o` on a row that is not a file               |
 | `Nothing to stage`, `Nothing staged`, `Nothing to commit`, `No changes to describe`, `Already staged`, `Not staged` | informational |
 
 ### peek

@@ -165,7 +165,7 @@ module.exports = ctx => {
       case 'delete': if (r) deleteEntry(r); return;
       case 'edit': if (r && !r.dir) runAction(() => actions.edit(absOf(r.rel), PANE)); return;
       case 'openInEditor': if (r) runAction(() => actions.editor(absOf(r.rel), PANE)); return;
-      case 'openInApp': if (r && !r.dir) runAction(() => actions.system(absOf(r.rel))); return;
+      case 'openInApp': if (r) runAction(() => actions.app(absOf(r.rel), PANE)); return;
       case 'preview': if (r && !r.dir) runAction(() => actions.preview(absOf(r.rel), ctx.ROOT, PANE, 0, true, true, { keep: true })); return;
       case 'copyPath': if (r) runAction(() => actions.copy(absOf(r.rel))); return;
       case 'copyRelativePath': if (r) runAction(() => actions.copy(r.rel)); return;

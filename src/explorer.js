@@ -36,7 +36,7 @@ const DEFAULT_KEYS = {
   open: ['enter', 'space'], expand: ['right', 'l'], collapse: ['left', 'h'], close: ['escape', 'q'],
   menu: ['m', 'menu', 'shift+f10'], refresh: ['r'], filter: ['/'], goToFile: ['ctrl+p'], searchInFiles: ['ctrl+f'],
   sourceControl: ['s'], settings: [','], toggleHidden: ['.'], toggleIgnored: ['i'], newFile: ['n'], newFolder: ['N'],
-  rename: ['R', 'f2'], delete: ['delete'], edit: ['e'], openInEditor: ['o'], openInApp: ['O'], preview: ['p'], copyPath: ['y'],
+  rename: ['R', 'f2'], delete: ['delete'], edit: ['E'], openInEditor: ['e'], openInApp: ['o'], preview: ['p'], copyPath: ['y'],
   copyRelativePath: ['Y'], parentRoot: ['backspace'], changedOnly: ['c'], viewChanges: ['d'], nextChange: [']'], previousChange: ['['], fileHistory: ['H'], narrower: ['>', INNER === 'right' ? 'shift+left' : 'shift+right'],
   wider: ['<', INNER === 'right' ? 'shift+right' : 'shift+left'], halfPageUp: ['ctrl+u'], halfPageDown: ['ctrl+d'], help: ['?', 'f1'],
 };
@@ -47,7 +47,7 @@ const HELP = [
     ['filter', 'filter']]],
   ['Review', [['changedOnly', 'changed files only'], ['viewChanges', 'changes in the preview'], ['nextChange', 'next changed file'], ['previousChange', 'previous changed file'],
     ['fileHistory', 'history of the file']]],
-  ['Open', [['open', 'open, fold'], ['preview', 'preview'], ['edit', 'edit (terminal)'], ['openInEditor', 'open in editor'], ['openInApp', 'open in app'],
+  ['Open', [['open', 'open, fold'], ['preview', 'preview'], ['openInEditor', 'open in editor'], ['edit', 'edit (terminal)'], ['openInApp', 'open in app'],
     ['copyPath', 'copy path'], ['copyRelativePath', 'copy relative path']]],
   ['Files', [['newFile', 'new file'], ['newFolder', 'new folder'], ['rename', 'rename'], ['delete', 'to the trash'],
     ['menu', 'actions menu']]],
@@ -491,7 +491,7 @@ function menuItems(r) {
       items.push(['Open in editor', () => actions.editor(abs, PANE), 'openInEditor']);
       if (actions.canOpen(abs)) items.push(['Open in app', () => actions.system(abs), 'openInApp']);
       items.push(['Edit in terminal', () => actions.edit(abs, PANE), 'edit']);
-    } else items.push(['Open in editor', () => actions.editor(abs, PANE), 'openInEditor']);
+    } else items.push(['Open in editor', () => actions.editor(abs, PANE), 'openInEditor'], ['Open in file manager', () => actions.app(abs, PANE), 'openInApp']);
     items.push(['Insert into terminal', () => actions.insert(abs, PANE)], null);
     items.push(['New file…', () => newEntry(dirRel, false), 'newFile'], ['New folder…', () => newEntry(dirRel, true), 'newFolder']);
     if (r.dir) items.push(['Search in folder…', () => actions.search(abs, PANE, 'content'), 'searchInFiles'], ['Set as root', () => setRoot(abs)]);

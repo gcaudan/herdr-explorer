@@ -530,15 +530,15 @@ async function search(mode) {
   if (msg) flash(msg, true);
 }
 
-// y Y e o on a file of Changes, as in the explorer and the preview: copy its path or relative path, edit it in
-// the terminal, open it in the editor.
+// y Y e E o on a file of Changes, as in the explorer and the preview: copy its path or relative path, open it in the
+// editor, edit it in the terminal, open it in its app.
 async function fileAction(k, row) {
   if (!row || row.type !== 'file') return flash('Select a file first');
   const rel = row.item.path, abs = path.join(S.repo.top, rel);
-  if ((k === 'e' || k === 'o') && !fs.existsSync(abs)) return flash(`${rel} is deleted`, true);
+  if ('eEo'.includes(k) && !fs.existsSync(abs)) return flash(`${rel} is deleted`, true);
   const pane = process.env.HERDR_PANE_ID;
   const msg = k === 'y' ? await actions.copy(abs) : k === 'Y' ? await actions.copy(rel, 'Relative path copied')
-    : k === 'e' ? await actions.edit(abs, pane) : await actions.open(abs, pane);
+    : k === 'e' ? await actions.editor(abs, pane) : k === 'E' ? await actions.edit(abs, pane) : await actions.app(abs, pane);
   // The actions' messages tell success from failure (ui.messageKind), as in the explorer.
   if (msg) flash(msg);
 }
