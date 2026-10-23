@@ -64,10 +64,11 @@ function locate(n, lines) {
 }
 
 // The notes of a tab placed again in their files as they are now (locate), saved when one moved, for every pane.
-function current(tab) {
+// only: the real path of the one file to read (a pane showing it, which saw it change), the other notes as saved.
+function current(tab, only = null) {
   const list = read(tab), files = new Map();
   const placed = list.map(n => {
-    if (!n.from || !n.anchor) return n;
+    if (!n.from || !n.anchor || (only && n.file !== only)) return n;
     if (!files.has(n.file)) files.set(n.file, linesOf(n.file));
     return locate(n, files.get(n.file));
   });

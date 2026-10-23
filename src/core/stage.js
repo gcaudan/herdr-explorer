@@ -26,6 +26,28 @@ function picked(rows) {
 }
 
 const isChange = l => l[0] === '+' || l[0] === '-';
+const NO_NL = '\\ No newline at end of file';
+
+// The lines of a hunk in the order the patch takes them. A run of changes kept in part pairs its removed and added
+// lines (the first removed with the first added, and so on), as git add -p does: a removed line left out, turned
+// context, then stays next to the line that replaced it instead of moving after all the added ones. A "\ No newline
+// at end of file" stays after its line.
+function order(hunk, keep) {
+  const out = [];
+  for (let i = 0; i < hunk.length;) {
+    if (!isChange(hunk[i])) { out.push(hunk[i++]); continue; }
+    const start = i, rem = [], add = [];
+    while (i < hunk.length && hunk[i][0] !== ' ') {
+      const item = [hunk[i++]];
+      if (i < hunk.length && hunk[i][0] === '\\') item.push(hunk[i++]);
+      (item[0][0] === '-' ? rem : add).push(item);
+    }
+    const run = hunk.slice(start, i).filter(isChange);
+    if (!rem.length || !add.length || run.every(l => keep.has(l)) || !run.some(l => keep.has(l))) { out.push(...hunk.slice(start, i)); continue; }
+    for (let k = 0; k < Math.max(rem.length, add.length); k++) out.push(...(rem[k] || []), ...(add[k] || []));
+  }
+  return out;
+}
 
 // The files of the diff a mode acts on, with the changed lines selected in each: [{ f, keep, all }], keep the Set of
 // those lines, all when they are every change of the file (or the file has none, a binary file or a mode change).
@@ -72,10 +94,10 @@ function patchOf({ f, keep, all }, mode) {
     if (!m || !h.lines.some(l => keep.has(l))) continue;
     const lines = [];
     let shown = false, oldN = 0, newN = 0;
-    for (const l of h.lines) {
+    for (const l of order(h.lines, keep)) {
       const [s, text, , , , cr] = l;
       // "\ No newline at end of file" follows the line it is about, when that line is in the patch.
-      if (s === '\\') { if (shown) lines.push('\\ No newline at end of file'); continue; }
+      if (s === '\\') { if (shown) lines.push(NO_NL); continue; }
       const sign = s === ' ' || keep.has(l) ? s : (s === '-') !== reverse ? ' ' : null;
       shown = sign !== null;
       if (!shown) continue;
@@ -93,10 +115,22 @@ function patchOf({ f, keep, all }, mode) {
     // A line without newline at the end of the file ends both sides when it is context: with lines kept after it
     // (an added line, the old last line turned context), it is the removed line, then the same line added with its
     // newline, as git would write it.
-    const nl = lines.indexOf('\\ No newline at end of file');
+    const nl = lines.indexOf(NO_NL);
     if (nl > 0 && nl < lines.length - 1 && lines[nl - 1][0] === ' ') {
       const text = lines[nl - 1].slice(1);
-      lines.splice(nl - 1, 2, `-${text}`, '\\ No newline at end of file', `+${text}`);
+      lines.splice(nl - 1, 2, `-${text}`, NO_NL, `+${text}`);
+    }
+    // The last lines of the file taken out leave the line before them last: without newline when the side made had
+    // none (its last line, left out, had the marker), as the removed line, then the same line added without it.
+    const gone = reverse ? '+' : '-', made = reverse ? '-' : '+';
+    if (lines[lines.length - 1] === NO_NL && lines[lines.length - 2][0] === gone) {
+      let j = lines.length - 2;
+      while (j >= 0 && lines[j][0] === gone) j--;
+      if (j >= 0 && lines[j][0] === ' ' && h.lines.some((l, k) => l[0] === made && !keep.has(l) && h.lines[k + 1] && h.lines[k + 1][0] === '\\')) {
+        const text = lines[j].slice(1);
+        if (reverse) lines.splice(j, 1, `-${text}`, NO_NL, `+${text}`);
+        else { lines.splice(j, 1, `-${text}`); lines.push(`+${text}`, NO_NL); }
+      }
     }
     // The side the patch is matched on keeps its place; the other moves with the lines kept before. A side with no
     // line starts at the line before (git's convention).
@@ -140,7 +174,9 @@ function count(parsed, sel, mode) {
 }
 
 // Does it: top, the repository's folder, which the diff's paths are relative to. Returns the message to show.
-async function apply(top, parsed, sel, mode) {
+// Untracked files discarded whole go to the trash (opts.trash, actions.trash by default); without one, they are
+// deleted for good only when opts.noTrash(names) says so, and kept otherwise.
+async function apply(top, parsed, sel, mode, opts = {}) {
   const list = targets(parsed, sel, mode);
   if (!list.length) return mode === 'unstage' ? 'Nothing staged selected' : 'Nothing unstaged selected';
   const env = { ...await gitEnv(top), GIT_LITERAL_PATHSPECS: '1' };
@@ -180,13 +216,20 @@ async function apply(top, parsed, sel, mode) {
     const res = await git(top, env, [...args, ...whole]);
     if (res.code !== 0) return fail(res);
   }
-  for (const name of remove) {
-    try { fs.rmSync(path.join(top, name)); } catch (e) { return `Cannot discard: ${e.code || e.message}`; }
+  const trash = opts.trash || require('./actions').trash;
+  const left = [];
+  for (const name of remove) if (!await trash(path.join(top, name))) left.push(name);
+  if (left.length && opts.noTrash && await opts.noTrash(left)) {
+    for (const name of left.splice(0)) {
+      try { fs.rmSync(path.join(top, name)); } catch (e) { return `Cannot discard: ${e.code || e.message}`; }
+    }
   }
-  if (unindex.length) {
-    const res = await git(top, env, ['rm', '--cached', '-q', '--', ...unindex]);
+  const gone = unindex.filter(name => !left.includes(name));
+  if (gone.length) {
+    const res = await git(top, env, ['rm', '--cached', '-q', '--', ...gone]);
     if (res.code !== 0) return fail(res);
   }
+  if (left.length) return `${plural(left.length, 'untracked file')} kept: no trash`;
   return `${VERB[mode]} ${summary(list)}`;
 }
 

@@ -3,7 +3,6 @@
 //                          autoOpen setting is off
 //   node hook.js --toggle  key binding action: opens the current tab's explorer, focuses it when the focus is
 //                          elsewhere, closes it when it has the focus
-//   node hook.js --all     adds it to existing tabs that have a single pane
 //   node hook.js --restore startup hook: reopens the explorer and preview panes that herdr restored as shells
 //   node hook.js --search  key binding action: Go to file popup of the current tab's folder
 //   node hook.js --scm     key binding action: source control of the current tab's folder
@@ -139,14 +138,6 @@ if (process.argv.includes('--toggle')) {
   try { pane = d.pane_id && herdr('pane', 'get', d.pane_id).pane; } catch { }
   if (pane && pane.tab_id && pane.cwd) {
     require('./core/scope').agentStatus(pane.tab_id, pane.pane_id, d.agent_status, pane.cwd).then(r => console.log(r), () => { });
-  }
-} else if (process.argv.includes('--all')) {
-  for (const ws of herdr('workspace', 'list').workspaces) {
-    const tabs = new Map();
-    for (const p of workspacePanes(ws.workspace_id)) tabs.set(p.tab_id, [...tabs.get(p.tab_id) || [], p]);
-    for (const [tab, panes] of tabs) {
-      if (panes.length === 1 && panes[0].label !== LABEL) open(panes, tab, null);
-    }
   }
 } else if (process.argv.includes('--restore')) {
   // herdr restores the plugin's panes as plain shells, its session keeping only their label and folder: close

@@ -76,7 +76,16 @@ test('part of an untracked file is staged; a whole one is discarded from the dis
   parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
   list = diff.render(parsed, 200, 'inline');
   const file = list.filter(x => x.f && x.f.to === 'gone.txt');
-  assert.strictEqual(await stage.apply(r.top, parsed, stage.picked(file), 'discard'), 'Discarded 1 line');
+  // To the trash; without one, kept unless deleted for good once asked.
+  const trashed = [];
+  const trash = async abs => { trashed.push(abs); fs.rmSync(abs); return true; };
+  assert.strictEqual(await stage.apply(r.top, parsed, stage.picked(file), 'discard', { trash }), 'Discarded 1 line');
+  assert.deepStrictEqual(trashed, [path.join(r.top, 'gone.txt')]);
+  r.write('gone.txt', 'bye\n');
+  const noTrash = { trash: async () => false };
+  assert.strictEqual(await stage.apply(r.top, parsed, stage.picked(file), 'discard', { ...noTrash, noTrash: async () => false }), '1 untracked file kept: no trash');
+  assert.ok(fs.existsSync(path.join(r.top, 'gone.txt')));
+  assert.strictEqual(await stage.apply(r.top, parsed, stage.picked(file), 'discard', { ...noTrash, noTrash: async () => true }), 'Discarded 1 line');
   assert.ok(!fs.existsSync(path.join(r.top, 'gone.txt')));
 });
 
@@ -94,7 +103,7 @@ test('a file added with git add -N keeps its entry when staged in part, loses it
   parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
   list = diff.render(parsed, 200, 'inline');
   const file = list.filter(x => x.f && x.f.to === 'n.txt' && x.f.sec === 'unstaged');
-  assert.strictEqual(await stage.apply(r.top, parsed, stage.picked(file), 'discard'), 'Discarded 2 lines');
+  assert.strictEqual(await stage.apply(r.top, parsed, stage.picked(file), 'discard', { trash: async abs => { fs.rmSync(abs); return true; } }), 'Discarded 2 lines');
   assert.strictEqual(r.git('status', '--porcelain').stdout, '');
 });
 
@@ -157,4 +166,37 @@ test('a whole file takes its mode change with it', () => {
   const f = { from: 'h.sh', to: 'h.sh', status: 'modified', oldMode: '100644', newMode: '100755', hunks: [{ head: '@@ -1 +1,2 @@', lines: [[' ', 'm'], l] }] };
   assert.match(stage.patchOf({ f, keep: new Set([l]), all: true }, 'stage'), /^old mode 100644\nnew mode 100755\n--- a\/h.sh/m);
   assert.doesNotMatch(stage.patchOf({ f, keep: new Set([l]), all: false }, 'stage'), /old mode/);
+});
+
+test('part of a replaced block keeps the lines in their order', async () => {
+  for (const [mode, pickText, index, tree] of [
+    ['discard', 'c', 'a\nb\nc\nz\n', 'a\nB\nc\nz\n'],
+    ['stage', 'b', 'a\nB\nc\nz\n', 'a\nB\nC\nz\n'],
+    ['unstage', 'c', 'a\nB\nc\nz\n', 'a\nB\nC\nz\n'],
+  ]) {
+    const r = repo({ 'f.txt': 'a\nb\nc\nz\n' });
+    if (!r) return;
+    r.write('f.txt', 'a\nB\nC\nz\n');
+    if (mode === 'unstage') r.git('add', 'f.txt');
+    const parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+    const f = parsed.files.find(x => x.sec === stage.SECTION[mode]);
+    const picks = f.hunks[0].lines.filter(l => l[1].toLowerCase() === pickText);
+    assert.strictEqual(await stage.apply(r.top, parsed, { files: new Set(), hunks: new Set(), lines: new Set(picks) }, mode), `${stage.SECTION[mode] === 'staged' ? 'Unstaged' : mode === 'stage' ? 'Staged' : 'Discarded'} 2 lines`);
+    assert.strictEqual(r.git('show', ':f.txt').stdout, index);
+    assert.strictEqual(r.read('f.txt'), tree);
+  }
+});
+
+test('the last line added to a file without newline is taken out without adding one', async () => {
+  for (const mode of ['discard', 'unstage']) {
+    const r = repo({ 'f.txt': 'a\nb' });
+    if (!r) return;
+    r.write('f.txt', 'a\nb\nc');
+    if (mode === 'unstage') r.git('add', 'f.txt');
+    const parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+    const f = parsed.files.find(x => x.sec === stage.SECTION[mode]);
+    const c = f.hunks[0].lines.find(l => l[0] === '+' && l[1] === 'c');
+    await stage.apply(r.top, parsed, { files: new Set(), hunks: new Set(), lines: new Set([c]) }, mode);
+    assert.strictEqual(mode === 'discard' ? r.read('f.txt') : r.git('show', ':f.txt').stdout, 'a\nb');
+  }
 });

@@ -46,6 +46,20 @@ test('rows: dot files with the hidden setting, never .git; the cache until clear
   assert.deepStrictEqual(shown(tree.rows({ expanded: new Set() })), ['a.txt', 'b.txt']);
 });
 
+test('stale: a folder is read again only when its modification time moved', t => {
+  const root = folder(['a.txt']);
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const old = new Date(Date.now() - 60000);
+  fs.utimesSync(root, old, old);
+  const tree = Tree.create(() => root, { hidden: true, ignored: true });
+  const first = tree.readDir('');
+  tree.stale();
+  assert.strictEqual(tree.readDir(''), first, 'same time: reused');
+  fs.writeFileSync(path.join(root, 'b.txt'), '');
+  tree.stale();
+  assert.deepStrictEqual(tree.readDir('').map(e => e.name), ['a.txt', 'b.txt']);
+});
+
 test('rows: the filter keeps the matches and the folders holding one, unfolded, outside ignored folders', t => {
   const root = folder(['src/', 'src/main.js', 'src/util.js', 'docs/', 'docs/Main.md', 'node_modules/', 'node_modules/main.js', 'readme.md']);
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

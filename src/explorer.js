@@ -72,7 +72,8 @@ if (theme ? theme.entry.file !== settings.icons.file : settings.icons && setting
 }
 // The icon theme or icon set chosen in another explorer, the update check, the opening in new tabs, what Enter opens,
 // the editor and the preview following the selection changed there, and the preview and diff settings changed in
-// their panes (shown by an open settings view). Hidden and ignored files and Follow terminal stay this explorer's.
+// their panes (shown by an open settings view). Hidden and ignored files stay this explorer's; Follow terminal is
+// read again at each check (follow).
 if (SETTINGS_FILE) fs.watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
   // A file read while being written is skipped, rather than taken for the default settings.
   let saved, chosen;
@@ -244,7 +245,7 @@ async function refresh() {
   if (stopped) return;
   if (busy) { again = true; return; }
   busy = true;
-  cache.clear();
+  tree.stale();
   await refreshGit();
   buildRows();
   render();

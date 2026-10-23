@@ -119,11 +119,16 @@ function open(abs, pane) {
 
 // o: a folder in the file manager, a file of the types allowed (documents, media, text formats) in its system
 // application, any other in the editor, so that a script is never handed to the system, which could run it.
+// On macOS, open would launch a folder that is an application (x.app, a link to one): a Finder window shows it
+// instead, or, when Finder cannot be told, it is revealed in its parent.
 async function app(abs, pane) {
   if (!fs.statSync(abs, { throwIfNoEntry: false })?.isDirectory()) return canOpen(abs) ? system(abs) : editor(abs, pane);
   if (remoteLink(abs)) return NETWORK;
   const ok = WIN ? await detached(which('explorer.exe'), [abs], { windowsHide: false })
-    : await detached(MAC ? 'open' : 'xdg-open', [abs]);
+    : MAC ? await run('osascript', ['-e', 'on run argv\ntell application "Finder"\nactivate\n'
+      + 'make new Finder window to (POSIX file (item 1 of argv))\nend tell\nend run', fs.realpathSync(abs)]) !== null
+      || await detached('open', ['-R', abs])
+    : await detached('xdg-open', [abs]);
   return ok ? `Opening ${path.basename(abs)}` : 'File manager not found';
 }
 

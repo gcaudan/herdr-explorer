@@ -75,9 +75,22 @@ function create(root, settings) {
   // gone: the deleted files no longer on disk, which the tree shows only among the changed files.
   const git = { top: null, prefix: '', files: new Map(), dirs: new Map(), untracked: new Set(), ignored: new Set(), gone: [] };
   const cache = new Map(); // relative folder → sorted entries
+  // After a change on disk (stale), a folder read is read again only when its modification time moved: the
+  // compact folders look into every folder shown, collapsed ones included, at each build of the rows. A time too
+  // close to the reading (within the 2 s of the coarsest file systems) is not trusted.
+  const stamps = new Map(); // relative folder → its modification time when read, or null
+  let check = new Set(); // folders read, to compare with their modification time before reuse
+  const mtime = rel => fs.statSync(path.join(root(), rel), { throwIfNoEntry: false })?.mtimeMs ?? null;
 
   function readDir(rel) {
-    if (cache.has(rel)) return cache.get(rel);
+    if (cache.has(rel)) {
+      if (!check.has(rel)) return cache.get(rel);
+      check.delete(rel);
+      const was = stamps.get(rel);
+      if (was != null && mtime(rel) === was) return cache.get(rel);
+    }
+    const t = mtime(rel);
+    stamps.set(rel, t !== null && Date.now() - t > 2000 ? t : null);
     let entries = [];
     try {
       entries = fs.readdirSync(path.join(root(), rel), { withFileTypes: true })
@@ -216,7 +229,10 @@ function create(root, settings) {
     return out;
   }
 
-  return { git, cache, readDir, visible, isChanged, withGone, rows, applyStatus, decoration, hidden, changedFiles };
+  // A change on disk: the folders read are checked again before reuse.
+  function stale() { check = new Set(cache.keys()); }
+
+  return { git, cache, stale, readDir, visible, isChanged, withGone, rows, applyStatus, decoration, hidden, changedFiles };
 }
 
 module.exports = { FILTER_BUDGET, RANK, parentOf, holds, ENTRY_ORDER, NAME_ORDER, code, parseStatus, treeBefore, create };

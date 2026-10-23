@@ -49,39 +49,63 @@ async function unstageAll() {
   if (await op('Unstaging all', args)) pulse(items, 'changes');
 }
 
-// Changes section: worktree changes restored from the index, untracked files deleted. Staged section: index
-// and worktree back to HEAD (a file added since is deleted).
+// Folders left empty by a file gone go too.
+function prune(abs) {
+  for (let d = path.dirname(abs); d.startsWith(S.repo.top + path.sep); d = path.dirname(d)) {
+    try { fs.rmdirSync(d); } catch { break; }
+  }
+}
+// Files of the repository (paths from its top) to the trash; those it does not take are deleted for good once asked
+// again. Never a path that resolves outside the repository.
+async function toTrash(list) {
+  let failed = 0;
+  const left = [];
+  for (const rel of list) {
+    const abs = path.resolve(S.repo.top, rel);
+    if (!abs.startsWith(S.repo.top + path.sep)) { failed++; continue; }
+    if (await actions.trash(abs)) prune(abs); else left.push(abs);
+  }
+  if (failed) flash(`Could not delete ${files(failed)}`, true);
+  schedule();
+  if (!left.length) return;
+  confirm({ title: 'No trash: delete for good?', name: left.length === 1 ? path.relative(S.repo.top, left[0]) : files(left.length),
+    note: 'This cannot be undone.', action: 'Delete' }, () => {
+    let lost = 0;
+    for (const abs of left) {
+      try { fs.rmSync(abs, { force: true }); prune(abs); } catch { lost++; }
+    }
+    if (lost) flash(`Could not delete ${files(lost)}`, true);
+    schedule();
+  });
+}
+
+// Changes section: worktree changes restored from the index, untracked files to the trash. Staged section: index and
+// worktree back to HEAD, the files added since (all of them before the first commit) out of the index and to the
+// trash.
 function discard(items, sec) {
   if (!items.length) return;
   if (sec === 'conflicts') return flash('Merge conflict: edit the file and stage it, or abort the merge', true);
   const what = items.length === 1 ? items[0].path : files(items.length);
   if (sec === 'staged') {
-    const added = items.filter(i => i.code === 'A').length;
-    return confirm({ title: 'Discard all changes?', name: `${what}, staged and not`, where: added ? `deletes ${files(added)} added since HEAD` : '',
-      note: 'This cannot be undone.', action: 'Discard' }, async () => {
-      if (S.repo.hasHead) await op('Discarding', ['restore', '--staged', '--worktree', '--source=HEAD', ...fromFile], { input: nul(items) });
-      else await op('Discarding', ['rm', '-f', '-r', '-q', ...fromFile], { input: nul(items) });
+    const added = items.filter(i => !S.repo.hasHead || i.code === 'A'), others = items.filter(i => !added.includes(i));
+    return confirm({ title: 'Discard all changes?', name: `${what}, staged and not`,
+      where: added.length ? `moves ${files(added.length)} added since HEAD to the trash` : '',
+      note: others.length ? 'The changes cannot be recovered.' : '', action: 'Discard' }, async () => {
+      if (others.length && !await op('Discarding', ['restore', '--staged', '--worktree', '--source=HEAD', ...fromFile], { input: nul(others) })) return;
+      if (!added.length) return;
+      if (!await op('Discarding', ['rm', '--cached', '-r', '-q', ...fromFile], { input: nul(added) })) return;
+      await toTrash(added.map(i => i.path));
     });
   }
   const untracked = items.filter(i => i.untracked), tracked = items.filter(i => !i.untracked);
   const q = untracked.length
-    ? { title: `Delete ${files(untracked.length)} not tracked?`, name: untracked.length === 1 ? untracked[0].path : files(untracked.length),
-      where: tracked.length ? `and discard the changes in ${files(tracked.length)}` : '', action: 'Delete' }
+    ? { title: `Move ${files(untracked.length)} not tracked to the trash?`, name: untracked.length === 1 ? untracked[0].path : files(untracked.length),
+      where: tracked.length ? `and discard the changes in ${files(tracked.length)}` : '', action: 'Discard' }
     : { title: 'Discard the changes?', name: what, action: 'Discard' };
-  confirm({ ...q, note: 'This cannot be undone.' }, async () => {
+  confirm({ ...q, note: tracked.length ? 'The changes cannot be recovered.' : '' }, async () => {
     if (tracked.length) await op('Discarding', ['restore', '--worktree', ...fromFile], { input: nul(tracked) });
-    let failed = 0;
-    for (const it of untracked) {
-      const abs = path.resolve(S.repo.top, it.path);
-      if (!abs.startsWith(S.repo.top + path.sep)) { failed++; continue; }
-      try { fs.rmSync(abs, { force: true }); } catch { failed++; continue; }
-      // Folders left empty by the deletion go too.
-      for (let d = path.dirname(abs); d.startsWith(S.repo.top + path.sep); d = path.dirname(d)) {
-        try { fs.rmdirSync(d); } catch { break; }
-      }
-    }
-    if (failed) flash(`Could not delete ${files(failed)}`, true);
-    schedule();
+    if (untracked.length) await toTrash(untracked.map(i => i.path));
+    else schedule();
   });
 }
 

@@ -673,7 +673,7 @@ class Field {
     else if (name === 'left' || name === 'ctrl+b') this.cursor = Math.max(0, at - 1);
     else if (name === 'right' || name === 'ctrl+f') this.cursor = Math.min(chars.length, at + 1);
     else if (name === 'home' || name === 'ctrl+a') this.cursor = 0;
-    else if (name === 'end' || name === 'ctrl+e') this.cursor = chars.length;
+    else if (name === 'end') this.cursor = chars.length;
     else if (name === 'ctrl+u') { chars.splice(0, at); this.cursor = 0; }
     else if (name === 'ctrl+k') chars.splice(at);
     else if (name === 'ctrl+w' || name === 'alt+backspace') {

@@ -78,10 +78,31 @@ async function branches(cwd) {
 // A tree object of the repository's working tree as it is: tracked files with their changes, and untracked ones
 // that are not ignored, added to a copy of the index (the real one left alone), so that git rehashes only the files
 // changed since. Its blobs stay in the repository's objects until git gc prunes them. Returns the tree's id, or null.
-async function worktree(top, env) {
+// keep: the copy is kept in the git folder (herdr-explorer-index) for the next call, so that the untracked files too
+// are rehashed only once changed (the Diff view reloaded); copied again when the real index changes.
+async function worktree(top, env, keep = false) {
   const git = (args, extra = {}) => run(GIT, args, { cwd: top, env: { ...env, ...extra } });
   const index = (await git(['rev-parse', '--git-path', 'index']) || '').trim();
   if (!index) return null;
+  if (keep) {
+    const kept = path.resolve(top, (await git(['rev-parse', '--git-path', 'herdr-explorer-index']) || '').trim());
+    const st = fs.statSync(path.resolve(top, index), { throwIfNoEntry: false });
+    const from = st ? `${st.mtimeMs}:${st.size}` : 'none';
+    try {
+      if (fs.readFileSync(`${kept}.from`, 'utf8') !== from || !fs.existsSync(kept)) throw new Error('stale');
+    } catch {
+      try {
+        if (st) fs.copyFileSync(path.resolve(top, index), kept); else fs.rmSync(kept, { force: true });
+        fs.writeFileSync(`${kept}.from`, from);
+      } catch { return worktree(top, env); }
+    }
+    if (await git(['add', '-A', '--', '.'], { GIT_INDEX_FILE: kept }) !== null) {
+      const tree = (await git(['write-tree'], { GIT_INDEX_FILE: kept }) || '').trim();
+      if (tree) return tree;
+    }
+    // Another pane updating it at the same time (its lock taken): a copy of its own.
+    return worktree(top, env);
+  }
   let dir;
   try { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'herdr-explorer-index-')); } catch { return null; }
   const tmp = path.join(dir, 'index');
@@ -101,6 +122,20 @@ function readTurn(tab) {
   try { return JSON.parse(fs.readFileSync(tabFile('turn', tab), 'utf8')); } catch { return null; }
 }
 
+// Sets fields of the turn started at t, read again just before: the hooks of several events run at once, and a
+// write made from an older read would undo the other's (a tree taken back to null, an end lost). Read back after,
+// to write again if another hook wrote over it meanwhile. False when the turn is no longer that one.
+function updateTurn(tab, t, fields) {
+  for (let tries = 0; tries < 3; tries++) {
+    const now = readTurn(tab);
+    if (!now || now.t !== t) return false;
+    writeAtomic(tabFile('turn', tab), JSON.stringify({ ...now, ...fields }));
+    const back = readTurn(tab);
+    if (back && back.t === t && Object.keys(fields).every(k => back[k] === fields[k])) return true;
+  }
+  return false;
+}
+
 // An agent's status changed (the pane.agent_status_changed event): a new turn starts when it works again after
 // having been idle or done, or for an agent other than the last one; blocked or unknown in between keep the turn.
 // cwd: the pane's folder. Returns what was done, for the log.
@@ -108,7 +143,7 @@ async function agentStatus(tab, pane, status, cwd) {
   const turn = readTurn(tab);
   const mine = turn && turn.pane === pane;
   if (status !== 'working') {
-    if (mine && (status === 'idle' || status === 'done') && !turn.ended) writeAtomic(tabFile('turn', tab), JSON.stringify({ ...turn, ended: true }));
+    if (mine && (status === 'idle' || status === 'done') && !turn.ended) updateTurn(tab, turn.t, { ended: true });
     return 'kept';
   }
   if (mine && !turn.ended) return 'same turn';
@@ -117,12 +152,10 @@ async function agentStatus(tab, pane, status, cwd) {
   if (!top) return 'not a repository';
   // The turn is written at once, its tree once taken: the hooks of the events that follow, run while git hashes the
   // files, see the turn started (a working one keeps it, an idle one ends it), and the tree does not undo them.
-  const t = Date.now(), file = tabFile('turn', tab);
-  writeAtomic(file, JSON.stringify({ pane, top: path.resolve(top), tree: null, t, ended: false }));
+  const t = Date.now();
+  writeAtomic(tabFile('turn', tab), JSON.stringify({ pane, top: path.resolve(top), tree: null, t, ended: false }));
   const tree = await worktree(top, env);
-  const now = readTurn(tab);
-  if (!now || now.pane !== pane || now.t !== t) return 'snapshot dropped: a newer turn';
-  writeAtomic(file, JSON.stringify({ ...now, tree }));
+  if (!updateTurn(tab, t, { tree })) return 'snapshot dropped: a newer turn';
   return tree ? 'snapshot' : 'no snapshot';
 }
 

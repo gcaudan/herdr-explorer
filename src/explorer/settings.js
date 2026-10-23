@@ -77,7 +77,7 @@ module.exports = ctx => {
       { group: 'NEW TABS' },
       { label: 'Open automatically', help: 'Open the explorer in new tabs that have a single pane. Off: only with the toggle key (prefix+f with the installer).', ...onOff('autoOpen') },
       { label: 'Dock side', help: 'Where new explorers dock. An open explorer keeps its side.', ...choice('side', ['left', 'right']) },
-      { group: 'GENERAL' },
+      { group: 'ADVANCED' },
       { label: 'Key bindings', help: 'Change the explorer keys, saved in keys.json.',
         ...dialog(changedActions().length ? `${changedActions().length} changed` : 'default', () => openKeys()) },
       { label: 'Check for updates', help: 'Look for a newer release on GitHub, once a day.', ...onOff('updateCheck') },

@@ -301,16 +301,18 @@ async function collect({ cwd, file = '', base = 'head', scope = null, turn = nul
   if (kind === 'turn') {
     if (!turn || path.resolve(turn.top) !== path.resolve(top)) return { text: '', top, baseName, error: 'No agent turn recorded in this repository' };
     if (!turn.tree) return { text: '', top, baseName, error: 'The agent turn is still being recorded' };
-    const now = await require('./core/scope').worktree(top, env);
+    const now = await require('./core/scope').worktree(top, env, true);
     if (!now) return { text: '', top, baseName, error: 'Cannot read the working tree' };
     return { text: diff(turn.tree, now, ...target), top, baseName };
   }
   if (kind === 'rev') {
-    // a..b, a...b (from where they parted), or one commit: its own changes, against its first parent.
-    const m = /^(.+?)(\.\.\.?)(.+)$/.exec(scope.rev);
+    // a..b, a...b (from where they parted), or one commit: its own changes, against its first parent. A side left
+    // out is HEAD, as for git (main.., ..main).
+    const m = /^(.*?)(\.\.\.?)(.*)$/.exec(scope.rev);
     if (m) {
-      const [a, b] = [commit(m[1]), commit(m[3])];
-      if (!a || !b) return { text: '', top, baseName, error: `Unknown commit: ${!a ? m[1] : m[3]}` };
+      const [x, y] = [m[1] || 'HEAD', m[3] || 'HEAD'];
+      const [a, b] = [commit(x), commit(y)];
+      if (!a || !b) return { text: '', top, baseName, error: `Unknown commit: ${!a ? x : y}` };
       const start = m[2] === '...' ? git('merge-base', a, b).trim() : a;
       if (!start) return { text: '', top, baseName, error: 'No common commit' };
       return { text: diff(start, b, ...target), top, baseName };
@@ -351,7 +353,7 @@ function changesOf(res) {
 // The layout chosen with v, kept in the settings for the next diffs (source control and the preview included), by
 // width: one for narrow diffs (under SPLIT_MIN columns, as a preview beside the terminal) and one for wide ones (a
 // zoomed preview, the Changes pane), so that each keeps its own. diffLayout: { narrow, wide }, each 'inline' or
-// 'split', unset to choose by width; a single value (the settings view's, or older versions') holds for both until s
+// 'split', unset to choose by width; a single value (the settings view's, or older versions') holds for both until v
 // chooses one.
 const sizeOf = width => (width >= SPLIT_MIN ? 'wide' : 'narrow');
 function savedMode(width) {
@@ -612,14 +614,19 @@ function main() {
   }
   // s, u, D: the rows selected staged, unstaged or discarded (core/stage.js), with HEAD as the scope only (the others
   // show changes the index has nothing to do with); D asks first. The cursor then stays where it was.
-  let confirm = null; // { text, run } while D asks
+  let confirm = null; // { text, run, no } while D asks
   function edit(mode) {
     if (!parsed || !rows.length) return;
     if (scope.kind !== 'head') return say('Not with this scope: stage compared with HEAD (b)');
     const [from, to] = range(), sel = stage.picked(rows.slice(from, to + 1));
     const go = async () => {
       confirm = null;
-      say(await stage.apply(top, parsed, sel, mode).catch(() => `Cannot ${mode}`));
+      // Untracked files the trash did not take: deleted for good once asked again.
+      const noTrash = names => new Promise(resolve => {
+        confirm = { text: `No trash: delete ${names.length > 1 ? `${names.length} files` : names[0]} for good?`, run: () => resolve(true), no: () => resolve(false) };
+        draw();
+      });
+      say(await stage.apply(top, parsed, sel, mode, { noTrash }).catch(() => `Cannot ${mode}`));
       const d = await changes();
       if (d === null) return;
       parsed = d; cache = ''; stay = cur; readViewed(); draw();
@@ -670,9 +677,10 @@ function main() {
     if (note) return noteKey(k);
     if (prompt) return promptKey(k);
     if (confirm) {
-      const run = (k === 'y' || k === 'enter') && confirm.run;
+      const c = confirm, yes = k === 'y' || k === 'enter';
       confirm = null;
-      return run ? run() : draw();
+      if (!yes && c.no) c.no();
+      return yes ? c.run() : draw();
     }
     if (menu) {
       const r = menu.key(k, ui.size().H);
@@ -762,7 +770,8 @@ function main() {
       tab = t && t.me.tab_id;
       if (!tab) return;
       tabNotes = notes.current(tab);
-      notes.watch(tab, () => { tabNotes = notes.current(tab); draw(); });
+      // Placed again by the pane that saw a file change (or at a reload here): read as saved.
+      notes.watch(tab, () => { tabNotes = notes.read(tab); draw(); });
       Viewed.watch(tab, () => { readViewed(); draw(); });
       readViewed();
       // The tab's scope, and the one another pane chooses later.

@@ -239,15 +239,15 @@ function nextHunk(dir) {
   const i = dir > 0 ? list.findIndex((r, k) => k > at && r.hunk) : list.map((r, k) => (k < at && r.hunk ? k : -1)).filter(k => k >= 0).pop();
   if (i !== undefined && i >= 0) { state.top = i; state.hunk = list[i].h || null; state.rows = null; render(); }
 }
-// b: the menu of the scopes (Scope.items); a scope chosen holds for every pane of the tab (scope-<tab>.json).
+// b: the menu of the scopes (Scope.items); a scope chosen holds for every pane of the tab (scope-<tab>.json). The
+// one already chosen loads its changes again (a new agent turn, a branch moved), as in the Changes pane.
 function pickScope(s) {
   state.menu = null; state.revPrompt = null;
   if (!Scope.same(s, state.scope)) {
     state.scope = s;
     if (TAB) Scope.write(TAB, s);
-    return reloadScope();
   }
-  render();
+  reloadScope();
 }
 function reloadScope() {
   if (state.view !== 'diff') return render();
@@ -289,7 +289,12 @@ function editDiff(mode) {
   const picked = stage.picked(list.slice(a, b + 1));
   const go = async () => {
     state.select = null;
-    flash(await stage.apply(d.top, d.parsed, picked, mode).catch(() => `Cannot ${mode}`));
+    // Untracked files the trash did not take: deleted for good once asked again.
+    const noTrash = names => new Promise(resolve => ask({ title: 'No trash: delete for good?',
+      name: names.length > 1 ? `${names.length} files` : names[0], note: 'This cannot be undone.',
+      buttons: [{ key: 'd', label: 'Delete', tone: 'danger' }, { key: 'escape', label: 'Cancel' }],
+      on: { d: () => resolve(true), escape: () => { resolve(false); render(); } } }));
+    flash(await stage.apply(d.top, d.parsed, picked, mode, { noTrash }).catch(() => `Cannot ${mode}`));
     loadDiff(true);
   };
   if (mode !== 'discard') return go();
@@ -1651,15 +1656,15 @@ function noteKey(k) {
 }
 
 // The tab's notes on the shown file, read again when they change (taken or sent in another pane) and placed again
-// when the file does (notes.current).
-function readNotes() {
-  const all = notes.current(TAB), file = state.file && notes.real(state.file);
+// when the file does (notes.current, this file only: the pane showing another one places its own).
+function readNotes(place = true) {
+  const file = state.file && notes.real(state.file), all = place && file ? notes.current(TAB, file) : notes.read(TAB);
   state.noteCount = all.length;
   state.notes = all.filter(n => n.file === file);
 }
 function loadNotes() {
   const was = JSON.stringify(state.notes);
-  readNotes();
+  readNotes(false);
   if (JSON.stringify(state.notes) !== was) state.rows = null;
   render();
 }
