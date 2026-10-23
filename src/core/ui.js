@@ -812,6 +812,21 @@ function head(text, n) {
   return `${out}\x1b[0m${' '.repeat(Math.max(0, n - w))}`;
 }
 
+// A drawn line from column n (from 0), its colours kept: the part of a line right of something drawn over it. The
+// styles met before n are kept in front; a wide character cut by n leaves spaces.
+function tail(text, n) {
+  let pre = '', out = '', w = 0, prev;
+  for (const tok of text.match(/\x1b\[[0-9;?]*[A-Za-z]|[\s\S]/gu) || []) {
+    if (tok[0] === '\x1b') { if (w >= n) out += tok; else pre += tok; continue; }
+    const c = cols(tok, prev);
+    prev = tok;
+    if (w >= n) out += tok;
+    else if (w + c > n) out += ' '.repeat(w + c - n);
+    w += c;
+  }
+  return `${pre}${out}\x1b[0m`;
+}
+
 // A menu in a frame over a pane: items { label, run, key, value, danger }, or null for a rule. key:
 // the key that does the same outside the menu, dimmed after the label; value: [text, style] on the right, as in the
 // explorer's settings (onOff gives ● on / ○ off). at: the screen line (from 0) of its top border; right: its right
@@ -830,10 +845,13 @@ class Menu {
     const inner = this.inner = Math.min(W - 2 - (this.right ? 1 : this.left), want);
     // From its left column x (from 1): the frame takes inner + 2 columns after a space.
     const x = this.x = this.right ? Math.max(1, this.right - inner - 2) : this.left;
-    // Left of the frame, what the line showed; right of it, blank.
-    const rest = ' '.repeat(Math.max(0, W - x - inner - 2));
-    let pad = '';
-    const keep = i => { pad = x > 1 ? head(lines[i] || '', x - 1) : ''; };
+    // On both sides of the frame, what the line showed.
+    let pad = '', rest = '';
+    const keep = i => {
+      const l = lines[i] || line([], W);
+      pad = x > 1 ? head(l, x - 1) : '';
+      rest = tail(l, x + inner + 1);
+    };
     const border = (l, r, t, more) => `${pad}${line([[`${l}${t}${'─'.repeat(Math.max(0, inner - textWidth(t) - (more ? 2 : 0)))}${more ? more + '─' : ''}${r}`, edge]], inner + 2)}${rest}`;
     keep(this.at);
     lines[this.at] = border('╭', '╮', ` ${ellipsis(this.title, Math.max(1, inner - 4))} `, this.off > 0 && '▴');
@@ -886,6 +904,6 @@ class Menu {
 module.exports = {
   KITTY_QUERY, KITTY_OK,
   fg, bg, glyph, G, useGlyphs, C, GIT, useTheme, onTheme, themeName, settingTheme, backgroundOf, clean, cleanLine, cols, fit, textWidth, ellipsis, line, keys, keyAt, help, helpKey, helpMouse, wrap, empty, message, messageKind, messageTime, confirm, confirmKey, confirmMouse, ask, askKey, askMouse,
-  segWidth, segText, slice, split, mark, Scrollbar, segmented, switchStyle, onOff, Menu,
+  segWidth, segText, slice, split, mark, Scrollbar, segmented, switchStyle, onOff, Menu, head, tail,
   keyName, keyLabel, decode, printable, Field, screen, restart, size,
 };

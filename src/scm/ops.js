@@ -588,14 +588,17 @@ function openMenu(fromHeader) {
     items.push({ label: 'Create tag…', key: 't', run: () => newTag(c) }, { label: `Cherry-pick onto ${headName()}`, key: 'C', run: () => cherryPick(c) },
       { label: `Reset --hard ${headName()} here…`, danger: true, run: () => resetHard(c) }, null);
   }
-  items.push({ label: 'Merge a branch…', run: () => openPicker('merge') }, { label: 'Rebase onto a branch…', run: () => openPicker('rebase') },
+  // The picker of a branch to merge or rebase onto hangs where this menu was.
+  const anchor = () => ({ right: menu.x + menu.inner + 1, at: menu.at });
+  items.push({ label: 'Merge a branch…', run: () => openPicker('merge', anchor()) }, { label: 'Rebase onto a branch…', run: () => openPicker('rebase', anchor()) },
     { label: 'Create tag on HEAD…', key: 'T', run: () => newTag(null) }, null,
     { label: 'Fetch', key: 'f', run: fetch }, { label: 'Pull', key: 'L', run: pull }, { label: 'Push', key: 'P', run: push },
     { label: 'Force push (with lease)…', danger: true, run: forcePush }, null,
     { label: 'Undo last commit…', run: undoCommit }, { label: 'Reset --hard to HEAD…', danger: true, run: () => resetHard(null) });
   const { W, H } = ui.size(), y = frame.listY + S.cursor - S.top;
   const at = fromHeader || !row ? 1 : Math.max(1, Math.min(y + 1, H - 3 - items.length));
-  S.menu = new ui.Menu({ title, items, at, right: fromHeader ? W : 0 });
+  const menu = S.menu = new ui.Menu({ title, items, at, right: fromHeader ? W : 0 });
+  menu.header = !!fromHeader;
   draw();
 }
 

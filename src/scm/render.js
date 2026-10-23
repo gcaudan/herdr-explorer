@@ -7,9 +7,9 @@ const ui = require('../core/ui');
 const diffs = require('../diff');
 const icons = require('../core/icons');
 const { WIN, readSettings, writeSettings } = require('../core/exec');
-const { ROOT, C, fg, bg, BOLD, G, theme, SPLIT, VIEWS, shares, S, frame, late, wide, base, dirOf, flash, quit } = require('./context');
+const { ROOT, C, fg, bg, BOLD, G, theme, settings, SPLIT, VIEWS, shares, S, frame, late, wide, base, dirOf } = require('./context');
 const {
-  schedule, histName, renamed, allFiles, ongoing, continues, headName, openPicker, baseName, closeDiff, setView, toggleTree,
+  histName, renamed, allFiles, ongoing, continues, headName, openPicker, baseName, setView, toggleTree,
 } = require('./state');
 const { stage, unstage, discard, commit, abort, toggleAmend, generate, fetch, pull, push, newStash, openMenu } = require('./ops');
 
@@ -111,6 +111,7 @@ let KEY, DIM;
 ui.onTheme(() => { KEY = BOLD + fg(C.text); DIM = fg(C.dim); });
 const UNDERLINE = '\x1b[4m\x1b[58;2;55;148;255m'; // the active tab, underlined in blue where the terminal can
 const PRIMARY = bg([14, 99, 156]) + fg([255, 255, 255]) + BOLD; // the main button of the header and the commit box
+const LIT = () => bg(C.blue) + fg(C.canvas) + BOLD; // a button or the branch while its menu hangs under it
 // A pill: its colour on a shade of it, close to the theme's background.
 const shade = rgb => rgb.map((v, i) => Math.round(C.canvas[i] + (v - C.canvas[i]) * 0.25));
 const PILLS = { heads: () => C.green, remotes: () => C.blue, tags: () => C.yellow };
@@ -251,7 +252,10 @@ function header(W) {
     const x0 = ui.textWidth(left[0][0]) + 1;
     const label = ` ${G.branch} ${name} `;
     frame.hits.push({ y: 0, x0, x1: x0 + ui.textWidth(label), fn: openPicker });
-    left.push([' ', ''], [label, bg(shade(C.blue)) + fg(C.blue)]);
+    frame.pillX = x0;
+    // Lit while its picker hangs under it.
+    const open = S.picker && !S.picker.mode;
+    left.push([' ', ''], [label, open ? LIT() : bg(shade(C.blue)) + fg(C.blue)]);
     if (r.upstream) left.push(r.ahead || r.behind ? [`  ↑${r.ahead} ↓${r.behind}`, fg(C.yellow)] : ['  up to date', DIM]);
     else if (!r.hasHead) left.push(['  no commits yet', DIM]);
     else if (!r.detached) left.push(['  not published', DIM]);
@@ -259,10 +263,10 @@ function header(W) {
     const main = syncButton(r, short);
     if (main) btns.push(main);
     const fetchLabel = S.netOp === 'fetch' ? spinner() : '⇣';
-    btns.push([short ? fetchLabel : `${fetchLabel} Fetch`, fetch], ['⋯', () => openMenu(true)], ['↻', () => { flash('Refreshed'); schedule(); }]);
+    // The repository's menu (m), lit while it hangs under it.
+    btns.push([short ? fetchLabel : `${fetchLabel} Fetch`, fetch], [short ? '▾' : 'Actions ▾', () => openMenu(true), S.menu && S.menu.header ? LIT() : KEY]);
   }
-  btns.push(['✕', quit]);
-  return split(left, buttons(btns, 0, W, 0), W, C.header);
+  return split(left, buttons(btns, 0, W, 1), W, C.header);
 }
 
 function tabs(W) {
@@ -346,7 +350,7 @@ function hints() {
   if (S.diff && S.diff.back && (S.diff.focus || !wide())) return [['↑↓', 'scroll'], ['n N', 'hunks'], ['q', 'back to the comparison']];
   if (S.diff && (S.diff.focus || !wide())) return [['↑↓', 'scroll'], ['n N', 'hunks'], ['tab', 'list'], ['q', 'back']];
   if (!S.repo) return S.noGit ? [['q', 'quit']] : [['i', 'git init'], ['q', 'quit']];
-  const common = [['b', 'branch'], ['f', 'fetch'], ['P', 'push'], ['L', 'pull'], ['m', 'more'], ['q', 'quit']];
+  const common = [['b', 'branch'], ['f', 'fetch'], ['P', 'push'], ['L', 'pull'], ['m', 'actions'], ['q', 'quit']];
   if (S.view === 'changes') {
     return [['space', 'stage'], ['u', 'unstage'], ['d', 'discard'], ['c', commitKey], ...(ongoing() ? [['X', 'abort']] : []),
       ['⏎', wide() ? 'focus diff' : 'diff'], ['ctrl+g', '✧ Claude'], ...common];
@@ -382,48 +386,78 @@ function helpGroups() {
     ['m', 'more: merge, rebase, force push, undo commit, reset --hard'], ['r', 'refresh']]],
     ['Move', [['↑↓ j k', 'move'], ['← → h l', 'fold, unfold'], ['pgup pgdn', 'page'], ['ctrl+u/d', 'half page'], ['g G', 'first, last'],
       ['1-4', 'switch view']]],
-    ['Diff', [['tab', 'focus the diff'], ['n N', 'next, previous hunk'], ['v', 'inline, split (side by side)'], ['< >', 'narrower, wider list'], ['shift+← →', 'move the separator'],
+    ['Diff', [['tab', 'focus the diff'], [',', 'the view\'s options (or ⚙)'], ['n N', 'next, previous hunk'], ['v', 'inline, split (side by side)'],
+      ['w', 'wrap long lines'], ['← → h l', 'left, right (no wrap)'], ['< >', 'narrower, wider list'], ['shift+← →', 'move the separator'],
       ['q', 'back to the list']]],
     ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]]);
   return g;
 }
 
-// The diff area: a title row and the rows of diff.js, rendered for its width and cached.
+// The diff area: a title row and the rows of diff.js, rendered for its width and cached. Long lines wrap with the
+// Wrap lines setting (w, shared with the preview and the Changes pane), else they show from column d.left (← →), the
+// rows cut there made again when drawn (redo).
 function diffLines(width, height) {
   const d = S.diff;
   if (d.compare) return compareLines(d, width, height);
-  const mode = diffs.layoutOf(width);
+  const mode = diffs.layoutOf(width), wrap = !!settings.wrap;
+  const keyOf = w => `${w}:${mode}:${wrap}`;
   // While the separator is dragged, the rows laid out for the old width are cut or padded: laying out a long
   // diff again at each column would make the separator lag behind the mouse. The release lays it out.
   const layout = w => {
     if (S.resizing && d.rows && d.rows.length) return;
-    if (d.parsed && d.cache !== `${w}:${mode}`) { d.rows = diffs.render(d.parsed, w, mode, !!d.item); d.cache = `${w}:${mode}`; }
+    if (d.parsed && d.cache !== keyOf(w)) { d.rows = diffs.render(d.parsed, w, mode, !!d.item, { wrap }); d.cache = keyOf(w); }
   };
   const body = height - 1;
+  if (wrap) d.left = 0;
   // One column narrower when the scrollbar shows (a narrower layout never has fewer rows): kept while it does.
-  if (d.cache !== `${width - 1}:${mode}` || d.rows.length <= body) layout(width);
+  if (d.cache !== keyOf(width - 1) || d.rows.length <= body) layout(width);
   if ((d.rows || []).length > body) layout(width - 1);
   d.top = Math.max(0, Math.min(d.top, (d.rows || []).length - body));
   const bw = diffBar.set((d.rows || []).length, body, d.top);
   const counts = d.parsed ? [[`  +${d.parsed.add}`, fg(C.green)], [` −${d.parsed.del}`, fg(ui.GIT.D)]] : [];
-  // The layout switch as in the Changes pane, the active choice filled (clicks: see switchHits, d.switchAt).
-  const sw = ui.segmented([['inline', 'Inline'], ['split', 'Split']], mode);
-  const right = [...sw.segs, [wide() ? ' ' : '  ✕ ', fg(C.text)]];
-  d.switchAt = width - ui.segWidth(right); d.switchHits = sw.hits; d.width = width;
+  // ⚙, the view's options (,), as in the Changes pane and the preview's Diff view (clicks: see switchHits, d.switchAt).
+  const right = [[` ${ui.G.gear} `, fg(S.menu && S.menu.view ? C.text : C.dim)], [' ', '']];
+  d.switchAt = width - ui.segWidth(right); d.width = width;
   const lines = [split([[` ${d.title}`, BOLD], [d.tag ? `  ${d.tag}` : '', DIM], ...counts], right, width, d.focus ? C.select : C.header)];
   if (!d.parsed) lines.push(...ui.empty(width, body, 'Loading…'));
   else if (!d.rows.length) lines.push(...ui.empty(width, body, 'No changes'));
-  (d.rows || []).slice(d.top, d.top + body).forEach((r, k) => lines.push(ui.line(r.segs, width - bw, r.back) + diffBar.cell(k)));
+  (d.rows || []).slice(d.top, d.top + body).forEach((r, k) => lines.push(ui.line(d.left && r.redo ? r.redo(d.left) : r.segs, width - bw, r.back) + diffBar.cell(k)));
   while (lines.length < height) lines.push(ui.line([], width));
   return lines.slice(0, height);
 }
 
-// The diff's layout switch, its title row's Inline and Split, clickable; x: the diff area's first column.
+// The diff's ⚙ in its title row, clickable; x: the diff area's first column.
 function switchHits(x) {
   const d = S.diff;
   if (!d || d.compare || d.switchAt === undefined) return;
-  const set = mode => () => { if (diffs.layoutOf(d.width) !== mode) { diffs.saveMode(d.width, mode); draw(); } };
-  for (const h of d.switchHits) frame.hits.push({ y: 1, x0: x + d.switchAt + h.from, x1: x + d.switchAt + h.to + 1, fn: set(h.id) });
+  frame.hits.push({ y: 1, x0: x + d.switchAt, x1: x + d.switchAt + 3, fn: () => openDiffView() });
+}
+
+// The diff's options (⚙ or , in the diff), as in the preview's Diff view: each changes in place, the menu staying
+// open (keep).
+function switchLayout() {
+  const d = S.diff;
+  if (!d) return;
+  diffs.saveMode(d.width, diffs.layoutOf(d.width) === 'split' ? 'inline' : 'split');
+  draw();
+}
+function toggleWrap() {
+  settings.wrap = !settings.wrap;
+  if (S.diff) S.diff.left = 0;
+  writeSettings({ ...readSettings(), wrap: settings.wrap });
+  draw();
+}
+function openDiffView(sel = 0) {
+  const d = S.diff;
+  if (!d || d.compare) return;
+  const items = [
+    { label: 'Layout', key: 'v', value: [diffs.layoutOf(d.width), fg(C.blue)], keep: true, run: switchLayout },
+    { label: 'Wrap lines', key: 'w', value: ui.onOff(!!settings.wrap), keep: true, run: toggleWrap },
+  ];
+  S.menu = new ui.Menu({ title: 'View', items, at: 2, right: ui.size().W }); // under ⚙
+  S.menu.view = true; // reopened after a choice that keeps it
+  S.menu.sel = sel;
+  draw();
 }
 
 // A comparison in the diff area: its title row, then its rows (selected commit highlighted).
@@ -514,7 +548,6 @@ function draw() {
   } else if (S.diff && W < SPLIT) {
     lines.push(...diffLines(W, H - 2));
     switchHits(0);
-    frame.hits.push({ y: 1, x0: W - 3, x1: W, fn: closeDiff });
     frame.listW = 0;
   } else {
     // From SPLIT columns, the diff of the selection always shows on the right.
@@ -571,33 +604,43 @@ function syncCursor() {
 
 // --- branch picker
 
+// A menu in a frame, as wide as its branches (72 columns at most): the switch's hangs under the header's branch,
+// merge's and rebase's under the Actions menu that opened them (p.anchor, its right edge), shifted to stay on screen. The
+// lines keep what they showed on both sides of it.
 function drawPicker(lines, W, H) {
-  const p = S.picker;
-  const w = Math.min(W - 2, 72), h = Math.max(5, Math.min(H - 4, p.items.length + 4));
-  const x = Math.floor((W - w) / 2), y = 2, body = h - 4;
+  const p = S.picker, edge = DIM;
+  const title = p.mode === 'merge' ? `Merge into ${headName()}` : p.mode === 'rebase' ? `Rebase ${headName()} onto` : 'Switch branch';
+  const width = b => (b.create ? 3 + ui.textWidth(b.name) : 3 + ui.textWidth(`${b.name}  ${b.subject}`) + ui.textWidth(` ${b.date} `) + 1);
+  const inner = Math.min(W - 2, 70, Math.max(ui.textWidth(title) + 4, 30, ...p.items.map(width)));
+  const x = p.anchor ? Math.max(0, p.anchor.right - inner - 2) : Math.max(0, Math.min(frame.pillX || 0, W - inner - 2));
+  const y = p.anchor ? p.anchor.at : 1;
+  const h = Math.max(4, Math.min(H - 1 - y, p.items.length + 3)), body = h - 3;
   if (p.sel < p.top) p.top = p.sel;
   if (p.sel >= p.top + body) p.top = p.sel - body + 1;
-  p.box = { x, y, w, h, body };
+  p.box = { x, y, w: inner + 2, h, body };
+  while (lines.length < H - 1) lines.push(ui.line([], W));
   const box = [];
-  const title = p.mode === 'merge' ? ` Merge into ${headName()}` : p.mode === 'rebase' ? ` Rebase ${headName()} onto` : ' Switch branch';
-  box.push(ui.line([[title, BOLD], ['  (local, then remote)', DIM]], w, C.header));
-  box.push(ui.line([[` ${G.search} `, DIM], ...(p.typing ? p.field.segments(w - 4) : [[p.field.value || 'type / to filter', DIM]])], w, C.panel));
+  const head = ` ${ui.ellipsis(title, inner - 4)} `;
+  box.push(ui.line([['╭─', edge], [head, BOLD], [`${'─'.repeat(Math.max(0, inner - 1 - ui.textWidth(head)))}╮`, edge]], inner + 2));
+  const side = l => `${edge}│\x1b[0m${l}${edge}│\x1b[0m`;
+  box.push(side(ui.line([[` ${G.search} `, DIM], ...(p.typing ? p.field.segments(inner - 4) : [[p.field.value || 'type / to filter', DIM]])], inner, C.panel)));
   for (let i = p.top; i < p.top + body; i++) {
     const b = p.items[i];
-    if (!b) { box.push(ui.line([], w, C.menu)); continue; }
+    if (!b) { box.push(side(ui.line([], inner, C.menu))); continue; }
     const back = i === p.sel ? C.select : C.menu;
-    if (b.create && S.inline && S.inline.kind === 'branch') box.push(inlineRow(w, ' + ', C.menu));
-    else if (b.create) box.push(ui.line([[' + ', fg(C.green)], [b.name, fg(C.green)]], w, back));
+    if (b.create && S.inline && S.inline.kind === 'branch') box.push(side(inlineRow(inner, ' + ', C.menu)));
+    else if (b.create) box.push(side(ui.line([[' + ', fg(C.green)], [b.name, fg(C.green)]], inner, back)));
     else {
-      box.push(split([[b.current ? ' ● ' : '   ', fg(C.green)], [b.name, b.remote ? fg(C.purple) : b.current ? BOLD : ''],
-        [`  ${b.subject}`, DIM]], [[` ${b.date} `, DIM]], w, back));
+      box.push(side(split([[b.current ? ' ● ' : '   ', fg(C.green)], [b.name, b.remote ? fg(C.purple) : b.current ? BOLD : ''],
+        [`  ${b.subject}`, DIM]], [[` ${b.date} `, DIM]], inner, back)));
     }
   }
-  const count = p.items.filter(b => !b.create).length;
-  box.push(ui.line([[` ${count} branch${count === 1 ? '' : 'es'}`, DIM]], w, C.header));
-  box.push(ui.line([['─'.repeat(w), DIM]], w));
-  // Rows under the box are cleared on both sides: styled lines cannot be cut at a column.
-  box.slice(0, h).forEach((l, i) => { if (y + i < H - 1) lines[y + i] = ' '.repeat(x) + l + ' '.repeat(W - x - w); });
+  const count = p.items.filter(b => !b.create).length, foot = ` ${count} branch${count === 1 ? '' : 'es'} `;
+  box.push(ui.line([['╰─', edge], [foot, DIM], [`${'─'.repeat(Math.max(0, inner - 1 - ui.textWidth(foot)))}╯`, edge]], inner + 2));
+  box.forEach((l, i) => {
+    const old = lines[y + i] || ui.line([], W);
+    lines[y + i] = (x ? ui.head(old, x) : '') + l + ui.tail(old, x + inner + 2);
+  });
 }
 
 // What the row of a name typed above the list starts with, by kind (the branch's is in the picker).
@@ -611,4 +654,4 @@ function inlineRow(w, lead, back) {
     [' '.repeat(Math.max(1, w - ui.textWidth(lead) - fw - ui.textWidth(right))), ''], [right, DIM]], w, back);
 }
 
-module.exports = { draw, listBar, diffBar, resizeList };
+module.exports = { draw, listBar, diffBar, resizeList, openDiffView, switchLayout, toggleWrap };

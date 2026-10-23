@@ -95,6 +95,19 @@ test('a menu drawn on the right keeps what is left of it', () => {
   assert.strictEqual(menu.key('escape', 24), 'close');
 });
 
+test('tail keeps the colours before its column and spaces a cut wide character', () => {
+  const row = ui.line([['abcdef', ui.fg(ui.C.red)], ['界ghij', '\x1b[1m']], 20);
+  assert.strictEqual(plain(ui.tail(row, 7)), ' ghij        ');
+  assert.ok(ui.tail(row, 7).startsWith(`${ui.fg(ui.C.red)}\x1b[0m\x1b[1m`));
+  assert.strictEqual(ui.textWidth(plain(ui.head(row, 4) + ui.tail(row, 4))), 20);
+});
+
+test('a menu drawn in the middle keeps what is right of it', () => {
+  const lines = ['', ui.line([['abcdefghijklmnopqrstuvwxyz', '']], 26), ui.line([['abcdefghijklmnopqrstuvwxyz', '']], 26), ui.line([['abcdefghijklmnopqrstuvwxyz', '']], 26)];
+  new ui.Menu({ title: 'M', items: [{ label: 'A' }], at: 1, left: 4 }).draw(lines, 26, 24);
+  assert.deepStrictEqual(lines.slice(1).map(plain), ['abc╭ M ──╮klmnopqrstuvwxyz', 'abc│ A   │klmnopqrstuvwxyz', 'abc╰─────╯klmnopqrstuvwxyz']);
+});
+
 test('a menu item with a key and no value keeps its whole label', () => {
   const plain = s => s.replace(/\x1b\[[0-9;]*m/g, '');
   const lines = ['', '', ''];

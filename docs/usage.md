@@ -319,8 +319,8 @@ Header: with several tabs, the tabs (the current one bold on a lighter backgroun
 details when they fit; with one, the file path relative to the root, then details (lines, size, image format and size; in the Diff view, the
 added and removed lines). On the right:
 
-- in the Diff view, what the changes are compared with, dimmed: `vs HEAD`, `vs main base`, `vs last turn`, `vs abc123`
-  or `vs feature` ([diff scope](#diff-scope); the rest shows in the content itself);
+- in the Diff view, what the changes are compared with, as in the Changes pane: `HEAD`, `main base`, `last turn`,
+  `abc123` or `vs feature` ([diff scope](#diff-scope); the rest shows in the content itself); a click opens `b`'s menu;
 - the **File · Diff** switch, the active choice filled: a click on the other one switches ([Diff view](#diff-view));
 - `⚙` (or `,`, as the explorer's settings), which opens the **View** menu of the view's options, as the explorer's settings show them: a choice
   in blue, or `● on` / `○ off`. **Markdown** (rendered or raw, `m`), **Wrap lines** (`w`) and **Line numbers** (`L`)
@@ -462,8 +462,9 @@ Every match is highlighted, the current one brighter, also in wrapped lines and 
 
 `d` (or **File · Diff** in the header) shows the file's git changes in place of the file, as the Changes pane does:
 compared with HEAD, staged and unstaged together, an untracked file in full, a deleted one as removed lines. The
-header shows the added and removed line counts and what they are compared with; the View menu (`⚙`, `,`) chooses the
-**Layout**, inline or split (side by side, `v`), and what to **Compare with** (the [diff scope](#diff-scope), `b`). The layout is saved for every
+header shows the added and removed line counts and what they are compared with (a click opens `b`'s menu); the View
+menu (`⚙`, `,`) chooses the **Layout**, inline or split (side by side, `v`), **Wrap lines** (`w`) and what to **Compare
+with** (the [diff scope](#diff-scope), `b`). The layout is saved for every
 diff, one for narrow diffs and one for wide ones: inline beside the terminal and split once zoomed (`z`), for
 example. `n` and `N` jump
 between hunks, `a` notes the lines of the rows selected with the mouse (or of the top row), and it reloads with the
@@ -588,8 +589,8 @@ upstream (*up to date*, `↑ahead ↓behind`, *not published*), then the ongoing
 CHERRY-PICKING, REVERTING, APPLYING, BISECTING). On the right, one main button shows what the branch needs:
 **↑ Publish branch** without an upstream, **↓ Pull 3** when it is behind, **↑ Push 2** when it is ahead,
 **⇅ ↓1 ↑2** when it has diverged (pulling then says to merge or rebase in the terminal), nothing when up to date;
-its icon spins while it runs. Then come **⇣ Fetch**, **↻** (refresh) and **✕** (close), with shorter labels below
-80 columns.
+its icon spins while it runs. Then come **⇣ Fetch** and **Actions ▾**, the repository's menu (`m`), with shorter
+labels below 80 columns. A menu hangs under the button that opened it, which stays lit while it is open.
 
 Tabs: **Changes**, **History**, **Stashes**, **Refs** (keys `1` to `4`), the active one underlined, Changes and
 Stashes with their count. In Changes, a **List · Tree** switch, the active choice filled, changes the layout.
@@ -640,7 +641,7 @@ help of the view (see [Key help](#key-help--or-f1)).
 | `f` / `L` / `P`            | fetch / pull (fast-forward only) / push. The first push publishes the branch on `origin` (else the first remote) and sets its upstream |
 | `ctrl+p` / `ctrl+f`        | Go to file / Search in files, in the repository                 |
 | `b`                        | branch picker                                                   |
-| `m` `menu` `shift+f10`     | the [menu](#git-operations) of the selected branch or commit and of the repository (also `⋯` in the header) |
+| `m` `menu` `shift+f10`     | the [menu](#git-operations) of the selected branch or commit and of the repository (also **Actions ▾** in the header) |
 | `T`                        | create a tag on HEAD                                            |
 | `c`                        | type the commit message (from any view: back to Changes)        |
 | `ctrl+g`                   | write the message with Claude (same)                            |
@@ -690,7 +691,7 @@ show the branch's changes too; a branch merely selected leaves the scope alone.
 
 ### Git operations
 
-`m` (or the menu key, `shift+f10`, the header's `⋯`) opens a menu: first the actions of the selected branch (Refs)
+`m` (or the menu key, `shift+f10`, the header's **Actions ▾**) opens a menu: first the actions of the selected branch (Refs)
 or commit (History), then those of the repository, each with its key when it has one:
 
 | Item | What it runs |
@@ -715,10 +716,15 @@ writes with Claude, and `alt+a` toggles amend.
 
 **Diff focused**: `up` `k` / `down` `j` `enter`, `pageup` / `pagedown` `space`, `home` `g` / `end` `G`,
 `ctrl+u` / `ctrl+d` scroll. `n`/`N` jump between hunks, `v` switches inline/side by side (side by side by default
-from 120 columns; kept for the next diffs), and `tab`, `q` or `escape` go back to the list (below 100 columns, `q` and `escape` close
-the diff).
+from 120 columns; kept for the next diffs), `w` wraps long lines (the **Wrap lines** setting, shared with the preview
+and the Changes pane), and without wrap `left` `h` / `right` `l` scroll them 8 columns sideways, the line numbers
+staying. `,` or the `⚙` of the diff's title opens its **View** menu, **Layout** (`v`) and **Wrap lines** (`w`), each
+changed in place as in the preview. `tab`, `q` or `escape` go back to the list (below 100 columns, `q` and `escape`
+close the diff).
 
-**Branch picker** (`b`): starts with *New branch…*, then local and remote branches. `up`/`down`
+**Branch picker** (`b`): a menu that hangs under the header's branch (highlighted while it is open),
+as wide as its branches; the picker of *Merge a branch…* and *Rebase onto a branch…* hangs where the menu
+was. It starts with *New branch…*, then local and remote branches. `up`/`down`
 (`k`/`j`), `pageup`/`pagedown`, `enter` switch, `n` new branch, `D` delete (not a remote or the
 current branch), `q` closes. `/` or any other character starts the filter, where `k` `j` `n` `D` `q`
 are typed; `escape` clears the filter, then closes. A new branch is named on the picker's first row,
@@ -745,10 +751,10 @@ Opened by **View changes** on a folder (a file's changes show in the preview's [
 folder, it compares tracked files with HEAD (before the first commit, with nothing), each file's staged changes
 apart from its unstaged ones (two sections, the file's name followed by `staged` or `unstaged`), and shows
 untracked files in full, up to 200, as unstaged. The
-header shows the name and the added and removed line counts, then two switches, the active choice filled, which a
-click changes: what the changes are compared with (the [diff scope](#diff-scope); a click opens `b`'s menu) and **Inline · Split** (`v`, saved for the
-diffs of that width, see [`diffLayout`](configuration.md#settings)); the footer, the keys and how far down the diff
-is. The diff is inline, or
+header shows the name and the added and removed line counts, then what the changes are compared with (the
+[diff scope](#diff-scope); a click opens `b`'s menu) and `⚙` (or `,`), the **View** menu as in the preview's Diff view:
+**Layout** (`v`, saved for the diffs of that width, see [`diffLayout`](configuration.md#settings)), **Wrap lines** (`w`)
+and **Compare with** (`b`), each changed in place; the footer, the keys and how far down the diff is. The diff is inline, or
 side by side from 120 columns, with changed words highlighted.
 
 A cursor, a blue bar in the first column, moves over the rows: `up` `k` / `down` `j` `enter`, `pageup` /
@@ -766,6 +772,7 @@ drag with the mouse, select the rows from the cursor's; `escape` keeps the curso
 | `]` / `[`  | next / previous file not viewed, its name at the top                                           |
 | `y`        | copy the cursor's line as `path:line`, relative to the pane's folder                           |
 | `b`        | what to compare with: the menu of the [diff scopes](#diff-scope)                               |
+| `,`        | the View menu (or `⚙`): Layout, Wrap lines, Compare with                                        |
 | `v`        | inline / side by side (kept for the next diffs)                                                |
 | `w`        | wrap long lines, on each side in a side by side diff (the preview's **Wrap lines** setting)    |
 | `left` `h` / `right` `l` | without wrap, scroll the lines 8 columns sideways, the line numbers staying         |

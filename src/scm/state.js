@@ -284,10 +284,12 @@ function filterPicker() {
 }
 
 // mode: 'merge' or 'rebase' (the menu's Merge a branch… and Rebase onto a branch…), else the picker switches.
-function openPicker(mode) {
+// anchor: { right, at }, the right edge (column from 0, excluded) and top line of the menu that opened it, where it
+// hangs; else under the header's branch.
+function openPicker(mode, anchor) {
   if (!S.repo) return;
   const first = mode ? 0 : 1;
-  S.picker = { mode, field: new ui.Field(), typing: false, sel: first, top: 0, all: [], items: [] };
+  S.picker = { mode, anchor: mode ? anchor : null, field: new ui.Field(), typing: false, sel: first, top: 0, all: [], items: [] };
   filterPicker();
   draw();
   loadPicker().then(() => { if (S.picker && !S.inline) { S.picker.sel = Math.max(0, Math.min(first, S.picker.items.length - 1)); draw(); } });
@@ -342,6 +344,7 @@ async function showDiff(key, title, args, item, tag) {
   const res = await git(args);
   if (S.diff !== d) return;
   d.parsed = diffs.parse(res.out);
+  d.widest = undefined;
   d.cache = '';
   draw();
 }
