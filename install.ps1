@@ -3,7 +3,11 @@
 $ErrorActionPreference = 'Stop'
 if (-not (Get-Command herdr -ErrorAction SilentlyContinue)) { Write-Host "herdr not found"; exit 1 }
 
+# Windows PowerShell 5.1 turns a native command's stderr into an error, which 'Stop' would make fatal: not linked
+# yet, or no server to reload, is fine.
+$ErrorActionPreference = 'Continue'
 herdr plugin unlink gcaudan.explorer 2>$null | Out-Null
+$ErrorActionPreference = 'Stop'
 herdr plugin link $PSScriptRoot | Out-Null
 Write-Host "  plugin  $PSScriptRoot"
 
@@ -25,7 +29,9 @@ description = "$description"
 Bind 'prefix+f' 'toggle' 'file explorer'
 Bind 'prefix+a' 'search' 'go to file'
 Bind 'prefix+d' 'scm' 'source control'
+$ErrorActionPreference = 'Continue'
 herdr server reload-config 2>$null | Out-Null
+$ErrorActionPreference = 'Stop'
 
 # The herdr-preview skill, for Claude Code (~\.claude present): a junction to the clone (no admin right needed), so
 # that updates reach it. A folder of that name that is not a link is yours, and left alone.
