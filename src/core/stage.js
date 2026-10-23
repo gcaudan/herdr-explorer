@@ -83,6 +83,13 @@ function patchOf({ f, keep, all }, mode) {
       if (sign !== '+') oldN++;
       if (sign !== '-') newN++;
     }
+    // A removed or added line keeps its marker only while it ends its side: in reverse, an added line not chosen
+    // turns context after the removed one, which then gets its newline back.
+    for (let i = lines.length - 1; i > 0; i--) {
+      const s = lines[i - 1][0];
+      if (lines[i][0] !== '\\' || s === ' ' || s === '\\') continue;
+      if (lines.slice(i + 1).some(l => l[0] === ' ' || l[0] === s)) lines.splice(i, 1);
+    }
     // A line without newline at the end of the file ends both sides when it is context: with lines kept after it
     // (an added line, the old last line turned context), it is the removed line, then the same line added with its
     // newline, as git would write it.
@@ -138,14 +145,20 @@ async function apply(top, parsed, sel, mode) {
   if (!list.length) return mode === 'unstage' ? 'Nothing staged selected' : 'Nothing unstaged selected';
   const env = { ...await gitEnv(top), GIT_LITERAL_PATHSPECS: '1' };
   const fail = res => `Cannot ${mode}: ${(res.err || res.out).trim().split('\n')[0] || 'git failed'}`;
-  const patches = [], whole = [], ita = [], remove = [];
+  const patches = [], whole = [], ita = [], remove = [], unindex = [];
+  // Added files the index already has (git add -N by the user): their entry is kept on a failure, and goes with the
+  // file on a discard.
+  const added = list.filter(t => t.f.sec === 'unstaged' && t.f.status === 'added').map(t => t.f.to || t.f.from);
+  const indexed = new Set(added.length ? (await git(top, env, ['ls-files', '-z', '--', ...added])).out.split('\0') : []);
   for (const t of list) {
     const name = t.f.to || t.f.from;
     // An untracked file: added whole with git add, removed whole from the disk; part of it goes through the index.
     const untracked = t.f.sec === 'unstaged' && t.f.status === 'added';
-    if (!t.f.hunks.length || (untracked && t.all)) (untracked && mode === 'discard' ? remove : whole).push(name);
-    else {
-      if (untracked && mode === 'stage') ita.push(name);
+    if (!t.f.hunks.length || (untracked && t.all)) {
+      (untracked && mode === 'discard' ? remove : whole).push(name);
+      if (untracked && mode === 'discard' && indexed.has(name)) unindex.push(name);
+    } else {
+      if (untracked && mode === 'stage' && !indexed.has(name)) ita.push(name);
       patches.push(patchOf(t, mode));
     }
   }
@@ -169,6 +182,10 @@ async function apply(top, parsed, sel, mode) {
   }
   for (const name of remove) {
     try { fs.rmSync(path.join(top, name)); } catch (e) { return `Cannot discard: ${e.code || e.message}`; }
+  }
+  if (unindex.length) {
+    const res = await git(top, env, ['rm', '--cached', '-q', '--', ...unindex]);
+    if (res.code !== 0) return fail(res);
   }
   return `${VERB[mode]} ${summary(list)}`;
 }

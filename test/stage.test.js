@@ -80,6 +80,24 @@ test('part of an untracked file is staged; a whole one is discarded from the dis
   assert.ok(!fs.existsSync(path.join(r.top, 'gone.txt')));
 });
 
+test('a file added with git add -N keeps its entry when staged in part, loses it when discarded', async () => {
+  const r = repo({ 'a.txt': 'x\n' });
+  if (!r) return;
+  r.write('n.txt', 'one\ntwo\n');
+  r.git('add', '-N', 'n.txt');
+  let parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+  let list = diff.render(parsed, 200, 'inline');
+  assert.strictEqual(await stage.apply(r.top, parsed, pick(list, 'unstaged', '+ one'), 'stage'), 'Staged 1 line');
+  assert.strictEqual(r.git('show', ':n.txt').stdout, 'one\n');
+  r.git('reset', '-q', '--', 'n.txt');
+  r.git('add', '-N', 'n.txt');
+  parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+  list = diff.render(parsed, 200, 'inline');
+  const file = list.filter(x => x.f && x.f.to === 'n.txt' && x.f.sec === 'unstaged');
+  assert.strictEqual(await stage.apply(r.top, parsed, stage.picked(file), 'discard'), 'Discarded 2 lines');
+  assert.strictEqual(r.git('status', '--porcelain').stdout, '');
+});
+
 test('lines ending with CRLF keep it in the patch', async () => {
   const r = repo({ 'w.txt': 'a\r\nb\r\nc\r\n' });
   if (!r) return;
@@ -106,6 +124,20 @@ test('a line added after a last line without newline is staged on a line of its 
   const sel = { files: new Set(), hunks: new Set(), lines: new Set([c]) };
   assert.strictEqual(await stage.apply(r.top, parsed, sel, 'stage'), 'Staged 1 line');
   assert.strictEqual(r.git('show', ':f.txt').stdout, 'a\nb\nc\n');
+});
+
+test('a last line without newline discarded alone comes back before the line added', async () => {
+  for (const now of ['a\nnew\n', 'a\nnew']) {
+    const r = repo({ 'f.txt': 'a\nold' });
+    if (!r) return;
+    r.write('f.txt', now);
+    const parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+    const f = parsed.files.find(x => x.sec === 'unstaged');
+    const old = f.hunks[0].lines.find(l => l[0] === '-' && l[1] === 'old');
+    const sel = { files: new Set(), hunks: new Set(), lines: new Set([old]) };
+    assert.strictEqual(await stage.apply(r.top, parsed, sel, 'discard'), 'Discarded 1 line');
+    assert.strictEqual(r.read('f.txt'), `a\nold\n${now.slice(2)}`);
+  }
 });
 
 test('part of a staged deletion goes back to the index', async () => {
