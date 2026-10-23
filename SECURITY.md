@@ -142,6 +142,9 @@ contains spaces or control characters is refused; the others pass after `--end-o
 - **`peek.js`** shows, in the preview, a regular file the caller names: anything the user can read, as the preview
   already does, never a folder or a device. An agent calling it changes what you see, not what is run. It writes the
   request file of the state folder only, whose path it reads from `state-dir` in the plugin's config folder.
+- **Ctrl-clicked links**: herdr hands the plugin only `file://` hyperlinks. A link naming another host than this
+  machine (or `localhost`) is refused, since on Windows it would reach a network share; the file then shows as with
+  `peek.js`, never run.
 
 ## Commit messages from Claude
 

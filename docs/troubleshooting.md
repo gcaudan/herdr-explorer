@@ -143,6 +143,8 @@
 | `The terminal did not answer the Kitty graphics query: the image may not show` | (Preview) pixels were asked for in a terminal that did not answer. See [Sharp images](usage.md#sharp-images) |
 | `Find works in the file: d`                      | (Preview) `/` in the Diff view. `d` goes back to the file                          |
 | `No default branch: compared with HEAD`          | (Diff view, Changes pane) no `origin/HEAD`, `main` or `master`, or no common commit with it |
+| `No agent turn recorded in this repository`      | (Diff view, Changes pane) scope **Last agent turn**, but the tab's agent has not started working in this repository since the plugin was installed. `b` picks another scope |
+| `The agent turn is still being recorded`         | (Diff view, Changes pane) the agent just started working and the snapshot of the working tree is not written yet: in a moment, `r` in the preview, or **Last agent turn** chosen again with `b` in the Changes pane |
 | `Cannot edit this file here (e: in the terminal)` | (Preview) editing needs a text or Markdown file in the File view                  |
 | `Cannot edit: over 2 MB` / `binary file` / `not UTF-8` / `<code>` | (Preview) see [Limits](#limits)                                   |
 | `Mixed line endings: saved as LF` / `CRLF`       | (Preview) the file mixes LF and CRLF: saving writes the more frequent one everywhere (LF on a tie) |

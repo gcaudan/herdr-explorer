@@ -142,20 +142,24 @@ repository is the clone's `origin` when it is on GitHub, so a fork follows its o
 `gcaudan/herdr-explorer`. A failed check waits for the next day. Only a version made of digits and dots (a leading `v` stripped) is kept, in
 `update.json`. Turn it off with **Settings → Check for updates**.
 
-When a newer release exists, a green `↑` shows in the explorer header, and **↑ X.Y.Z available** under the
-settings title (`u` to update). It is compared with the version on disk, so it goes away once you have pulled, and
-a clone ahead of the release (development) shows nothing. The `↑` is also hidden while an update runs or a header
-message shows.
+When a newer release exists, a green `↑ X.Y.Z` pill shows in the explorer header, and **↑ X.Y.Z available** under
+the settings title (`u` to update). It is compared with the version on disk, so it goes away once you have pulled, and
+a clone ahead of the release (development) shows nothing. The pill is also hidden while an update runs, and for a
+version you skipped (see below), which shows dimmed in the settings only, as **X.Y.Z skipped** (`u` to update
+anyway). The check keeps the release's changes (the bullets of its notes) and its page, for the dialog below.
 
 ### Updating
 
-Click the `↑`, or press `u` (or click **↑ X.Y.Z available**) in the settings.
+Click the pill, or press `u` (or click **↑ X.Y.Z available**) in the settings.
 
 - **Installed from the plugin index**: herdr owns that checkout. Without asking, the explorer copies
   `herdr plugin update gcaudan.explorer` instead (*Update command copied*): run it in a terminal.
-- **Linked git clone**: after confirmation, the explorer runs `git pull --ff-only --no-rebase` in the
+- **Linked git clone**: a dialog shows the installed and new versions and the release's first three changes, with
+  four answers: `y` **Update**, `r` **Notes** (the release page in the browser), `s` **Skip version** (no pill until
+  the next release), and `n` **Later**, selected at first. **Update** runs `git pull --ff-only --no-rebase` in the
   plugin folder. *Updating…* shows in the header while it runs, which can take up to a minute. Success messages
-  are `Already up to date` and `Updated to X.Y.Z`.
+  are `Already up to date` and `Updated to X.Y.Z`; after an update done here, the restarted explorers show
+  *Updated to X.Y.Z* and, for half a minute, a blue `✓ what's new` pill that opens the release notes.
 
 ### Refusals
 
@@ -181,9 +185,10 @@ copied `git -C "<plugin folder>" pull --ff-only --no-rebase` to the clipboard, t
 ### Finishing an update
 
 When the update changed `herdr-plugin.toml` (beyond its version) or an install script, the message is
-`Updated to X.Y.Z: rerun the installer`: every explorer header shows a yellow `!`, and the settings
-**! Finish the update** (`u`). Either one copies the installer command (`"<plugin folder>/install.sh"`, or
-`powershell -ExecutionPolicy Bypass -File …` on Windows), and once it is copied the `!` goes away; run it in a terminal. The plugin
+`Updated to X.Y.Z: rerun the installer`: every explorer header shows a yellow `! finish` pill, and the settings
+**! Finish the update** (`u`). Either one opens a dialog that shows the installer command (`"<plugin folder>/install.sh"`,
+or `powershell -ExecutionPolicy Bypass -File …` on Windows); `c` **Copy command** copies it, and the pill then goes
+away in every explorer; run it in a terminal. The plugin
 never reruns the installer itself, since it unlinks and relinks the plugin while its panes run.
 
 ### Pane restart

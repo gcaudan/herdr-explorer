@@ -24,7 +24,7 @@ module.exports = ctx => {
     return { value: [shown(values[now]), fg(C.blue)], change: dir => setSetting(name, values[(now + dir + values.length) % values.length]) };
   };
   const dialog = (value, open) => ({ value: [value, fg(C.blue)], change: dir => (dir > 0 ? open() : null) });
-  // diffLayout: one value, or { narrow, wide } once s chose a layout in a diff (diff.js saveMode), read again as other
+  // diffLayout: one value, or { narrow, wide } once v chose a layout in a diff (diff.js saveMode), read again as other
   // panes write it. Both shown when they differ; a choice here holds for both.
   const diffLayout = () => {
     const values = ['', 'split', 'inline'], m = readSettings().diffLayout;
@@ -65,7 +65,7 @@ module.exports = ctx => {
       { label: 'Preview follows selection', help: 'A file selected by a click or the arrow keys shows in the preview: arrow keys only update an open one.', ...onOff('singleClick') },
       { group: 'NEXT TABS' },
       { label: 'Dock side', help: 'Where new explorers dock. An open explorer keeps its side.', ...choice('side', ['left', 'right']) },
-      { label: 'Open automatically', help: 'Open the explorer in new tabs that have a single pane. Off: only with the toggle key (prefix+f by default).', ...onOff('autoOpen') },
+      { label: 'Open automatically', help: 'Open the explorer in new tabs that have a single pane. Off: only with the toggle key (prefix+f with the installer).', ...onOff('autoOpen') },
       { group: 'PREVIEW' },
       { label: 'Wrap lines', help: 'Wrap long lines in the preview (w). Other previews at their next opening.', ...onOff('wrap') },
       { label: 'Line numbers', help: 'Line numbers in the preview (L). Other previews at their next opening.', ...onOff('lineNumbers') },

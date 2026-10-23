@@ -95,7 +95,7 @@ saved, and the explorer's width falls back to 32 columns.
 | `background`           | `dark` or `light`: the terminal's background, as the last pane opened on the auto theme read it |
 | `expanded.json`        | expanded folders, per tree root                                                              |
 | `search.json`          | last Go to file query, search query, include/exclude globs, case/word/regex options          |
-| `update.json`          | `checkedAt`, the `latest` release found with its changes (`notes`) and page (`url`), the version skipped (`skip`), the last update done (`updated`: `{ from, to, t }`), and `finish` (an update the installer must finish) |
+| `update.json`          | `checkedAt`, the repository checked (`repo`), the `latest` release found with its changes (`notes`) and page (`url`), the version skipped (`skip`), the last update done (`updated`: `{ from, to, t }`), and `finish` (an update the installer must finish) |
 | `resizing`             | the pane resizing itself, for half a second: the panes it moves let it put them back         |
 | `update.lock`          | present while an update runs; taken over after 2 minutes (a killed update)                   |
 | `panes/<pane id>.json` | per pane: the explorer's tab folder (`home`) and tree root (`root`), the preview's `file`, `root`, `line` and tabs (`tabs`) |
