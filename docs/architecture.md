@@ -88,7 +88,7 @@ Inputs reach a pane through `--env` variables of `herdr plugin pane open`:
 | `EXPLORER_KEEP` | preview | `1`: the file opens in a kept tab rather than the temporary one |
 | `EXPLORER_TABS` | preview | the tabs to restore, `{ list, current }` (JSON), after a herdr restart or a self-restart |
 | `EXPLORER_TAB` | preview | the tab id, which names its request file |
-| `EXPLORER_SEEN` | preview | the last request handled, across a restart |
+| `EXPLORER_SEEN` | preview | the last request handled, across a restart; on opening, the request file as it was, to take the requests made while the preview starts |
 | `EXPLORER_PANE` | search, scm, diff | the pane to act from (the diff's notes go to the terminal next to it) |
 | `EXPLORER_HISTORY` | scm | a file whose history to show, in place of `EXPLORER_FILE` |
 | `EXPLORER_MODE`, `EXPLORER_QUERY` | search | `files` or `content`, and the first query |

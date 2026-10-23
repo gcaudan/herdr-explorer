@@ -625,7 +625,7 @@ function render() {
   const bw = scrollbar.set(list.length, bodyH, state.top);
   // Nothing to show (an error, an image that cannot be drawn, an empty file): why, centred, and what to do.
   const none = list.length === 1 && list[0].empty ? list[0] : state.view === 'file' && (state.kind === 'text' || state.kind === 'markdown') && state.text === ''
-    ? { empty: 'Empty file', pairs: [['i', 'edit here'], ['e', 'edit'], ['q', 'close']] } : null;
+    ? { empty: 'Empty file', pairs: [['i', 'edit here'], ['e', 'editor'], ['q', 'close']] } : null;
   if (none) lines.push(...ui.empty(W, bodyH, none.empty, none.pairs));
   for (let i = state.top; !none && i < Math.min(list.length, state.top + bodyH); i++) {
     const r = list[i];
@@ -690,7 +690,7 @@ const HELP = [
     ['ctrl+f', 'find: ⏎ ↓ next, ↑ previous'], ['ctrl+r', 'replace: ⏎ one, alt+a all, tab to the other field'], ['ctrl+g', 'go to line'],
     ['ctrl+c ctrl+x ctrl+v', 'copy, cut, paste'], ['ctrl+a', 'select all'], ['shift+arrows', 'select (or drag)'], ['ctrl+← →', 'word'],
     ['tab shift+tab', 'indent, outdent'], ['alt+r alt+k', 'file changed on disk: reload, keep yours']]],
-  ['File', [['e', 'edit in the terminal'], ['o', 'open in the editor (media: in its app)'], ['O', 'open with the system'], ['y', 'copy path'],
+  ['File', [['e', 'open in the editor'], ['E', 'edit in the terminal'], ['o', 'open in its app (else the editor)'], ['y', 'copy path'],
     ['Y', 'copy relative path, with the selected lines'], ['H', 'history of the file']]],
   ['Review', [['a', 'note on the selected lines (or the file)'], ['tab', 'kind of note, while typing'], ['A', 'send the notes to the agent'],
     ['C', 'copy the notes'], ['U', 'remove the last note']]],
@@ -893,7 +893,7 @@ function footer(W) {
   const keys = ui.keys(state.view === 'diff'
     ? [...send, ...marks, ...(state.marks.length > 1 ? [] : [['n N', 'hunks']]), ['a', 'note'], ['z', 'zoom'], ['q', 'close'], ['?', 'keys']]
     : state.kind === 'image' ? [...send, ['p', sharp() ? 'pixelated' : 'sharp'], ['o', 'open'], ['y', 'copy path'], ['q', 'close'], ['?', 'keys']]
-      : [...send, ...marks, ['/', 'find'], ['a', 'note'], ['e', 'edit'], ['o', 'editor'], ['z', 'zoom'], ['q', 'close'], ['?', 'keys']], W - pos.length - 1);
+      : [...send, ...marks, ['/', 'find'], ['a', 'note'], ['e', 'editor'], ['o', 'app'], ['z', 'zoom'], ['q', 'close'], ['?', 'keys']], W - pos.length - 1);
   state.hints = keys;
   return ui.line([...keys, [pos.padStart(Math.max(0, W - ui.segWidth(keys))), fg(C.dim)]], W, C.header);
 }
@@ -1571,9 +1571,9 @@ function key(k) {
     case 'p': return toggleSharp();
     case 'm': if (state.kind === 'markdown') { state.raw = !state.raw; state.rows = null; state.top = 0; render(); } return;
     case 'r': return load(true);
-    case 'e': keepTab(); return act(actions.edit(state.file, PANE));
-    case 'o': keepTab(); return act(actions.open(state.file, PANE));
-    case 'O': return act(actions.system(state.file));
+    case 'e': keepTab(); return act(actions.editor(state.file, PANE));
+    case 'E': keepTab(); return act(actions.edit(state.file, PANE));
+    case 'o': keepTab(); return act(actions.app(state.file, PANE));
     case 'i': return startEdit();
     case 'y': return act(actions.copy(state.file));
     case 'Y': return copyReference();
@@ -1810,8 +1810,9 @@ function savedTabs() {
 const saveFile = () => writePaneState(PANE, { file: state.file, root: state.root, line: state.line, tabs: savedTabs() });
 
 // The explorer and the search ask for another file through the request file.
-// After a restart on new code, seen is the previous process's: a request made while the pane changed hands is still
-// taken, once the file it showed is loaded.
+// After a restart on new code, seen is the previous process's, and on opening that of the request file when the explorer
+// opened the pane: a request made while the pane changed hands or started is still taken, once the file it showed is
+// loaded.
 const handed = process.env.EXPLORER_SEEN !== undefined;
 let seen = +process.env.EXPLORER_SEEN || 0;
 if (REQUEST) {

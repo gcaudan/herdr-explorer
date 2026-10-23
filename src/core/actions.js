@@ -117,6 +117,16 @@ function open(abs, pane) {
   return SYSTEM.has(ext(abs)) ? system(abs) : editor(abs, pane);
 }
 
+// o: a folder in the file manager, a file of the types allowed (documents, media, text formats) in its system
+// application, any other in the editor, so that a script is never handed to the system, which could run it.
+async function app(abs, pane) {
+  if (!fs.statSync(abs, { throwIfNoEntry: false })?.isDirectory()) return canOpen(abs) ? system(abs) : editor(abs, pane);
+  if (remoteLink(abs)) return NETWORK;
+  const ok = WIN ? await detached(which('explorer.exe'), [abs], { windowsHide: false })
+    : await detached(MAC ? 'open' : 'xdg-open', [abs]);
+  return ok ? `Opening ${path.basename(abs)}` : 'File manager not found';
+}
+
 async function reveal(abs) {
   if (remoteLink(abs)) return NETWORK;
   let ok;
@@ -391,7 +401,15 @@ const requestFile = tab => tabFile('preview', tab);
 // and columns a to b included, 0 for whole lines). view: 'diff' to show the file's git changes rather than the file.
 // keep: in a kept tab of the preview, rather than the temporary one that the next file replaces (a double-click, Enter).
 // tabs: the tabs of a new preview, { list, current }, as the preview saved them (restore after a herdr restart).
-async function preview(abs, root, pane, line = 0, focus = false, open = true, { marks = [], view = 'file', keep = false, tabs = null } = {}) {
+// One at a time: clicks made while a preview opens would each find none in the tab and open their own.
+let previewing = Promise.resolve();
+function preview(...args) {
+  const next = previewing.then(() => showPreview(...args));
+  previewing = next.catch(() => { });
+  return next;
+}
+
+async function showPreview(abs, root, pane, line = 0, focus = false, open = true, { marks = [], view = 'file', keep = false, tabs = null } = {}) {
   const tab = pane && await tabOf(pane);
   if (!tab) return 'Cannot preview';
   const request = { file: abs, root, line, marks, view, keep, t: Date.now() };
@@ -404,8 +422,11 @@ async function preview(abs, root, pane, line = 0, focus = false, open = true, { 
   }
   if (!open) return null;
   const target = (await terminalOf(pane))[0] || pane;
+  // seen: the request file as it is now, so that a request written while the preview starts is still taken.
+  let seen = 0;
+  try { seen = fs.statSync(requestFile(tab.me.tab_id)).mtimeMs; } catch { }
   const res = await openPane('preview', 'split', target, {
-    EXPLORER_FILE: abs, EXPLORER_ROOT: root, EXPLORER_LINE: line, EXPLORER_TAB: tab.me.tab_id,
+    EXPLORER_FILE: abs, EXPLORER_ROOT: root, EXPLORER_LINE: line, EXPLORER_TAB: tab.me.tab_id, EXPLORER_SEEN: seen,
     ...(marks.length ? { EXPLORER_MARKS: JSON.stringify(marks) } : {}), ...(view === 'diff' ? { EXPLORER_VIEW: 'diff' } : {}),
     ...(keep ? { EXPLORER_KEEP: '1' } : {}), ...(tabs ? { EXPLORER_TABS: JSON.stringify(tabs) } : {}),
   }, ['--direction', 'right', focus ? '--focus' : '--no-focus']);
@@ -559,7 +580,7 @@ async function discard(abs, root) {
 }
 
 module.exports = {
-  open, editor, system, web, canOpen, canPreview, reveal, copy, clipboard, insert, type, relativeTo, diff, preview, edit, search, scm, requestFile, tabOf, terminalOf,
+  open, app, editor, system, web, canOpen, canPreview, reveal, copy, clipboard, insert, type, relativeTo, diff, preview, edit, search, scm, requestFile, tabOf, terminalOf,
   layoutOf, sideSplit, setWidth, widthKeeper,
   create, rename, duplicate, trash, remove, stage, unstage, discard, REVEAL: WIN ? 'Reveal in Explorer' : 'Open folder',
 };
