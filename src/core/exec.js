@@ -210,7 +210,7 @@ function writePaneState(pane, data) {
 }
 
 // What a tab keeps in the state folder, one file per tab and kind: <kind>-<tab id>.json. The kinds: the review notes
-// (notes.js), the preview's requests (actions.js), the diff scope and the agent's last turn (scope.js). Read from the environment at each call, as peek.js sets the state
+// (notes.js), the preview's requests (actions.js), the diff scope and the agent's last turn (scope.js), the files viewed (viewed.js). Read from the environment at each call, as peek.js sets the state
 // folder after loading this module.
 const TAB_KINDS = ['notes', 'preview', 'scope', 'turn', 'viewed'];
 const tabName = (kind, tab) => `${kind}-${String(tab).replace(/[^\w-]/g, '_')}.json`;
@@ -228,12 +228,14 @@ function staleState(dir, names, panes, tabs, livePanes) {
 }
 
 // Removes the state of the tabs and panes that no longer exist (staleState); the ids of those that do, from herdr.
+// A file written in the last 10 s stays: a tab opened after herdr gave its list may already have one.
 function sweepState(tabs, livePanes) {
   const dir = process.env.HERDR_PLUGIN_STATE_DIR;
   if (!dir) return;
   const list = d => { try { return fs.readdirSync(d); } catch { return []; } };
+  const since = Date.now() - 10 * 1000;
   for (const f of staleState(dir, list(dir), list(path.join(dir, 'panes')), tabs, livePanes)) {
-    try { fs.rmSync(f, { recursive: true, force: true }); } catch { }
+    try { if (fs.statSync(f).mtimeMs < since) fs.rmSync(f, { recursive: true, force: true }); } catch { }
   }
 }
 

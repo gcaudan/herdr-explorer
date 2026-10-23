@@ -41,7 +41,7 @@ function watch(tab, fn) {
 
 const same = (a, b) => a.kind === b.kind && (a.rev || '') === (b.rev || '');
 
-// The scope in a few words, for a header: HEAD, main (merge-base), last turn, abc123, a..b, vs feature.
+// The scope in a few words, for a header: HEAD, main base, last turn, abc123, a..b, vs feature.
 function label(scope, baseName = '') {
   switch (scope.kind) {
     case 'branch': return `${baseName || 'main'} base`;
@@ -82,13 +82,15 @@ async function worktree(top, env) {
   const git = (args, extra = {}) => run(GIT, args, { cwd: top, env: { ...env, ...extra } });
   const index = (await git(['rev-parse', '--git-path', 'index']) || '').trim();
   if (!index) return null;
-  const tmp = path.join(os.tmpdir(), `herdr-explorer-index-${process.pid}-${Date.now()}`);
+  let dir;
+  try { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'herdr-explorer-index-')); } catch { return null; }
+  const tmp = path.join(dir, 'index');
   try {
     try { fs.copyFileSync(path.resolve(top, index), tmp); } catch { }
     if (await git(['add', '-A', '--', '.'], { GIT_INDEX_FILE: tmp }) === null) return null;
     return (await git(['write-tree'], { GIT_INDEX_FILE: tmp }) || '').trim() || null;
   } finally {
-    try { fs.unlinkSync(tmp); } catch { }
+    try { fs.rmSync(dir, { recursive: true, force: true }); } catch { }
   }
 }
 

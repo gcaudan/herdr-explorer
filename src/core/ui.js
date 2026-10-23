@@ -730,9 +730,11 @@ function screen(handlers, { mouse = true, motion = false, focus = true } = {}) {
   // A long paste arrives in several reads: held until its end marker, so that its text never reads as keys. So does
   // a terminal's answer (OSC, APC) cut between reads, for 100 ms at most: alt+] or alt+_ alone then reads as keys.
   let pending = '', flush = null;
+  // Only after the last paste: its text may hold an ESC ] of its own.
   const unended = data => {
+    const pasted = data.lastIndexOf('\x1b[201~');
     const start = Math.max(data.lastIndexOf('\x1b]'), data.lastIndexOf('\x1b_'));
-    return start >= 0 && !/\x07|\x1b\\/.test(data.slice(start + 2)) ? start : -1;
+    return start > pasted && !/\x07|\x1b\\/.test(data.slice(start + 2)) ? start : -1;
   };
   process.stdin.on('data', data => {
     clearTimeout(flush);
