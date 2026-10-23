@@ -348,7 +348,7 @@ function changesOf(res) {
   return { pre, files, add: a.add + b.add, del: a.del + b.del };
 }
 
-// The layout chosen with s, kept in the settings for the next diffs (source control and the preview included), by
+// The layout chosen with v, kept in the settings for the next diffs (source control and the preview included), by
 // width: one for narrow diffs (under SPLIT_MIN columns, as a preview beside the terminal) and one for wide ones (a
 // zoomed preview, the Changes pane), so that each keeps its own. diffLayout: { narrow, wide }, each 'inline' or
 // 'split', unset to choose by width; a single value (the settings view's, or older versions') holds for both until s
@@ -630,12 +630,14 @@ function main() {
     confirm = { text: `Discard ${n} from the working tree?`, run: go };
     draw();
   }
-  // A scope chosen here, for every pane of the tab.
+  // A scope chosen here, for every pane of the tab; the current one chosen again reloads it (an agent turn being
+  // recorded, for instance).
   function pick(s) {
     menu = null; prompt = null;
-    if (Scope.same(s, scope)) return draw();
-    scope = s;
-    if (tab) Scope.write(tab, s);
+    if (!Scope.same(s, scope)) {
+      scope = s;
+      if (tab) Scope.write(tab, s);
+    }
     reload();
   }
   // menu: b's (ui.Menu), or the branches of Branch…; prompt: { field } while a commit or range is typed.
