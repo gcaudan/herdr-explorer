@@ -26,8 +26,9 @@ function readVersion() {
 // The version of the code this process runs.
 const CURRENT = readVersion();
 
-// { checkedAt, latest, notes, url, skip, updated, finish } in the state folder: the latest release, its changes and
-// page, the version the user skipped, the last update done here ({ from, to, t }), and the one to finish.
+// { checkedAt, repo, latest, notes, url, skip, updated, finish } in the state folder: the repository checked, the
+// latest release, its changes and page, the version the user skipped, the last update done here ({ from, to, t }),
+// and the one to finish.
 const FILE = process.env.HERDR_PLUGIN_STATE_DIR ? path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'update.json') : null;
 function read() {
   try { return JSON.parse(fs.readFileSync(FILE, 'utf8')) || {}; } catch { return {}; }
@@ -39,7 +40,7 @@ const write = data => writeAtomic(FILE, JSON.stringify(data));
 function releaseNotes(body) {
   return String(body || '').split(/\r?\n/).map(l => /^\s*[*-]\s+(.+)$/.exec(l)).filter(Boolean)
     .map(([, t]) => t.replace(/\s*\(\[[^\]]*\]\([^)]*\)\)/g, '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-      .replace(/\*\*([^*]+)\*\*/g, '$1').replace(/[`*_]/g, '').replace(/[\x00-\x1f\x7f]/g, ' ').trim())
+      .replace(/\*\*([^*]+)\*\*/g, '$1').replace(/[`*_]/g, '').replace(/[\x00-\x1f\x7f-\x9f]/g, ' ').trim())
     .filter(Boolean).slice(0, 20);
 }
 
@@ -71,8 +72,9 @@ async function check() {
   const saved = read();
   if (Date.now() - (saved.checkedAt || 0) < DAY) return;
   const origin = await git(['config', '--get', 'remote.origin.url']);
-  const release = await latestRelease((origin.ok && repoOf(origin.out)) || REPO);
-  write({ ...read(), checkedAt: Date.now(), ...(release || {}) });
+  const repo = (origin.ok && repoOf(origin.out)) || REPO;
+  const release = await latestRelease(repo);
+  write({ ...read(), checkedAt: Date.now(), repo, ...(release || {}) });
 }
 
 // The newer release found, or null: compared with the version on disk, so that it goes away once pulled. A clone
@@ -86,10 +88,11 @@ const available = () => { const r = newerRelease(); return r && !r.skipped ? r.l
 const skipped = () => { const r = newerRelease(); return r && r.skipped ? r.latest : null; };
 // The user skips a version: no ↑ for it, in every explorer; the next one shows again.
 const skip = version => write({ ...read(), skip: version });
-// The latest release's changes and page: { notes, url }.
+// The latest release's changes and page: { notes, url }; without a page, the releases of the repository checked.
 function release() {
-  const { notes, url } = FILE ? read() : {};
-  return { notes: Array.isArray(notes) ? notes.map(String) : [], url: typeof url === 'string' ? url : `https://github.com/${REPO}/releases` };
+  const { notes, url, repo } = FILE ? read() : {};
+  const releases = `https://github.com/${(typeof repo === 'string' && repoOf(`https://github.com/${repo}`)) || REPO}/releases`;
+  return { notes: Array.isArray(notes) ? notes.map(String) : [], url: typeof url === 'string' ? url : releases };
 }
 // The update done here that this code comes from, for a minute after it: { from, to }, else null.
 function justUpdated() {
