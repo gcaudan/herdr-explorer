@@ -9,7 +9,8 @@
 // input.js (keys and mouse). This file starts the pane.
 'use strict';
 const ui = require('./core/ui');
-const { S, late, wide } = require('./scm/context');
+const { S, late, wide, settings } = require('./scm/context');
+const { readSettings, SETTINGS_FILE } = require('./core/exec');
 const { schedule, refresh, filterPicker } = require('./scm/state');
 const { draw } = require('./scm/render');
 const { select, follow, key, mouse } = require('./scm/input');
@@ -31,3 +32,9 @@ late.paint = ui.screen({
 draw();
 refresh();
 setInterval(schedule, 5000); // the working tree is not watched: edits show up within 5 s
+// Wrap lines and the diff layout chosen in another pane (the preview, the Changes pane): shown at once.
+if (SETTINGS_FILE) require('fs').watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
+  const wrap = !!readSettings().wrap;
+  if (wrap !== !!settings.wrap) { settings.wrap = wrap; if (S.diff) S.diff.left = 0; }
+  if (S.diff) draw();
+});

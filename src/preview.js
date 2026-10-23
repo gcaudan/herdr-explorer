@@ -702,17 +702,16 @@ const HELP = [
   ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
 ];
 
-// What the Diff view compares with: the tab's scope, vs HEAD, vs main base, vs last turn, vs abc123, vs feature.
+// The default branch the Diff view's merge base is with, for the scope's label.
 const branchName = () => (state.diff && state.diff.baseName) || 'main';
-const base = () => (state.scope.kind === 'ref' ? Scope.label(state.scope) : `vs ${Scope.label(state.scope, branchName())}`);
 const diffMode = W => (diffs ? diffs.layoutOf(Math.max(10, W - 2)) : 'inline');
 
-// What the Diff view compares with, in the header (vs HEAD, vs main): the only option that does not show in the
-// content itself (⚙ changes it).
-const reminder = () => (state.view === 'diff' ? base() : '');
+// What the Diff view compares with, in the header, as in the Changes pane (HEAD, main base, vs feature): the only
+// option that does not show in the content itself; a click opens b's menu, as ⚙ › Compare with.
+const reminder = () => (state.view === 'diff' ? Scope.label(state.scope, branchName()) : '');
 
 // Header: the tabs on the left, or with a single tab, the file's path; then the details; on the right, what the Diff
-// view compares with (dimmed), the File · Diff switch and ⚙, which opens the view's options (,). A narrow pane drops
+// view compares with (clickable), the File · Diff switch and ⚙, which opens the view's options (,). A narrow pane drops
 // the reminder, then the switch, then the details, then the tabs out of reach of the one shown (tabStrip).
 // state.chips: the clickable parts, { id, from, to, tab } in columns from 1.
 function header(W) {
@@ -721,11 +720,11 @@ function header(W) {
   const sw = diffs && state.file ? ui.segmented([['file', 'File'], ['diff', 'Diff']], state.view) : null;
   let note = reminder();
   const gear = 3; // the glyph and the cell after it, which a Nerd Font glyph often spills over
-  const room = () => W - gear - (sw ? sw.width + 1 : 0) - (note ? ui.textWidth(note) + 2 : 0);
+  const room = () => W - gear - (sw ? sw.width + 1 : 0) - (note ? ui.textWidth(note) + 3 : 0);
   const nameRoom = Math.min(20, ui.textWidth(` ${one ? name : path.basename(state.file)} ×  `));
   if (note && room() < nameRoom) note = '';
   const showSwitch = sw && room() >= nameRoom;
-  const right = (note ? ui.textWidth(note) + 2 : 0) + (showSwitch ? sw.width + 1 : 0) + gear;
+  const right = (note ? ui.textWidth(note) + 3 : 0) + (showSwitch ? sw.width + 1 : 0) + gear;
   state.chips = [];
   let segs, lw;
   if (one) {
@@ -745,7 +744,12 @@ function header(W) {
   const iw = ui.textWidth(info);
   segs.push([info, fg(C.dim)], [' '.repeat(Math.max(0, W - right - lw - iw)), '']);
   let x = W - right + 1;
-  if (note) { segs.push([`${note}  `, fg(C.dim)]); x += ui.textWidth(note) + 2; }
+  if (note) {
+    const chip = ui.segmented([['scope', note]], 'scope');
+    segs.push(...chip.segs, [' ', '']);
+    state.chips.push({ id: 'scope', from: x, to: x + chip.width - 1 });
+    x += chip.width + 1;
+  }
   if (showSwitch) {
     segs.push(...sw.segs, [' ', '']);
     for (const h of sw.hits) state.chips.push({ id: h.id, from: x + h.from, to: x + h.to });
@@ -1724,6 +1728,7 @@ function headerMouse(m) {
     return showTab(chip.tab);
   }
   if (chip.id === 'menu') return openMenu();
+  if (chip.id === 'scope') return openScopes();
   if (chip.id !== state.view) toggleView();
 }
 
@@ -1801,11 +1806,16 @@ function widen(cols) {
 keeper.check();
 
 // The Images setting changed in the explorer's settings, or by a click in another preview: the image drawn again
-// as it says, p's choice forgotten.
+// as it says, p's choice forgotten. Wrap lines and the diff layout chosen in another pane (another preview, the
+// Changes pane, source control): shown at once.
+let layoutSeen = JSON.stringify(readSettings().diffLayout);
 if (SETTINGS_FILE) fs.watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
-  const images = readSettings().images;
-  if (images === settings.images) return;
-  settings.images = images;
+  const saved = readSettings(), layout = JSON.stringify(saved.diffLayout);
+  if (!!saved.wrap !== !!settings.wrap) { settings.wrap = !!saved.wrap; state.left = 0; state.rows = null; render(); }
+  else if (layout !== layoutSeen && state.view === 'diff') { state.rows = null; render(); }
+  layoutSeen = layout;
+  if (saved.images === settings.images) return;
+  settings.images = saved.images;
   state.sharp = null; state.rows = null;
   render();
 });

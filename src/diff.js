@@ -8,7 +8,7 @@
 const path = require('path');
 const { spawnSync } = require('child_process');
 const ui = require('./core/ui');
-const { GIT, gitEnv, readSettings, writeSettings } = require('./core/exec');
+const { GIT, gitEnv, readSettings, writeSettings, SETTINGS_FILE } = require('./core/exec');
 
 const MAX_UNTRACKED = 200;
 const MAX_ROWS = 200000; // beyond, a huge diff would take seconds to lay out at every resize
@@ -475,12 +475,12 @@ function main() {
     if (rows.length > body) layout(W - 2, m);
     top0 = Math.max(0, Math.min(top0, rows.length - body));
     const bw = scrollbar.set(rows.length, body, top0);
-    // Header: the name and the counts, then the scope (a click opens b's menu) and the layout switch, the active
-    // choice filled (clickable), the scope left out when they do not fit.
+    // Header: the name and the counts, then the scope (a click opens b's menu) and ⚙, which opens the view's options
+    // (,), as in the preview's Diff view; the scope left out when they do not fit.
     const counts = parsed ? [[` +${parsed.add}`, GREEN], [` −${parsed.del}`, RED]] : [];
     const head = [[` ${title()}`, '\x1b[1m'], ...counts];
-    const switches = [ui.segmented([['scope', Scope.label(scope, baseName)]], 'scope'),
-      ui.segmented([['inline', 'Inline'], ['split', 'Split']], m)];
+    const gear = { segs: [[` ${ui.G.gear} `, ui.fg(menu ? ui.C.text : ui.C.dim)]], width: 3, hits: [{ id: 'menu', from: 0, to: 2 }] };
+    const switches = [ui.segmented([['scope', Scope.label(scope, baseName)]], 'scope'), gear];
     const width = () => switches.reduce((w, s) => w + s.width + 1, 0);
     while (switches.length && W - ui.segWidth(head) - width() < 1) switches.shift();
     chips = [];
@@ -543,7 +543,7 @@ function main() {
   let help = null, hints = [], chips = [];
   const HELP = [
     ['Move', [['↑↓ j k', 'line'], ['pgup pgdn', 'page'], ['space', 'page down'], ['ctrl+u/d', 'half page'], ['g G', 'top, bottom']]],
-    ['Diff', [['n N', 'next, previous hunk'], ['v', 'inline, split (side by side)'], ['w', 'wrap long lines'], ['← → h l', 'left, right (no wrap)'],
+    ['Diff', [[',', 'the view\'s options (or ⚙)'], ['n N', 'next, previous hunk'], ['v', 'inline, split (side by side)'], ['w', 'wrap long lines'], ['← → h l', 'left, right (no wrap)'],
       ['b', 'compare with: HEAD, merge base, last agent turn, a commit or range, a branch']]],
     ['Stage (HEAD)', [['shift+↑↓ J K', 'select lines'], ['s', 'stage the line, hunk (@@ row) or file (name row)'],
       ['u', 'unstage it'], ['D', 'discard it from the working tree']]],
@@ -683,6 +683,28 @@ function main() {
   }
   // menu: b's (ui.Menu), or the branches of Branch…; prompt: { field } while a commit or range is typed.
   let menu = null, prompt = null;
+  // The view's options (⚙ or ,), as in the preview's Diff view: each changes in place, the menu staying open.
+  function openView(sel = 0) {
+    const W = ui.size().W, choice = text => [text, CYAN];
+    menu = new ui.Menu({ title: 'View', at: 1, right: W, items: [
+      { label: 'Layout', key: 'v', value: choice(layoutOf(W)), keep: true, run: switchLayout },
+      { label: 'Wrap lines', key: 'w', value: ui.onOff(wrap), keep: true, run: toggleWrap },
+      { label: 'Compare with', key: 'b', value: choice(Scope.label(scope, baseName)), run: openScopes },
+    ] });
+    menu.sel = sel;
+    draw();
+  }
+  // A choice of a menu, by key or click: run; the view's options shown again with the new values, unless closed.
+  function menuChoice(r) {
+    if (r === 'close') { menu = null; return draw(); }
+    if (!r || !r.run) return draw();
+    const sel = menu.sel;
+    menu = null;
+    r.run();
+    if (r.keep) openView(sel);
+  }
+  function switchLayout() { const W = ui.size().W; saveMode(W, layoutOf(W) === 'split' ? 'inline' : 'split'); draw(); }
+  function toggleWrap() { wrap = !wrap; left = 0; writeSettings({ ...readSettings(), wrap }); draw(); }
   function openScopes() {
     menu = new ui.Menu({ title: 'Compare with', items: Scope.items(scope, baseName, pick, ask), at: 1, right: ui.size().W });
     draw();
@@ -716,12 +738,7 @@ function main() {
       if (!yes && c.no) c.no();
       return yes ? c.run() : draw();
     }
-    if (menu) {
-      const r = menu.key(k, ui.size().H);
-      if (r === 'close') { menu = null; return draw(); }
-      if (r && r.run) return r.run();
-      return draw();
-    }
+    if (menu) return menuChoice(menu.key(k, ui.size().H));
     if (k === 'ctrl+c') process.exit(0);
     if (help) { if (!ui.helpKey(k, help)) help = null; return draw(); }
     if (k === '?' || k === 'f1') { help = { top: 0, find: null }; draw(); }
@@ -741,12 +758,13 @@ function main() {
     else if (k === 'end' || k === 'G') { move(rows.length); top0 = rows.length; draw(); }
     else if (k === 'n') jump(1);
     else if (k === 'N') jump(-1);
-    else if (k === 'v') { const W = ui.size().W; saveMode(W, layoutOf(W) === 'split' ? 'inline' : 'split'); draw(); }
+    else if (k === 'v') switchLayout();
+    else if (k === ',') openView();
     else if (k === 's') edit('stage');
     else if (k === 'u') edit('unstage');
     else if (k === 'D') edit('discard');
     else if (k === 'b') openScopes();
-    else if (k === 'w') { wrap = !wrap; left = 0; writeSettings({ ...readSettings(), wrap }); draw(); }
+    else if (k === 'w') toggleWrap();
     else if (k === 'left' || k === 'h') { if (!wrap && left) { left = Math.max(0, left - 8); draw(); } }
     else if (k === 'right' || k === 'l') { if (!wrap && left + 8 < widest()) { left += 8; draw(); } }
     else if (k === 'a') startNote();
@@ -764,18 +782,13 @@ function main() {
     paste(text) { const f = prompt ? prompt.field : note && note.field; if (f) { f.insert(text); draw(); } },
     mouse(m) {
       if (help) { if (!ui.helpMouse(m, help)) help = null; return draw(); }
-      if (menu) {
-        const r = menu.mouse(m, ui.size().H);
-        if (r === 'close') { menu = null; return draw(); }
-        if (r && r.run) return r.run();
-        return draw();
-      }
+      if (menu) return menuChoice(menu.mouse(m, ui.size().H));
       if (m.wheel) return scroll(m.wheel * 3);
       const click = m.press && !m.drag && m.button === 0;
       // The header's switches: a click on a choice takes it.
       const chip = click && m.y === 1 && chips.find(c => m.x >= c.from && m.x <= c.to);
       if (chip) {
-        if ((chip.id === 'inline' || chip.id === 'split') && chip.id !== layoutOf(ui.size().W)) { saveMode(ui.size().W, chip.id); draw(); }
+        if (chip.id === 'menu') openView();
         if (chip.id === 'scope') openScopes();
         return;
       }
@@ -798,6 +811,12 @@ function main() {
   }, { focus: false, motion: true });
   draw();
   changes().then(d => { if (d !== null) { parsed = d; cache = ''; readViewed(); draw(); } });
+  // Wrap lines and the layout changed in another pane (the preview, source control): shown at once.
+  if (SETTINGS_FILE) require('fs').watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
+    const now = !!readSettings().wrap;
+    if (now !== wrap) { wrap = now; left = 0; }
+    draw();
+  });
   // The tab, whose notes this pane shows and takes.
   if (PANE) {
     actions.tabOf(PANE).then(t => {

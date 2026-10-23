@@ -3,7 +3,7 @@
 const ui = require('../core/ui');
 const diffs = require('../diff');
 const { GIT, gitEnv } = require('../core/exec');
-const { ROOT, SPLIT, VIEWS, S, frame, draw, wide, flash, confirm, quit } = require('./context');
+const { ROOT, SPLIT, VIEWS, S, frame, draw, wide, flash, confirm, quit, settings } = require('./context');
 const {
   exec, english, errorOf, schedule, filterPicker, openPicker, compare, shareCompare, showDiff, closeDiff, comparable, diffable, showing, allFiles,
   setView, toggleAllBranches, toggleTree, toggle,
@@ -12,7 +12,7 @@ const {
   stage, unstage, stageAll, unstageAll, discard, commit, abort, toggleAmend, generate, pickBranch, newBranch, deleteBranch,
   fetch, pull, push, newStash, stashAction, integrate, cherryPick, newTag, setBase, openRow, search, fileAction, openMenu,
 } = require('./ops');
-const { listBar, diffBar, resizeList } = require('./render');
+const { listBar, diffBar, resizeList, openDiffView, switchLayout, toggleWrap } = require('./render');
 
 function select(i) {
   const rows = frame.rows;
@@ -120,11 +120,12 @@ function diffKey(k) {
   if (k === 'ctrl+d') return scroll(Math.ceil(page / 2));
   if (k === 'home' || k === 'g') { d.top = 0; return draw(); }
   if (k === 'end' || k === 'G') { d.top = Infinity; return draw(); }
-  if (k === 'v') {
-    const width = ui.size().W < SPLIT ? ui.size().W : ui.size().W - frame.listW - 1;
-    diffs.saveMode(width, diffs.layoutOf(width) === 'split' ? 'inline' : 'split');
-    return draw();
-  }
+  if (k === 'v') return switchLayout();
+  if (k === 'w') return toggleWrap();
+  if (k === ',') return openDiffView();
+  // Without wrap, the text 8 columns sideways, up to the longest line.
+  if (k === 'left' || k === 'h') { if (!settings.wrap && d.left) { d.left = Math.max(0, d.left - 8); draw(); } return; }
+  if (k === 'right' || k === 'l') { if (!settings.wrap && (d.left || 0) + 8 < widest(d)) { d.left = (d.left || 0) + 8; draw(); } return; }
   if (k === 'n' || k === 'N') {
     const r = d.rows || [];
     const i = k === 'n' ? r.findIndex((x, j) => j > d.top && x.hunk) : r.map((x, j) => (j < d.top && x.hunk ? j : -1)).filter(j => j >= 0).pop();
@@ -134,11 +135,23 @@ function diffKey(k) {
 
 // --- views and keys
 
-// A choice of the menu, by key or click: the menu closes, then the item runs.
+// A choice of the menu, by key or click: the menu closes, then the item runs; the diff's options show again with
+// their new values (keep).
 function menuChoice(r) {
+  const view = S.menu && S.menu.view, sel = S.menu && S.menu.sel;
   if (r === 'close' || (r && r.run)) S.menu = null;
   draw();
   if (r && r.run) r.run();
+  if (r && r.keep && view) openDiffView(sel);
+}
+// The width of the diff's longest line, the most ← → can scroll.
+function widest(d) {
+  if (!d.parsed) return 0;
+  if (d.widest === undefined) {
+    d.widest = 0;
+    for (const f of d.parsed.files) for (const h of f.hunks) for (const l of h.lines) d.widest = Math.max(d.widest, ui.textWidth(ui.cleanLine(l[1])));
+  }
+  return d.widest;
 }
 
 function fieldKey(k) {
