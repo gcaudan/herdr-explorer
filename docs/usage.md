@@ -572,7 +572,8 @@ messages.
 
 Click a tab, a chip or a field. Click a result to select it, and double-click it to open it. In
 Search in files, clicking a file's header row folds or unfolds it. The wheel scrolls 3 rows. From 100
-columns wide, the right half previews the selected result.
+columns wide, the right half previews the selected result, coloured as in the preview and with long lines
+wrapped when the preview wraps them (`wrap` setting, read when the popup opens).
 
 ## Source control
 

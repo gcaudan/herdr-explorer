@@ -10,7 +10,10 @@ const actions = require('./core/actions');
 const { WIN, run, GIT, gitEnv, readSettings, remoteLink, writeAtomic } = require('./core/exec');
 
 const { C, fg, bg, line, textWidth, ellipsis, Field } = ui;
-ui.useGlyphs(readSettings().glyphs);
+const settings = readSettings();
+ui.useGlyphs(settings.glyphs);
+// Optional: the preview on the right shows plain text without it.
+const highlight = (() => { try { return require('./render/highlight'); } catch { return null; } })();
 const ROOT = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());
 const PANE = process.env.EXPLORER_PANE;
 const SAVE = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'search.json');
@@ -20,6 +23,7 @@ const MAX_MATCHES = 5000;
 const MAX_ROWS = 1000;        // Go to file results kept
 const BATCH = 24;             // files read at once
 const DEBOUNCE = 150;
+const MAX_HIGHLIGHT = 1 << 20; // larger files previewed in plain text, as in the preview pane
 
 let HI, FOUND, DIM; // fuzzy-matched characters, text matches
 ui.onTheme(() => { HI = '\x1b[1m' + fg(C.hit); FOUND = bg(C.found) + fg(C.strong); DIM = fg(C.dim); });
@@ -439,18 +443,50 @@ function contentRow(r, W) {
 
 // --- preview
 
-const previews = new Map(); // rel → { lines } or { error }
+const previews = new Map(); // rel → { lines, segs } or { error }
 function preview(rel) {
   if (previews.has(rel)) return previews.get(rel);
   previews.set(rel, null);
   readText(path.join(ROOT, rel)).then(([text, error]) => {
     if (previews.size > 30) previews.delete(previews.keys().next().value);
-    previews.set(rel, text === null || text === undefined ? { error } : { lines: text.replace(/\r?\n$/, '').split('\n').map(l => l.replace(/\r$/, '')) });
+    if (text === null || text === undefined) previews.set(rel, { error });
+    else {
+      const lines = text.replace(/\r?\n$/, '').split('\n').map(l => l.replace(/\r$/, ''));
+      previews.set(rel, { lines, segs: coloured(rel, lines, text.length) });
+    }
     paintSoon();
   });
   return null;
 }
 
+// The segments of each line, coloured as in the preview pane (plain when the language is unknown or the file large),
+// their text the line's with tabs expanded and control characters dropped (ui.cleanLine).
+function coloured(rel, lines, size) {
+  const lang = highlight && size <= MAX_HIGHLIGHT ? highlight.language(path.basename(rel)) : null;
+  let segs = null;
+  try { segs = lang ? highlight.highlight(lines.join('\n'), lang) : null; } catch { }
+  return lines.map((l, i) => {
+    const t = ui.cleanLine(l);
+    return segs && segs[i] && ui.segText(segs[i]) === t ? segs[i] : [[t, '']];
+  });
+}
+
+// The ranges [start, end) of a line's text moved to its cleaned text (tabs expanded, control characters dropped).
+function cleanRanges(text, found) {
+  if (!found.length || !/[\x00-\x1f\x7f-\x9f]/.test(text)) return found;
+  const at = [];
+  let s = '';
+  for (let i = 0; i < text.length; i++) {
+    at.push(s.length);
+    const ch = text[i];
+    if (ch === '\t') s += ' '.repeat(4 - (Array.from(s).length % 4));
+    else if (!/[\x00-\x1f\x7f-\x9f]/.test(ch)) s += ch;
+  }
+  at.push(s.length);
+  return found.map(([a, b]) => [at[a], at[b]]);
+}
+
+// The file around the target's line, the line about a third down; long lines wrapped when the preview pane wraps them.
 function previewLines(t, W, H) {
   const out = [];
   if (!t) return out;
@@ -458,14 +494,31 @@ function previewLines(t, W, H) {
   const p = preview(t.rel);
   if (!p) return out;
   if (p.error) return out.concat(line([[` (${p.error})`, DIM]], W));
-  const h = H - 1, at = Math.max(0, (t.line || 1) - 1);
-  const start = t.line ? Math.max(0, Math.min(at - Math.floor(h / 3), p.lines.length - h)) : 0;
-  const digits = String(Math.min(p.lines.length, start + h)).length;
-  for (let n = start; n < Math.min(p.lines.length, start + h); n++) {
-    const l = p.lines[n], current = t.line && n === at;
-    const found = state.mode === 'content' && state.re ? ranges(state.re, l) : [];
-    out.push(line([[` ${String(n + 1).padStart(digits)} `, current ? fg(C.text) : DIM], ...marked(l, found, '', FOUND)], W,
-      current ? C.selectBlur : null));
+  const h = H - 1, n = p.lines.length, at = Math.max(0, Math.min((t.line || 1) - 1, n - 1));
+  const digits = String(n).length, room = Math.max(1, W - digits - 2);
+  // The screen rows of line i: its segments with the matches marked, split when wrapping.
+  const cut = new Map();
+  const rowsOf = i => {
+    if (!cut.has(i)) {
+      const found = state.mode === 'content' && state.re ? cleanRanges(p.lines[i], ranges(state.re, p.lines[i])) : [];
+      const segs = ui.mark(p.segs[i], found, FOUND);
+      cut.set(i, settings.wrap ? ui.split(segs, room) : [segs]);
+    }
+    return cut.get(i).length;
+  };
+  // From the target's line, the lines above it up to a third of the height, then those below, then more above at the end.
+  const first = t.line ? at : 0;
+  let from = first, to = first, used = rowsOf(first);
+  while (from > 0 && used + rowsOf(from - 1) <= Math.floor(h / 3)) used += rowsOf(--from);
+  while (to + 1 < n && used < h) used += rowsOf(++to);
+  while (from > 0 && used + rowsOf(from - 1) <= h) used += rowsOf(--from);
+  for (let i = from; i <= to && out.length <= h; i++) {
+    const current = t.line && i === at;
+    cut.get(i).forEach((segs, k) => {
+      if (out.length > h) return;
+      const num = k ? ' '.repeat(digits) : String(i + 1).padStart(digits);
+      out.push(line([[` ${num} `, current ? fg(C.text) : DIM], ...segs], W, current ? C.selectBlur : null));
+    });
   }
   return out;
 }
