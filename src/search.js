@@ -759,7 +759,7 @@ function mouse({ button, x, y, press, wheel, drag }) {
   if (zone) return zone.fn();
   const i = state.top + y - 1 - first;
   const r = rows()[i];
-  if (y - 1 < first || !r || y > ui.size().H - 1) return;
+  if (y - 1 < first || !r || y > ui.size().H - 1 || x > listW) return; // not on the preview on the right
   const now = Date.now(), double = state.lastClick && state.lastClick.i === i && now - state.lastClick.t < 400;
   state.lastClick = double ? null : { i, t: now };
   select(i);
