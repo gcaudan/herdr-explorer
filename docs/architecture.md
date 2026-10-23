@@ -142,7 +142,8 @@ Each tab has at most one preview, reused for every file. To show a file, the exp
 `hook.js --restore` call `actions.preview`, which looks for a pane labelled *Preview* in the tab (source control and
 the Changes pane show files only through the search they open). If there is one, it writes `{ file, root, line, marks, view, keep, t }` to
 `preview-<tab id>.json` in the state folder, which the preview polls every 200 ms (`fs.watchFile`), loading each
-new request at its line; otherwise it opens a new preview pane with the file in its environment. `marks`, from
+new request at its line; otherwise it opens a new preview pane with the file in its environment. Calls run one at a time, so that clicks made
+while a preview opens find it rather than each opening their own. `marks`, from
 `peek.js` only, are the parts to highlight, `{ from, to, a, b }` (lines, and columns, 0 for whole lines): the preview
 keeps at most 200 well-formed ones (`EXPLORER_MARKS` for a new pane). `view: 'diff'` opens the Diff view
 (`EXPLORER_VIEW`), whose changes come from `diff.collect`, the function the Changes pane uses too, run from the

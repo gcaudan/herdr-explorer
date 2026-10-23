@@ -123,14 +123,7 @@ description = "preview the last changed file"
 ### Adding the explorer to existing tabs
 
 The explorer opens by itself only in tabs created after the install, and only in a tab that has a single pane
-(setting [`autoOpen`](configuration.md#settings)). In an existing tab, press `prefix+f`. The hook script also has a
-mode that adds the explorer to every existing tab that has a single pane:
-
-```sh
-node src/hook.js --all
-```
-
-Run it from the plugin folder, in a herdr pane.
+(setting [`autoOpen`](configuration.md#settings)). In an existing tab, press `prefix+f`.
 
 ## Updates
 

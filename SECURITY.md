@@ -111,8 +111,9 @@ contains spaces or control characters is refused; the others pass after `--end-o
 - **Saving** an edited file writes a new temporary file beside its target, created exclusively (`wx`, never through a
   file or link already there) with the file's permissions and group, then renames it over the file. A file with hard
   links, owned by another user, or in a folder that cannot be written is written in place instead.
-- **Discard**: source control deletes untracked files only when they resolve inside the repository; the explorer's
-  *Discard changes* sends them to the trash instead.
+- **Discard**: untracked files discarded go to the trash, from the explorer's *Discard changes*, source control's
+  `d` and `D` in the preview and the Changes pane alike; without a trash, they are deleted for good only after a
+  second question. Source control touches them only when they resolve inside the repository.
 - **Opening files**: a double-click opens with the system application only documents and media (images, PDF,
   Office, archives, audio, video); everything else goes to the preview or an editor, so it never starts an
   executable, a script or a shortcut. *Open in app* adds only `txt`, `md`, `csv`, `log`, `json`, `xml`, `html` and

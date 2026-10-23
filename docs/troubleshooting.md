@@ -119,7 +119,7 @@
 | `Cannot insert`, `Cannot type into the terminal` | `herdr pane send-text` failed                                                      |
 | `Not opened: file type not allowed`              | **Open in app** accepts only documents, media and `txt md csv log json xml html htm` |
 | `Cannot open`                                    | `xdg-open` / `open` / `explorer.exe` could not start                               |
-| `File manager not found`                         | `xdg-open`, `open -R` or `explorer.exe` could not start. On Linux, install `xdg-open` |
+| `File manager not found`                         | `xdg-open`, Finder (`osascript`, else `open -R`) or `explorer.exe` could not start. On Linux, install `xdg-open` |
 | `<cmd> not found` / `<cmd> not found (an .exe is needed)` | fix the editor command in the settings. On Windows, give an `.exe` (VS Code's `code.cmd` is handled) |
 | `VS Code not found`                              | the editor command is `code` but VS Code was not found                             |
 | `No editor: set one in the settings`             | opening a folder needs an external editor. Set **Editor**                          |
@@ -130,7 +130,7 @@
 | `Invalid name`                                   | empty, absolute, containing a control character, or leaving the folder (`..`)     |
 | `Already exists`                                 | choose another name                                                                |
 | `Cannot create` / `rename` / `duplicate` / `delete: <code>` | file system error (`EACCES`, `EPERM`…)                                  |
-| `N untracked files kept: no trash`               | **Discard changes** could not trash untracked files. Install a trash tool          |
+| `N untracked files kept: no trash`               | **Discard changes** (or `D`, deleting for good declined) could not trash untracked files. Install a trash tool |
 | `Cannot stage` / `Cannot unstage` / `Cannot discard` | the git command failed. Try in a terminal to see git's error                   |
 | `<theme>: not found`                             | the icon theme was uninstalled. Choose another one                                 |
 | `<key>: already bound`, `<key> taken from <action>` | (Key bindings) the key already had that action, or moved from another one |

@@ -5,7 +5,9 @@ Change the settings from the explorer's settings (`,`, the gear icon or *Setting
 
 ## Settings
 
-The pane where a setting changes applies it at once; the last column says when the other open panes do.
+The pane where a setting changes applies it at once; the last column says when the other open panes do. The rows
+follow the groups of the settings view: Appearance, Tree, Opening, Preview, Review, New tabs, Advanced (see
+[usage.md](usage.md#settings--or-the-gear-icon)).
 
 | Key | Default | Setting | Effect | Other open panes |
 |---|---|---|---|---|
@@ -15,7 +17,7 @@ The pane where a setting changes applies it at once; the last column says when t
 | `hidden` | `true` | Hidden files; explorer `.` | show dot files in the tree | at their next opening |
 | `ignored` | `true` | Git-ignored files; explorer `i` | show git-ignored files, greyed out | at their next opening |
 | `compact` | `true` | Compact folders | a folder whose only entry is a folder shows on one row with it (`src/main/java`), not while filtering | at their next opening |
-| `follow` | `false` | Follow terminal | reveal the folder of the terminal next to the explorer, moving the root when it leaves the tree | within 2 s |
+| `follow` | `true` | Follow terminal | reveal the folder of the terminal next to the explorer, moving the root when it leaves the tree | within 2 s |
 | `open` | `"preview"` | Enter opens | what `Enter` and a double-click do on a text file: `"preview"` or `"editor"` | explorers within a second |
 | `singleClick` | `false` | Preview follows selection | a file selected by a click or the arrow keys shows in the preview; the arrow keys only update a preview already open | explorers within a second |
 | `editor` | `""` | Editor | external editor command, see below | at once (read at each use) |
@@ -36,8 +38,9 @@ A missing or unreadable `settings.json` means all defaults, and keys left out ke
 
 ### Editor command
 
-The editor command is split at spaces, with quotes kept together (`"subl -w"`, `"code --wait"`). It
-runs without a shell, with the path as its last argument.
+The editor command is what `e` (**Open in editor**) runs, and `o` (**Open in app**) for the files it does not hand to
+the system. It is split at spaces, with quotes kept together (`"subl -w"`, `"code --wait"`), and runs without a
+shell, with the path as its last argument.
 
 - **Empty** (default): VS Code when the `code` command is found (on Windows, the plugin also looks
   in `%LOCALAPPDATA%\Programs\Microsoft VS Code\bin`). Otherwise the terminal editor in the Editor
@@ -107,7 +110,8 @@ saved, and the explorer's width falls back to 32 columns.
 
 `settings.json`, `expanded.json`, `width`, `update.json`, `search.json`, `resizing`, `preview-*.json`, `notes-*.json`, `scope-*.json`, `turn-*.json`, `viewed-*.json`,
 `panes/*.json` and `keys.json` (in the config folder) are written to a temporary file and then renamed, so a pane never reads them half-written. When a tab or a space closes, and again at herdr
-startup, the files of tabs and panes that no longer exist are deleted (`notes-*.json`, `preview-*.json`, `scope-*.json`, `turn-*.json`, `viewed-*.json`, `panes/*.json`).
+startup, the files of tabs and panes that no longer exist are deleted (`notes-*.json`, `preview-*.json`, `scope-*.json`, `turn-*.json`, `viewed-*.json`, `panes/*.json`),
+except those written in the last 10 seconds, which a tab opened meanwhile may already use.
 
 ### Config folder
 
@@ -185,7 +189,7 @@ folders. See [installation.md](installation.md#key-bindings).
 | `HERDR_CONFIG_PATH`, `XDG_CONFIG_HOME` | the herdr `config.toml` the install scripts add the key bindings to, see [Installation](installation.md) (`XDG_CONFIG_HOME`: `install.sh` only) |
 
 herdr sets `HERDR_PLUGIN_STATE_DIR`, `HERDR_PLUGIN_CONFIG_DIR`, `HERDR_PLUGIN_CONTEXT_JSON` and
-`HERDR_PLUGIN_EVENT_JSON` for the plugin's own processes, and `HERDR_PANE_ID` in every pane; the plugin only reads them.
+`HERDR_PLUGIN_EVENT_JSON` for the plugin's own processes (and `HERDR_PLUGIN_CLICKED_URL` for a clicked link), and `HERDR_PANE_ID` in every pane; the plugin only reads them.
 
 The `EXPLORER_*` variables only pass between the plugin's own panes (see
 [Pane environment](architecture.md#pane-environment)).

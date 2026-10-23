@@ -148,7 +148,7 @@ pasted text.
 | Key                               | Action                              |
 | --------------------------------- | ----------------------------------- |
 | `left` `right`, `ctrl+b` `ctrl+f` | move the cursor                     |
-| `home` `end`, `ctrl+a` `ctrl+e`   | start / end                         |
+| `home` `ctrl+a`, `end`            | start / end                         |
 | `backspace`, `delete` `ctrl+d`    | delete before / after the cursor    |
 | `ctrl+u` / `ctrl+k`               | delete to the start / to the end    |
 | `ctrl+w` `alt+backspace`          | delete the word before the cursor   |
@@ -228,7 +228,7 @@ setting. The settings are shared by every explorer. See [configuration.md](confi
 | Preview    | Wrap lines, Line numbers, Images, Diff layout (auto, split, inline) |
 | Review     | Notes prefix                                                        |
 | New tabs   | Open automatically, Dock side (left or right)                       |
-| General    | Key bindings, Check for updates                                     |
+| Advanced   | Key bindings, Check for updates                                     |
 
 `up`/`down` (and their bound keys, page and first/last included) move, `/` finds a setting, `right`/`l` and
 `enter` give a setting its next value (on **Icon theme**, **Editor**, **Notes prefix** and **Key bindings**: open its
@@ -648,9 +648,10 @@ help of the view (see [Key help](#key-help--or-f1)).
 **Changes view**: `s`/`space` stage, `u` unstage, `a` stage all, `A` unstage all, `d` discard (after
 confirmation), `t` list/tree (kept for the next panes), `X` abort the ongoing operation. These keys act on the
 selected file, folder or section; the files staged or unstaged are highlighted for a moment where they land. In
-*Changes*, `d` puts tracked files back to the index and, unlike the explorer's *Discard changes*, **deletes
-untracked files for good**, not to the trash, with the folders left empty; in *Staged Changes*, the index and the
-file go back to the last commit, and files added since are deleted. Conflicts cannot be discarded. On a file, as
+*Changes*, `d` puts tracked files back to the index and, like the explorer's *Discard changes*, sends untracked
+files to the trash, with the folders left empty (without a trash, they are deleted for good after a second
+question); in *Staged Changes*, the index and the
+file go back to the last commit, and files added since leave the index for the trash. Conflicts cannot be discarded. On a file, as
 in the explorer and the preview, `y` / `Y` copy its absolute / relative path, `e` opens it in the editor, `E`
 edits it in the terminal editor and `o` opens it in its app (else the editor).
 
@@ -786,7 +787,7 @@ and the added one both count.
 
 The plugin makes a patch of the lines chosen from the diff shown and hands it to `git apply` (`--cached` for the
 index, `-R` to take changes back). Part of an untracked file is first added with `git add -N`; a whole untracked file
-is added with `git add`, or deleted from the disk by `D`. A file without lines (a binary file, a mode change) is taken
+is added with `git add`, or sent to the trash by `D` (deleted for good, after a second question, without a trash). A file without lines (a binary file, a mode change) is taken
 whole. The other scopes are read-only.
 
 
@@ -802,7 +803,8 @@ with** in the View menu) opens its menu; the scope chosen holds for every pane o
   changed since. herdr tells the plugin when an agent's status changes; when it starts working after having been idle
   or done (or for another agent of the tab), the plugin records a snapshot of the repository's working tree, tracked
   and untracked files, without touching the index. Before any turn, it says so;
-- **Commit or range…**: a commit (its own changes, against its parent), `a..b` or `a...b` (since `b` left `a`), typed in
+- **Commit or range…**: a commit (its own changes, against its parent), `a..b` or `a...b` (since `b` left `a`), a
+  side left out being `HEAD` (`main..`, `..main`), typed in
   the footer (`enter` to apply, `escape` to cancel);
 - **Branch…**: a branch, local or remote, compared with the working tree.
 
