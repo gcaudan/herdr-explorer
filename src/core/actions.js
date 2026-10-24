@@ -494,10 +494,12 @@ async function edit(abs, pane, command = terminalEditor()) {
 // preview of the pane's tab (EXPLORER_PANE), the search then closed. A search already open for the tab, or asked from
 // within one (its preview), is focused instead.
 async function search(root, pane, mode = 'files', query = '') {
+  const from = await originOf(pane);
+  if (from) pane = from.pane_id;
   const tab = await tabOf(pane);
   if (!tab) return 'Cannot open the search';
   const open = tab.panes.find(p => p.label === 'Search') || await ownOf('search', tab.me.tab_id, 'Search');
-  if (open) return await herdr('plugin', 'pane', 'focus', open.pane_id) ? null : 'Cannot open the search';
+  if (open) return await focusPane(open) ? null : 'Cannot open the search';
   const env = { EXPLORER_ROOT: root, EXPLORER_PANE: pane, EXPLORER_MODE: mode, EXPLORER_ORIGIN: tab.me.tab_id };
   if (query) env.EXPLORER_QUERY = query;
   return await openPane('search', 'tab', pane, env, ['--focus']) ? null : 'Cannot open the search';
@@ -508,16 +510,47 @@ async function search(root, pane, mode = 'files', query = '') {
 // already open, or source control asked from within one, is focused instead.
 // file: a file or folder to select among the changes; history: show the commits of that file instead.
 async function scm(root, pane, file = '', history = false) {
+  const from = await originOf(pane);
+  if (from) pane = from.pane_id;
   const tab = await tabOf(pane);
   if (!tab) return 'Cannot open source control';
   const open = tab.panes.find(p => p.label === 'Source Control') || await ownOf('review', tab.me.tab_id, 'Source Control');
-  if (open) return await herdr('plugin', 'pane', 'focus', open.pane_id) ? null : 'Cannot open source control';
+  if (open) return await focusPane(open) ? null : 'Cannot open source control';
   const env = { EXPLORER_ROOT: root, EXPLORER_PANE: pane, EXPLORER_REVIEW: tab.me.tab_id,
     ...(file ? { [history ? 'EXPLORER_HISTORY' : 'EXPLORER_FILE']: file } : {}) };
   return await openPane('scm', 'tab', pane, env, ['--focus']) ? null : 'Cannot open source control';
 }
 
 // --- tabs of their own: the review (source control) and the search
+
+// For a pane of a tab of its own (source control, the search), the tab it was opened from: its explorer, else its
+// first terminal, else its first pane, { pane_id, tab_id }; null for any other pane. Source control and the search
+// open from there, so that each never opens from the other's tab, one tab leading to the next.
+async function originOf(pane) {
+  const tab = await tabOf(pane);
+  if (!tab) return null;
+  const mine = new Set(tab.panes.map(p => p.pane_id));
+  const ws = tab.me.workspace_id;
+  const tabs = await herdr('tab', 'list', '--workspace', ws).then(r => (r && r.tabs) || []);
+  for (const t of tabs) {
+    if (t.tab_id === tab.me.tab_id) continue;
+    for (const kind of ['review', 'search']) {
+      let saved = null;
+      try { saved = JSON.parse(fs.readFileSync(tabFile(kind, t.tab_id), 'utf8')); } catch { }
+      if (!saved || !mine.has(saved.pane)) continue;
+      const panes = await herdr('pane', 'list', '--workspace', ws).then(r => ((r && r.panes) || []).filter(p => p.tab_id === t.tab_id));
+      const p = panes.find(x => x.label === 'Explorer') || panes.find(x => !OWN.has(x.label)) || panes[0];
+      return p ? { pane_id: p.pane_id, tab_id: t.tab_id } : null;
+    }
+  }
+  return null;
+}
+
+// A pane of a tab of its own focused, with its tab: herdr's plugin pane focus moves the focus there, but the screen
+// stays on the tab shown.
+async function focusPane(p) {
+  return await herdr('plugin', 'pane', 'focus', p.pane_id) && await herdr('tab', 'focus', p.tab_id);
+}
 
 // The pane of kind recorded for a tab (holdTab), with the label it must have; null when there is none or it is gone.
 async function ownOf(kind, tabId, label) {
@@ -712,7 +745,7 @@ async function discard(abs, root) {
 }
 
 module.exports = {
-  open, app, editor, system, web, canOpen, canPreview, reveal, copy, clipboard, insert, type, relativeTo, diff, preview, edit, search, scm, reviewOf, ownOf, holdTab, sharer, zoom, unzoom, requestFile, tabOf, terminalOf,
+  open, app, editor, system, web, canOpen, canPreview, reveal, copy, clipboard, insert, type, relativeTo, diff, preview, edit, search, scm, reviewOf, ownOf, originOf, focusPane, holdTab, sharer, zoom, unzoom, requestFile, tabOf, terminalOf,
   layoutOf, sideSplit, setWidth, widthKeeper,
   create, rename, duplicate, trash, remove, stage, unstage, discard, REVEAL: WIN ? 'Reveal in Explorer' : 'Open folder',
 };

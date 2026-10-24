@@ -117,20 +117,27 @@ if (process.argv.includes('--toggle')) {
 } else if (process.argv.includes('--search') || process.argv.includes('--scm')) {
   // From the tab's explorer when there is one, so that the search opens files in that tab's preview.
   const actions = require('./core/actions');
-  const panes = ctx.tab_id ? tabPanes(ctx.workspace_id, ctx.tab_id) : [];
-  const explorer = panes.find(p => p.label === LABEL);
-  const pane = (explorer && explorer.pane_id) || process.env.HERDR_PANE_ID || ctx.pane_id || (panes[0] && panes[0].pane_id);
-  // The explorer's root: workspace_cwd is the folder of the focused pane, the plugin's own when it is one of its panes.
-  const saved = explorer && readPaneState(explorer.pane_id);
-  // The focused terminal first, else the tab's first one.
-  const focused = panes.find(p => p.pane_id === (process.env.HERDR_PANE_ID || ctx.pane_id));
-  const terminal = focused && !OWN.has(focused.label) ? focused : panes.find(p => !OWN.has(p.label));
-  const root = (saved && saved.root) || (terminal && terminal.cwd) || ctx.workspace_cwd;
-  if (pane && root) (process.argv.includes('--scm') ? actions.scm(root, pane) : actions.search(root, pane, 'files'));
+  (async () => {
+    // From a tab of their own (source control, the search), the tab they were opened from (actions.originOf).
+    const here = process.env.HERDR_PANE_ID || ctx.pane_id;
+    const from = here && await actions.originOf(here).catch(() => null);
+    const tabId = from ? from.tab_id : ctx.tab_id;
+    const panes = tabId ? tabPanes(ctx.workspace_id, tabId) : [];
+    const explorer = panes.find(p => p.label === LABEL);
+    const pane = (explorer && explorer.pane_id) || (from ? from.pane_id : here) || (panes[0] && panes[0].pane_id);
+    // The explorer's root: workspace_cwd is the folder of the focused pane, the plugin's own when it is one of its panes.
+    const saved = explorer && readPaneState(explorer.pane_id);
+    // The focused terminal first, else the tab's first one.
+    const focused = panes.find(p => p.pane_id === here);
+    const terminal = focused && !OWN.has(focused.label) ? focused : panes.find(p => !OWN.has(p.label));
+    const root = (saved && saved.root) || (terminal && terminal.cwd) || ctx.workspace_cwd;
+    if (pane && root) await (process.argv.includes('--scm') ? actions.scm(root, pane) : actions.search(root, pane, 'files'));
+  })().catch(() => { });
 } else if (process.argv.includes('--focused')) {
   const d = JSON.parse(process.env.HERDR_PLUGIN_EVENT_JSON || '{}').data || {};
   const tab = d.tab_id || (d.tab && d.tab.tab_id);
-  if (tab) require('./core/actions').reviewOf(tab).then(p => p && herdr('plugin', 'pane', 'focus', p.pane_id)).catch(() => { });
+  const actions = require('./core/actions');
+  if (tab) actions.reviewOf(tab).then(p => p && actions.focusPane(p)).catch(() => { });
 } else if (process.argv.includes('--closed')) {
   sweep();
 } else if (process.argv.includes('--agent')) {
