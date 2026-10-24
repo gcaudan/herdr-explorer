@@ -311,9 +311,6 @@ function splitRows(rows, b, width, nw, view) {
 
 const defaultMode = width => (width >= SPLIT_MIN ? 'split' : 'inline');
 
-// The tree of an empty commit, compared with for a commit that has no parent.
-const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
-
 // The changes to show, as git diff writes them, for a scope (core/scope.js): those of the working tree compared with
 // the last commit ('head'), where the branch left the default one ('branch', so every change of the branch,
 // committed or not) or a branch ('ref'), untracked files in full; those since the agent's last turn started ('turn',
@@ -367,7 +364,9 @@ async function collect({ cwd, file = '', base = 'head', scope = null, turn = nul
     }
     const c = commit(scope.rev);
     if (!c) return { text: '', top, baseName, error: `Unknown commit: ${scope.rev}` };
-    return { text: diff(commit(`${c}^`) || EMPTY_TREE, c, ...target), top, baseName };
+    // No parent: compared with the empty tree, whose id depends on the hash (SHA-1 or SHA-256).
+    const parent = commit(`${c}^`) || git('hash-object', '-t', 'tree', '--stdin').trim();
+    return { text: diff(parent, c, ...target), top, baseName };
   }
   if (kind === 'ref') {
     from = commit(scope.rev);
@@ -492,8 +491,12 @@ function main() {
   // Lines covered by a note of the tab, by path relative to the repository.
   const reals = new Map(); // the real path of each file of the diff, looked up once
   const realOf = f => (reals.has(f) ? reals.get(f) : reals.set(f, notes.real(path.join(top, f))).get(f));
-  const noted = r => r.ref && r.ref.from && tabNotes.length && tabNotes.some(n => n.from && !n.stale && n.file === realOf(r.ref.file)
-    && r.ref.from >= n.from && r.ref.to <= n.to);
+  // A staged row is at its index line, the notes at disk lines (noteKey): compared where it is on disk.
+  const noted = r => {
+    if (!r.ref || !r.ref.from || !tabNotes.length) return false;
+    const at = r.ref.sec === 'staged' && parsed ? diskLines(parsed, r.ref) : r.ref;
+    return !!at && tabNotes.some(n => n.from && !n.stale && n.file === realOf(r.ref.file) && at.from >= n.from && at.to <= n.to);
+  };
 
   function draw() {
     const { W, H } = ui.size();
@@ -738,26 +741,15 @@ function main() {
   function switchLayout() { const W = ui.size().W; saveMode(W, layoutOf(W) === 'split' ? 'inline' : 'split'); draw(); }
   function toggleWrap() { wrap = !wrap; left = 0; writeSettings({ ...readSettings(), wrap }); draw(); }
   function openScopes() {
-    menu = new ui.Menu({ title: 'Compare with', items: Scope.items(scope, baseName, pick, ask), at: 1, right: ui.size().W });
-    draw();
-  }
-  async function ask(kind) {
-    menu = null;
-    if (kind === 'rev') { prompt = { field: new ui.Field(scope.kind === 'rev' ? scope.rev : '') }; return draw(); }
-    const list = await Scope.branches(cwd);
-    if (!list.length) return say('No branch');
-    menu = new ui.Menu({ title: 'Branch', items: list.map(b => ({ label: b, value: scope.kind === 'ref' && scope.rev === b ? ['●', ''] : null,
-      run: () => pick({ kind: 'ref', rev: b }) })), at: 1, right: ui.size().W });
+    menu = Scope.menu(scope, baseName, cwd, { pick, say,
+      show: m => { menu = m; draw(); }, prompt: rev => { prompt = { field: new ui.Field(rev) }; draw(); } });
     draw();
   }
   function promptKey(k) {
-    if (k === 'escape' || k === 'ctrl+c') { prompt = null; return draw(); }
-    if (k === 'enter') {
-      const rev = prompt.field.value.trim();
-      prompt = null;
-      return rev ? pick({ kind: 'rev', rev }) : draw();
-    }
-    if (prompt.field.key(k)) draw();
+    const r = Scope.revKey(prompt.field, k);
+    if (!r.done) return r.changed && draw();
+    prompt = null;
+    return r.rev ? pick({ kind: 'rev', rev: r.rev }) : draw();
   }
 
   function onKey(k) {
