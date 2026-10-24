@@ -157,3 +157,13 @@ test('errorOf: fatal and error lines, refused pushes, no output', () => {
   assert.strictEqual(parse.errorOf({ code: null, err: '', out: '' }), 'timed out or not run');
   assert.strictEqual(parse.errorOf({ code: 1, err: '', out: '' }), 'failed');
 });
+
+test('labels: a branch with its remote one as one, the current branch first, tags last', () => {
+  const refs = parse.refList('tag: refs/tags/v1, refs/remotes/origin/old, refs/heads/main, HEAD -> refs/heads/feat, refs/remotes/origin/main, refs/remotes/origin/HEAD');
+  assert.deepStrictEqual(parse.labels(refs, true, 'feat'), [
+    { name: 'feat', remote: false, current: true }, { name: 'main', remote: true, current: false }, { name: 'origin/old' }, { name: 'v1', tag: true }]);
+  // Not at HEAD: no current branch, even of the same name.
+  assert.ok(parse.labels(refs, false, 'feat').every(l => !l.current));
+  // Detached: HEAD is the current one.
+  assert.deepStrictEqual(parse.labels(parse.refList('HEAD, refs/heads/main'), true, '')[0], { name: 'HEAD', remote: false, current: true });
+});

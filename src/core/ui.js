@@ -15,11 +15,12 @@ const bg = rgb => `\x1b[48;2;${rgb.join(';')}m`;
 const shade = rgb => rgb.map((v, i) => Math.round(C.canvas[i] + (v - C.canvas[i]) * 0.25));
 const glyph = code => String.fromCodePoint(code);
 // The glyphs of the panes' controls in the icon set chosen in the settings: Nerd Font glyphs, or characters any
-// font has. G.search is the magnifier before every find and filter field; G.set the set's name.
+// font has. G.search is the magnifier before every find and filter field; G.remote marks a branch whose remote one is at
+// the same commit; G.set the set's name.
 const GLYPHS = {
-  nerd: { closed: glyph(0xeab6), open: glyph(0xeab4), gear: glyph(0xf013), search: glyph(0xf002), branch: glyph(0xe0a0) },
-  unicode: { closed: '▸', open: '▾', gear: '⚙', search: '⌕', branch: '⎇' },
-  ascii: { closed: '>', open: 'v', gear: '=', search: '/', branch: '*' },
+  nerd: { closed: glyph(0xeab6), open: glyph(0xeab4), gear: glyph(0xf013), search: glyph(0xf002), branch: glyph(0xe0a0), remote: glyph(0xf0c2) },
+  unicode: { closed: '▸', open: '▾', gear: '⚙', search: '⌕', branch: '⎇', remote: '☁' },
+  ascii: { closed: '>', open: 'v', gear: '=', search: '/', branch: '*', remote: '^' },
 };
 GLYPHS.emoji = GLYPHS.unicode;
 const G = {};

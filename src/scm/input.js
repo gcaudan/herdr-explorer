@@ -81,7 +81,7 @@ function compareKey(k, d, page) {
   if (k === 'enter' && d.sel >= 0) {
     const c = d.rows[d.sel].commit;
     showDiff(`commit:${c.hash}`, `${c.short} ${c.subject}`,
-      ['show', ...diffs.DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', '--format=fuller', c.hash]);
+      ['show', ...diffs.DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', '--format=fuller', '--decorate=short', c.hash]);
     S.diff.back = d;
     S.diff.focus = true;
     return true;

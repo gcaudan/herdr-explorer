@@ -316,7 +316,7 @@ const defaultMode = width => (width >= SPLIT_MIN ? 'split' : 'inline');
 const SHOW = ['--stat', '-p', '--diff-merges=first-parent'];
 function showArgs({ kind, ref, paths = [] } = {}) {
   if (typeof ref !== 'string' || !ref || ref.startsWith('-') || !Array.isArray(paths) || !paths.every(p => typeof p === 'string' && p)) return null;
-  if (kind === 'commit') return ['show', ...DIFF_OPTS, ...SHOW, '--format=fuller', ref, ...(paths.length ? ['--', ...paths] : [])];
+  if (kind === 'commit') return ['show', ...DIFF_OPTS, ...SHOW, '--format=fuller', '--decorate=short', ref, ...(paths.length ? ['--', ...paths] : [])];
   if (kind === 'stash') return ['stash', 'show', ...DIFF_OPTS, '--stat', '-p', '--include-untracked', ref];
   if (kind === 'tag') return ['show', ...DIFF_OPTS, ...SHOW, `refs/tags/${ref}`];
   return null;

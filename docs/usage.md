@@ -694,11 +694,15 @@ count of names): a click on it, or `x`, goes back to every file. Renames are fol
 names the file had on the current branch, and the history lists the commits of all of them, so a file that later
 took one of those names shows there too.
 
-**History view**: the branch graph, the subject, the branches and remote branches at the commit (in their lane's
-colour) and its tags (yellow); on the right, the author (from 90 columns), the age and the short hash. Each branch
+**History view**: the branch graph, the branches and remote branches at the commit (in their lane's colour) and
+its tags (yellow), then the subject. A branch and the remote ones of the same name at the same commit show as one,
+marked with a cloud (`☁`, `^` with the ASCII icons); the current branch comes first, in bold, then the other
+branches, the remote ones alone and the tags, 3 at most then `+N` (the commit's preview lists them all in its first
+line). On a narrow pane the subject gives way first; on the right, the author (from 90 columns), the age and the short hash. Each branch
 has its own lane and colour, linked to the commit it started from and to the merge that brought it back; its
 commits are marked ┿ on its line (┯ for a branch tip, ┷ for the first commit), and the checked-out commit's
-subject is bold. It shows every local and remote branch, or with `a` only the current one (kept for the next
+subject is bold. The current branch's line changes colour where it leaves the default branch (the remote's HEAD,
+else `main` or `master`), so that its own commits stand apart even when it is a straight line ahead of it. It shows every local and remote branch, or with `a` only the current one (kept for the next
 panes). The graph takes 24 columns at most: lanes further right are cut. On a commit, `t` creates a tag and `C`
 cherry-picks it onto the current branch (refused when the branch already has it).
 

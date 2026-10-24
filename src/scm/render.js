@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 const ui = require('../core/ui');
 const diffs = require('../diff');
+const parse = require('./parse');
 const icons = require('../core/icons');
 const { WIN, readSettings, writeSettings } = require('../core/exec');
 const { ROOT, C, fg, bg, BOLD, G, theme, settings, SPLIT, VIEWS, shares, S, frame, late, wide, base, dirOf } = require('./context');
@@ -131,6 +132,25 @@ const tilde = p => {
   return samePath(abs, h) || samePath(abs.slice(0, h.length + 1), h + path.sep) ? `~${abs.slice(h.length)}` : p;
 };
 
+// A commit's labels, before its subject (parse.labels): a branch at the same commit as its remote one marked ☁, the
+// current branch in bold; 3 at most, then +N (the commit's preview lists them all). They take room columns at most,
+// the subject giving way first.
+function labelSegs(c, room) {
+  const list = parse.labels(c.refs, c.head, S.repo.detached ? '' : S.repo.branch);
+  const segsOf = n => {
+    const shown = list.slice(0, n).flatMap(l => [l.tag ? pill(l.name, 'tags')
+      : lanePill(l.remote ? `${l.name} ${G.remote}` : l.name, c.lane, l.current ? BOLD : ''), [' ', '']]);
+    return list.length > n ? [...shown, [`+${list.length - n}`, DIM], ['  ', '']] : [...shown, [' ', '']];
+  };
+  const widthOf = segs => ui.textWidth(segs.map(s => s[0]).join(''));
+  let n = Math.min(3, list.length), segs = segsOf(n);
+  while (n > 1 && widthOf(segs) > room) segs = segsOf(--n);
+  if (!list.length || widthOf(segs) <= room) return list.length ? segs : [];
+  // A single label still too wide: its name cut.
+  const [text, style] = segs[0], over = widthOf(segs) - Math.max(4, room);
+  return [[` ${ui.ellipsis(text.trim(), Math.max(1, ui.textWidth(text) - 2 - over))} `, style], ...segs.slice(1)];
+}
+
 // A line made of a left part, cut to fit, and a right part kept whole (buttons, counts).
 function split(left, right, width, back) {
   const rw = ui.textWidth(right.map(s => s[0]).join(''));
@@ -187,15 +207,14 @@ function rowLine(row, width, y, selected) {
   if (row.type === 'commit') {
     // Subject first, so that subjects line up; author, age and hash in columns on the right.
     const c = row.commit;
-    const pills = c.refs.flatMap((r, i) => [[i ? ' ' : '  ', ''],
-      r.kind === 'tags' ? pill(r.name, 'tags') : lanePill(r.name, c.lane, c.head && r.kind === 'heads' ? BOLD : '')]);
     const author = row.authorW && width >= 90 ? [[` ${pad(c.author, row.authorW)} `, DIM]] : [];
+    const right = [...author, [`${c.date.padStart(6)}  `, DIM], [`${c.short} `, fg(C.yellow)]];
     // The graph, cut at MAX_GRAPH columns and padded so that subjects line up; the commit checked out in bold.
     const cells = c.graph.slice(0, row.graphW).map(([ch, n]) => (ch === '●' ? [c.node, fg(laneRgb(n)) + (c.head ? BOLD : '')]
       : [ch, n === null ? '' : fg(laneRgb(n))]));
     while (cells.length < row.graphW) cells.push([' ', '']);
-    return split([[' ', ''], ...cells, ['  ', ''], [c.subject, c.head ? BOLD : ''], ...pills],
-      [...author, [`${c.date.padStart(6)}  `, DIM], [`${c.short} `, fg(C.yellow)]], width, back);
+    const room = width - ui.textWidth(right.map(s => s[0]).join('')) - row.graphW - 3;
+    return split([[' ', ''], ...cells, ['  ', ''], ...labelSegs(c, Math.floor(room / 2)), [c.subject, c.head ? BOLD : '']], right, width, back);
   }
   if (row.type === 'stash') {
     const s = row.stash;
