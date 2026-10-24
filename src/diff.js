@@ -1,4 +1,4 @@
-// Git changes of a file or folder, in a temporary full-tab pane: tracked files compared with HEAD (staged, then
+// Git changes of a file or folder, in a temporary side pane: tracked files compared with HEAD (staged, then
 // unstaged), untracked files in full, or with another scope (b). Inline, or side by side from 120 columns; v switches,
 // s, u and D stage, unstage and discard, n and N jump between hunks, arrows, Page keys or the wheel scroll, q or Esc
 // closes the pane.
@@ -8,7 +8,7 @@
 const path = require('path');
 const { spawnSync } = require('child_process');
 const ui = require('./core/ui');
-const { GIT, gitEnv, readSettings, writeSettings, SETTINGS_FILE } = require('./core/exec');
+const { GIT, gitEnv, run, readSettings, writeSettings, SETTINGS_FILE } = require('./core/exec');
 
 const MAX_UNTRACKED = 200;
 const MAX_ROWS = 200000; // beyond, a huge diff would take seconds to lay out at every resize
@@ -311,6 +311,25 @@ function splitRows(rows, b, width, nw, view) {
 
 const defaultMode = width => (width >= SPLIT_MIN ? 'split' : 'inline');
 
+// A commit, a stash or a tag with its changes, as source control and the preview show them: the git arguments, or null
+// for a request not well formed. what: { kind, ref, paths }, paths limiting a commit to a file's history (its names).
+const SHOW = ['--stat', '-p', '--diff-merges=first-parent'];
+function showArgs({ kind, ref, paths = [] } = {}) {
+  if (typeof ref !== 'string' || !ref || ref.startsWith('-') || !Array.isArray(paths) || !paths.every(p => typeof p === 'string' && p)) return null;
+  if (kind === 'commit') return ['show', ...DIFF_OPTS, ...SHOW, '--format=fuller', ref, ...(paths.length ? ['--', ...paths] : [])];
+  if (kind === 'stash') return ['stash', 'show', ...DIFF_OPTS, '--stat', '-p', '--include-untracked', ref];
+  if (kind === 'tag') return ['show', ...DIFF_OPTS, ...SHOW, `refs/tags/${ref}`];
+  return null;
+}
+// The changes of showArgs, parsed (parse), run from cwd: null when git fails.
+async function show(cwd, what) {
+  const args = showArgs(what);
+  if (!args || !GIT) return null;
+  const env = { ...await gitEnv(cwd), GIT_LITERAL_PATHSPECS: '1' };
+  const out = await run(GIT, ['-c', 'core.quotePath=false', ...args], { cwd, env });
+  return out === null ? null : parse(out);
+}
+
 // The changes to show, as git diff writes them, for a scope (core/scope.js): those of the working tree compared with
 // the last commit ('head'), where the branch left the default one ('branch', so every change of the branch,
 // committed or not) or a branch ('ref'), untracked files in full; those since the agent's last turn started ('turn',
@@ -427,7 +446,7 @@ function widestOf(parsed) {
   return WIDEST.get(parsed);
 }
 
-module.exports = { DIFF_OPTS, MAX_UNTRACKED, SPLIT_MIN, parse, render, collect, changesOf, shownLines, defaultMode, savedMode, saveMode, layoutOf, widestOf, diskLines, unquote, main };
+module.exports = { DIFF_OPTS, MAX_UNTRACKED, SPLIT_MIN, parse, render, collect, showArgs, show, changesOf, shownLines, defaultMode, savedMode, saveMode, layoutOf, widestOf, diskLines, unquote, main };
 
 // --- pane
 
@@ -589,7 +608,7 @@ function main() {
     ['Review', [['a', 'note on the line (hunk, file)'], ['tab', 'kind of note, while typing'], ['A', 'send the notes to the agent'],
       ['C', 'copy the notes'], ['U', 'remove the last note'], ['y', 'copy path:line'],
       ['m', 'mark the file viewed: folded until it changes'], ['] [', 'next, previous file not viewed']]],
-    ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
+    ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['z', 'zoom the pane'], ['? f1', 'keys'], ['q esc', 'close']]],
   ];
   // Go to file and Search in files from the diff's folder, as from the explorer.
   const search = mode => actions.search(cwd, PANE, mode);
@@ -788,6 +807,7 @@ function main() {
     else if (k === 'pagedown' || k === 'space') move(page);
     else if (k === 'ctrl+u') move(-Math.ceil(page / 2));
     else if (k === 'ctrl+d') move(Math.ceil(page / 2));
+    else if (k === 'z') actions.zoom(PANE);
     else if (k === 'ctrl+p') act(search('files'));
     else if (k === 'ctrl+f') act(search('content'));
     else if (k === 'home' || k === 'g') { cur = rows.findIndex(r => r.ref); top0 = 0; draw(); }
@@ -844,7 +864,9 @@ function main() {
     },
     resize: draw,
     theme() { cache = ''; draw(); },
-  }, { focus: false, motion: true });
+    // Left zoomed, the tab would show alone whatever pane takes the focus (actions.unzoom).
+    focus(on) { if (!on) actions.unzoom(PANE).catch(() => { }); },
+  }, { motion: true });
   draw();
   changes().then(d => { if (d !== null) { parsed = d; cache = ''; readViewed(); draw(); } });
   // Wrap lines and the layout changed in another pane (the preview, source control): shown at once.

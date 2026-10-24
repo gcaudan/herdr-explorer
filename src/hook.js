@@ -1,13 +1,13 @@
 // Opens the explorer to the left (or the right, depending on the settings) of a tab.
 //   node hook.js           tab.created event (creating a space also emits it for its first tab), unless the
 //                          autoOpen setting is off
-//   node hook.js --toggle  key binding action: opens the current tab's explorer, focuses it when the focus is
-//                          elsewhere, closes it when it has the focus
+//   node hook.js --toggle  key binding action: opens the current tab's explorer, closes it when it is open
 //   node hook.js --restore startup hook: reopens the explorer and preview panes that herdr restored as shells
 //   node hook.js --search  key binding action: Go to file popup of the current tab's folder
 //   node hook.js --scm     key binding action: source control of the current tab's folder
 //   node hook.js --closed  tab.closed and workspace.closed events: removes the state of the tabs and panes gone
 //   node hook.js --agent   pane.agent_status_changed event: the working tree when the agent starts a turn (scope.js)
+//   node hook.js --focused tab.focused event: a tab under review leads to its review (actions.scm)
 // Each run also saves the state folder for peek.js.
 'use strict';
 const { execFileSync } = require('child_process');
@@ -109,13 +109,11 @@ if (process.argv.includes('--toggle')) {
   if (!ctx.tab_id) process.exit(0);
   const panes = tabPanes(ctx.workspace_id, ctx.tab_id);
   const explorer = panes.find(p => p.label === LABEL);
-  if (explorer && ctx.focused_pane_id && ctx.focused_pane_id !== explorer.pane_id) {
-    herdr('plugin', 'pane', 'focus', explorer.pane_id);
-  } else if (explorer) {
+  if (explorer) {
     // The preview closes with the explorer (see close in explorer.js).
     for (const p of panes) if (p.label === 'Preview') herdr('pane', 'close', p.pane_id);
     herdr('pane', 'close', explorer.pane_id);
-  } else if (panes.length) open(panes, ctx.tab_id, ctx.workspace_cwd);
+  } else if (panes.some(p => !OWN.has(p.label))) open(panes, ctx.tab_id, ctx.workspace_cwd);
 } else if (process.argv.includes('--search') || process.argv.includes('--scm')) {
   // From the tab's explorer when there is one, so that the search opens files in that tab's preview.
   const actions = require('./core/actions');
@@ -129,6 +127,10 @@ if (process.argv.includes('--toggle')) {
   const terminal = focused && !OWN.has(focused.label) ? focused : panes.find(p => !OWN.has(p.label));
   const root = (saved && saved.root) || (terminal && terminal.cwd) || ctx.workspace_cwd;
   if (pane && root) (process.argv.includes('--scm') ? actions.scm(root, pane) : actions.search(root, pane, 'files'));
+} else if (process.argv.includes('--focused')) {
+  const d = JSON.parse(process.env.HERDR_PLUGIN_EVENT_JSON || '{}').data || {};
+  const tab = d.tab_id || (d.tab && d.tab.tab_id);
+  if (tab) require('./core/actions').reviewOf(tab).then(p => p && herdr('plugin', 'pane', 'focus', p.pane_id)).catch(() => { });
 } else if (process.argv.includes('--closed')) {
   sweep();
 } else if (process.argv.includes('--agent')) {
@@ -190,6 +192,7 @@ if (process.argv.includes('--toggle')) {
   if (tab && readSettings().autoOpen) {
     const panes = tabPanes(tab.workspace_id, tab.tab_id);
     const root = ctx.workspace_id === tab.workspace_id ? ctx.workspace_cwd : null;
-    if (panes.length === 1 && panes[0].label !== LABEL) open(panes, tab.tab_id, root);
+    // Not in the editor's tab, opened as a tab of its own.
+    if (panes.length === 1 && !OWN.has(panes[0].label)) open(panes, tab.tab_id, root);
   }
 }

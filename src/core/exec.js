@@ -241,7 +241,7 @@ function writePaneState(pane, data) {
 // What a tab keeps in the state folder, one file per tab and kind: <kind>-<tab id>.json. The kinds: the review notes
 // (notes.js), the preview's requests (actions.js), the diff scope and the agent's last turn (scope.js), the files viewed (viewed.js). Read from the environment at each call, as peek.js sets the state
 // folder after loading this module.
-const TAB_KINDS = ['notes', 'preview', 'scope', 'turn', 'viewed'];
+const TAB_KINDS = ['notes', 'preview', 'review', 'scope', 'search', 'turn', 'viewed'];
 const tabName = (kind, tab) => `${kind}-${String(tab).replace(/[^\w-]/g, '_')}.json`;
 const tabFile = (kind, tab) => process.env.HERDR_PLUGIN_STATE_DIR && tab
   && path.join(process.env.HERDR_PLUGIN_STATE_DIR, tabName(kind, tab));

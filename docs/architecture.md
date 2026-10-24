@@ -9,12 +9,13 @@ The plugin is a set of CommonJS Node.js scripts that use only Node's built-in mo
 | event     | `tab.created` | `node src/hook.js`         |                           |
 | event     | `tab.closed`, `workspace.closed` | `node src/hook.js --closed` |        |
 | event     | `pane.agent_status_changed` | `node src/hook.js --agent` |              |
+| event     | `tab.focused` | `node src/hook.js --focused` |                         |
 | pane      | `tree`     | `node src/explorer.js`        | split                     |
 | pane      | `preview`  | `node src/preview.js`         | split                     |
-| pane      | `search`   | `node src/search.js`          | popup, 80% × 80%          |
-| pane      | `scm`      | `node src/scm.js`             | zoomed                    |
-| pane      | `diff`     | `node src/diff.js`            | zoomed                    |
-| pane      | `edit`     | `node src/edit.js`            | zoomed                    |
+| pane      | `search`   | `node src/search.js`          | tab                       |
+| pane      | `scm`      | `node src/scm.js`             | tab                       |
+| pane      | `diff`     | `node src/diff.js`            | split                     |
+| pane      | `edit`     | `node src/edit.js`            | tab                       |
 | action    | `toggle`   | `node src/hook.js --toggle`   | tab context               |
 | action    | `search`   | `node src/hook.js --search`   | tab context               |
 | action    | `scm`      | `node src/hook.js --scm`      | tab context               |
@@ -39,8 +40,8 @@ Changes, Editor). [CONTRIBUTING.md](../CONTRIBUTING.md#project-structure) gives 
 
 **Explorer** (`hook.js`, which exits at once when herdr is not found). When a tab is created, the hook skips the
 tab unless `autoOpen` is on and the tab has a single pane that is not already an explorer. `--toggle` opens the
-tab's explorer when it has none, focuses it when the focus is elsewhere, and closes it, with its preview, when it has
-the focus.
+tab's explorer when it has none, and closes it, with its preview, when it has one. The hook and `--toggle` open no
+explorer in a tab holding only the plugin's panes (the editor's).
 
 1. The hook takes the top-left pane, or the top-right pane when docked on the right.
 2. It opens the `tree` pane as a split to the right of that pane, without focus. The root is the
@@ -58,8 +59,19 @@ the focus.
 **Preview** (`actions.preview`). The first file opens the `preview` pane as a split to the right of
 the terminal next to the explorer, giving `explorer | terminal | preview`.
 
-**Popups and full-tab panes**. The search opens as a popup over the active pane. Source control, the
-changes pane and the editor open *zoomed* (full tab), targeting the explorer's tab. `--search` and `--scm` use the
+**Side panes, tabs of their own and the editor**. The search opens in a tab of its own (`EXPLORER_ORIGIN`: the tab
+it was opened from, recorded in `search-<tab id>.json`, `actions.holdTab`), beside a preview of the result selected,
+which keeps its share of the width (`searchShare`); the result opened goes to the origin's preview. The changes
+pane opens on the right of the terminal, in place of the preview (`actions.sidePane`). Source control opens a review
+in a tab of its own (`actions.scm`, `EXPLORER_REVIEW`: the tab reviewed), renamed `(SC <label>)`, and records it in
+`review-<tab id>.json`; the `tab.focused` event leads from the tab reviewed to its review (`hook.js --focused`), and
+the review's exit, whatever its cause, removes the record and closes the review's previews, so its tab. The selection there shows in
+a preview on the right of source control (`beside`, which also tells it that `q` closes it; a commit as a `show`
+request, `diffs.showArgs`; another line as a blank one), opened by the first selection and then by `Enter` only, which keeps its share of the width (`keepShare`,
+`reviewShare` setting). The editor opens in a tab of its own, in the explorer's workspace; closing it closes the tab. `z` zooms the preview,
+source control and the changes pane, which take the zoom off when they lose the focus (focus reports,
+`actions.unzoom`): herdr's zoom belongs to the tab and follows the focus, so a zoom left on would show the agent alone
+once the focus comes back to it, the explorer hidden. `--search` and `--scm` use the
 explorer's saved root, else the focused terminal's folder, else the workspace folder, and pass the explorer's pane
 (`EXPLORER_PANE`), so that the files they open go to that tab's preview.
 

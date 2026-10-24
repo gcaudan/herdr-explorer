@@ -330,7 +330,7 @@ function widen(cols) {
 }
 
 // Alone in its tab by the pane list too: the layout alone can show a single pane while the tab has others (a
-// source control pane zoomed over the explorer, a client attaching), and closing then lost the explorer.
+// pane zoomed over the explorer, a client attaching), and closing then lost the explorer.
 async function alone() {
   const me = (result(await run(HERDR, ['pane', 'get', PANE])) || {}).pane;
   if (!me) return false;
@@ -381,6 +381,27 @@ async function follow() {
   revealRel(rel);
   render();
 }
+
+// A file opened from the search in the tab's preview (reveal in its request, actions.preview): selected in the tree,
+// its folders expanded, when it is under the root. The tab's request file is watched once the tab is known.
+let requests = null;
+actions.tabOf(PANE).then(tab => {
+  if (!tab || stopped) return;
+  requests = actions.requestFile(tab.me.tab_id);
+  let seen = 0;
+  try { seen = fs.statSync(requests).mtimeMs; } catch { }
+  fs.watchFile(requests, { interval: 300 }, stat => {
+    if (stopped || !stat.mtimeMs || stat.mtimeMs === seen) return;
+    seen = stat.mtimeMs;
+    let req = null;
+    try { req = JSON.parse(fs.readFileSync(requests, 'utf8')); } catch { }
+    if (!req || req.reveal !== true || typeof req.file !== 'string') return;
+    const rel = path.relative(ROOT, req.file);
+    if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) return;
+    revealRel(rel.split(path.sep).join('/'));
+    render();
+  });
+}, () => { });
 
 // --- rendering
 
@@ -759,7 +780,7 @@ update.watch(() => !updating && !state.prompt && !state.confirm && !state.choice
   for (const t of timers) clearInterval(t);
   clearTimeout(settle); clearTimeout(timer);
   for (const w of [rootWatcher, gitWatcher]) if (w) w.close();
-  for (const f of [KEYS_FILE, SETTINGS_FILE, update.FILE]) if (f) fs.unwatchFile(f);
+  for (const f of [KEYS_FILE, SETTINGS_FILE, update.FILE, requests]) if (f) fs.unwatchFile(f);
   ui.restart({ EXPLORER_TREE: ROOT });
 });
 

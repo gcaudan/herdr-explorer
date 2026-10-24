@@ -4,8 +4,8 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
-const { WIN, PLUGIN, pathDirs, which, remoteLink, writeAtomic, OWN_PANES: OWN, words, run, result, HERDR, GIT, gitEnv, readSettings, tabFile } = require('./exec');
+const { spawn, execFileSync } = require('child_process');
+const { WIN, PLUGIN, pathDirs, which, remoteLink, writeAtomic, OWN_PANES: OWN, words, run, result, HERDR, GIT, gitEnv, readSettings, writeSettings, tabFile } = require('./exec');
 
 const MAC = process.platform === 'darwin';
 
@@ -259,12 +259,10 @@ async function terminalOf(pane) {
   return [null, null];
 }
 
-// Git changes in a temporary full-tab pane (q to close it). Zoomed placement: unlike overlay, it targets the
-// explorer's tab rather than the active pane.
+// Git changes in a temporary pane on the right of the terminal (q to close it, z to zoom it).
 async function diff(abs, root, pane) {
-  const res = await run(HERDR, ['plugin', 'pane', 'open', '--plugin', PLUGIN, '--entrypoint', 'diff', '--placement', 'zoomed',
-    '--target-pane', pane, '--env', `EXPLORER_FILE=${abs}`, '--env', `EXPLORER_ROOT=${root}`, '--env', `EXPLORER_PANE=${pane}`]);
-  return result(res) ? null : 'Cannot show changes';
+  return await sidePane('diff', pane, { EXPLORER_FILE: abs, EXPLORER_ROOT: root, EXPLORER_PANE: pane })
+    ? null : 'Cannot show changes';
 }
 
 // --- pane widths
@@ -389,10 +387,19 @@ function widthKeeper(pane, { columns, get, set, side = null }) {
 
 // A time limit: preview() runs one call at a time, and one herdr never answers (a restart) would hold the next ones.
 const herdr = (...args) => run(HERDR, args, { timeout: 10000 }).then(result);
-// herdr opens a popup over the active pane and refuses a target for it.
-const openPane = (entry, placement, target, env, extra = []) => herdr('plugin', 'pane', 'open', '--plugin', PLUGIN,
-  '--entrypoint', entry, '--placement', placement, ...(placement === 'popup' ? [] : ['--target-pane', target]), ...extra,
-  ...Object.entries(env).flatMap(([k, v]) => ['--env', `${k}=${v}`]));
+// herdr opens a popup over the active pane and refuses a target for it. A tab of its own (the editor) goes in the
+// target's workspace, as herdr takes no target for it either (see sidePane for why not zoomed).
+async function openPane(entry, placement, target, env, extra = []) {
+  let where = ['--target-pane', target];
+  if (placement === 'popup') where = [];
+  else if (placement === 'tab') {
+    const me = await herdr('pane', 'get', target).then(r => r && r.pane);
+    if (!me) return null;
+    where = ['--workspace', me.workspace_id];
+  }
+  return herdr('plugin', 'pane', 'open', '--plugin', PLUGIN, '--entrypoint', entry, '--placement', placement, ...where, ...extra,
+    ...Object.entries(env).flatMap(([k, v]) => ['--env', `${k}=${v}`]));
+}
 
 // The panes of the tab holding a pane, with their labels, and that pane's own record.
 async function tabOf(pane) {
@@ -420,10 +427,14 @@ function preview(...args) {
   return next;
 }
 
-async function showPreview(abs, root, pane, line = 0, focus = false, open = true, { marks = [], view = 'file', keep = false, tabs = null } = {}) {
+// beside: the pane on the right of which a new preview opens (a review's source control), rather than the terminal.
+// show: a commit, stash or tag to show rather than a file (diffs.showArgs, with its title and the repository's cwd),
+// or { blank: true, text, cwd } for a line saying what to select (text); abs then ''. reveal: the tab's explorer
+// selects the file too (the search's Enter).
+async function showPreview(abs, root, pane, line = 0, focus = false, open = true, { marks = [], view = 'file', keep = false, tabs = null, beside = null, show = null, reveal = false } = {}) {
   const tab = pane && await tabOf(pane);
   if (!tab) return 'Cannot preview';
-  const request = { file: abs, root, line, marks, view, keep, t: Date.now() };
+  const request = { file: abs, root, line, marks, view, keep, ...(show ? { show } : {}), ...(reveal ? { reveal } : {}), t: Date.now() };
   const existing = tab.panes.find(p => p.label === 'Preview');
   if (existing) {
     // Whole or not at all: the preview polls it.
@@ -432,7 +443,9 @@ async function showPreview(abs, root, pane, line = 0, focus = false, open = true
     return null;
   }
   if (!open) return null;
-  const target = (await terminalOf(pane))[0] || pane;
+  const target = beside || (await terminalOf(pane))[0] || pane;
+  // Written for the explorer too when it must reveal the file; the preview, which starts on it, then skips it (seen).
+  if (reveal) writeAtomic(requestFile(tab.me.tab_id), JSON.stringify(request));
   // seen: the request file as it is now, so that a request written while the preview starts is still taken.
   let seen = 0;
   try { seen = fs.statSync(requestFile(tab.me.tab_id)).mtimeMs; } catch { }
@@ -440,8 +453,31 @@ async function showPreview(abs, root, pane, line = 0, focus = false, open = true
     EXPLORER_FILE: abs, EXPLORER_ROOT: root, EXPLORER_LINE: line, EXPLORER_TAB: tab.me.tab_id, EXPLORER_SEEN: seen,
     ...(marks.length ? { EXPLORER_MARKS: JSON.stringify(marks) } : {}), ...(view === 'diff' ? { EXPLORER_VIEW: 'diff' } : {}),
     ...(keep ? { EXPLORER_KEEP: '1' } : {}), ...(tabs ? { EXPLORER_TABS: JSON.stringify(tabs) } : {}),
+    ...(show ? { EXPLORER_SHOW: JSON.stringify(show) } : {}), ...(beside ? { EXPLORER_REVIEW: '1' } : {}),
   }, ['--direction', 'right', focus ? '--focus' : '--no-focus']);
   return res ? null : 'Cannot open the preview';
+}
+
+// The changes pane on the right of the terminal, as the preview: one view at a time there, the others closed, after
+// the opening, as the pane asking may be one of them. Zoomed in the terminal's tab instead, herdr's zoom (one per tab,
+// following the focus) went to the agent when the focus came back to it, hiding the explorer.
+const SIDE = new Set(['Preview', 'Changes']);
+async function sidePane(entry, pane, env) {
+  const tab = await tabOf(pane);
+  if (!tab) return null;
+  const target = (await terminalOf(pane))[0] || pane;
+  const res = await openPane(entry, 'split', target, env, ['--direction', 'right', '--focus']);
+  if (!res) return null;
+  for (const p of tab.panes) if (SIDE.has(p.label) && p.pane_id !== target) await herdr('pane', 'close', p.pane_id);
+  return res;
+}
+
+// The tab zoomed in and out on the pane (z), and out when the pane loses the focus: left zoomed, the tab would show
+// alone whatever pane takes the focus, the agent when one comes back to it.
+const zoom = pane => pane && herdr('pane', 'zoom', pane, '--toggle');
+async function unzoom(pane) {
+  const layout = pane && await layoutOf(pane).catch(() => null);
+  if (layout && layout.zoomed) await herdr('pane', 'zoom', pane, '--off');
 }
 
 // The terminal editor ($VISUAL, $EDITOR, else nano, nvim, vim or vi; see edit.js) in a full-tab pane, closed when the
@@ -449,21 +485,106 @@ async function showPreview(abs, root, pane, line = 0, focus = false, open = true
 // command: the editor of the settings when it is a terminal one (see editor), else $VISUAL, $EDITOR…
 async function edit(abs, pane, command = terminalEditor()) {
   if (remoteLink(abs)) return NETWORK;
-  return await openPane('edit', 'zoomed', pane, { EXPLORER_FILE: abs, ...(command ? { EXPLORER_EDITOR: command } : {}) })
+  return await openPane('edit', 'tab', pane, { EXPLORER_FILE: abs, ...(command ? { EXPLORER_EDITOR: command } : {}) })
     ? null : 'Cannot open the editor';
 }
 
 // Go to file (mode files) or search in files (mode content), in a popup over the tab.
+// The search opens in a tab of its own, beside the preview of the result selected; the result opened goes to the
+// preview of the pane's tab (EXPLORER_PANE), the search then closed. A search already open for the tab, or asked from
+// within one (its preview), is focused instead.
 async function search(root, pane, mode = 'files', query = '') {
-  const env = { EXPLORER_ROOT: root, EXPLORER_PANE: pane, EXPLORER_MODE: mode };
+  const tab = await tabOf(pane);
+  if (!tab) return 'Cannot open the search';
+  const open = tab.panes.find(p => p.label === 'Search') || await ownOf('search', tab.me.tab_id, 'Search');
+  if (open) return await herdr('plugin', 'pane', 'focus', open.pane_id) ? null : 'Cannot open the search';
+  const env = { EXPLORER_ROOT: root, EXPLORER_PANE: pane, EXPLORER_MODE: mode, EXPLORER_ORIGIN: tab.me.tab_id };
   if (query) env.EXPLORER_QUERY = query;
-  return await openPane('search', 'popup', pane, env) ? null : 'Cannot open the search';
+  return await openPane('search', 'tab', pane, env, ['--focus']) ? null : 'Cannot open the search';
 }
 
+// Source control opens a review of the pane's tab: a tab of its own, source control then the preview of the files
+// chosen, at full height. Selecting the reviewed tab leads back to it while it runs (hook.js --focused). A review
+// already open, or source control asked from within one, is focused instead.
 // file: a file or folder to select among the changes; history: show the commits of that file instead.
 async function scm(root, pane, file = '', history = false) {
-  const env = { EXPLORER_ROOT: root, EXPLORER_PANE: pane, ...(file ? { [history ? 'EXPLORER_HISTORY' : 'EXPLORER_FILE']: file } : {}) };
-  return await openPane('scm', 'zoomed', pane, env) ? null : 'Cannot open source control';
+  const tab = await tabOf(pane);
+  if (!tab) return 'Cannot open source control';
+  const open = tab.panes.find(p => p.label === 'Source Control') || await ownOf('review', tab.me.tab_id, 'Source Control');
+  if (open) return await herdr('plugin', 'pane', 'focus', open.pane_id) ? null : 'Cannot open source control';
+  const env = { EXPLORER_ROOT: root, EXPLORER_PANE: pane, EXPLORER_REVIEW: tab.me.tab_id,
+    ...(file ? { [history ? 'EXPLORER_HISTORY' : 'EXPLORER_FILE']: file } : {}) };
+  return await openPane('scm', 'tab', pane, env, ['--focus']) ? null : 'Cannot open source control';
+}
+
+// --- tabs of their own: the review (source control) and the search
+
+// The pane of kind recorded for a tab (holdTab), with the label it must have; null when there is none or it is gone.
+async function ownOf(kind, tabId, label) {
+  let saved = null;
+  try { saved = JSON.parse(fs.readFileSync(tabFile(kind, tabId), 'utf8')); } catch { }
+  const p = saved && typeof saved.pane === 'string' && await herdr('pane', 'get', saved.pane).then(r => r && r.pane);
+  return p && p.label === label ? p : null;
+}
+const reviewOf = tabId => ownOf('review', tabId, 'Source Control');
+
+// The running pane, made from the tab origin in a tab of its own, recorded in <kind>-<origin>.json for ownOf. Its tab
+// named "(<name> <origin's label>)", in brackets to set it apart from the agents' tabs, then shown: herdr focuses it on
+// opening, but the screen does not follow a focus given during a key binding's action, and does once it is over. At
+// any exit (q, Esc, ctrl+c, a signal, a crash), the record goes; shown, the tab hands over to the origin, not to the
+// tab before it as herdr would (it cannot place a tab right after another); the previews it holds close, so the tab.
+function holdTab(kind, origin, name) {
+  const pane = process.env.HERDR_PANE_ID, file = origin && pane && tabFile(kind, origin);
+  if (!file || !writeAtomic(file, JSON.stringify({ pane }))) return;
+  process.on('exit', () => {
+    try { if (JSON.parse(fs.readFileSync(file, 'utf8')).pane === pane) fs.unlinkSync(file); } catch { }
+    const sync = (...args) => result(execFileSync(HERDR, args, { encoding: 'utf8', timeout: 5000 }));
+    try {
+      const me = sync('pane', 'get', pane).pane;
+      const shown = sync('workspace', 'list').workspaces.some(w => w.focused && w.active_tab_id === me.tab_id);
+      if (shown) try { sync('tab', 'focus', origin); } catch { }
+      for (const p of sync('pane', 'list', '--workspace', me.workspace_id).panes) {
+        if (p.tab_id === me.tab_id && p.label === 'Preview') sync('pane', 'close', p.pane_id);
+      }
+    } catch { }
+  });
+  (async () => {
+    const from = await herdr('tab', 'get', origin), me = await herdr('pane', 'get', pane);
+    if (!me) return;
+    if (from) await herdr('tab', 'rename', me.pane.tab_id, `(${name} ${from.tab.label})`);
+    await herdr('tab', 'focus', me.pane.tab_id);
+  })().catch(() => { });
+}
+
+// The share of its tab's width that a pane of its own tab keeps beside its preview: the setting key (35 % at first),
+// set when the preview opens, changed by change (< >) or by dragging the border, and kept for the next ones. seen: the
+// split's ratio as set or seen last, null while the pane is alone or zoomed.
+function sharer(pane, key) {
+  let seen = null, sharing = false;
+  return async (change = 0) => {
+    if (!pane || sharing) return;
+    sharing = true;
+    try {
+      const layout = await layoutOf(pane).catch(() => null);
+      const found = layout && !layout.zoomed && sideSplit(layout, pane);
+      if (!found) { seen = null; return; }
+      const saved = readSettings();
+      let share = saved[key] > 0 && saved[key] < 1 ? saved[key] : 0.35;
+      if (change) share += change;
+      else if (seen !== null && Math.abs(found.split.ratio - seen) >= 0.005) share = found.left ? found.split.ratio : 1 - found.split.ratio;
+      share = Math.min(0.8, Math.max(0.15, Math.round(share * 1000) / 1000));
+      const want = found.left ? share : 1 - share, delta = want - found.split.ratio;
+      seen = found.split.ratio;
+      if (Math.abs(delta) >= 0.005) {
+        await run(HERDR, ['pane', 'resize', '--pane', pane, '--direction', delta > 0 ? 'right' : 'left', '--amount', Math.abs(delta).toFixed(6)]);
+        // herdr rounds the split to whole columns: the ratio it took is the one kept.
+        const now = await layoutOf(pane).catch(() => null);
+        const after = now && sideSplit(now, pane);
+        if (after) { seen = after.split.ratio; share = Math.round((after.left ? seen : 1 - seen) * 1000) / 1000; }
+      }
+      if (share !== saved[key]) writeSettings({ ...readSettings(), [key]: share });
+    } finally { sharing = false; }
+  };
 }
 
 // --- files
@@ -591,7 +712,7 @@ async function discard(abs, root) {
 }
 
 module.exports = {
-  open, app, editor, system, web, canOpen, canPreview, reveal, copy, clipboard, insert, type, relativeTo, diff, preview, edit, search, scm, requestFile, tabOf, terminalOf,
+  open, app, editor, system, web, canOpen, canPreview, reveal, copy, clipboard, insert, type, relativeTo, diff, preview, edit, search, scm, reviewOf, ownOf, holdTab, sharer, zoom, unzoom, requestFile, tabOf, terminalOf,
   layoutOf, sideSplit, setWidth, widthKeeper,
   create, rename, duplicate, trash, remove, stage, unstage, discard, REVEAL: WIN ? 'Reveal in Explorer' : 'Open folder',
 };

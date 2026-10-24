@@ -1,16 +1,18 @@
 // Keys and mouse of the source control pane, and the selection, which the diff beside the list follows.
 'use strict';
+const path = require('path');
 const ui = require('../core/ui');
 const diffs = require('../diff');
+const actions = require('../core/actions');
 const { GIT, gitEnv } = require('../core/exec');
-const { ROOT, SPLIT, VIEWS, S, frame, draw, wide, flash, confirm, quit, settings } = require('./context');
+const { ROOT, REVIEW, SPLIT, VIEWS, S, frame, draw, wide, flash, confirm, quit, settings } = require('./context');
 const {
   exec, english, errorOf, schedule, filterPicker, openPicker, compare, shareCompare, showDiff, closeDiff, comparable, diffable, showing, allFiles,
   setView, toggleAllBranches, toggleTree, toggle,
 } = require('./state');
 const {
   stage, unstage, stageAll, unstageAll, discard, commit, abort, toggleAmend, generate, pickBranch, newBranch, deleteBranch,
-  fetch, pull, push, newStash, stashAction, integrate, cherryPick, newTag, setBase, openRow, search, fileAction, openMenu,
+  fetch, pull, push, newStash, stashAction, integrate, cherryPick, newTag, setBase, showOf, openRow, search, fileAction, openMenu,
 } = require('./ops');
 const { listBar, diffBar, resizeList, openDiffView, switchLayout, toggleWrap } = require('./render');
 
@@ -87,13 +89,33 @@ function compareKey(k, d, page) {
   return false;
 }
 
+// Below SPLIT columns (always in a review), the selection shows in the tab's preview, opened on the right of the pane
+// (open): a file's changes, a commit, a stash or a tag, else a line saying to select one (blank). focus: the
+// preview's.
+const previewable = row => !!row && (row.type === 'file' || !!showOf(row));
+function previewRow(row, open = true, focus = false) {
+  const PANE = process.env.HERDR_PANE_ID, top = S.repo.top;
+  const asked = row && row.type === 'file'
+    ? actions.preview(path.join(top, row.item.path), top, PANE, 0, focus, open, { view: 'diff', beside: PANE })
+    : actions.preview('', top, PANE, 0, focus, open, { show: { ...(showOf(row) || { blank: true }), cwd: top }, beside: PANE });
+  // Its share set once the preview is in the layout: the resize that its opening sends may come before.
+  return asked.then(msg => (msg ? flash(msg, true) : open && keepShare()));
+}
+// The preview opens by itself once, with the first selection; closed (q there), only Enter opens it again.
+let previewed = false;
+
+// A review's share of its tab beside the preview (reviewShare setting, actions.sharer).
+const keepShare = REVIEW ? actions.sharer(process.env.HERDR_PANE_ID, 'reviewShare') : async () => { };
+
 // From SPLIT columns, the diff shows the selected file, commit, stash or tag (shortly after, when moving fast).
 // A branch other than the base shows its comparison with the base.
 function follow() {
   clearTimeout(follow.timer);
   follow.timer = setTimeout(() => {
-    if (!S.repo || !wide()) return;
+    if (!S.repo) return;
     const row = frame.rows[S.cursor];
+    // Narrow: the preview opened below the pane follows the selected file.
+    if (!wide()) { previewRow(row, !previewed); previewed = true; return; }
     if (diffable(row)) {
       // showDiff sets S.diff before it waits for git.
       if (!showing(row)) { openRow(row, true); if (S.diff && S.diff.key === row.key) S.diff.auto = true; }
@@ -172,6 +194,7 @@ async function key(k) {
   // The key help (ui.helpKey): scrolls, finds with /, closes with esc, q, ? or f1.
   if (S.help) { if (!ui.helpKey(k, S.help)) S.help = null; return draw(); }
   if ((k === '?' || k === 'f1') && S.repo) { S.help = { top: 0, find: null }; return draw(); }
+  if (k === 'z') return actions.zoom(process.env.HERDR_PANE_ID);
   if (S.diff && (S.diff.focus || ui.size().W < SPLIT)) return diffKey(k);
   if (!S.repo) {
     if (k === 'q' || k === 'escape') return quit();
@@ -212,6 +235,7 @@ async function key(k) {
         if (S.diff && S.diff.key === row.key) { S.diff.focus = true; S.diff.auto = false; }
         break;
       }
+      if (!wide() && previewable(row)) return previewRow(row, true, true);
       return openRow(row);
     case '1': case '2': case '3': case '4': return setView(VIEWS[+k - 1][0]);
     case 'r': flash('Refreshed'); return schedule();
@@ -225,7 +249,10 @@ async function key(k) {
     case 'b': return openPicker();
     case 'm': case 'menu': case 'shift+f10': return openMenu();
     case 'T': return newTag(null);
-    case '<': case '>': if (wide()) resizeList(frame.listW + (k === '<' ? -4 : 4)); break;
+    case '<': case '>':
+      if (wide()) resizeList(frame.listW + (k === '<' ? -4 : 4));
+      else if (REVIEW) keepShare(k === '<' ? -0.04 : 0.04);
+      break;
     case 'shift+left': case 'shift+right': if (wide()) resizeList(frame.listW + (k === 'shift+left' ? -4 : 4)); break;
     case 'c': if (S.view !== 'changes') setView('changes'); S.editing = true; break;
     case 'ctrl+g': if (S.view !== 'changes') setView('changes'); return generate();
@@ -340,4 +367,4 @@ function mouse(m) {
   draw();
 }
 
-module.exports = { select, follow, key, mouse };
+module.exports = { select, follow, key, mouse, keepShare };

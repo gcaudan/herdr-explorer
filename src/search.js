@@ -1,6 +1,6 @@
-// Search popup opened from the explorer: Go to file (fuzzy match on paths, ctrl+p) and Search in files
-// (text or regex in the contents, ctrl+f), with a preview of the selected result on wide screens.
-// Enter opens the file preview pane at the line; Esc closes the popup.
+// Search opened from the explorer, in a tab of its own (actions.search): Go to file (fuzzy match on paths, ctrl+p) and
+// Search in files (text or regex in the contents, ctrl+f), the selected result in the tab's preview on the right.
+// Enter opens the file in the preview of the tab it was opened from, at the line; Esc closes the search and its tab.
 'use strict';
 const fs = require('fs');
 const fsp = fs.promises;
@@ -17,6 +17,8 @@ const highlight = (() => { try { return require('./render/highlight'); } catch {
 const ROOT = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());
 require('./launch').home(); // the pane's folder for new spaces, tabs and panes made from it
 const PANE = process.env.EXPLORER_PANE;
+// The tab the search was opened from, when it has one of its own; its own pane, beside its preview.
+const ORIGIN = process.env.EXPLORER_ORIGIN || '', OWN = process.env.HERDR_PANE_ID;
 const SAVE = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'search.json');
 const MAX_FILES = 50000;      // walk without git
 const MAX_SIZE = 2 << 20;     // larger files are not searched
@@ -613,7 +615,8 @@ function render() {
   if (content && !state.touched && list.length > 1 && state.cursor === 0) state.cursor = 1;
   state.cursor = Math.max(0, Math.min(state.cursor, list.length - 1));
   state.top = Math.max(0, Math.min(state.top, list.length - h));
-  const LW = listW = W >= 100 ? Math.floor(W / 2) : W;
+  // In a tab of its own, the result shows in the tab's preview (follow), not on the right of the list.
+  const LW = listW = !ORIGIN && W >= 100 ? Math.floor(W / 2) : W;
   const right = LW < W ? previewLines(target(list[state.cursor]), W - LW - 1, h) : [];
   const bw = scrollbar.set(list.length, h, state.top), RW = LW - bw;
   // Nothing to list: what to type, or what to try instead.
@@ -638,6 +641,30 @@ function render() {
   lines.push(line(state.hints, W, C.header));
   if (state.help) ui.help(lines, W, state.mode === 'content' ? 'Search in files' : 'Go to file', HELP, state.help);
   paint(lines.slice(0, H));
+  if (ORIGIN) follow();
+}
+
+// In a tab of its own, the tab's preview shows the result selected (the line found, marked), else what to do; it
+// opens with the first one, and once closed (q there) stays closed.
+const share = ORIGIN ? actions.sharer(OWN, 'searchShare') : null;
+let shownKey = null, wantKey = null, followTimer = null, previewed = false;
+function follow() {
+  const t = target(rows()[state.cursor]);
+  const empty = !state.files ? 'Indexing…' : state.mode === 'content' && !state.fields.content.value ? 'Type to search' : 'No results';
+  const want = t ? { file: path.join(ROOT, t.rel), line: t.line || 0 } : { text: empty };
+  const k = JSON.stringify(want);
+  if (k === wantKey || (k === shownKey && !followTimer)) return;
+  wantKey = k;
+  clearTimeout(followTimer);
+  followTimer = setTimeout(() => {
+    followTimer = null; shownKey = k;
+    const open = !previewed;
+    previewed = true;
+    const marks = state.mode === 'content' && want.line ? [{ from: want.line, to: want.line, a: 0, b: 0 }] : [];
+    const asked = t ? actions.preview(want.file, ROOT, OWN, want.line, false, open, { marks, beside: OWN })
+      : actions.preview('', ROOT, OWN, 0, false, open, { show: { blank: true, text: empty, cwd: ROOT }, beside: OWN });
+    asked.then(msg => (msg ? flash(msg) : open && share()), () => { });
+  }, 120);
 }
 
 // The key help (f1: ? is typed in the fields), over the whole pane (ui.help); state.help: { top, find } while it shows.
@@ -708,7 +735,7 @@ async function act(kind) {
   const abs = path.join(ROOT, t.rel);
   let msg;
   try {
-    if (kind === 'open') msg = await actions.preview(abs, ROOT, PANE, t.line || undefined);
+    if (kind === 'open') msg = await actions.preview(abs, ROOT, PANE, t.line || undefined, false, true, { reveal: true });
     else if (kind === 'insert') msg = await actions.insert(abs, PANE);
     else if (kind === 'editor') msg = await actions.editor(abs, PANE);
     else if (kind === 'app') msg = await actions.app(abs, PANE);
@@ -817,7 +844,8 @@ function mouse({ button, x, y, press, wheel, drag }) {
 
 // --- startup
 
-paint = ui.screen({ key, mouse, paste, resize: render }, { motion: true });
+paint = ui.screen({ key, mouse, paste, resize: () => { render(); if (share) share(); } }, { motion: true });
 process.on('exit', save);
+if (ORIGIN) actions.holdTab('search', ORIGIN, 'Search');
 render();
 loadFiles();

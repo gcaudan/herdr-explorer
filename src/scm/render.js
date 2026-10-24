@@ -389,7 +389,7 @@ function helpGroups() {
     ['Diff', [['tab', 'focus the diff'], [',', 'the view\'s options (or ⚙)'], ['n N', 'next, previous hunk'], ['v', 'inline, split (side by side)'],
       ['w', 'wrap long lines'], ['← → h l', 'left, right (no wrap)'], ['< >', 'narrower, wider list'], ['shift+← →', 'move the separator'],
       ['q', 'back to the list']]],
-    ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]]);
+    ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['z', 'zoom the pane'], ['? f1', 'keys'], ['q esc', 'close']]]);
   return g;
 }
 

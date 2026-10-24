@@ -24,6 +24,10 @@ command = ["node", "src/hook.js", "--closed"]
 on = "pane.agent_status_changed"
 command = ["node", "src/hook.js", "--agent"]
 
+[[events]]
+on = "tab.focused"
+command = ["node", "src/hook.js", "--focused"]
+
 [[panes]]
 id = "tree"
 title = "Explorer"
@@ -39,27 +43,25 @@ command = ["node", "src/preview.js"]
 [[panes]]
 id = "search"
 title = "Search"
-placement = "popup"
-width = "80%"
-height = "80%"
+placement = "tab"
 command = ["node", "src/search.js"]
 
 [[panes]]
 id = "scm"
 title = "Source Control"
-placement = "zoomed"
+placement = "tab"
 command = ["node", "src/scm.js"]
 
 [[panes]]
 id = "diff"
 title = "Changes"
-placement = "zoomed"
+placement = "split"
 command = ["node", "src/diff.js"]
 
 [[panes]]
 id = "edit"
 title = "Editor"
-placement = "zoomed"
+placement = "tab"
 command = ["node", "src/edit.js"]
 
 [[actions]]

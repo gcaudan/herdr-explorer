@@ -530,18 +530,21 @@ function setBase(row) {
 
 // --- rows
 
+// A commit, stash or tag row as diffs.showArgs takes it, with a title: null for another row. A commit of a file's
+// history: its changes to that file only.
+function showOf(row) {
+  if (!row) return null;
+  if (row.type === 'commit') return { kind: 'commit', ref: row.commit.hash, paths: S.histFile ? S.histNames : [], title: `${row.commit.short} ${row.commit.subject}` };
+  if (row.type === 'stash') return { kind: 'stash', ref: row.stash.ref, title: `${row.stash.ref} ${row.stash.subject}` };
+  if (row.type === 'tag') return { kind: 'tag', ref: row.ref.name, title: `tag ${row.ref.name}` };
+  return null;
+}
+
 function openRow(row, follow) {
   if (!row) return;
   if (row.type === 'file') return openItemDiff(row.item);
-  if (row.type === 'commit') {
-    return showDiff(row.key, `${row.commit.short} ${row.commit.subject}`,
-      ['show', ...diffs.DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', '--format=fuller', row.commit.hash,
-        ...(S.histFile ? ['--', ...S.histNames] : [])]);
-  }
-  if (row.type === 'stash') {
-    return showDiff(row.key, `${row.stash.ref} ${row.stash.subject}`, ['stash', 'show', ...diffs.DIFF_OPTS, '--stat', '-p', '--include-untracked', row.stash.ref]);
-  }
-  if (row.type === 'tag') return showDiff(row.key, `tag ${row.ref.name}`, ['show', ...diffs.DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', `refs/tags/${row.ref.name}`]);
+  const what = showOf(row);
+  if (what) return showDiff(row.key, what.title, diffs.showArgs(what));
   if (follow) return comparable(row) ? compare(row) : undefined;
   if (row.type === 'section' || row.type === 'folder') return toggle(row);
   if (row.type === 'branch') return checkout(row.ref.remote ? row.ref : { ...row.ref, current: row.current });
@@ -604,6 +607,6 @@ function openMenu(fromHeader) {
 
 module.exports = {
   stage, unstage, stageAll, unstageAll, discard, commit, abort, toggleAmend, generate, pickBranch, checkout, newBranch,
-  deleteBranch, fetch, pull, push, newStash, stashAction, integrate, cherryPick, newTag, setBase, openRow, search,
+  deleteBranch, fetch, pull, push, newStash, stashAction, integrate, cherryPick, newTag, setBase, showOf, openRow, search,
   fileAction, openMenu,
 };

@@ -17,7 +17,10 @@ const G = ui.G;
 const settings = readSettings();
 ui.useGlyphs(settings.glyphs);
 const theme = icons.load(settings.icons); // the explorer's icon theme
-const SPLIT = 100;      // columns from which the diff opens on the right of the list
+// A review (actions.scm): the tab reviewed. The pane then shares a tab of its own with the preview of the files
+// chosen, and the diff never opens on the right of the list.
+const REVIEW = process.env.EXPLORER_REVIEW || '';
+const SPLIT = REVIEW ? Infinity : 100; // columns from which the diff opens on the right of the list
 const MAX_PROMPT = 60000; // characters of diff sent to Claude
 const NET_TIMEOUT = 120000;
 const VIEWS = [['changes', 'Changes'], ['history', 'History'], ['stashes', 'Stashes'], ['refs', 'Refs']];
@@ -85,6 +88,6 @@ function confirm(q, yes) { S.confirm = { ...q, yes, focus: 'no' }; draw(); }
 function quit() { process.exit(0); }
 
 module.exports = {
-  ROOT, C, fg, bg, BOLD, G, settings, theme, SPLIT, MAX_PROMPT, NET_TIMEOUT, VIEWS, shares, S, frame, late, draw,
+  ROOT, C, fg, bg, BOLD, G, settings, theme, REVIEW, SPLIT, MAX_PROMPT, NET_TIMEOUT, VIEWS, shares, S, frame, late, draw,
   select, follow, wide, base, dirOf, files, flash, confirm, quit,
 };

@@ -6,13 +6,13 @@ The plugin has six panes:
 | --------------- | ---------------------------- | ------------------------------------------------------------- |
 | Explorer        | split, left or right of tab  | new tab with a single pane (**Open automatically**), `prefix+f` |
 | Preview         | split, right of the terminal | `Enter`/double-click on a file, `p`, `d` (its diff), search results, [`peek.js`](#show-a-file-from-an-agent-or-a-script) |
-| Search          | popup, 80% × 80%             | `ctrl+p`, `ctrl+f`, `prefix+a`                                |
-| Source Control  | full tab (zoomed)            | `s`, `prefix+d`                                               |
-| Changes         | full tab (zoomed)            | `d` or **View changes** on a folder                           |
-| Editor          | full tab (zoomed)            | `E`, **Edit in terminal**, `e` with a terminal editor         |
+| Search          | tab of its own               | `ctrl+p`, `ctrl+f`, `prefix+a`                                |
+| Source Control  | tab of its own, the review   | `s`, `prefix+d`                                               |
+| Changes         | right of the terminal        | `d` or **View changes** on a folder                           |
+| Editor          | tab of its own               | `E`, **Edit in terminal**, `e` with a terminal editor         |
 
 Its four herdr actions can be bound to keys (see [Key bindings](installation.md#key-bindings)):
-`gcaudan.explorer.toggle` opens the explorer, focuses it, or closes it when it already has the focus (`prefix+f`), `gcaudan.explorer.search` opens Go to file
+`gcaudan.explorer.toggle` opens the explorer, or closes it when it is open (`prefix+f`), `gcaudan.explorer.search` opens Go to file
 (`prefix+a`), `gcaudan.explorer.scm` source control (`prefix+d`), and `gcaudan.explorer.peek` previews the changed
 file written last (left unbound by the installer).
 
@@ -143,7 +143,7 @@ default. The bottom line shows the keys (`⏎ rename`, `⏎ create in src`, `esc
 `escape` or any click cancels.
 
 Every text field (prompts, filter, finds, search and source control fields) edits with these keys, unless the
-pane uses the key itself (in the search popup, `ctrl+k` moves in the results and `ctrl+f` switches tab), and takes
+pane uses the key itself (in the search, `ctrl+k` moves in the results and `ctrl+f` switches tab), and takes
 pasted text.
 
 | Key                               | Action                              |
@@ -265,7 +265,7 @@ saved in [`keys.json`](configuration.md#config-folder-keysjson) and apply at onc
 
 Every key of the explorer, as bound now, takes the place of the tree, by group, over the pane's full height. The arrows, page keys, `j` `k` `g` `G`,
 `ctrl+u` `ctrl+d` and the wheel scroll it, `/` finds a key or what it does. `escape`, `q`, `?`,
-`f1`, or a click on the title, goes back to the tree. The preview, the search popup, source
+`f1`, or a click on the title, goes back to the tree. The preview, the search, source
 control and the changes pane show their keys the same way (`?` or `f1`; `f1` only in the search).
 
 ### Find in the pages
@@ -368,7 +368,7 @@ a click runs, and the scroll percentage.
 | `H`                          | history of the file, in source control                   |
 | `a`                          | take a review note, see [Review notes](#review-notes)    |
 | `A` / `C` / `U`              | send the notes to the agent / copy them / remove the last note |
-| `z`                          | zoom the pane (toggle)                                   |
+| `z`                          | zoom the pane (toggle), until the pane loses the focus   |
 | `<` / `>`                    | 4 columns narrower / wider (hold to repeat)              |
 | `shift+left` `shift+right`   | move the inner border 4 columns that way                 |
 | `ctrl+p`                     | Go to file                                               |
@@ -517,9 +517,17 @@ may not show. Under a pixelated image, a line tells how to see it sharp: `p` and
 follow the same setting, and `p` (or **Images** in the **View** menu) switches them all; scrolled partly out of the
 pane, an image shows its visible part.
 
-## Search popup
+## Search
 
-The popup has two tabs, **Go to file** (`ctrl+p`) and **Search in files** (`ctrl+f`). Queries, globs and the case,
+The search opens in a tab of its own, named after the tab it was opened from (`(Search 2)`), with a preview on the
+right at full height that shows the selected result, at its line (in Search in files, the line found marked), or
+what to do while there is none. `q` in that preview closes it for the rest of the search. Asked again for the same
+tab, from it or from the search's own tab, the open search is focused. Esc closes it and its tab, back to the tab it
+was opened from. ⏎ on a result opens it in the preview of that tab and selects it in its explorer, its folders
+expanded, then closes the search. The search keeps 35 % of the width, which dragging the border changes and the next searches keep
+(`searchShare` setting).
+
+It has two tabs, **Go to file** (`ctrl+p`) and **Search in files** (`ctrl+f`). Queries, globs and the case,
 word and regex options are saved for the next time, shown selected so that typing replaces them. **hidden** starts
 off each time.
 
@@ -561,8 +569,8 @@ and the search stops at 5000 matches.
 | `ctrl+y`                    | copy the path, relative to the folder searched               |
 
 Other keys edit the focused field (see [Prompts](#prompts)). `ctrl+e` is there because Windows Terminal keeps
-`alt+enter` for full screen; it no longer moves to the end of the field (`end` does). Opening a result or inserting its path closes the popup; on failure, the popup stays
-and shows the message.
+`alt+enter` for full screen; it no longer moves to the end of the field (`end` does). Opening a result (in the preview of the tab the search was opened
+from) or inserting its path closes the search, back to that tab; on failure, the search stays and shows the message.
 
 Go to file counts the files on the right of the field (`12 of 840`, or `840` with no query). In Search in files,
 the rule above the results counts them (`37 results in 9 files`), and shows `indexing…`, `searching…` and the
@@ -571,14 +579,15 @@ messages.
 ### Mouse
 
 Click a tab, a chip or a field. Click a result to select it, and double-click it to open it. In
-Search in files, clicking a file's header row folds or unfolds it. The wheel scrolls 3 rows. From 100
-columns wide, the right half previews the selected result, coloured as in the preview and with long lines
-wrapped when the preview wraps them (`wrap` setting, read when the popup opens).
+Search in files, clicking a file's header row folds or unfolds it. The wheel scrolls 3 rows.
 
 ## Source control
 
-A full-tab pane for the repository of the explorer's root (with `prefix+d` and no explorer: the focused
-terminal's folder). Outside a repository, it shows *Not a git repository*, and `i` runs `git init` there after
+A review of the tab: source control opens in a tab of its own, named after the tab reviewed (`(SC 2)`), for the
+repository of the explorer's root (with `prefix+d` and no explorer: the focused terminal's folder). The tab reviewed
+stays as it was; while the review is open, coming back to that tab (switching agent, for instance) leads to the
+review, and `s` or `prefix+d` there focuses it. `q` ends the review and closes its tab, with the preview it holds, back to the tab reviewed (herdr adds the
+review's tab at the end of the bar). Outside a repository, it shows *Not a git repository*, and `i` runs `git init` there after
 confirmation. Opened with `s` in the tree, it selects the selected file in Changes and shows its diff (on a
 folder, its first changed file); a file without changes leaves the selection at the top, with *No changes in …*
 in the status line.
@@ -596,10 +605,12 @@ labels below 80 columns. A menu hangs under the button that opened it, which sta
 Tabs: **Changes**, **History**, **Stashes**, **Refs** (keys `1` to `4`), the active one underlined, Changes and
 Stashes with their count. In Changes, a **List · Tree** switch, the active choice filled, changes the layout.
 
-From 100 columns, the diff of the selected file, commit, stash or tag always shows on the right of the list
-(otherwise it takes the whole pane); with a section or a branch selected, that side says what to select. Drag the
-separator, or press `<` and `>`, to give the list fewer or more columns; each view keeps its own share, also for
-the next panes.
+The review has its own preview, on the right at full height, which shows the selection as it moves: a file's
+changes (Diff view); a commit, stash or tag, read only (its header, the files changed, then the diff); on any other
+line, *Select a file, commit, stash or tag*. `Enter` on a file, commit, stash or tag focuses the preview. `q` in the
+preview closes it, whatever it shows: source control then takes the whole tab until the next `Enter`, which opens it
+again. Source control keeps 35 % of the width, which `<` and `>` change and the next reviews keep (`reviewShare`
+setting).
 
 ### Commit box (Changes)
 
@@ -627,15 +638,16 @@ help of the view (see [Key help](#key-help--or-f1)).
 
 | Key                        | Action                                                          |
 | -------------------------- | --------------------------------------------------------------- |
-| `q` `escape` `ctrl+c`      | close (below 100 columns, `q` and `escape` close the diff first) |
+| `q` `escape` `ctrl+c`      | end the review (`q` and `escape` close a diff shown first)      |
 | `?` `f1`                   | all the keys                                                    |
-| `<` / `>`                  | narrower / wider list beside the diff (kept)                    |
+| `<` / `>`                  | narrower / wider source control beside the preview (kept)       |
 | `shift+left` `shift+right` | move the separator 4 columns that way (kept)                    |
-| `up` `k` / `down` `j`      | move (the diff on the right follows)                            |
+| `up` `k` / `down` `j`      | move (the preview on the right follows)                         |
 | `pageup` / `pagedown`, `home` `g` / `end` `G` | move by page / to the ends               |
 | `ctrl+u` / `ctrl+d`        | move half a page                                                |
 | `left` `h` / `right` `l`   | fold / unfold a section or folder                               |
-| `enter`                    | file, commit, stash, tag: focus its diff (below 100 columns: show it) · section/folder: fold · branch: checkout |
+| `enter`                    | file, commit, stash, tag: focus the preview (opened again after a `q` there) · section/folder: fold · branch: checkout |
+| `z`                        | zoom the pane (toggle); the zoom goes when the pane loses the focus |
 | `tab`                      | focus the diff                                                  |
 | `1`–`4`                    | switch view                                                     |
 | `r`                        | refresh                                                         |
@@ -778,6 +790,7 @@ drag with the mouse, select the rows from the cursor's; `escape` keeps the curso
 | `w`        | wrap long lines, on each side in a side by side diff (the preview's **Wrap lines** setting)    |
 | `left` `h` / `right` `l` | without wrap, scroll the lines 8 columns sideways, the line numbers staying         |
 | `q` `escape` `ctrl+c` | close                                                                               |
+| `z`        | zoom the pane (toggle); the zoom goes when the pane loses the focus                            |
 | `ctrl+p` / `ctrl+f` | Go to file / Search in files                                                          |
 | `?` `f1`   | all the keys                                                                                   |
 
