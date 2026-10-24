@@ -1,0 +1,2783 @@
+{
+ "module": "node/path",
+ "cases": [
+  {
+   "fn": "posix.normalize",
+   "args": [
+    ""
+   ],
+   "out": "."
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "."
+   ],
+   "out": "."
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    ".."
+   ],
+   "out": ".."
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "/"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "//"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "///a"
+   ],
+   "out": "/a"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "a"
+   ],
+   "out": "a"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "a/"
+   ],
+   "out": "a/"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "a//b"
+   ],
+   "out": "a/b"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "/a/b/"
+   ],
+   "out": "/a/b/"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "/a/./b/../c"
+   ],
+   "out": "/a/c"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "../../x"
+   ],
+   "out": "../../x"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "a/../../b"
+   ],
+   "out": "../b"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "./a/."
+   ],
+   "out": "a"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "/.."
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "/../a"
+   ],
+   "out": "/a"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "a/b/../../.."
+   ],
+   "out": ".."
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    ".bashrc"
+   ],
+   "out": ".bashrc"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "a.b.c"
+   ],
+   "out": "a.b.c"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "a."
+   ],
+   "out": "a."
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "..x"
+   ],
+   "out": "..x"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "dir/.x.y"
+   ],
+   "out": "dir/.x.y"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "é/ü.txt"
+   ],
+   "out": "é/ü.txt"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "/x/..y/z"
+   ],
+   "out": "/x/..y/z"
+  },
+  {
+   "fn": "posix.normalize",
+   "args": [
+    "a/.../b"
+   ],
+   "out": "a/.../b"
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    ""
+   ],
+   "out": "."
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "."
+   ],
+   "out": "."
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    ".."
+   ],
+   "out": "."
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "/"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "//"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "///a"
+   ],
+   "out": "//"
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "a"
+   ],
+   "out": "."
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "a/"
+   ],
+   "out": "."
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "a//b"
+   ],
+   "out": "a/"
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "/a/b/"
+   ],
+   "out": "/a"
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "/a/./b/../c"
+   ],
+   "out": "/a/./b/.."
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "../../x"
+   ],
+   "out": "../.."
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "a/../../b"
+   ],
+   "out": "a/../.."
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "./a/."
+   ],
+   "out": "./a"
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "/.."
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "/../a"
+   ],
+   "out": "/.."
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "a/b/../../.."
+   ],
+   "out": "a/b/../.."
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    ".bashrc"
+   ],
+   "out": "."
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "a.b.c"
+   ],
+   "out": "."
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "a."
+   ],
+   "out": "."
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "..x"
+   ],
+   "out": "."
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "dir/.x.y"
+   ],
+   "out": "dir"
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "é/ü.txt"
+   ],
+   "out": "é"
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "/x/..y/z"
+   ],
+   "out": "/x/..y"
+  },
+  {
+   "fn": "posix.dirname",
+   "args": [
+    "a/.../b"
+   ],
+   "out": "a/..."
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    ""
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "."
+   ],
+   "out": "."
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    ".."
+   ],
+   "out": ".."
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "/"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "//"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "///a"
+   ],
+   "out": "a"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "a"
+   ],
+   "out": "a"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "a/"
+   ],
+   "out": "a"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "a//b"
+   ],
+   "out": "b"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "/a/b/"
+   ],
+   "out": "b"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "/a/./b/../c"
+   ],
+   "out": "c"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "../../x"
+   ],
+   "out": "x"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "a/../../b"
+   ],
+   "out": "b"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "./a/."
+   ],
+   "out": "."
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "/.."
+   ],
+   "out": ".."
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "/../a"
+   ],
+   "out": "a"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "a/b/../../.."
+   ],
+   "out": ".."
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    ".bashrc"
+   ],
+   "out": ".bashrc"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "a.b.c"
+   ],
+   "out": "a.b.c"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "a."
+   ],
+   "out": "a."
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "..x"
+   ],
+   "out": "..x"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "dir/.x.y"
+   ],
+   "out": ".x.y"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "é/ü.txt"
+   ],
+   "out": "ü.txt"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "/x/..y/z"
+   ],
+   "out": "z"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "a/.../b"
+   ],
+   "out": "b"
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    ""
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "."
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    ".."
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "/"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "//"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "///a"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "a"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "a/"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "a//b"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "/a/b/"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "/a/./b/../c"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "../../x"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "a/../../b"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "./a/."
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "/.."
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "/../a"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "a/b/../../.."
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    ".bashrc"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "a.b.c"
+   ],
+   "out": ".c"
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "a."
+   ],
+   "out": "."
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "..x"
+   ],
+   "out": ".x"
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "dir/.x.y"
+   ],
+   "out": ".y"
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "é/ü.txt"
+   ],
+   "out": ".txt"
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "/x/..y/z"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.extname",
+   "args": [
+    "a/.../b"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    ""
+   ],
+   "out": false
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "."
+   ],
+   "out": false
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    ".."
+   ],
+   "out": false
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "/"
+   ],
+   "out": true
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "//"
+   ],
+   "out": true
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "///a"
+   ],
+   "out": true
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "a"
+   ],
+   "out": false
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "a/"
+   ],
+   "out": false
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "a//b"
+   ],
+   "out": false
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "/a/b/"
+   ],
+   "out": true
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "/a/./b/../c"
+   ],
+   "out": true
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "../../x"
+   ],
+   "out": false
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "a/../../b"
+   ],
+   "out": false
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "./a/."
+   ],
+   "out": false
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "/.."
+   ],
+   "out": true
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "/../a"
+   ],
+   "out": true
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "a/b/../../.."
+   ],
+   "out": false
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    ".bashrc"
+   ],
+   "out": false
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "a.b.c"
+   ],
+   "out": false
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "a."
+   ],
+   "out": false
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "..x"
+   ],
+   "out": false
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "dir/.x.y"
+   ],
+   "out": false
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "é/ü.txt"
+   ],
+   "out": false
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "/x/..y/z"
+   ],
+   "out": true
+  },
+  {
+   "fn": "posix.isAbsolute",
+   "args": [
+    "a/.../b"
+   ],
+   "out": false
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    ""
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "."
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    ".."
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "/"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "//"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "///a"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "a"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "a/"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "a//b"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "/a/b/"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "/a/./b/../c"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "../../x"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "a/../../b"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "./a/."
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "/.."
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "/../a"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "a/b/../../.."
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    ".bashrc"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "a.b.c"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "a."
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "..x"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "dir/.x.y"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "é/ü.txt"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "/x/..y/z"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.root",
+   "args": [
+    "a/.../b"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.resolve",
+   "args": [
+    "/"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.resolve",
+   "args": [
+    "//"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.resolve",
+   "args": [
+    "///a"
+   ],
+   "out": "/a"
+  },
+  {
+   "fn": "posix.resolve",
+   "args": [
+    "/a/b/"
+   ],
+   "out": "/a/b"
+  },
+  {
+   "fn": "posix.resolve",
+   "args": [
+    "/a/./b/../c"
+   ],
+   "out": "/a/c"
+  },
+  {
+   "fn": "posix.resolve",
+   "args": [
+    "/.."
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.resolve",
+   "args": [
+    "/../a"
+   ],
+   "out": "/a"
+  },
+  {
+   "fn": "posix.resolve",
+   "args": [
+    "/x/..y/z"
+   ],
+   "out": "/x/..y/z"
+  },
+  {
+   "fn": "posix.resolve",
+   "args": [
+    "/a",
+    "b",
+    "../c"
+   ],
+   "out": "/a/c"
+  },
+  {
+   "fn": "posix.resolve",
+   "args": [
+    "/a",
+    "/b",
+    "c/"
+   ],
+   "out": "/b/c"
+  },
+  {
+   "fn": "posix.resolve",
+   "args": [
+    "/",
+    ""
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.resolve",
+   "args": [
+    "/x",
+    "..",
+    "..",
+    "y"
+   ],
+   "out": "/y"
+  },
+  {
+   "fn": "posix.resolve",
+   "args": [
+    "/a/b",
+    "./"
+   ],
+   "out": "/a/b"
+  },
+  {
+   "fn": "posix.join",
+   "args": [
+    "a",
+    "b"
+   ],
+   "out": "a/b"
+  },
+  {
+   "fn": "posix.join",
+   "args": [
+    "/a",
+    "",
+    "b/"
+   ],
+   "out": "/a/b/"
+  },
+  {
+   "fn": "posix.join",
+   "args": [
+    "",
+    ""
+   ],
+   "out": "."
+  },
+  {
+   "fn": "posix.join",
+   "args": [
+    "a",
+    "../..",
+    "b"
+   ],
+   "out": "../b"
+  },
+  {
+   "fn": "posix.join",
+   "args": [
+    "/",
+    ".."
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "posix.join",
+   "args": [
+    "a",
+    "/b"
+   ],
+   "out": "a/b"
+  },
+  {
+   "fn": "posix.relative",
+   "args": [
+    "/a/b",
+    "/a/b/c"
+   ],
+   "out": "c"
+  },
+  {
+   "fn": "posix.relative",
+   "args": [
+    "/a/b/c",
+    "/a/b"
+   ],
+   "out": ".."
+  },
+  {
+   "fn": "posix.relative",
+   "args": [
+    "/a/b",
+    "/a/x"
+   ],
+   "out": "../x"
+  },
+  {
+   "fn": "posix.relative",
+   "args": [
+    "/",
+    "/a"
+   ],
+   "out": "a"
+  },
+  {
+   "fn": "posix.relative",
+   "args": [
+    "/a",
+    "/"
+   ],
+   "out": ".."
+  },
+  {
+   "fn": "posix.relative",
+   "args": [
+    "/a/b",
+    "/a/b"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "posix.relative",
+   "args": [
+    "/ab",
+    "/a"
+   ],
+   "out": "../a"
+  },
+  {
+   "fn": "posix.relative",
+   "args": [
+    "/a",
+    "/ab"
+   ],
+   "out": "../ab"
+  },
+  {
+   "fn": "posix.relative",
+   "args": [
+    "/x/y/z",
+    "/q"
+   ],
+   "out": "../../../q"
+  },
+  {
+   "fn": "posix.relative",
+   "args": [
+    "/a/",
+    "/a/b/"
+   ],
+   "out": "b"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "/a/b.js",
+    ".js"
+   ],
+   "out": "b"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "/a/.js",
+    ".js"
+   ],
+   "out": ".js"
+  },
+  {
+   "fn": "posix.basename",
+   "args": [
+    "bbb",
+    "bbb"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    ""
+   ],
+   "out": "."
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "."
+   ],
+   "out": "."
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "C:"
+   ],
+   "out": "C:."
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "C:\\"
+   ],
+   "out": "C:\\"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "c:/a/b"
+   ],
+   "out": "c:\\a\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "C:a\\b"
+   ],
+   "out": "C:a\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "\\"
+   ],
+   "out": "\\"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "/"
+   ],
+   "out": "\\"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "\\a\\..\\..\\b"
+   ],
+   "out": "\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "\\\\server\\share"
+   ],
+   "out": "\\\\server\\share\\"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "\\\\server\\share\\"
+   ],
+   "out": "\\\\server\\share\\"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "\\\\server\\share\\a\\..\\b"
+   ],
+   "out": "\\\\server\\share\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "\\\\?\\C:\\x\\y"
+   ],
+   "out": "\\\\?\\C:\\x\\y"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "\\\\.\\pipe\\p"
+   ],
+   "out": "\\\\.\\pipe\\p"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "//server/share/x"
+   ],
+   "out": "\\\\server\\share\\x"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "C:\\a\\b\\..\\..\\.."
+   ],
+   "out": "C:\\"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "a\\b/c\\.."
+   ],
+   "out": "a\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "C:\\a.b\\c.d"
+   ],
+   "out": "C:\\a.b\\c.d"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "C:\\x\\"
+   ],
+   "out": "C:\\x\\"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "\\\\server"
+   ],
+   "out": "\\server"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "\\\\\\x"
+   ],
+   "out": "\\x"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "D:\\Été\\ü.TXT"
+   ],
+   "out": "D:\\Été\\ü.TXT"
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    ""
+   ],
+   "out": "."
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "."
+   ],
+   "out": "."
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "C:"
+   ],
+   "out": "C:"
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "C:\\"
+   ],
+   "out": "C:\\"
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "c:/a/b"
+   ],
+   "out": "c:/a"
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "C:a\\b"
+   ],
+   "out": "C:a"
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "\\"
+   ],
+   "out": "\\"
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "/"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "\\a\\..\\..\\b"
+   ],
+   "out": "\\a\\..\\.."
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "\\\\server\\share"
+   ],
+   "out": "\\\\server\\share"
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "\\\\server\\share\\"
+   ],
+   "out": "\\\\server\\share\\"
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "\\\\server\\share\\a\\..\\b"
+   ],
+   "out": "\\\\server\\share\\a\\.."
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "\\\\?\\C:\\x\\y"
+   ],
+   "out": "\\\\?\\C:\\x"
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "\\\\.\\pipe\\p"
+   ],
+   "out": "\\\\.\\pipe\\"
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "//server/share/x"
+   ],
+   "out": "//server/share/"
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "C:\\a\\b\\..\\..\\.."
+   ],
+   "out": "C:\\a\\b\\..\\.."
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "a\\b/c\\.."
+   ],
+   "out": "a\\b/c"
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "C:\\a.b\\c.d"
+   ],
+   "out": "C:\\a.b"
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "C:\\x\\"
+   ],
+   "out": "C:\\"
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "\\\\server"
+   ],
+   "out": "\\"
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "\\\\\\x"
+   ],
+   "out": "\\\\"
+  },
+  {
+   "fn": "win32.dirname",
+   "args": [
+    "D:\\Été\\ü.TXT"
+   ],
+   "out": "D:\\Été"
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    ""
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "."
+   ],
+   "out": "."
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "C:"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "C:\\"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "c:/a/b"
+   ],
+   "out": "b"
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "C:a\\b"
+   ],
+   "out": "b"
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "\\"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "/"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "\\a\\..\\..\\b"
+   ],
+   "out": "b"
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "\\\\server\\share"
+   ],
+   "out": "share"
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "\\\\server\\share\\"
+   ],
+   "out": "share"
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "\\\\server\\share\\a\\..\\b"
+   ],
+   "out": "b"
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "\\\\?\\C:\\x\\y"
+   ],
+   "out": "y"
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "\\\\.\\pipe\\p"
+   ],
+   "out": "p"
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "//server/share/x"
+   ],
+   "out": "x"
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "C:\\a\\b\\..\\..\\.."
+   ],
+   "out": ".."
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "a\\b/c\\.."
+   ],
+   "out": ".."
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "C:\\a.b\\c.d"
+   ],
+   "out": "c.d"
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "C:\\x\\"
+   ],
+   "out": "x"
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "\\\\server"
+   ],
+   "out": "server"
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "\\\\\\x"
+   ],
+   "out": "x"
+  },
+  {
+   "fn": "win32.basename",
+   "args": [
+    "D:\\Été\\ü.TXT"
+   ],
+   "out": "ü.TXT"
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    ""
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "."
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "C:"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "C:\\"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "c:/a/b"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "C:a\\b"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "\\"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "/"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "\\a\\..\\..\\b"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "\\\\server\\share"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "\\\\server\\share\\"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "\\\\server\\share\\a\\..\\b"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "\\\\?\\C:\\x\\y"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "\\\\.\\pipe\\p"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "//server/share/x"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "C:\\a\\b\\..\\..\\.."
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "a\\b/c\\.."
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "C:\\a.b\\c.d"
+   ],
+   "out": ".d"
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "C:\\x\\"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "\\\\server"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "\\\\\\x"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.extname",
+   "args": [
+    "D:\\Été\\ü.TXT"
+   ],
+   "out": ".TXT"
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    ""
+   ],
+   "out": false
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "."
+   ],
+   "out": false
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "C:"
+   ],
+   "out": false
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "C:\\"
+   ],
+   "out": true
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "c:/a/b"
+   ],
+   "out": true
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "C:a\\b"
+   ],
+   "out": false
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "\\"
+   ],
+   "out": true
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "/"
+   ],
+   "out": true
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "\\a\\..\\..\\b"
+   ],
+   "out": true
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "\\\\server\\share"
+   ],
+   "out": true
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "\\\\server\\share\\"
+   ],
+   "out": true
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "\\\\server\\share\\a\\..\\b"
+   ],
+   "out": true
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "\\\\?\\C:\\x\\y"
+   ],
+   "out": true
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "\\\\.\\pipe\\p"
+   ],
+   "out": true
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "//server/share/x"
+   ],
+   "out": true
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "C:\\a\\b\\..\\..\\.."
+   ],
+   "out": true
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "a\\b/c\\.."
+   ],
+   "out": false
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "C:\\a.b\\c.d"
+   ],
+   "out": true
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "C:\\x\\"
+   ],
+   "out": true
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "\\\\server"
+   ],
+   "out": true
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "\\\\\\x"
+   ],
+   "out": true
+  },
+  {
+   "fn": "win32.isAbsolute",
+   "args": [
+    "D:\\Été\\ü.TXT"
+   ],
+   "out": true
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    ""
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "."
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "C:"
+   ],
+   "out": "C:"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "C:\\"
+   ],
+   "out": "C:\\"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "c:/a/b"
+   ],
+   "out": "c:/"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "C:a\\b"
+   ],
+   "out": "C:"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "\\"
+   ],
+   "out": "\\"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "/"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "\\a\\..\\..\\b"
+   ],
+   "out": "\\"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "\\\\server\\share"
+   ],
+   "out": "\\\\server\\share"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "\\\\server\\share\\"
+   ],
+   "out": "\\\\server\\share\\"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "\\\\server\\share\\a\\..\\b"
+   ],
+   "out": "\\\\server\\share\\"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "\\\\?\\C:\\x\\y"
+   ],
+   "out": "\\\\?\\C:\\"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "\\\\.\\pipe\\p"
+   ],
+   "out": "\\\\.\\pipe\\"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "//server/share/x"
+   ],
+   "out": "//server/share/"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "C:\\a\\b\\..\\..\\.."
+   ],
+   "out": "C:\\"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "a\\b/c\\.."
+   ],
+   "out": ""
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "C:\\a.b\\c.d"
+   ],
+   "out": "C:\\"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "C:\\x\\"
+   ],
+   "out": "C:\\"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "\\\\server"
+   ],
+   "out": "\\"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "\\\\\\x"
+   ],
+   "out": "\\"
+  },
+  {
+   "fn": "win32.root",
+   "args": [
+    "D:\\Été\\ü.TXT"
+   ],
+   "out": "D:\\"
+  },
+  {
+   "fn": "win32.resolve",
+   "args": [
+    "C:\\"
+   ],
+   "out": "C:\\"
+  },
+  {
+   "fn": "win32.resolve",
+   "args": [
+    "c:/a/b"
+   ],
+   "out": "c:\\a\\b"
+  },
+  {
+   "fn": "win32.resolve",
+   "args": [
+    "\\\\server\\share"
+   ],
+   "out": "\\\\server\\share\\"
+  },
+  {
+   "fn": "win32.resolve",
+   "args": [
+    "\\\\server\\share\\"
+   ],
+   "out": "\\\\server\\share\\"
+  },
+  {
+   "fn": "win32.resolve",
+   "args": [
+    "\\\\server\\share\\a\\..\\b"
+   ],
+   "out": "\\\\server\\share\\b"
+  },
+  {
+   "fn": "win32.resolve",
+   "args": [
+    "\\\\?\\C:\\x\\y"
+   ],
+   "out": "\\\\?\\C:\\x\\y"
+  },
+  {
+   "fn": "win32.resolve",
+   "args": [
+    "\\\\.\\pipe\\p"
+   ],
+   "out": "\\\\.\\pipe\\p"
+  },
+  {
+   "fn": "win32.resolve",
+   "args": [
+    "C:\\a\\b\\..\\..\\.."
+   ],
+   "out": "C:\\"
+  },
+  {
+   "fn": "win32.resolve",
+   "args": [
+    "C:\\a.b\\c.d"
+   ],
+   "out": "C:\\a.b\\c.d"
+  },
+  {
+   "fn": "win32.resolve",
+   "args": [
+    "C:\\x\\"
+   ],
+   "out": "C:\\x"
+  },
+  {
+   "fn": "win32.resolve",
+   "args": [
+    "\\\\server"
+   ],
+   "out": "\\server"
+  },
+  {
+   "fn": "win32.resolve",
+   "args": [
+    "D:\\Été\\ü.TXT"
+   ],
+   "out": "D:\\Été\\ü.TXT"
+  },
+  {
+   "fn": "win32.resolve",
+   "args": [
+    "C:\\a",
+    "b",
+    "..\\c"
+   ],
+   "out": "C:\\a\\c"
+  },
+  {
+   "fn": "win32.resolve",
+   "args": [
+    "C:\\a",
+    "D:\\b"
+   ],
+   "out": "D:\\b"
+  },
+  {
+   "fn": "win32.resolve",
+   "args": [
+    "C:\\a",
+    "\\b"
+   ],
+   "out": "C:\\b"
+  },
+  {
+   "fn": "win32.resolve",
+   "args": [
+    "\\\\s\\sh",
+    "x",
+    "..",
+    ".."
+   ],
+   "out": "\\\\s\\sh\\"
+  },
+  {
+   "fn": "win32.resolve",
+   "args": [
+    "C:\\",
+    "x/y/"
+   ],
+   "out": "C:\\x\\y"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "a",
+    "b"
+   ],
+   "out": "a\\b"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "\\\\server",
+    "share"
+   ],
+   "out": "\\\\server\\share\\"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "\\\\\\a",
+    "b"
+   ],
+   "out": "\\a\\b"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "C:",
+    "x"
+   ],
+   "out": "C:\\x"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "",
+    ""
+   ],
+   "out": "."
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "//a",
+    "b"
+   ],
+   "out": "\\\\a\\b\\"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "/",
+    "/x"
+   ],
+   "out": "\\x"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "ab.cc:"
+   ],
+   "out": ".\\ab.cc:"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "ab.cc:",
+    "b"
+   ],
+   "out": ".\\ab.cc:\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "a:b"
+   ],
+   "out": "a:b"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "a:b",
+    "b"
+   ],
+   "out": "a:b\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "x/c:"
+   ],
+   "out": ".\\x\\c:"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "x/c:",
+    "b"
+   ],
+   "out": ".\\x\\c:\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "x\\c:\\y"
+   ],
+   "out": ".\\x\\c:\\y"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "x\\c:\\y",
+    "b"
+   ],
+   "out": ".\\x\\c:\\y\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "ab:/x"
+   ],
+   "out": ".\\ab:\\x"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "ab:/x",
+    "b"
+   ],
+   "out": ".\\ab:\\x\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "\\\\.\\x"
+   ],
+   "out": "\\\\.\\x"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "\\\\.\\x",
+    "b"
+   ],
+   "out": "\\\\.\\x\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "\\\\?\\x\\"
+   ],
+   "out": "\\\\?\\x\\"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "\\\\?\\x\\",
+    "b"
+   ],
+   "out": "\\\\?\\x\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "\\\\?\\COM1:\\a"
+   ],
+   "out": "\\\\?\\COM1:\\a"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "\\\\?\\COM1:\\a",
+    "b"
+   ],
+   "out": "\\\\?\\COM1:\\a\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "\\\\.\\nul:"
+   ],
+   "out": "\\\\?\\nul:\\"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "\\\\.\\nul:",
+    "b"
+   ],
+   "out": "\\\\.\\nul:\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "CON:"
+   ],
+   "out": ".\\CON:."
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "CON:",
+    "b"
+   ],
+   "out": "CON:\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "con:x"
+   ],
+   "out": ".\\con:x"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "con:x",
+    "b"
+   ],
+   "out": "con:x\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "COM1:\\a\\.."
+   ],
+   "out": ".\\COM1:."
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "COM1:\\a\\..",
+    "b"
+   ],
+   "out": "COM1:\\a\\..\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "CONx"
+   ],
+   "out": ".\\CONx"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "CONx",
+    "b"
+   ],
+   "out": "CONx\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "NULé"
+   ],
+   "out": ".\\NULé"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "NULé",
+    "b"
+   ],
+   "out": "NULé\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "COM¹:"
+   ],
+   "out": ".\\COM¹:."
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "COM¹:",
+    "b"
+   ],
+   "out": "COM¹:\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "x\\CON:"
+   ],
+   "out": ".\\x\\CON:"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "x\\CON:",
+    "b"
+   ],
+   "out": "x\\CON:\\b"
+  },
+  {
+   "fn": "win32.normalize",
+   "args": [
+    "a\\..\\C:x"
+   ],
+   "out": ".\\C:x"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "a\\..\\C:x",
+    "b"
+   ],
+   "out": ".\\C:x\\b"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "a/c://"
+   ],
+   "out": ".\\a\\c:\\"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "\\\\.",
+    "/.b.ca"
+   ],
+   "out": "\\\\.\\.b.ca"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "a",
+    "CON:x"
+   ],
+   "out": "a\\CON:x"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "x",
+    "prn:",
+    "y/z"
+   ],
+   "out": "x\\prn:\\y\\z"
+  },
+  {
+   "fn": "win32.join",
+   "args": [
+    "\\\\?",
+    "COM1:"
+   ],
+   "out": "\\\\?\\COM1:"
+  },
+  {
+   "fn": "win32.relative",
+   "args": [
+    "C:\\a\\b",
+    "C:\\a\\b\\c"
+   ],
+   "out": "c"
+  },
+  {
+   "fn": "win32.relative",
+   "args": [
+    "C:\\A\\b",
+    "c:\\a\\B\\x"
+   ],
+   "out": "x"
+  },
+  {
+   "fn": "win32.relative",
+   "args": [
+    "C:\\a",
+    "D:\\a"
+   ],
+   "out": "D:\\a"
+  },
+  {
+   "fn": "win32.relative",
+   "args": [
+    "C:\\a\\b",
+    "C:\\a\\x"
+   ],
+   "out": "..\\x"
+  },
+  {
+   "fn": "win32.relative",
+   "args": [
+    "C:\\",
+    "C:\\x"
+   ],
+   "out": "x"
+  },
+  {
+   "fn": "win32.relative",
+   "args": [
+    "C:\\x",
+    "C:\\"
+   ],
+   "out": ".."
+  },
+  {
+   "fn": "win32.relative",
+   "args": [
+    "\\\\s\\sh\\a",
+    "\\\\s\\sh\\b"
+   ],
+   "out": "..\\b"
+  },
+  {
+   "fn": "win32.relative",
+   "args": [
+    "\\\\s\\sh",
+    "\\\\t\\sh"
+   ],
+   "out": "\\\\t\\sh\\"
+  },
+  {
+   "fn": "win32.relative",
+   "args": [
+    "C:\\Été",
+    "c:\\été\\x"
+   ],
+   "out": "x"
+  }
+ ]
+}

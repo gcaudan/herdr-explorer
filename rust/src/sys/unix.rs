@@ -133,6 +133,47 @@ unsafe extern "C" {
     #[cfg(target_os = "linux")]
     fn poll(fds: *mut PollFd, n: Nfds, timeout: c_int) -> c_int;
     fn signal(sig: c_int, handler: usize) -> usize;
+    fn access(path: *const std::os::raw::c_char, mode: c_int) -> c_int;
+    #[link_name = "setsid"]
+    fn setsid_raw() -> c_int;
+    fn kill(pid: c_int, sig: c_int) -> c_int;
+    fn gethostname(name: *mut std::os::raw::c_char, len: usize) -> c_int;
+}
+
+/// The machine's name, as os.hostname().
+pub fn hostname() -> String {
+    let mut buf = [0u8; 256];
+    // SAFETY: gethostname writes at most len bytes.
+    if unsafe { gethostname(buf.as_mut_ptr() as *mut std::os::raw::c_char, buf.len()) } != 0 {
+        return String::new();
+    }
+    let end = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
+    String::from_utf8_lossy(&buf[..end]).into_owned()
+}
+
+/// Whether the process may run the file (access X_OK, as fs.accessSync checks it).
+pub fn executable(path: &str) -> bool {
+    let Ok(c) = std::ffi::CString::new(path) else { return false };
+    // SAFETY: a NUL-terminated path.
+    unsafe { access(c.as_ptr(), 1) == 0 }
+}
+
+/// A new session without terminal, for a child about to run (Node's detached); async-signal-safe.
+pub fn setsid() {
+    // SAFETY: no precondition; it fails only for a group leader.
+    unsafe { setsid_raw() };
+}
+
+/// SIGTERM to a process group (Node's process.kill(-pid)).
+pub fn kill_group(pid: u32) {
+    // SAFETY: plain system call.
+    unsafe { kill(-(pid as c_int), SIGTERM) };
+}
+
+/// SIGTERM to a process, as Node's `child.kill()`.
+pub fn terminate(pid: u32) {
+    // SAFETY: plain system call.
+    unsafe { kill(pid as c_int, SIGTERM) };
 }
 
 fn errno() -> i32 {

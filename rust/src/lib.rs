@@ -2,6 +2,8 @@
 
 pub mod cli;
 pub mod codec;
+pub mod core;
+pub mod diff;
 pub mod json;
 pub mod sys;
 pub mod unicode;

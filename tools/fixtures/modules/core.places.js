@@ -41,5 +41,10 @@ module.exports = {
     clicked(''),
     clicked(null),
     clicked('ftp://x/y'),
+    ...['file:///a/b/../c/./d.js#L3', 'file:///a/%2e%2E/b', 'file:///a%2Fb', 'file:///a%2fb', 'file:///a%zz', 'file:///a%E2%9C',
+      'file:///a\tb\n.js', 'FILE:///x.js', 'file://a@b/x', 'file://me:80/x', 'file://h%41st/x', 'file:///C|/x/../..', 'file://C:/x',
+      'file:\\\\\\x\\y', 'file:///x#L1-L2', 'file:///x#1-', 'file:///x#', 'file:///x?q#L5', 'file:///', 'file://', 'file:///a//b/',
+      'file:///%41%20b', 'file:///../../x', 'file:///a/..', 'file:///a/.', 'file://ME.local/x', 'file:///é ü/ç.js', 'file:///x#L٣']
+      .map(u => clicked(u)),
   ],
 };

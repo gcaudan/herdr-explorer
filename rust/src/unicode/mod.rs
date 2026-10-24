@@ -4,6 +4,11 @@
 
 #[rustfmt::skip]
 mod tables;
+#[rustfmt::skip]
+mod collation;
+
+pub use collation_order::locale_compare;
+mod collation_order;
 
 fn within(table: &[(u32, u32)], c: char) -> bool {
     let c = c as u32;

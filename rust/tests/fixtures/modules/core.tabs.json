@@ -1,0 +1,3083 @@
+{
+ "module": "core/tabs",
+ "cases": [
+  {
+   "fn": "open",
+   "args": [
+    {
+     "list": [],
+     "current": 0
+    },
+    "/a",
+    false
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": false
+     }
+    ],
+    "current": 0,
+    "fresh": true
+   }
+  },
+  {
+   "fn": "open",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": true
+      },
+      {
+       "file": "/b",
+       "kept": false
+      }
+     ],
+     "current": 0
+    },
+    "/c",
+    false
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": true
+     },
+     {
+      "file": "/c",
+      "kept": false
+     }
+    ],
+    "current": 1,
+    "fresh": true
+   }
+  },
+  {
+   "fn": "open",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": true
+      },
+      {
+       "file": "/b",
+       "kept": true
+      }
+     ],
+     "current": 0
+    },
+    "/c",
+    true
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": true
+     },
+     {
+      "file": "/c",
+      "kept": true
+     },
+     {
+      "file": "/b",
+      "kept": true
+     }
+    ],
+    "current": 1,
+    "fresh": true
+   }
+  },
+  {
+   "fn": "open",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": false,
+       "scroll": 3
+      },
+      {
+       "file": "/b",
+       "kept": true
+      }
+     ],
+     "current": 1
+    },
+    "/a",
+    true
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": true,
+      "scroll": 3
+     },
+     {
+      "file": "/b",
+      "kept": true
+     }
+    ],
+    "current": 0,
+    "fresh": false
+   }
+  },
+  {
+   "fn": "open",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": false,
+       "scroll": 3
+      },
+      {
+       "file": "/b",
+       "kept": true
+      }
+     ],
+     "current": 1
+    },
+    "/a",
+    false
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": false,
+      "scroll": 3
+     },
+     {
+      "file": "/b",
+      "kept": true
+     }
+    ],
+    "current": 0,
+    "fresh": false
+   }
+  },
+  {
+   "fn": "open",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": true
+      },
+      {
+       "file": "/b",
+       "kept": true
+      }
+     ],
+     "current": 1
+    },
+    "/b",
+    true
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": true
+     },
+     {
+      "file": "/b",
+      "kept": true
+     }
+    ],
+    "current": 1,
+    "fresh": false
+   }
+  },
+  {
+   "fn": "open",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/f0",
+       "kept": true
+      },
+      {
+       "file": "/f1",
+       "kept": true
+      },
+      {
+       "file": "/f2",
+       "kept": true
+      },
+      {
+       "file": "/f3",
+       "kept": true
+      },
+      {
+       "file": "/f4",
+       "kept": true
+      },
+      {
+       "file": "/f5",
+       "kept": true
+      },
+      {
+       "file": "/f6",
+       "kept": true
+      },
+      {
+       "file": "/f7",
+       "kept": true
+      },
+      {
+       "file": "/f8",
+       "kept": true
+      },
+      {
+       "file": "/f9",
+       "kept": true
+      },
+      {
+       "file": "/f10",
+       "kept": true
+      },
+      {
+       "file": "/f11",
+       "kept": true
+      },
+      {
+       "file": "/f12",
+       "kept": true
+      },
+      {
+       "file": "/f13",
+       "kept": true
+      },
+      {
+       "file": "/f14",
+       "kept": true
+      },
+      {
+       "file": "/f15",
+       "kept": true
+      },
+      {
+       "file": "/f16",
+       "kept": true
+      },
+      {
+       "file": "/f17",
+       "kept": true
+      },
+      {
+       "file": "/f18",
+       "kept": true
+      },
+      {
+       "file": "/f19",
+       "kept": true
+      },
+      {
+       "file": "/f20",
+       "kept": true
+      },
+      {
+       "file": "/f21",
+       "kept": true
+      },
+      {
+       "file": "/f22",
+       "kept": true
+      },
+      {
+       "file": "/f23",
+       "kept": true
+      },
+      {
+       "file": "/f24",
+       "kept": true
+      },
+      {
+       "file": "/f25",
+       "kept": true
+      },
+      {
+       "file": "/f26",
+       "kept": true
+      },
+      {
+       "file": "/f27",
+       "kept": true
+      },
+      {
+       "file": "/f28",
+       "kept": true
+      },
+      {
+       "file": "/f29",
+       "kept": true
+      },
+      {
+       "file": "/f30",
+       "kept": true
+      },
+      {
+       "file": "/f31",
+       "kept": true
+      },
+      {
+       "file": "/f32",
+       "kept": true
+      },
+      {
+       "file": "/f33",
+       "kept": true
+      },
+      {
+       "file": "/f34",
+       "kept": true
+      },
+      {
+       "file": "/f35",
+       "kept": true
+      },
+      {
+       "file": "/f36",
+       "kept": true
+      },
+      {
+       "file": "/f37",
+       "kept": true
+      },
+      {
+       "file": "/f38",
+       "kept": true
+      },
+      {
+       "file": "/f39",
+       "kept": true
+      },
+      {
+       "file": "/f40",
+       "kept": true
+      },
+      {
+       "file": "/f41",
+       "kept": true
+      },
+      {
+       "file": "/f42",
+       "kept": true
+      },
+      {
+       "file": "/f43",
+       "kept": true
+      },
+      {
+       "file": "/f44",
+       "kept": true
+      },
+      {
+       "file": "/f45",
+       "kept": true
+      },
+      {
+       "file": "/f46",
+       "kept": true
+      },
+      {
+       "file": "/f47",
+       "kept": true
+      },
+      {
+       "file": "/f48",
+       "kept": true
+      },
+      {
+       "file": "/f49",
+       "kept": true
+      }
+     ],
+     "current": 0
+    },
+    "/new",
+    true
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/f0",
+      "kept": true
+     },
+     {
+      "file": "/new",
+      "kept": true
+     },
+     {
+      "file": "/f1",
+      "kept": true
+     },
+     {
+      "file": "/f2",
+      "kept": true
+     },
+     {
+      "file": "/f3",
+      "kept": true
+     },
+     {
+      "file": "/f4",
+      "kept": true
+     },
+     {
+      "file": "/f5",
+      "kept": true
+     },
+     {
+      "file": "/f6",
+      "kept": true
+     },
+     {
+      "file": "/f7",
+      "kept": true
+     },
+     {
+      "file": "/f8",
+      "kept": true
+     },
+     {
+      "file": "/f9",
+      "kept": true
+     },
+     {
+      "file": "/f10",
+      "kept": true
+     },
+     {
+      "file": "/f11",
+      "kept": true
+     },
+     {
+      "file": "/f12",
+      "kept": true
+     },
+     {
+      "file": "/f13",
+      "kept": true
+     },
+     {
+      "file": "/f14",
+      "kept": true
+     },
+     {
+      "file": "/f15",
+      "kept": true
+     },
+     {
+      "file": "/f16",
+      "kept": true
+     },
+     {
+      "file": "/f17",
+      "kept": true
+     },
+     {
+      "file": "/f18",
+      "kept": true
+     },
+     {
+      "file": "/f19",
+      "kept": true
+     },
+     {
+      "file": "/f20",
+      "kept": true
+     },
+     {
+      "file": "/f21",
+      "kept": true
+     },
+     {
+      "file": "/f22",
+      "kept": true
+     },
+     {
+      "file": "/f23",
+      "kept": true
+     },
+     {
+      "file": "/f24",
+      "kept": true
+     },
+     {
+      "file": "/f25",
+      "kept": true
+     },
+     {
+      "file": "/f26",
+      "kept": true
+     },
+     {
+      "file": "/f27",
+      "kept": true
+     },
+     {
+      "file": "/f28",
+      "kept": true
+     },
+     {
+      "file": "/f29",
+      "kept": true
+     },
+     {
+      "file": "/f30",
+      "kept": true
+     },
+     {
+      "file": "/f31",
+      "kept": true
+     },
+     {
+      "file": "/f32",
+      "kept": true
+     },
+     {
+      "file": "/f33",
+      "kept": true
+     },
+     {
+      "file": "/f34",
+      "kept": true
+     },
+     {
+      "file": "/f35",
+      "kept": true
+     },
+     {
+      "file": "/f36",
+      "kept": true
+     },
+     {
+      "file": "/f37",
+      "kept": true
+     },
+     {
+      "file": "/f38",
+      "kept": true
+     },
+     {
+      "file": "/f39",
+      "kept": true
+     },
+     {
+      "file": "/f40",
+      "kept": true
+     },
+     {
+      "file": "/f41",
+      "kept": true
+     },
+     {
+      "file": "/f42",
+      "kept": true
+     },
+     {
+      "file": "/f43",
+      "kept": true
+     },
+     {
+      "file": "/f44",
+      "kept": true
+     },
+     {
+      "file": "/f45",
+      "kept": true
+     },
+     {
+      "file": "/f46",
+      "kept": true
+     },
+     {
+      "file": "/f47",
+      "kept": true
+     },
+     {
+      "file": "/f48",
+      "kept": true
+     }
+    ],
+    "current": 1,
+    "fresh": true
+   }
+  },
+  {
+   "fn": "open",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/f0",
+       "kept": true
+      },
+      {
+       "file": "/f1",
+       "kept": true
+      },
+      {
+       "file": "/f2",
+       "kept": true
+      },
+      {
+       "file": "/f3",
+       "kept": true
+      },
+      {
+       "file": "/f4",
+       "kept": true
+      },
+      {
+       "file": "/f5",
+       "kept": true
+      },
+      {
+       "file": "/f6",
+       "kept": true
+      },
+      {
+       "file": "/f7",
+       "kept": true
+      },
+      {
+       "file": "/f8",
+       "kept": true
+      },
+      {
+       "file": "/f9",
+       "kept": true
+      },
+      {
+       "file": "/f10",
+       "kept": true
+      },
+      {
+       "file": "/f11",
+       "kept": true
+      },
+      {
+       "file": "/f12",
+       "kept": true
+      },
+      {
+       "file": "/f13",
+       "kept": true
+      },
+      {
+       "file": "/f14",
+       "kept": true
+      },
+      {
+       "file": "/f15",
+       "kept": true
+      },
+      {
+       "file": "/f16",
+       "kept": true
+      },
+      {
+       "file": "/f17",
+       "kept": true
+      },
+      {
+       "file": "/f18",
+       "kept": true
+      },
+      {
+       "file": "/f19",
+       "kept": true
+      },
+      {
+       "file": "/f20",
+       "kept": true
+      },
+      {
+       "file": "/f21",
+       "kept": true
+      },
+      {
+       "file": "/f22",
+       "kept": true
+      },
+      {
+       "file": "/f23",
+       "kept": true
+      },
+      {
+       "file": "/f24",
+       "kept": true
+      },
+      {
+       "file": "/f25",
+       "kept": true
+      },
+      {
+       "file": "/f26",
+       "kept": true
+      },
+      {
+       "file": "/f27",
+       "kept": true
+      },
+      {
+       "file": "/f28",
+       "kept": true
+      },
+      {
+       "file": "/f29",
+       "kept": true
+      },
+      {
+       "file": "/f30",
+       "kept": true
+      },
+      {
+       "file": "/f31",
+       "kept": true
+      },
+      {
+       "file": "/f32",
+       "kept": true
+      },
+      {
+       "file": "/f33",
+       "kept": true
+      },
+      {
+       "file": "/f34",
+       "kept": true
+      },
+      {
+       "file": "/f35",
+       "kept": true
+      },
+      {
+       "file": "/f36",
+       "kept": true
+      },
+      {
+       "file": "/f37",
+       "kept": true
+      },
+      {
+       "file": "/f38",
+       "kept": true
+      },
+      {
+       "file": "/f39",
+       "kept": true
+      },
+      {
+       "file": "/f40",
+       "kept": true
+      },
+      {
+       "file": "/f41",
+       "kept": true
+      },
+      {
+       "file": "/f42",
+       "kept": true
+      },
+      {
+       "file": "/f43",
+       "kept": true
+      },
+      {
+       "file": "/f44",
+       "kept": true
+      },
+      {
+       "file": "/f45",
+       "kept": true
+      },
+      {
+       "file": "/f46",
+       "kept": true
+      },
+      {
+       "file": "/f47",
+       "kept": true
+      },
+      {
+       "file": "/f48",
+       "kept": true
+      },
+      {
+       "file": "/f49",
+       "kept": true
+      }
+     ],
+     "current": 49
+    },
+    "/new",
+    true
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/f1",
+      "kept": true
+     },
+     {
+      "file": "/f2",
+      "kept": true
+     },
+     {
+      "file": "/f3",
+      "kept": true
+     },
+     {
+      "file": "/f4",
+      "kept": true
+     },
+     {
+      "file": "/f5",
+      "kept": true
+     },
+     {
+      "file": "/f6",
+      "kept": true
+     },
+     {
+      "file": "/f7",
+      "kept": true
+     },
+     {
+      "file": "/f8",
+      "kept": true
+     },
+     {
+      "file": "/f9",
+      "kept": true
+     },
+     {
+      "file": "/f10",
+      "kept": true
+     },
+     {
+      "file": "/f11",
+      "kept": true
+     },
+     {
+      "file": "/f12",
+      "kept": true
+     },
+     {
+      "file": "/f13",
+      "kept": true
+     },
+     {
+      "file": "/f14",
+      "kept": true
+     },
+     {
+      "file": "/f15",
+      "kept": true
+     },
+     {
+      "file": "/f16",
+      "kept": true
+     },
+     {
+      "file": "/f17",
+      "kept": true
+     },
+     {
+      "file": "/f18",
+      "kept": true
+     },
+     {
+      "file": "/f19",
+      "kept": true
+     },
+     {
+      "file": "/f20",
+      "kept": true
+     },
+     {
+      "file": "/f21",
+      "kept": true
+     },
+     {
+      "file": "/f22",
+      "kept": true
+     },
+     {
+      "file": "/f23",
+      "kept": true
+     },
+     {
+      "file": "/f24",
+      "kept": true
+     },
+     {
+      "file": "/f25",
+      "kept": true
+     },
+     {
+      "file": "/f26",
+      "kept": true
+     },
+     {
+      "file": "/f27",
+      "kept": true
+     },
+     {
+      "file": "/f28",
+      "kept": true
+     },
+     {
+      "file": "/f29",
+      "kept": true
+     },
+     {
+      "file": "/f30",
+      "kept": true
+     },
+     {
+      "file": "/f31",
+      "kept": true
+     },
+     {
+      "file": "/f32",
+      "kept": true
+     },
+     {
+      "file": "/f33",
+      "kept": true
+     },
+     {
+      "file": "/f34",
+      "kept": true
+     },
+     {
+      "file": "/f35",
+      "kept": true
+     },
+     {
+      "file": "/f36",
+      "kept": true
+     },
+     {
+      "file": "/f37",
+      "kept": true
+     },
+     {
+      "file": "/f38",
+      "kept": true
+     },
+     {
+      "file": "/f39",
+      "kept": true
+     },
+     {
+      "file": "/f40",
+      "kept": true
+     },
+     {
+      "file": "/f41",
+      "kept": true
+     },
+     {
+      "file": "/f42",
+      "kept": true
+     },
+     {
+      "file": "/f43",
+      "kept": true
+     },
+     {
+      "file": "/f44",
+      "kept": true
+     },
+     {
+      "file": "/f45",
+      "kept": true
+     },
+     {
+      "file": "/f46",
+      "kept": true
+     },
+     {
+      "file": "/f47",
+      "kept": true
+     },
+     {
+      "file": "/f48",
+      "kept": true
+     },
+     {
+      "file": "/f49",
+      "kept": true
+     },
+     {
+      "file": "/new",
+      "kept": true
+     }
+    ],
+    "current": 49,
+    "fresh": true
+   }
+  },
+  {
+   "fn": "open",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/f0",
+       "kept": true
+      },
+      {
+       "file": "/f1",
+       "kept": true
+      },
+      {
+       "file": "/f2",
+       "kept": true
+      },
+      {
+       "file": "/f3",
+       "kept": true
+      },
+      {
+       "file": "/f4",
+       "kept": true
+      },
+      {
+       "file": "/f5",
+       "kept": true
+      },
+      {
+       "file": "/f6",
+       "kept": true
+      },
+      {
+       "file": "/f7",
+       "kept": true
+      },
+      {
+       "file": "/f8",
+       "kept": true
+      },
+      {
+       "file": "/f9",
+       "kept": true
+      },
+      {
+       "file": "/f10",
+       "kept": true
+      },
+      {
+       "file": "/f11",
+       "kept": true
+      },
+      {
+       "file": "/f12",
+       "kept": true
+      },
+      {
+       "file": "/f13",
+       "kept": true
+      },
+      {
+       "file": "/f14",
+       "kept": true
+      },
+      {
+       "file": "/f15",
+       "kept": true
+      },
+      {
+       "file": "/f16",
+       "kept": true
+      },
+      {
+       "file": "/f17",
+       "kept": true
+      },
+      {
+       "file": "/f18",
+       "kept": true
+      },
+      {
+       "file": "/f19",
+       "kept": true
+      },
+      {
+       "file": "/f20",
+       "kept": true
+      },
+      {
+       "file": "/f21",
+       "kept": true
+      },
+      {
+       "file": "/f22",
+       "kept": true
+      },
+      {
+       "file": "/f23",
+       "kept": true
+      },
+      {
+       "file": "/f24",
+       "kept": true
+      },
+      {
+       "file": "/f25",
+       "kept": true
+      },
+      {
+       "file": "/f26",
+       "kept": true
+      },
+      {
+       "file": "/f27",
+       "kept": true
+      },
+      {
+       "file": "/f28",
+       "kept": true
+      },
+      {
+       "file": "/f29",
+       "kept": true
+      },
+      {
+       "file": "/f30",
+       "kept": true
+      },
+      {
+       "file": "/f31",
+       "kept": true
+      },
+      {
+       "file": "/f32",
+       "kept": true
+      },
+      {
+       "file": "/f33",
+       "kept": true
+      },
+      {
+       "file": "/f34",
+       "kept": true
+      },
+      {
+       "file": "/f35",
+       "kept": true
+      },
+      {
+       "file": "/f36",
+       "kept": true
+      },
+      {
+       "file": "/f37",
+       "kept": true
+      },
+      {
+       "file": "/f38",
+       "kept": true
+      },
+      {
+       "file": "/f39",
+       "kept": true
+      },
+      {
+       "file": "/f40",
+       "kept": true
+      },
+      {
+       "file": "/f41",
+       "kept": true
+      },
+      {
+       "file": "/f42",
+       "kept": true
+      },
+      {
+       "file": "/f43",
+       "kept": true
+      },
+      {
+       "file": "/f44",
+       "kept": true
+      },
+      {
+       "file": "/f45",
+       "kept": true
+      },
+      {
+       "file": "/f46",
+       "kept": true
+      },
+      {
+       "file": "/f47",
+       "kept": true
+      },
+      {
+       "file": "/f48",
+       "kept": true
+      },
+      {
+       "file": "/f49",
+       "kept": true
+      }
+     ],
+     "current": 25
+    },
+    "/new",
+    true
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/f1",
+      "kept": true
+     },
+     {
+      "file": "/f2",
+      "kept": true
+     },
+     {
+      "file": "/f3",
+      "kept": true
+     },
+     {
+      "file": "/f4",
+      "kept": true
+     },
+     {
+      "file": "/f5",
+      "kept": true
+     },
+     {
+      "file": "/f6",
+      "kept": true
+     },
+     {
+      "file": "/f7",
+      "kept": true
+     },
+     {
+      "file": "/f8",
+      "kept": true
+     },
+     {
+      "file": "/f9",
+      "kept": true
+     },
+     {
+      "file": "/f10",
+      "kept": true
+     },
+     {
+      "file": "/f11",
+      "kept": true
+     },
+     {
+      "file": "/f12",
+      "kept": true
+     },
+     {
+      "file": "/f13",
+      "kept": true
+     },
+     {
+      "file": "/f14",
+      "kept": true
+     },
+     {
+      "file": "/f15",
+      "kept": true
+     },
+     {
+      "file": "/f16",
+      "kept": true
+     },
+     {
+      "file": "/f17",
+      "kept": true
+     },
+     {
+      "file": "/f18",
+      "kept": true
+     },
+     {
+      "file": "/f19",
+      "kept": true
+     },
+     {
+      "file": "/f20",
+      "kept": true
+     },
+     {
+      "file": "/f21",
+      "kept": true
+     },
+     {
+      "file": "/f22",
+      "kept": true
+     },
+     {
+      "file": "/f23",
+      "kept": true
+     },
+     {
+      "file": "/f24",
+      "kept": true
+     },
+     {
+      "file": "/f25",
+      "kept": true
+     },
+     {
+      "file": "/new",
+      "kept": true
+     },
+     {
+      "file": "/f26",
+      "kept": true
+     },
+     {
+      "file": "/f27",
+      "kept": true
+     },
+     {
+      "file": "/f28",
+      "kept": true
+     },
+     {
+      "file": "/f29",
+      "kept": true
+     },
+     {
+      "file": "/f30",
+      "kept": true
+     },
+     {
+      "file": "/f31",
+      "kept": true
+     },
+     {
+      "file": "/f32",
+      "kept": true
+     },
+     {
+      "file": "/f33",
+      "kept": true
+     },
+     {
+      "file": "/f34",
+      "kept": true
+     },
+     {
+      "file": "/f35",
+      "kept": true
+     },
+     {
+      "file": "/f36",
+      "kept": true
+     },
+     {
+      "file": "/f37",
+      "kept": true
+     },
+     {
+      "file": "/f38",
+      "kept": true
+     },
+     {
+      "file": "/f39",
+      "kept": true
+     },
+     {
+      "file": "/f40",
+      "kept": true
+     },
+     {
+      "file": "/f41",
+      "kept": true
+     },
+     {
+      "file": "/f42",
+      "kept": true
+     },
+     {
+      "file": "/f43",
+      "kept": true
+     },
+     {
+      "file": "/f44",
+      "kept": true
+     },
+     {
+      "file": "/f45",
+      "kept": true
+     },
+     {
+      "file": "/f46",
+      "kept": true
+     },
+     {
+      "file": "/f47",
+      "kept": true
+     },
+     {
+      "file": "/f48",
+      "kept": true
+     },
+     {
+      "file": "/f49",
+      "kept": true
+     }
+    ],
+    "current": 25,
+    "fresh": true
+   }
+  },
+  {
+   "fn": "open",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/f0",
+       "kept": true
+      },
+      {
+       "file": "/f1",
+       "kept": true
+      },
+      {
+       "file": "/f2",
+       "kept": true
+      },
+      {
+       "file": "/f3",
+       "kept": true
+      },
+      {
+       "file": "/f4",
+       "kept": true
+      },
+      {
+       "file": "/f5",
+       "kept": true
+      },
+      {
+       "file": "/f6",
+       "kept": true
+      },
+      {
+       "file": "/f7",
+       "kept": true
+      },
+      {
+       "file": "/f8",
+       "kept": true
+      },
+      {
+       "file": "/f9",
+       "kept": true
+      },
+      {
+       "file": "/f10",
+       "kept": true
+      },
+      {
+       "file": "/f11",
+       "kept": true
+      },
+      {
+       "file": "/f12",
+       "kept": true
+      },
+      {
+       "file": "/f13",
+       "kept": true
+      },
+      {
+       "file": "/f14",
+       "kept": true
+      },
+      {
+       "file": "/f15",
+       "kept": true
+      },
+      {
+       "file": "/f16",
+       "kept": true
+      },
+      {
+       "file": "/f17",
+       "kept": true
+      },
+      {
+       "file": "/f18",
+       "kept": true
+      },
+      {
+       "file": "/f19",
+       "kept": true
+      },
+      {
+       "file": "/f20",
+       "kept": true
+      },
+      {
+       "file": "/f21",
+       "kept": true
+      },
+      {
+       "file": "/f22",
+       "kept": true
+      },
+      {
+       "file": "/f23",
+       "kept": true
+      },
+      {
+       "file": "/f24",
+       "kept": true
+      },
+      {
+       "file": "/f25",
+       "kept": true
+      },
+      {
+       "file": "/f26",
+       "kept": true
+      },
+      {
+       "file": "/f27",
+       "kept": true
+      },
+      {
+       "file": "/f28",
+       "kept": true
+      },
+      {
+       "file": "/f29",
+       "kept": true
+      },
+      {
+       "file": "/f30",
+       "kept": true
+      },
+      {
+       "file": "/f31",
+       "kept": true
+      },
+      {
+       "file": "/f32",
+       "kept": true
+      },
+      {
+       "file": "/f33",
+       "kept": true
+      },
+      {
+       "file": "/f34",
+       "kept": true
+      },
+      {
+       "file": "/f35",
+       "kept": true
+      },
+      {
+       "file": "/f36",
+       "kept": true
+      },
+      {
+       "file": "/f37",
+       "kept": true
+      },
+      {
+       "file": "/f38",
+       "kept": true
+      },
+      {
+       "file": "/f39",
+       "kept": true
+      },
+      {
+       "file": "/f40",
+       "kept": true
+      },
+      {
+       "file": "/f41",
+       "kept": true
+      },
+      {
+       "file": "/f42",
+       "kept": true
+      },
+      {
+       "file": "/f43",
+       "kept": true
+      },
+      {
+       "file": "/f44",
+       "kept": true
+      },
+      {
+       "file": "/f45",
+       "kept": true
+      },
+      {
+       "file": "/f46",
+       "kept": true
+      },
+      {
+       "file": "/f47",
+       "kept": true
+      },
+      {
+       "file": "/f48",
+       "kept": true
+      },
+      {
+       "file": "/f49",
+       "kept": true
+      }
+     ],
+     "current": 0
+    },
+    "/new",
+    true,
+    [
+     "/f49",
+     "/f48"
+    ]
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/f0",
+      "kept": true
+     },
+     {
+      "file": "/new",
+      "kept": true
+     },
+     {
+      "file": "/f1",
+      "kept": true
+     },
+     {
+      "file": "/f2",
+      "kept": true
+     },
+     {
+      "file": "/f3",
+      "kept": true
+     },
+     {
+      "file": "/f4",
+      "kept": true
+     },
+     {
+      "file": "/f5",
+      "kept": true
+     },
+     {
+      "file": "/f6",
+      "kept": true
+     },
+     {
+      "file": "/f7",
+      "kept": true
+     },
+     {
+      "file": "/f8",
+      "kept": true
+     },
+     {
+      "file": "/f9",
+      "kept": true
+     },
+     {
+      "file": "/f10",
+      "kept": true
+     },
+     {
+      "file": "/f11",
+      "kept": true
+     },
+     {
+      "file": "/f12",
+      "kept": true
+     },
+     {
+      "file": "/f13",
+      "kept": true
+     },
+     {
+      "file": "/f14",
+      "kept": true
+     },
+     {
+      "file": "/f15",
+      "kept": true
+     },
+     {
+      "file": "/f16",
+      "kept": true
+     },
+     {
+      "file": "/f17",
+      "kept": true
+     },
+     {
+      "file": "/f18",
+      "kept": true
+     },
+     {
+      "file": "/f19",
+      "kept": true
+     },
+     {
+      "file": "/f20",
+      "kept": true
+     },
+     {
+      "file": "/f21",
+      "kept": true
+     },
+     {
+      "file": "/f22",
+      "kept": true
+     },
+     {
+      "file": "/f23",
+      "kept": true
+     },
+     {
+      "file": "/f24",
+      "kept": true
+     },
+     {
+      "file": "/f25",
+      "kept": true
+     },
+     {
+      "file": "/f26",
+      "kept": true
+     },
+     {
+      "file": "/f27",
+      "kept": true
+     },
+     {
+      "file": "/f28",
+      "kept": true
+     },
+     {
+      "file": "/f29",
+      "kept": true
+     },
+     {
+      "file": "/f30",
+      "kept": true
+     },
+     {
+      "file": "/f31",
+      "kept": true
+     },
+     {
+      "file": "/f32",
+      "kept": true
+     },
+     {
+      "file": "/f33",
+      "kept": true
+     },
+     {
+      "file": "/f34",
+      "kept": true
+     },
+     {
+      "file": "/f35",
+      "kept": true
+     },
+     {
+      "file": "/f36",
+      "kept": true
+     },
+     {
+      "file": "/f37",
+      "kept": true
+     },
+     {
+      "file": "/f38",
+      "kept": true
+     },
+     {
+      "file": "/f39",
+      "kept": true
+     },
+     {
+      "file": "/f40",
+      "kept": true
+     },
+     {
+      "file": "/f41",
+      "kept": true
+     },
+     {
+      "file": "/f42",
+      "kept": true
+     },
+     {
+      "file": "/f43",
+      "kept": true
+     },
+     {
+      "file": "/f44",
+      "kept": true
+     },
+     {
+      "file": "/f45",
+      "kept": true
+     },
+     {
+      "file": "/f46",
+      "kept": true
+     },
+     {
+      "file": "/f48",
+      "kept": true
+     },
+     {
+      "file": "/f49",
+      "kept": true
+     }
+    ],
+    "current": 1,
+    "fresh": true
+   }
+  },
+  {
+   "fn": "open",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/f0",
+       "kept": true
+      },
+      {
+       "file": "/f1",
+       "kept": true
+      },
+      {
+       "file": "/f2",
+       "kept": true
+      },
+      {
+       "file": "/f3",
+       "kept": true
+      },
+      {
+       "file": "/f4",
+       "kept": true
+      },
+      {
+       "file": "/f5",
+       "kept": true
+      },
+      {
+       "file": "/f6",
+       "kept": true
+      },
+      {
+       "file": "/f7",
+       "kept": true
+      },
+      {
+       "file": "/f8",
+       "kept": true
+      },
+      {
+       "file": "/f9",
+       "kept": true
+      },
+      {
+       "file": "/f10",
+       "kept": true
+      },
+      {
+       "file": "/f11",
+       "kept": true
+      },
+      {
+       "file": "/f12",
+       "kept": true
+      },
+      {
+       "file": "/f13",
+       "kept": true
+      },
+      {
+       "file": "/f14",
+       "kept": true
+      },
+      {
+       "file": "/f15",
+       "kept": true
+      },
+      {
+       "file": "/f16",
+       "kept": true
+      },
+      {
+       "file": "/f17",
+       "kept": true
+      },
+      {
+       "file": "/f18",
+       "kept": true
+      },
+      {
+       "file": "/f19",
+       "kept": true
+      },
+      {
+       "file": "/f20",
+       "kept": true
+      },
+      {
+       "file": "/f21",
+       "kept": true
+      },
+      {
+       "file": "/f22",
+       "kept": true
+      },
+      {
+       "file": "/f23",
+       "kept": true
+      },
+      {
+       "file": "/f24",
+       "kept": true
+      },
+      {
+       "file": "/f25",
+       "kept": true
+      },
+      {
+       "file": "/f26",
+       "kept": true
+      },
+      {
+       "file": "/f27",
+       "kept": true
+      },
+      {
+       "file": "/f28",
+       "kept": true
+      },
+      {
+       "file": "/f29",
+       "kept": true
+      },
+      {
+       "file": "/f30",
+       "kept": true
+      },
+      {
+       "file": "/f31",
+       "kept": true
+      },
+      {
+       "file": "/f32",
+       "kept": true
+      },
+      {
+       "file": "/f33",
+       "kept": true
+      },
+      {
+       "file": "/f34",
+       "kept": true
+      },
+      {
+       "file": "/f35",
+       "kept": true
+      },
+      {
+       "file": "/f36",
+       "kept": true
+      },
+      {
+       "file": "/f37",
+       "kept": true
+      },
+      {
+       "file": "/f38",
+       "kept": true
+      },
+      {
+       "file": "/f39",
+       "kept": true
+      },
+      {
+       "file": "/f40",
+       "kept": true
+      },
+      {
+       "file": "/f41",
+       "kept": true
+      },
+      {
+       "file": "/f42",
+       "kept": true
+      },
+      {
+       "file": "/f43",
+       "kept": true
+      },
+      {
+       "file": "/f44",
+       "kept": true
+      },
+      {
+       "file": "/f45",
+       "kept": true
+      },
+      {
+       "file": "/f46",
+       "kept": true
+      },
+      {
+       "file": "/f47",
+       "kept": true
+      },
+      {
+       "file": "/f48",
+       "kept": true
+      },
+      {
+       "file": "/f49",
+       "kept": true
+      }
+     ],
+     "current": 0
+    },
+    "/new",
+    true,
+    [
+     "/f0",
+     "/f1",
+     "/f2",
+     "/f3",
+     "/f4",
+     "/f5",
+     "/f6",
+     "/f7",
+     "/f8",
+     "/f9",
+     "/f10",
+     "/f11",
+     "/f12",
+     "/f13",
+     "/f14",
+     "/f15",
+     "/f16",
+     "/f17",
+     "/f18",
+     "/f19",
+     "/f20",
+     "/f21",
+     "/f22",
+     "/f23",
+     "/f24",
+     "/f25",
+     "/f26",
+     "/f27",
+     "/f28",
+     "/f29",
+     "/f30",
+     "/f31",
+     "/f32",
+     "/f33",
+     "/f34",
+     "/f35",
+     "/f36",
+     "/f37",
+     "/f38",
+     "/f39",
+     "/f40",
+     "/f41",
+     "/f42",
+     "/f43",
+     "/f44",
+     "/f45",
+     "/f46",
+     "/f47",
+     "/f48",
+     "/f49"
+    ]
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/f0",
+      "kept": true
+     },
+     {
+      "file": "/new",
+      "kept": true
+     },
+     {
+      "file": "/f1",
+      "kept": true
+     },
+     {
+      "file": "/f2",
+      "kept": true
+     },
+     {
+      "file": "/f3",
+      "kept": true
+     },
+     {
+      "file": "/f4",
+      "kept": true
+     },
+     {
+      "file": "/f5",
+      "kept": true
+     },
+     {
+      "file": "/f6",
+      "kept": true
+     },
+     {
+      "file": "/f7",
+      "kept": true
+     },
+     {
+      "file": "/f8",
+      "kept": true
+     },
+     {
+      "file": "/f9",
+      "kept": true
+     },
+     {
+      "file": "/f10",
+      "kept": true
+     },
+     {
+      "file": "/f11",
+      "kept": true
+     },
+     {
+      "file": "/f12",
+      "kept": true
+     },
+     {
+      "file": "/f13",
+      "kept": true
+     },
+     {
+      "file": "/f14",
+      "kept": true
+     },
+     {
+      "file": "/f15",
+      "kept": true
+     },
+     {
+      "file": "/f16",
+      "kept": true
+     },
+     {
+      "file": "/f17",
+      "kept": true
+     },
+     {
+      "file": "/f18",
+      "kept": true
+     },
+     {
+      "file": "/f19",
+      "kept": true
+     },
+     {
+      "file": "/f20",
+      "kept": true
+     },
+     {
+      "file": "/f21",
+      "kept": true
+     },
+     {
+      "file": "/f22",
+      "kept": true
+     },
+     {
+      "file": "/f23",
+      "kept": true
+     },
+     {
+      "file": "/f24",
+      "kept": true
+     },
+     {
+      "file": "/f25",
+      "kept": true
+     },
+     {
+      "file": "/f26",
+      "kept": true
+     },
+     {
+      "file": "/f27",
+      "kept": true
+     },
+     {
+      "file": "/f28",
+      "kept": true
+     },
+     {
+      "file": "/f29",
+      "kept": true
+     },
+     {
+      "file": "/f30",
+      "kept": true
+     },
+     {
+      "file": "/f31",
+      "kept": true
+     },
+     {
+      "file": "/f32",
+      "kept": true
+     },
+     {
+      "file": "/f33",
+      "kept": true
+     },
+     {
+      "file": "/f34",
+      "kept": true
+     },
+     {
+      "file": "/f35",
+      "kept": true
+     },
+     {
+      "file": "/f36",
+      "kept": true
+     },
+     {
+      "file": "/f37",
+      "kept": true
+     },
+     {
+      "file": "/f38",
+      "kept": true
+     },
+     {
+      "file": "/f39",
+      "kept": true
+     },
+     {
+      "file": "/f40",
+      "kept": true
+     },
+     {
+      "file": "/f41",
+      "kept": true
+     },
+     {
+      "file": "/f42",
+      "kept": true
+     },
+     {
+      "file": "/f43",
+      "kept": true
+     },
+     {
+      "file": "/f44",
+      "kept": true
+     },
+     {
+      "file": "/f45",
+      "kept": true
+     },
+     {
+      "file": "/f46",
+      "kept": true
+     },
+     {
+      "file": "/f47",
+      "kept": true
+     },
+     {
+      "file": "/f48",
+      "kept": true
+     },
+     {
+      "file": "/f49",
+      "kept": true
+     }
+    ],
+    "current": 1,
+    "fresh": true
+   }
+  },
+  {
+   "fn": "close",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": true
+      },
+      {
+       "file": "/b",
+       "kept": true
+      },
+      {
+       "file": "/c",
+       "kept": true
+      }
+     ],
+     "current": 1
+    },
+    0
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/b",
+      "kept": true
+     },
+     {
+      "file": "/c",
+      "kept": true
+     }
+    ],
+    "current": 0
+   }
+  },
+  {
+   "fn": "close",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": true
+      },
+      {
+       "file": "/b",
+       "kept": true
+      },
+      {
+       "file": "/c",
+       "kept": true
+      }
+     ],
+     "current": 1
+    },
+    1
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": true
+     },
+     {
+      "file": "/c",
+      "kept": true
+     }
+    ],
+    "current": 1
+   }
+  },
+  {
+   "fn": "close",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": true
+      },
+      {
+       "file": "/b",
+       "kept": true
+      },
+      {
+       "file": "/c",
+       "kept": true
+      }
+     ],
+     "current": 1
+    },
+    2
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": true
+     },
+     {
+      "file": "/b",
+      "kept": true
+     }
+    ],
+    "current": 1
+   }
+  },
+  {
+   "fn": "close",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": true
+      },
+      {
+       "file": "/b",
+       "kept": true
+      },
+      {
+       "file": "/c",
+       "kept": true
+      }
+     ],
+     "current": 2
+    },
+    2
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": true
+     },
+     {
+      "file": "/b",
+      "kept": true
+     }
+    ],
+    "current": 1
+   }
+  },
+  {
+   "fn": "close",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": true
+      },
+      {
+       "file": "/b",
+       "kept": true
+      },
+      {
+       "file": "/c",
+       "kept": true
+      }
+     ],
+     "current": 0
+    },
+    0
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/b",
+      "kept": true
+     },
+     {
+      "file": "/c",
+      "kept": true
+     }
+    ],
+    "current": 0
+   }
+  },
+  {
+   "fn": "close",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": true
+      },
+      {
+       "file": "/b",
+       "kept": true
+      },
+      {
+       "file": "/c",
+       "kept": true
+      }
+     ],
+     "current": 1
+    },
+    5
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": true
+     },
+     {
+      "file": "/b",
+      "kept": true
+     },
+     {
+      "file": "/c",
+      "kept": true
+     }
+    ],
+    "current": 1
+   }
+  },
+  {
+   "fn": "close",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": true
+      },
+      {
+       "file": "/b",
+       "kept": true
+      },
+      {
+       "file": "/c",
+       "kept": true
+      }
+     ],
+     "current": 1
+    },
+    -1
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": true
+     },
+     {
+      "file": "/b",
+      "kept": true
+     },
+     {
+      "file": "/c",
+      "kept": true
+     }
+    ],
+    "current": 1
+   }
+  },
+  {
+   "fn": "close",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": true
+      }
+     ],
+     "current": 0
+    },
+    0
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": true
+     }
+    ],
+    "current": 0
+   }
+  },
+  {
+   "fn": "step",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": true
+      },
+      {
+       "file": "/b",
+       "kept": true
+      },
+      {
+       "file": "/c",
+       "kept": true
+      }
+     ],
+     "current": 0
+    },
+    1
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": true
+     },
+     {
+      "file": "/b",
+      "kept": true
+     },
+     {
+      "file": "/c",
+      "kept": true
+     }
+    ],
+    "current": 1
+   }
+  },
+  {
+   "fn": "step",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": true
+      },
+      {
+       "file": "/b",
+       "kept": true
+      },
+      {
+       "file": "/c",
+       "kept": true
+      }
+     ],
+     "current": 0
+    },
+    -1
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": true
+     },
+     {
+      "file": "/b",
+      "kept": true
+     },
+     {
+      "file": "/c",
+      "kept": true
+     }
+    ],
+    "current": 2
+   }
+  },
+  {
+   "fn": "step",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": true
+      },
+      {
+       "file": "/b",
+       "kept": true
+      },
+      {
+       "file": "/c",
+       "kept": true
+      }
+     ],
+     "current": 2
+    },
+    1
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": true
+     },
+     {
+      "file": "/b",
+      "kept": true
+     },
+     {
+      "file": "/c",
+      "kept": true
+     }
+    ],
+    "current": 0
+   }
+  },
+  {
+   "fn": "step",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": true
+      },
+      {
+       "file": "/b",
+       "kept": true
+      },
+      {
+       "file": "/c",
+       "kept": true
+      }
+     ],
+     "current": 1
+    },
+    -1
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": true
+     },
+     {
+      "file": "/b",
+      "kept": true
+     },
+     {
+      "file": "/c",
+      "kept": true
+     }
+    ],
+    "current": 0
+   }
+  },
+  {
+   "fn": "step",
+   "args": [
+    {
+     "list": [],
+     "current": 0
+    },
+    1
+   ],
+   "out": {
+    "list": [],
+    "current": 0
+   }
+  },
+  {
+   "fn": "keep",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": false,
+       "v": 1
+      },
+      {
+       "file": "/b",
+       "kept": false
+      }
+     ],
+     "current": 0
+    }
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": true,
+      "v": 1
+     },
+     {
+      "file": "/b",
+      "kept": false
+     }
+    ],
+    "current": 0
+   }
+  },
+  {
+   "fn": "keep",
+   "args": [
+    {
+     "list": [
+      {
+       "file": "/a",
+       "kept": false
+      },
+      {
+       "file": "/b",
+       "kept": false
+      }
+     ],
+     "current": 0
+    },
+    1
+   ],
+   "out": {
+    "list": [
+     {
+      "file": "/a",
+      "kept": false
+     },
+     {
+      "file": "/b",
+      "kept": true
+     }
+    ],
+    "current": 0
+   }
+  },
+  {
+   "fn": "labels",
+   "args": [
+    [
+     "/x/src/index.js",
+     "/x/test/index.js",
+     "/x/a.js",
+     "/b.js",
+     "/index.js"
+    ]
+   ],
+   "out": [
+    "src/index.js",
+    "test/index.js",
+    "a.js",
+    "b.js",
+    "/index.js"
+   ]
+  },
+  {
+   "fn": "labels",
+   "args": [
+    []
+   ],
+   "out": []
+  },
+  {
+   "fn": "strip",
+   "args": [
+    [
+     10,
+     10,
+     10
+    ],
+    0,
+    40,
+    0
+   ],
+   "out": {
+    "first": 0,
+    "last": 2,
+    "cut": 0
+   }
+  },
+  {
+   "fn": "strip",
+   "args": [
+    [
+     10,
+     10,
+     10
+    ],
+    2,
+    15,
+    0
+   ],
+   "out": {
+    "first": 2,
+    "last": 2,
+    "cut": 0
+   }
+  },
+  {
+   "fn": "strip",
+   "args": [
+    [
+     10,
+     10,
+     10
+    ],
+    1,
+    15,
+    0
+   ],
+   "out": {
+    "first": 1,
+    "last": 1,
+    "cut": 0
+   }
+  },
+  {
+   "fn": "strip",
+   "args": [
+    [
+     10,
+     10,
+     10,
+     10,
+     10
+    ],
+    4,
+    24,
+    0
+   ],
+   "out": {
+    "first": 3,
+    "last": 4,
+    "cut": 0
+   }
+  },
+  {
+   "fn": "strip",
+   "args": [
+    [
+     10,
+     10,
+     10,
+     10,
+     10
+    ],
+    2,
+    24,
+    3
+   ],
+   "out": {
+    "first": 2,
+    "last": 3,
+    "cut": 0
+   }
+  },
+  {
+   "fn": "strip",
+   "args": [
+    [
+     10,
+     10,
+     10,
+     10,
+     10
+    ],
+    0,
+    24,
+    3
+   ],
+   "out": {
+    "first": 0,
+    "last": 1,
+    "cut": 0
+   }
+  },
+  {
+   "fn": "strip",
+   "args": [
+    [
+     50
+    ],
+    0,
+    20,
+    0
+   ],
+   "out": {
+    "first": 0,
+    "last": 0,
+    "cut": 30
+   }
+  },
+  {
+   "fn": "strip",
+   "args": [
+    [],
+    0,
+    10,
+    0
+   ],
+   "out": {
+    "first": 0,
+    "last": -1,
+    "cut": 0
+   }
+  },
+  {
+   "fn": "strip",
+   "args": [
+    [
+     5,
+     5
+    ],
+    1,
+    3,
+    0
+   ],
+   "out": {
+    "first": 1,
+    "last": 1,
+    "cut": 4
+   }
+  },
+  {
+   "fn": "strip",
+   "args": [
+    [
+     8,
+     8,
+     8,
+     8
+    ],
+    3,
+    20,
+    1
+   ],
+   "out": {
+    "first": 2,
+    "last": 3,
+    "cut": 0
+   }
+  }
+ ]
+}

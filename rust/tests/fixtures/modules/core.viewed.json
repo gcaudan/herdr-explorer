@@ -1,0 +1,221 @@
+{
+ "module": "core/viewed",
+ "cases": [
+  {
+   "fn": "sign",
+   "args": [
+    "$ROOT/a"
+   ],
+   "files": {
+    "a": "hello"
+   },
+   "out": "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"
+  },
+  {
+   "fn": "sign",
+   "args": [
+    "$ROOT/missing"
+   ],
+   "out": "gone"
+  },
+  {
+   "fn": "sign",
+   "args": [
+    "$ROOT/d"
+   ],
+   "files": {
+    "d": null
+   },
+   "out": "gone"
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "out": {}
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "viewed-w1_t1.json": "[1]"
+   },
+   "out": {}
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "viewed-w1_t1.json": "null"
+   },
+   "out": {}
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "viewed-w1_t1.json": "{\"x\":\"y\"}"
+   },
+   "out": {
+    "x": "y"
+   }
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "files": {
+    "viewed-w1_t1.json": "{\"x\":\"y\"}"
+   },
+   "out": {}
+  },
+  {
+   "fn": "is",
+   "args": [
+    {
+     "$ROOT/a": "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"
+    },
+    "$ROOT/a"
+   ],
+   "files": {
+    "a": "hello"
+   },
+   "out": true
+  },
+  {
+   "fn": "is",
+   "args": [
+    {
+     "$ROOT/a": "c00dbbc9dadfbe1e232e93a729dd4752fade0abf"
+    },
+    "$ROOT/a"
+   ],
+   "files": {
+    "a": "hello"
+   },
+   "out": false
+  },
+  {
+   "fn": "is",
+   "args": [
+    {
+     "$ROOT/a": "gone"
+    },
+    "$ROOT/a"
+   ],
+   "out": true
+  },
+  {
+   "fn": "is",
+   "args": [
+    {
+     "$ROOT/a": 1
+    },
+    "$ROOT/a"
+   ],
+   "files": {
+    "a": "x"
+   },
+   "out": false
+  },
+  {
+   "fn": "toggle",
+   "args": [
+    "w1:t1",
+    "$ROOT/a"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "a": "hello"
+   },
+   "after": {
+    "viewed-w1_t1.json": "{\"$ROOT/a\":\"aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d\"}"
+   },
+   "out": true
+  },
+  {
+   "fn": "toggle",
+   "args": [
+    "w1:t1",
+    "$ROOT/a"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "a": "hello",
+    "viewed-w1_t1.json": "{\"$ROOT/a\":\"aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d\"}"
+   },
+   "after": {
+    "viewed-w1_t1.json": null
+   },
+   "out": false
+  },
+  {
+   "fn": "toggle",
+   "args": [
+    "w1:t1",
+    "$ROOT/a"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "a": "hello",
+    "b": "b",
+    "viewed-w1_t1.json": "{\"$ROOT/b\":\"e9d71f5ee7c92d6dc9e92ffdad17b8bd49418f98\",\"$ROOT/c\":\"84a516841ba77a5b4648de2cd0dfcb30ea46dbb4\",\"$ROOT/a\":\"x\"}"
+   },
+   "after": {
+    "viewed-w1_t1.json": "{\"$ROOT/b\":\"e9d71f5ee7c92d6dc9e92ffdad17b8bd49418f98\",\"$ROOT/a\":\"aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d\"}"
+   },
+   "out": true
+  },
+  {
+   "fn": "toggle",
+   "args": [
+    "w1:t1",
+    "$ROOT/gone"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "after": {
+    "viewed-w1_t1.json": "{\"$ROOT/gone\":\"gone\"}"
+   },
+   "out": true
+  },
+  {
+   "fn": "toggle",
+   "args": [
+    "w1:t1",
+    "$ROOT/a"
+   ],
+   "files": {
+    "a": "hello"
+   },
+   "out": true
+  }
+ ]
+}

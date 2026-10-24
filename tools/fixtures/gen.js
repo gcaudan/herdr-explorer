@@ -6,7 +6,8 @@
 //   files  { "<path>": "<text>" | null (a folder) | { link: "<target>" } }, made under a fresh folder before the call;
 //   env    variables set for the call ("$ROOT" replaced);
 //   after  { "<path>": "<text>" | null (missing) }, files read back after the call.
-// "$ROOT" in args, files, out and after stands for that folder, so that fixtures do not depend on where they ran.
+// "$ROOT" in args, files (their text and link targets), out and after stands for that folder, so that fixtures do
+// not depend on where they ran.
 'use strict';
 const fs = require('fs');
 const os = require('os');
@@ -26,7 +27,7 @@ function setup(files = {}) {
     fs.mkdirSync(path.dirname(p), { recursive: true });
     if (content === null) fs.mkdirSync(p, { recursive: true });
     else if (typeof content === 'object') fs.symlinkSync(content.link.split('$ROOT').join(root), p);
-    else fs.writeFileSync(p, content);
+    else fs.writeFileSync(p, content.split('$ROOT').join(root));
   }
   return root;
 }

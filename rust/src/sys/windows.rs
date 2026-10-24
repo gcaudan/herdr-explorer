@@ -72,6 +72,19 @@ unsafe extern "system" {
     fn SetEvent(h: Handle) -> Bool;
     fn WaitForSingleObject(h: Handle, ms: u32) -> u32;
     fn SetConsoleCtrlHandler(handler: Option<unsafe extern "system" fn(u32) -> Bool>, add: Bool) -> Bool;
+    fn GetComputerNameExW(kind: u32, buf: *mut u16, len: *mut u32) -> Bool;
+}
+
+/// The machine's name, as os.hostname() (libuv's GetHostNameW gives the DNS host name).
+pub fn hostname() -> String {
+    const COMPUTER_NAME_DNS_HOSTNAME: u32 = 1;
+    let mut buf = [0u16; 256];
+    let mut len = buf.len() as u32;
+    // SAFETY: writes at most len units, and len back.
+    if unsafe { GetComputerNameExW(COMPUTER_NAME_DNS_HOSTNAME, buf.as_mut_ptr(), &mut len) } == 0 {
+        return String::new();
+    }
+    String::from_utf16_lossy(&buf[..len as usize])
 }
 
 fn console_mode(h: Handle) -> Option<u32> {

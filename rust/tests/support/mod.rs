@@ -121,7 +121,7 @@ fn setup(root: &Path, files: Option<&Value>) {
         std::fs::create_dir_all(p.parent().unwrap()).unwrap();
         match content {
             Value::Null => std::fs::create_dir_all(&p).unwrap(),
-            Value::Str(text) => std::fs::write(&p, text).unwrap(),
+            Value::Str(text) => std::fs::write(&p, text.replace("$ROOT", root.to_str().unwrap())).unwrap(),
             other => {
                 let target = other.get("link").and_then(Value::as_str).unwrap();
                 let target = target.replace("$ROOT", root.to_str().unwrap());

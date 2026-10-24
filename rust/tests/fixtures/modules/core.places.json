@@ -414,6 +414,230 @@
     "me"
    ],
    "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a/b/../c/./d.js#L3",
+    "me"
+   ],
+   "out": "/a/c/d.js:3"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a/%2e%2E/b",
+    "me"
+   ],
+   "out": "/b"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a%2Fb",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a%2fb",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a%zz",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a%E2%9C",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a\tb\n.js",
+    "me"
+   ],
+   "out": "/ab.js"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "FILE:///x.js",
+    "me"
+   ],
+   "out": "/x.js"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file://a@b/x",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file://me:80/x",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file://h%41st/x",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///C|/x/../..",
+    "me"
+   ],
+   "out": "/C:/"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file://C:/x",
+    "me"
+   ],
+   "out": "/C:/x"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:\\\\\\x\\y",
+    "me"
+   ],
+   "out": "file:\\\\\\x\\y"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///x#L1-L2",
+    "me"
+   ],
+   "out": "/x:1-2"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///x#1-",
+    "me"
+   ],
+   "out": "/x"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///x#",
+    "me"
+   ],
+   "out": "/x"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///x?q#L5",
+    "me"
+   ],
+   "out": "/x:5"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///",
+    "me"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file://",
+    "me"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a//b/",
+    "me"
+   ],
+   "out": "/a//b/"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///%41%20b",
+    "me"
+   ],
+   "out": "/A b"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///../../x",
+    "me"
+   ],
+   "out": "/x"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a/..",
+    "me"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a/.",
+    "me"
+   ],
+   "out": "/a/"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file://ME.local/x",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///é ü/ç.js",
+    "me"
+   ],
+   "out": "/é ü/ç.js"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///x#L٣",
+    "me"
+   ],
+   "out": "/x"
   }
  ]
 }
