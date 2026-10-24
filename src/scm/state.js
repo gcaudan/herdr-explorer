@@ -136,11 +136,27 @@ async function loadHistory() {
   // Children before their parents, by date, as the graph needs. For one file, --parents links each commit to the
   // previous one that changed it, so that the graph joins them up.
   const revs = S.allBranches ? [...(S.repo.hasHead ? ['HEAD'] : []), '--branches', '--remotes'] : [];
-  const res = await git(['log', '--no-show-signature', '--decorate=full', '--date-order', '-n', '500',
-    '--format=%H%x1f%h%x1f%s%x1f%an%x1f%at%x1f%D%x1f%P', ...(S.histFile ? ['--parents'] : []), ...revs, '--', ...(S.histFile ? S.histNames : [])]);
+  const [res, fork] = await Promise.all([git(['log', '--no-show-signature', '--decorate=full', '--date-order', '-n', '500',
+    '--format=%H%x1f%h%x1f%s%x1f%an%x1f%at%x1f%D%x1f%P', ...(S.histFile ? ['--parents'] : []), ...revs, '--', ...(S.histFile ? S.histNames : [])]),
+  forkPoint()]);
   S.history = res.code !== 0 ? [] : parse.parseHistory(res.out);
-  graph.layout(S.history).forEach((g, i) => Object.assign(S.history[i], { graph: g.cells, lane: g.color, node: node(g) }));
+  graph.layout(S.history, fork).forEach((g, i) => Object.assign(S.history[i], { graph: g.cells, lane: g.color, node: node(g) }));
   S.histLoaded = true;
+}
+
+// Where the current branch leaves the default branch (the remote's HEAD, else main or master, as the Diff view's main
+// base): the history's graph changes colour there. null on the default branch, or a branch it already has.
+async function forkPoint() {
+  if (!S.repo.hasHead) return null;
+  const out = async args => { const r = await git(args); return r.code === 0 ? r.out.trim() : ''; };
+  let name = await out(['rev-parse', '--abbrev-ref', '-q', '--verify', 'refs/remotes/origin/HEAD']);
+  for (const b of ['main', 'master', 'origin/main', 'origin/master']) {
+    if (name) break;
+    if (await out(['rev-parse', '--verify', '-q', `${b}^{commit}`])) name = b;
+  }
+  if (!name) return null;
+  const [fork, head] = await Promise.all([out(['merge-base', 'HEAD', name]), out(['rev-parse', 'HEAD'])]);
+  return fork && fork !== head ? fork : null;
 }
 
 // The file whose history is shown, relative to the repository (git runs there), through symbolic links (/home and
@@ -399,5 +415,5 @@ function toggle(row, open = !row.open) {
 module.exports = {
   exec, english, git, errorOf, op, net, fromFile, nul, loadStatus, histName, renamed, allFiles, schedule, refresh, ongoing,
   mergeOptions, continues, headName, filterPicker, openPicker, fullRef, baseName, compare, shareCompare, showDiff, openItemDiff,
-  closeDiff, comparable, diffable, showing, setView, toggleAllBranches, toggleTree, toggle,
+  closeDiff, comparable, diffable, showing, setView, toggleAllBranches, toggleTree, toggle, forkPoint,
 };

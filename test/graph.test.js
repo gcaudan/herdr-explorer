@@ -34,3 +34,12 @@ test('a tip has no line above, the first commit none below', () => {
   const rows = layout([{ hash: 'b', parents: ['a'] }, { hash: 'a', parents: [] }]);
   assert.deepStrictEqual(rows.map(r => [r.above, r.below]), [[false, true], [true, false]]);
 });
+
+test('the lane of a branch straight ahead of the default branch changes colour where it leaves it', () => {
+  const rows = layout([{ hash: 'c', parents: ['b'] }, { hash: 'b', parents: ['a'] }, { hash: 'a', parents: [] }], 'b');
+  assert.notStrictEqual(rows[0].color, rows[1].color);
+  assert.strictEqual(rows[1].color, rows[2].color);
+  // A lane joining there: its colour goes on.
+  const fork = layout([{ hash: 'd', parents: ['b'] }, { hash: 'm', parents: ['b'] }, { hash: 'b', parents: ['a'] }, { hash: 'a', parents: [] }], 'b');
+  assert.strictEqual(fork[2].color, fork[1].color);
+});

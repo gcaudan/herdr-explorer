@@ -267,3 +267,24 @@ test('the lines changed since HEAD, staged or not, as the File view marks them',
   fs.writeFileSync(path.join(out, 'f.txt'), 'a\n');
   if (spawnSync('git', ['rev-parse'], { cwd: out }).status !== 0) assert.strictEqual(await diff.lineChanges(path.join(out, 'f.txt'), 1), null);
 });
+
+test('the fork point of the history: where the branch leaves main, none on main', async () => {
+  const r = repo({ 'a.txt': 'a\n' });
+  if (!r) return;
+  const state = require('../src/scm/state');
+  const { S } = require('../src/scm/context');
+  S.repo = { top: r.top, hasHead: true };
+  const head = () => r.git('rev-parse', 'HEAD').stdout.trim();
+  r.git('branch', '-M', 'main');
+  const base = head();
+  assert.strictEqual(await state.forkPoint(), null);
+  // A straight line ahead of main.
+  r.git('switch', '-q', '-c', 'feat');
+  r.write('a.txt', 'b\n'); r.git('commit', '-qam', 'b');
+  assert.strictEqual(await state.forkPoint(), base);
+  // main went on: still where they parted.
+  r.git('switch', '-q', 'main');
+  r.write('a.txt', 'c\n'); r.git('commit', '-qam', 'c');
+  r.git('switch', '-q', 'feat');
+  assert.strictEqual(await state.forkPoint(), base);
+});
