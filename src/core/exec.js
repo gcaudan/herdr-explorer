@@ -91,7 +91,7 @@ function exec(cmd, args, { cwd, env, input, timeout = 0, detached = false, shell
     try { child = spawn(cmd, args, { cwd, env, shell, windowsHide: true, detached: detached && !WIN }); }
     catch (e) { return resolve({ code: null, out: '', err: e.message }); }
     const out = [], err = [];
-    let size = 0, done = false, timer = null;
+    let size = 0, errSize = 0, done = false, timer = null;
     const finish = code => {
       if (done) return;
       done = true; clearTimeout(timer);
@@ -101,7 +101,7 @@ function exec(cmd, args, { cwd, env, input, timeout = 0, detached = false, shell
     const kill = () => { try { if (detached && !WIN) process.kill(-child.pid); else child.kill(); } catch { } };
     if (timeout) timer = setTimeout(() => { kill(); finish(null); }, timeout);
     child.stdout.on('data', d => { if ((size += d.length) <= 64 << 20) out.push(d); });
-    child.stderr.on('data', d => err.push(d));
+    child.stderr.on('data', d => { if ((errSize += d.length) <= 64 << 20) err.push(d); });
     child.on('error', e => { err.push(Buffer.from(e.message)); finish(null); });
     child.on('close', code => finish(code));
     child.stdin.on('error', () => { });
