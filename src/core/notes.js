@@ -42,7 +42,10 @@ const MAX_SIZE = 4 << 20;  // a larger file is not read to place its notes
 function linesOf(file) {
   try {
     if (fs.statSync(file).size > MAX_SIZE) return undefined;
-    return fs.readFileSync(file, 'utf8').split(/\r?\n/);
+    // The '' after a last line break is not a line: a note on it would be anchored on any blank line.
+    const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+    if (lines[lines.length - 1] === '') lines.pop();
+    return lines;
   } catch (e) { return e.code === 'ENOENT' || e.code === 'ENOTDIR' ? null : undefined; }
 }
 
