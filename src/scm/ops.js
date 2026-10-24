@@ -9,7 +9,7 @@ const ui = require('../core/ui');
 const diffs = require('../diff');
 const actions = require('../core/actions');
 const { WIN, which } = require('../core/exec');
-const { pruneDirs } = require('../core/stage');
+const { pruneDirs, within } = require('../core/stage');
 const { ROOT, MAX_PROMPT, S, frame, draw, follow, base, files, flash, confirm } = require('./context');
 const {
   exec, git, errorOf, op, net, fromFile, nul, loadStatus, schedule, ongoing, mergeOptions, continues, headName, openPicker,
@@ -55,13 +55,13 @@ const prune = abs => pruneDirs(abs, S.repo.top);
 const onDisk = rel => { try { return !!fs.lstatSync(path.resolve(S.repo.top, rel)); } catch { return false; } };
 
 // Files of the repository (paths from its top) to the trash; those it does not take are deleted for good once asked
-// again. Never a path that resolves outside the repository.
+// again. Never a path that resolves outside the repository, through a symbolic link too (within).
 async function toTrash(list) {
   let failed = 0;
   const left = [];
   for (const rel of list) {
     const abs = path.resolve(S.repo.top, rel);
-    if (!abs.startsWith(S.repo.top + path.sep)) { failed++; continue; }
+    if (!within(abs, S.repo.top)) { failed++; continue; }
     if (await actions.trash(abs)) prune(abs); else left.push(abs);
   }
   if (failed) flash(`Could not delete ${files(failed)}`, true);

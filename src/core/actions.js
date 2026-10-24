@@ -16,7 +16,12 @@ const SYSTEM = new Set(('png jpg jpeg gif webp bmp ico svg pdf doc docx xls xlsx
 // Also allowed from the menu (Open in app): text formats opened by an editor or a browser.
 const SAFE = new Set([...SYSTEM, ...'txt md csv log json xml html htm'.split(' ')]);
 const ext = abs => path.extname(abs).slice(1).toLowerCase();
-const canOpen = abs => SAFE.has(ext(abs));
+// The link's target too: doc.pdf linking to a script would be run by macOS's open, which follows it.
+const canOpen = abs => {
+  let real = abs;
+  try { real = fs.realpathSync(abs); } catch { }
+  return SAFE.has(ext(abs)) && SAFE.has(ext(real));
+};
 // Shown in the preview: everything but documents and media other than images (Office, PDF, archives, sound, video).
 const IMAGES = new Set('png jpg jpeg gif webp bmp ico svg'.split(' '));
 const canPreview = abs => !SYSTEM.has(ext(abs)) || IMAGES.has(ext(abs));
@@ -382,7 +387,8 @@ function widthKeeper(pane, { columns, get, set, side = null }) {
 
 // --- plugin panes
 
-const herdr = (...args) => run(HERDR, args).then(result);
+// A time limit: preview() runs one call at a time, and one herdr never answers (a restart) would hold the next ones.
+const herdr = (...args) => run(HERDR, args, { timeout: 10000 }).then(result);
 // herdr opens a popup over the active pane and refuses a target for it.
 const openPane = (entry, placement, target, env, extra = []) => herdr('plugin', 'pane', 'open', '--plugin', PLUGIN,
   '--entrypoint', entry, '--placement', placement, ...(placement === 'popup' ? [] : ['--target-pane', target]), ...extra,
