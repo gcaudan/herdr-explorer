@@ -66,6 +66,30 @@ function items(scope, baseName, pick, ask) {
   ];
 }
 
+// The menu b opens (ui.Menu), and the one of Branch… in its place: pick(scope) for a scope chosen; show(menu) for
+// the menu to show next (null: none); prompt(rev) to type a commit or range, from the one typed before; say(text)
+// for a message. cwd: a folder of the repository.
+function menu(scope, baseName, cwd, { pick, show, prompt, say }) {
+  const ui = require('./ui');
+  const ask = async kind => {
+    show(null);
+    if (kind === 'rev') return prompt(scope.kind === 'rev' ? scope.rev : '');
+    const list = await branches(cwd);
+    if (!list.length) return say('No branch');
+    show(new ui.Menu({ title: 'Branch', at: 1, right: ui.size().W,
+      items: list.map(b => ({ label: b, value: scope.kind === 'ref' && scope.rev === b ? ['●', ''] : null, run: () => pick({ kind: 'ref', rev: b }) })) }));
+  };
+  return new ui.Menu({ title: 'Compare with', items: items(scope, baseName, pick, ask), at: 1, right: ui.size().W });
+}
+
+// A key in the field of Commit or range…: { done, rev } on enter (rev '' when empty) or escape (rev ''), else
+// { changed } when the field took the key.
+function revKey(field, k) {
+  if (k === 'escape' || k === 'ctrl+c') return { done: true, rev: '' };
+  if (k === 'enter') return { done: true, rev: field.value.trim() };
+  return { changed: field.key(k) };
+}
+
 // The branches of the repository holding cwd, local then remote, the latest commit first, for Branch….
 async function branches(cwd) {
   const out = await run(GIT, ['for-each-ref', '--sort=-committerdate', '--format=%(refname:short)', 'refs/heads', 'refs/remotes'],
@@ -162,4 +186,4 @@ async function agentStatus(tab, pane, status, cwd) {
   return tree ? 'snapshot' : 'no snapshot';
 }
 
-module.exports = { KINDS, HEAD, read, write, watch, same, label, items, branches, worktree, readTurn, agentStatus };
+module.exports = { KINDS, HEAD, read, write, watch, same, label, items, menu, revKey, branches, worktree, readTurn, agentStatus };
