@@ -1,4 +1,5 @@
-# Quick checks on every pull request and push to main: scripts parse, terminal width helpers, doc links.
+# Quick checks on every pull request and push to main: scripts parse, terminal width helpers, doc links; the Rust
+# crate's format, lints (host and the 5 release targets) and tests.
 name: ci
 
 on:
@@ -23,3 +24,26 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: node --test
+
+  cargo:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The runners' rustup installs the toolchain, components and targets pinned in rust-toolchain.toml.
+      - run: rustup toolchain install
+      - run: cargo fmt --manifest-path rust/Cargo.toml --check
+      - run: cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings
+      # Compiles each release target's FFI without linking it.
+      - run: |
+          for t in x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-apple-darwin aarch64-apple-darwin \
+            x86_64-pc-windows-msvc; do
+            cargo clippy --manifest-path rust/Cargo.toml --target $t -- -D warnings
+          done
+      - run: cargo test --manifest-path rust/Cargo.toml
