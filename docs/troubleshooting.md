@@ -93,6 +93,9 @@
   stealing prevention* in the KWin window behavior settings, or switch to the window by hand.
 - **No `↑` although a release is out**: `updateCheck` is off, the check already ran today, the release was skipped
   (**Settings**: `u` updates anyway), or the clone is ahead of the release. Delete `update.json` to check again at the next tab creation.
+- **Cannot rename or delete the project folder on Windows** (*access denied* or *in use*): the plugin's panes work
+  in that folder, so that new spaces, tabs and panes made from them start there, and Windows keeps a folder in use
+  from being renamed or deleted. Close the explorer (and the other plugin panes of the tab) first.
 - **A setting edited by hand has no effect**: some are read only when a pane starts (see
   [Settings](configuration.md#settings)): close and reopen the explorer.
 

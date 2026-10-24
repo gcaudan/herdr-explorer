@@ -5,6 +5,13 @@
 'use strict';
 const RESTART = 75; // the exit code of a child that asks to be started again
 
+// Herdr starts plugin panes in the plugin's folder and reads a pane's folder from its first process: in the space
+// folder, a new space, tab or pane made from this one starts there instead of in the plugin's checkout. Called by the
+// first process of every pane.
+function home(dir = process.env.EXPLORER_ROOT) {
+  if (dir) try { process.chdir(dir); } catch { }
+}
+
 // Returns true in the launcher, whose script must stop there; false in the child.
 function launch() {
   if (process.send) {
@@ -13,6 +20,7 @@ function launch() {
     process.channel.unref();
     return false;
   }
+  home();
   const { spawn } = require('child_process');
   // Raw mode from one child to the next, never read here: in line mode, a ctrl+c typed while the next one starts
   // would kill the pane on Unix. Each child restores at exit the mode it found.
@@ -20,8 +28,8 @@ function launch() {
   let env = process.env, child;
   const start = () => {
     child = spawn(process.execPath, [...process.execArgv, ...process.argv.slice(1)], { stdio: ['inherit', 'inherit', 'inherit', 'ipc'], env });
-    // What the next child must show, added to the environment.
-    child.on('message', m => { if (m && m.restart) env = { ...env, ...m.restart }; });
+    // What the next child must show, added to the environment; the folder to announce, after Set as root.
+    child.on('message', m => { if (m && m.restart) env = { ...env, ...m.restart }; if (m && m.cwd) home(m.cwd); });
     // Killed by a signal (no code): a failure, not a quit.
     child.on('close', code => (code === RESTART ? start() : process.exit(code ?? 1)));
     child.on('error', () => process.exit(1));
@@ -31,4 +39,4 @@ function launch() {
   return true;
 }
 
-module.exports = { launch, RESTART };
+module.exports = { launch, home, RESTART };

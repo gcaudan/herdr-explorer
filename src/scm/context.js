@@ -8,6 +8,7 @@ const icons = require('../core/icons');
 const { readSettings } = require('../core/exec');
 
 const ROOT = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());
+require('../launch').home(); // the pane's folder for new spaces, tabs and panes made from it
 const { C, fg, bg } = ui;
 const BOLD = '\x1b[1m';
 let DIM;

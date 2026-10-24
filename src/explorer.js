@@ -193,6 +193,7 @@ function setRoot(dir) {
   save();
   ROOT = dir;
   writePaneState(PANE, { home: HOME, root: ROOT });
+  announce();
   state.expanded = new Set(['']); state.filter = null; state.top = 0; state.cursor = 0;
   state.selected = null;
   load();
@@ -253,6 +254,11 @@ async function refresh() {
   render();
   busy = false;
   if (again) { again = false; schedule(); }
+}
+
+// The root as the folder herdr gives the new spaces, tabs and panes made from this one: the launcher's (launch.js).
+function announce() {
+  if (process.send) process.send({ cwd: ROOT });
 }
 
 let rootWatcher = null;
@@ -734,6 +740,7 @@ if (notice) flash(`Updated to ${notice.to}`);
 setTimeout(() => { if (graphics === null) { graphics = false; render(); } }, 500);
 
 watchRoot();
+if (ROOT !== HOME) announce();
 const timers = [
   setInterval(schedule, 30000), // safety net in case a file event is lost
   setInterval(follow, 2000),

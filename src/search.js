@@ -15,6 +15,7 @@ ui.useGlyphs(settings.glyphs);
 // Optional: the preview on the right shows plain text without it.
 const highlight = (() => { try { return require('./render/highlight'); } catch { return null; } })();
 const ROOT = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());
+require('./launch').home(); // the pane's folder for new spaces, tabs and panes made from it
 const PANE = process.env.EXPLORER_PANE;
 const SAVE = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'search.json');
 const MAX_FILES = 50000;      // walk without git

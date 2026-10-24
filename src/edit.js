@@ -9,6 +9,8 @@ const path = require('path');
 const { WIN, which, words } = require('./core/exec');
 
 const file = process.env.EXPLORER_FILE;
+// The pane's folder, which new spaces, tabs and panes made from it start in (launch.js); the file's without a root.
+require('./launch').home(process.env.EXPLORER_ROOT || (file && path.dirname(file)));
 
 // Absolute path of a program, or null when missing: found in the absolute folders of PATH only, as every program
 // the plugin runs (an empty or '.' entry of PATH would find one planted in the folder of the pane). A program given
