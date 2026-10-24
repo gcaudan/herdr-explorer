@@ -1,0 +1,10 @@
+#!/bin/sh
+# A fake herdr for the tests: logs each call, one line of arguments separated by tabs, to $FAKE_HERDR_DIR/calls.log,
+# and answers with the file of its first two arguments ($FAKE_HERDR_DIR/<first>-<second>, such as pane-get), or
+# {"result":null} without one. Never reaches a real herdr.
+dir=${FAKE_HERDR_DIR:?FAKE_HERDR_DIR is not set}
+line=
+for a in "$@"; do line="$line${line:+	}$a"; done
+printf '%s\n' "$line" >>"$dir/calls.log"
+answer="$dir/$1-$2"
+if [ -f "$answer" ]; then cat "$answer"; else printf '%s\n' '{"result":null}'; fi

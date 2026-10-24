@@ -1,0 +1,6 @@
+# The editor pane with cat as the editor: the file shown, then the pane done.
+size 40 8
+file a.txt hello\n
+env EXPLORER_FILE=$ROOT/work/a.txt
+env EXPLORER_EDITOR=cat
+start

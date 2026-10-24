@@ -1,0 +1,10 @@
+# Source control on a repository with one change.
+size 80 16
+file a.txt one\n
+git init -q -b main
+git add a.txt
+git commit -q -m first
+file a.txt one\ntwo\n
+file new.txt new\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start

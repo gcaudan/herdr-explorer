@@ -14,28 +14,11 @@ fn fixtures_are_well_formed() {
         let path = entry.unwrap().path();
         let text = std::fs::read_to_string(&path).unwrap();
         let v = json::parse(&text).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
-        assert_eq!(
-            format!("{}\n", json::stringify_pretty(&v, 1)),
-            text,
-            "{} written back",
-            path.display()
-        );
+        assert_eq!(format!("{}\n", json::stringify_pretty(&v, 1)), text, "{} written back", path.display());
         for case in v.get("cases").and_then(Value::as_array).unwrap() {
-            assert!(
-                case.get("fn").and_then(Value::as_str).is_some(),
-                "{}: fn",
-                path.display()
-            );
-            assert!(
-                case.get("args").and_then(Value::as_array).is_some(),
-                "{}: args",
-                path.display()
-            );
-            assert!(
-                case.get("out").is_some() || case.get("throws").is_some(),
-                "{}: outcome",
-                path.display()
-            );
+            assert!(case.get("fn").and_then(Value::as_str).is_some(), "{}: fn", path.display());
+            assert!(case.get("args").and_then(Value::as_array).is_some(), "{}: args", path.display());
+            assert!(case.get("out").is_some() || case.get("throws").is_some(), "{}: outcome", path.display());
             count += 1;
         }
     }

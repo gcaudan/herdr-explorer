@@ -1,0 +1,7 @@
+# The preview on a text file.
+size 60 12
+file notes.txt one\ntwo\nthree\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/notes.txt
+env EXPLORER_ROOT=$ROOT/work
+start

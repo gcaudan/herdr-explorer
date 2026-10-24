@@ -15,12 +15,7 @@ fn main() {
         .and_then(|(_, v)| v.split('"').nth(1))
         .expect("herdr-plugin.toml has a version")
         .to_string();
-    let digits = version
-        .split('.')
-        .all(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()));
-    assert!(
-        digits && version.split('.').count() == 3,
-        "herdr-plugin.toml: version {version:?} is not X.Y.Z"
-    );
+    let digits = version.split('.').all(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()));
+    assert!(digits && version.split('.').count() == 3, "herdr-plugin.toml: version {version:?} is not X.Y.Z");
     println!("cargo:rustc-env=HERDR_EXPLORER_VERSION={version}");
 }

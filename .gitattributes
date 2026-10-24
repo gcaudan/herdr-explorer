@@ -2,3 +2,5 @@
 * text=auto eol=lf
 # Fixtures are compared byte for byte: never converted.
 rust/tests/fixtures/** -text
+# Batch files keep CRLF, which cmd.exe expects.
+*.cmd text eol=crlf

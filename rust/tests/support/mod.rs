@@ -3,6 +3,10 @@
 
 #![allow(dead_code)]
 
+#[cfg(target_os = "linux")]
+pub mod pty;
+pub mod vt;
+
 use herdr_explorer::json::{self, Value};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -20,9 +24,7 @@ impl TempDir {
     pub fn new(prefix: &str) -> Self {
         static COUNT: AtomicUsize = AtomicUsize::new(0);
         let n = COUNT.fetch_add(1, Ordering::Relaxed);
-        let nanos = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(0, |d| d.as_nanos());
+        let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_nanos());
         let dir = std::env::temp_dir().join(format!("{prefix}-{}-{n}-{nanos}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("temporary folder");
         let path = herdr_explorer_canonical(&dir);
@@ -79,10 +81,7 @@ impl EnvBack {
     /// Removes herdr's and the explorer's variables (those of a real session, as gen.js does), then sets `set`.
     fn new(set: &[(String, String)]) -> EnvBack {
         let mut saved: Vec<_> = std::env::vars_os()
-            .filter(|(k, _)| {
-                k.to_str()
-                    .is_some_and(|k| k.starts_with("HERDR_") || k.starts_with("EXPLORER_"))
-            })
+            .filter(|(k, _)| k.to_str().is_some_and(|k| k.starts_with("HERDR_") || k.starts_with("EXPLORER_")))
             .map(|(k, v)| (k, Some(v)))
             .collect();
         saved.extend(set.iter().map(|(k, _)| (k.into(), std::env::var_os(k))));
@@ -142,24 +141,14 @@ pub fn replay(module: &str, call: impl Fn(&str, &[Value]) -> Result<Value, Strin
     let _env = ENV.lock().unwrap_or_else(|e| e.into_inner());
     let fixture = load(module);
     let mut failures = Vec::new();
-    for (i, case) in fixture
-        .get("cases")
-        .and_then(Value::as_array)
-        .unwrap()
-        .iter()
-        .enumerate()
-    {
+    for (i, case) in fixture.get("cases").and_then(Value::as_array).unwrap().iter().enumerate() {
         let dir = TempDir::new("fixture");
         let root = dir.path.to_str().unwrap().to_string();
         setup(&dir.path, case.get("files"));
         let env: Vec<(String, String)> = case
             .get("env")
             .and_then(Value::as_object)
-            .map(|e| {
-                e.iter()
-                    .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").replace("$ROOT", &root)))
-                    .collect()
-            })
+            .map(|e| e.iter().map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").replace("$ROOT", &root))).collect())
             .unwrap_or_default();
         let back = EnvBack::new(&env);
         let name = case.get("fn").and_then(Value::as_str).unwrap();
@@ -180,26 +169,15 @@ pub fn replay(module: &str, call: impl Fn(&str, &[Value]) -> Result<Value, Strin
         }
         if let Some(after) = case.get("after").and_then(Value::as_object) {
             for (file, want) in after {
-                let got = std::fs::read_to_string(dir.path.join(file))
-                    .ok()
-                    .map(|t| t.replace(&root, "$ROOT"));
+                let got = std::fs::read_to_string(dir.path.join(file)).ok().map(|t| t.replace(&root, "$ROOT"));
                 if Value::from(got.clone()) != *want {
                     diff.push(format!("{file}: got {got:?}, want {}", json::stringify(want)));
                 }
             }
         }
         if !diff.is_empty() {
-            failures.push(format!(
-                "#{i} {name}({}): {}",
-                json::stringify(case.get("args").unwrap()),
-                diff.join("; ")
-            ));
+            failures.push(format!("#{i} {name}({}): {}", json::stringify(case.get("args").unwrap()), diff.join("; ")));
         }
     }
-    assert!(
-        failures.is_empty(),
-        "{module}: {} case(s) differ\n{}",
-        failures.len(),
-        failures.join("\n")
-    );
+    assert!(failures.is_empty(), "{module}: {} case(s) differ\n{}", failures.len(), failures.join("\n"));
 }

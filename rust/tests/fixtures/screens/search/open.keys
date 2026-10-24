@@ -1,0 +1,8 @@
+# Go to file: a query typed.
+size 60 12
+file alpha.txt a\n
+file beta/main.rs b\n
+file beta/mod.rs c\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start
+text ma
