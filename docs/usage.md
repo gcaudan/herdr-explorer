@@ -620,8 +620,8 @@ Tabs: **Changes**, **History**, **Stashes**, **Refs** (keys `1` to `4`), the act
 Stashes with their count. In Changes, a **List · Tree** switch, the active choice filled, changes the layout.
 
 The review has its own preview, on the right at full height, which shows the selection as it moves: a file's
-changes (Diff view); a commit, stash or tag, read only (its header, the files changed, then the diff); on any other
-line, *Select a file, commit, stash or tag*. `Enter` on a file, commit, stash or tag focuses the preview. `q` in the
+changes (Diff view); a commit, stash or tag, read only (its header, the files changed, then the diff, with `⚙` or `,`
+for its **Layout**, `v`, and **Wrap lines**, `w`); on any other line, *Select a file, commit, stash or tag*. `Enter` on a file, commit, stash or tag focuses the preview. `q` in the
 preview closes it, whatever it shows: source control then takes the whole tab until the next `Enter`, which opens it
 again. Source control keeps 35 % of the width, which `<` and `>` change and the next reviews keep (`reviewShare`
 setting).

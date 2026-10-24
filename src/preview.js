@@ -453,15 +453,19 @@ function leaveShow() {
   dropShow();
   render();
 }
+// Its title and line counts, then ⚙ on the right, which opens the diff's options (,).
 function showHeader(W) {
-  state.chips = [];
+  const gear = 3; // as in header()
   const d = state.show.parsed, info = d ? `  +${d.add} −${d.del}` : '';
-  const [title] = ui.fit(` ${ui.cleanLine(state.show.what.title)}`, Math.max(1, W - ui.textWidth(info) - 1));
-  return ui.line([[title, '\x1b[1m'], [info, fg(C.dim)]], W, C.header);
+  const [title] = ui.fit(` ${ui.cleanLine(state.show.what.title)}`, Math.max(1, W - ui.textWidth(info) - gear - 1));
+  const used = ui.textWidth(title) + ui.textWidth(info), x = Math.max(used + 1, W - gear + 1);
+  state.chips = [{ id: 'menu', from: x, to: x + gear - 1 }];
+  return ui.line([[title, '\x1b[1m'], [info, fg(C.dim)], [' '.repeat(Math.max(0, x - 1 - used)), ''],
+    [` ${ui.G.gear} `, state.menu ? fg(C.text) : fg(C.dim)]], W, C.header);
 }
-// The keys of a commit shown: moving, hunks, layout, wrap, zoom, width, help; q and Escape go back.
+// The keys of a commit shown: moving, hunks, layout, wrap, the options, zoom, width, help; q and Escape go back.
 const SHOW_KEYS = new Set(['?', 'f1', 'ctrl+c', 'up', 'k', 'down', 'j', 'enter', 'pageup', 'pagedown', 'space', 'ctrl+u', 'ctrl+d',
-  'home', 'g', 'end', 'G', 'left', 'h', 'right', 'l', 'n', 'N', 'v', 'w', 'z', '<', '>', 'shift+left', 'shift+right']);
+  'home', 'g', 'end', 'G', 'left', 'h', 'right', 'l', 'n', 'N', 'v', 'w', ',', 'z', '<', '>', 'shift+left', 'shift+right']);
 
 function setError(text) {
   state.kind = 'error'; state.info = text; state.rows = null;
@@ -1000,7 +1004,10 @@ function quit() {
 // menu. The actions of the footer (z, e…) are not repeated here.
 function openMenu(sel = 0) {
   const { W } = ui.size(), items = [], choice = text => [text, fg(C.blue)];
-  if (state.view === 'diff') {
+  if (state.show) {
+    items.push({ label: 'Layout', key: 'v', value: choice(diffMode(W)), run: switchLayout },
+      { label: 'Wrap lines', key: 'w', value: ui.onOff(settings.wrap), run: () => toggle('wrap') });
+  } else if (state.view === 'diff') {
     items.push({ label: 'Layout', key: 'v', value: choice(diffMode(W)), run: switchLayout },
       { label: 'Wrap lines', key: 'w', value: ui.onOff(settings.wrap), run: () => toggle('wrap') },
       { label: 'Compare with', key: 'b', value: choice(Scope.label(state.scope, branchName())), run: openScopes, stay: false });
