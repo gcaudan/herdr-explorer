@@ -78,7 +78,7 @@ if (SETTINGS_FILE) fs.watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
   // A file read while being written is skipped, rather than taken for the default settings.
   let saved, chosen;
   try { saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')); chosen = saved.icons || ''; } catch { return; }
-  for (const name of ['updateCheck', 'autoOpen', 'open', 'editor', 'singleClick', 'wrap', 'lineNumbers', 'images', 'diffLayout', 'glyphs']) {
+  for (const name of ['updateCheck', 'autoOpen', 'open', 'editor', 'singleClick', 'wrap', 'lineNumbers', 'changes', 'images', 'diffLayout', 'glyphs']) {
     if (saved[name] === undefined || saved[name] === settings[name]) continue;
     settings[name] = saved[name];
     if (name === 'glyphs') ui.useGlyphs(saved.glyphs);

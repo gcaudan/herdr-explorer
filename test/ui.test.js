@@ -164,3 +164,18 @@ test('a card with several answers wraps its buttons to fit the pane', () => {
     for (const [x0, , key, y] of q.zones.buttons) assert.strictEqual(ui.askMouse({ press: true, button: 0, x: x0, y: y + 1 }, q), key);
   }
 });
+
+test('the scrollbar takes the colour of the heaviest mark of the rows a cell stands for', () => {
+  const bar = new ui.Scrollbar(() => { });
+  const red = [200, 0, 0], green = [0, 200, 0];
+  // 100 rows, 10 shown: 8 cells of track between the buttons, about 12 rows each.
+  assert.strictEqual(bar.set(100, 10, 0, [{ row: 50, color: green, weight: 1 }, { row: 51, color: red, weight: 3 }, { row: 99, color: green, weight: 1 }]), 1);
+  const cells = Array.from({ length: 10 }, (_, k) => bar.cell(k));
+  assert.ok(cells[5].includes(ui.fg(red)) && plain(cells[5]) === '│');
+  assert.ok(cells[8].includes(ui.fg(green)));
+  assert.ok(!cells[2].includes(ui.fg(red)) && !cells[2].includes(ui.fg(green)));
+  // On the thumb: its glyph, in the mark's colour.
+  bar.set(100, 10, 45, [{ row: 50, color: red, weight: 3 }]);
+  assert.strictEqual(plain(bar.cell(5)), '┃');
+  assert.ok(bar.cell(5).includes(ui.fg(red)));
+});

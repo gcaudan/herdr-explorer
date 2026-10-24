@@ -248,3 +248,22 @@ test('within refuses a path whose folder links outside the repository', { skip: 
   assert.ok(!stage.within(path.join(top, 'sub/x'), top));
   assert.ok(!stage.within(path.join(top, '../x'), top));
 });
+
+test('the lines changed since HEAD, staged or not, as the File view marks them', async () => {
+  const r = repo({ 'a.txt': lines(10), '.gitignore': 'ignored.txt\n' });
+  if (!r) return;
+  r.write('a.txt', r.read('a.txt').replace('line 2\n', 'line two\n').replace('line 5\n', '').replace('line 10\n', '').replace('line 7\n', 'line 7\nline 7b\n'));
+  r.git('add', 'a.txt');
+  r.write('a.txt', `line 0\n${r.read('a.txt')}`);
+  const res = await diff.lineChanges(path.join(r.top, 'a.txt'), 10);
+  // line 0, line 1, line two, line 3, line 4, line 6, line 7, line 7b, line 8, line 9
+  assert.deepStrictEqual([...res.kinds.keys()].filter(i => res.kinds[i]).map(i => [i, res.kinds[i]]), [[0, 'add'], [2, 'mod'], [7, 'add']]);
+  assert.deepStrictEqual([...res.deleted].sort((a, b) => a - b), [5, 10]);
+  r.write('new.txt', 'a\nb\n');
+  assert.deepStrictEqual((await diff.lineChanges(path.join(r.top, 'new.txt'), 2)).kinds, ['add', 'add']);
+  r.write('ignored.txt', 'a\n');
+  assert.deepStrictEqual((await diff.lineChanges(path.join(r.top, 'ignored.txt'), 1)).kinds, []);
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'nogit-'));
+  fs.writeFileSync(path.join(out, 'f.txt'), 'a\n');
+  if (spawnSync('git', ['rev-parse'], { cwd: out }).status !== 0) assert.strictEqual(await diff.lineChanges(path.join(out, 'f.txt'), 1), null);
+});

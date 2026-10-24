@@ -67,6 +67,8 @@ const state = {
   edit: null,       // the edit mode (i, see startEdit): { ed (buffer.Editor), base, disk, prompt, hl }
   ask: null,        // a question in a card (ui.ask): { …, on: { key: what to do } }
   show: null,       // a commit, stash or tag shown over the tabs (source control's review), see enterShow
+  changes: null,    // the file's lines changed since HEAD (diff.lineChanges): { file, kinds, deleted, lines }, lines
+                    // those that start a block of changes; null outside git
 };
 
 // Marks from a request or the environment, kept only when well formed: at most 200, in order.
@@ -176,7 +178,72 @@ function load(keepScroll) {
   if (state.find && state.find.field.value) search(false);
   if (state.view === 'diff') loadDiff(keepScroll);
   if (state.edit) diskChanged();
+  loadChanges();
   render();
+}
+
+// The lines changed since HEAD, shown beside the File view's lines and on its scrollbar (Changes setting, c). Those
+// of the file shown before stay until they come, so that a reload does not blink.
+let changesRun = 0;
+async function loadChanges() {
+  const run = ++changesRun, file = state.file;
+  if (state.changes && state.changes.file !== file) state.changes = null;
+  if (!diffs || !settings.changes || (state.kind !== 'text' && state.kind !== 'markdown')) {
+    if (state.changes) { state.changes = null; render(); }
+    return;
+  }
+  let res;
+  try { res = await diffs.lineChanges(file, state.plain.length); } catch { res = null; }
+  if (run !== changesRun || state.file !== file) return;
+  const n = state.plain.length, changed = i => !!(res.kinds[i] || res.deleted.has(i));
+  // Where each block starts; removed lines at the end go to the last line.
+  const lines = res ? [...Array(n + 1).keys()].filter(i => changed(i) && !(i && changed(i - 1))).map(i => Math.max(0, Math.min(i, n - 1))) : [];
+  state.changes = res && lines.length ? { file, ...res, lines } : null;
+  render();
+}
+// The changes beside the lines: in the File view of a text file or of a Markdown file's source.
+const changesShown = () => !!(state.changes && state.changes.file === state.file && state.view === 'file' && !state.show && !state.edit
+  && !markdownView() && (state.kind === 'text' || state.kind === 'markdown'));
+// The change of row i of the list: 'add', 'mod', 'del' (removed lines: above a line, on its first row; at the end of
+// the file, on its last row), or ''.
+function changeOf(list, i) {
+  const r = list[i], { kinds, deleted } = state.changes;
+  if (r.src < 0) return '';
+  if (kinds[r.src]) return kinds[r.src];
+  if (r.first && deleted.has(r.src)) return 'del';
+  const last = r.src === state.plain.length - 1 && !(list[i + 1] && list[i + 1].src === r.src);
+  return last && deleted.has(state.plain.length) ? 'del' : '';
+}
+// Each change's sign in the column beside the lines, its colour, and its weight on the scrollbar: removed lines over
+// changed ones over added ones.
+const CHANGE = { add: { color: 'green', weight: 1 }, mod: { color: 'blue', weight: 2 }, del: { color: 'red', weight: 3 } };
+function changeSign(list, i) {
+  const k = changeOf(list, i);
+  if (!k) return [' ', ''];
+  const r = list[i];
+  return [k !== 'del' ? '▎' : r.first && state.changes.deleted.has(r.src) ? '▔' : '▁', fg(C[CHANGE[k].color])];
+}
+// The changes on the scrollbar, for the rows of the list.
+function changeMarks(list) {
+  if (!changesShown()) return [];
+  if (list.changeMarks && list.changeMarks.of === state.changes) return list.changeMarks;
+  const marks = [];
+  list.forEach((r, i) => {
+    const k = changeOf(list, i);
+    if (k) marks.push({ row: i, color: C[CHANGE[k].color], weight: CHANGE[k].weight });
+  });
+  marks.of = state.changes;
+  return (list.changeMarks = marks);
+}
+// ] and [: the next or previous block of changes, a third of the way down, as n and N do with the marks.
+function nextChange(dir) {
+  if (!changesShown()) return flash(state.view !== 'file' || markdownView() ? 'Changes show in the file\'s source' : 'No changes since HEAD');
+  const third = Math.floor((ui.size().H - 2) / 3), at = state.top + third, lines = state.changes.lines;
+  const k = dir > 0 ? lines.findIndex(l => rowOf(l) > at) : lines.findLastIndex(l => rowOf(l) < at);
+  if (k < 0) return flash(dir > 0 ? 'Last change' : 'First change');
+  state.top = Math.max(0, rowOf(lines[k]) - third);
+  state.line = lines[k] + 1;
+  flash(`Change ${k + 1}/${lines.length}`);
 }
 
 // --- Diff view
@@ -422,8 +489,10 @@ function hexdump(buf) {
 
 // While editing, a Markdown file shows its source.
 const markdownView = () => state.view === 'file' && state.kind === 'markdown' && !state.raw && !state.edit && markdown;
+// The line numbers, the first of their columns taking the changes' signs; without them, a column of its own for the
+// changes, only when the file has some.
 const gutter = () => (state.view === 'file' && !state.show && settings.lineNumbers && !markdownView() && state.kind !== 'binary' && state.kind !== 'image'
-  ? String(state.source.length).length + 2 : 0);
+  ? String(state.source.length).length + 2 : changesShown() ? 1 : 0);
 
 // Display rows for the current width: wrapped or rendered text, built again when the width changes.
 function rows() {
@@ -711,15 +780,17 @@ function render() {
   const ranges = matchRanges(), md = markdownView();
   const current = state.find && state.match >= 0 ? state.matches[state.match] : null;
   // Wrapped and rendered rows (see rows()) leave the last column free for the scrollbar.
-  const bw = scrollbar.set(list.length, bodyH, state.top);
+  const bw = scrollbar.set(list.length, bodyH, state.top, changeMarks(list));
+  const signs = changesShown();
   // Nothing to show (an error, an image that cannot be drawn, an empty file): why, centred, and what to do.
   const none = list.length === 1 && list[0].empty ? list[0] : state.view === 'file' && !state.show && (state.kind === 'text' || state.kind === 'markdown') && state.text === ''
     ? { empty: 'Empty file', pairs: [['i', 'edit here'], ['e', 'editor'], ['q', 'close']] } : null;
   if (none) lines.push(...ui.empty(W, bodyH, none.empty, none.pairs));
   for (let i = state.top; !none && i < Math.min(list.length, state.top + bodyH); i++) {
     const r = list[i];
-    const num = g ? [[(r.first ? String(r.src + 1) : '').padStart(g - 1) + ' ',
+    let num = g > 1 ? [[(r.first ? String(r.src + 1) : '').padStart(g - 1) + ' ',
       r.src >= 0 && noted(r.src) ? NOTE + '\x1b[1m' : fg(r.src + 1 === state.line ? C.text : C.dim)]] : [];
+    if (signs) num = g > 1 ? [changeSign(list, i), [num[0][0].slice(1), num[0][1]]] : [changeSign(list, i)];
     // The find's matches: every one marked, the current one brighter (in rendered Markdown, matches are by row).
     const at = md ? i : r.src, off = r.off || 0;
     let segs = segsOf(r);
@@ -774,6 +845,7 @@ const HELP = [
     ['s', 'stage the lines selected (drag), else the hunk at the top (HEAD)'], ['u', 'unstage them'], ['D', 'discard them from the working tree']]],
   ['Tabs', [['tab shift+tab', 'next, previous tab'], ['ctrl+pgdn/pgup', 'next, previous tab'], ['t', 'keep the tab (in italics: the next file clicked replaces it)'],
     ['x', 'close the tab (middle click)']]],
+  ['Changes', [[']  [', 'next, previous block changed since HEAD'], ['c', 'show the changes beside the lines and on the scrollbar']]],
   ['View', [['w', 'wrap'], ['L', 'line numbers'], ['m', 'Markdown source'], ['p', 'image sharp or pixelated'], ['z', 'zoom the pane'], ['< >', 'narrower, wider'], ['shift+← →', 'move the border'], ['r', 'reload']]],
   ['Edit', [['i', 'edit the file here (or the View menu)'], ['ctrl+s', 'save'], ['esc', 'stop editing'], ['ctrl+z ctrl+y', 'undo, redo (or ctrl+shift+z)'],
     ['ctrl+f', 'find: ⏎ ↓ next, ↑ previous'], ['ctrl+r', 'replace: ⏎ one, alt+a all, tab to the other field'], ['ctrl+g', 'go to line'],
@@ -938,7 +1010,8 @@ function openMenu(sel = 0) {
     }
     if (!state.edit && (state.kind === 'text' || (state.kind === 'markdown' && state.raw))) {
       items.push({ label: 'Wrap lines', key: 'w', value: ui.onOff(settings.wrap), run: () => toggle('wrap') },
-        { label: 'Line numbers', key: 'L', value: ui.onOff(settings.lineNumbers), run: () => toggle('lineNumbers') });
+        { label: 'Line numbers', key: 'L', value: ui.onOff(settings.lineNumbers), run: () => toggle('lineNumbers') },
+        { label: 'Changes', key: 'c', value: ui.onOff(settings.changes), run: () => { toggle('changes'); loadChanges(); } });
     }
     if (state.edit) items.push({ label: 'Line numbers', key: 'L', value: ui.onOff(settings.lineNumbers), run: () => toggle('lineNumbers') });
     if (state.edit || state.kind === 'text' || state.kind === 'markdown') items.push({ label: 'Edit here', key: 'i', value: ui.onOff(!!state.edit), run: () => (state.edit ? stopEdit() : startEdit()), stay: false });
@@ -1680,6 +1753,8 @@ function key(k) {
     case 'D': if (state.view === 'diff') editDiff('discard'); return;
     case 'w': return toggle('wrap');
     case 'L': return toggle('lineNumbers');
+    case 'c': toggle('changes'); return loadChanges();
+    case ']': case '[': nextChange(k === ']' ? 1 : -1); return render();
     case 'p': return toggleSharp();
     case 'm': if (state.kind === 'markdown') { state.raw = !state.raw; state.rows = null; state.top = 0; render(); } return;
     case 'r': return load(true);
@@ -1885,7 +1960,8 @@ function bodyMouse(m) {
 
 const paint = ui.screen({
   key, mouse, reply,
-  focus: f => { state.focused = f; if (!f) { endSelection(); actions.unzoom(PANE).catch(() => { }); } },
+  // Back to the pane: a commit made meanwhile changes what is changed since HEAD.
+  focus: f => { state.focused = f; if (!f) { endSelection(); actions.unzoom(PANE).catch(() => { }); } else loadChanges(); },
   paste: (text, raw) => {
     if (state.ask) return;
     if (state.edit) return editPaste(text, raw);

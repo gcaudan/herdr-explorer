@@ -67,6 +67,7 @@ module.exports = ctx => {
       { group: 'PREVIEW' },
       { label: 'Wrap lines', help: 'Wrap long lines in the preview (w). Other previews at their next opening.', ...onOff('wrap') },
       { label: 'Line numbers', help: 'Line numbers in the preview (L). Other previews at their next opening.', ...onOff('lineNumbers') },
+      { label: 'Changes', help: 'Lines added, changed or removed since HEAD, beside the lines of the preview and on its scrollbar (c); ] and [ go through them. Other previews at their next opening.', ...onOff('changes') },
       { label: 'Images', help: `Images in the preview: pixelated (half blocks), or sharp with the Kitty graphics protocol of Kitty, Ghostty or WezTerm (p). ${
         graphics === null ? 'Checking this terminal…' : graphics ? 'This terminal has it.' : 'This terminal does not have it: sharp images would not show.'}`,
       ...choice('images', ['auto', 'blocks', 'pixels'], v => ({ blocks: 'pixelated', auto: 'sharp if possible', pixels: 'always sharp' })[v]) },

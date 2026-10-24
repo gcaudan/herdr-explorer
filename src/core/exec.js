@@ -208,6 +208,7 @@ const DEFAULTS = {
   icons: '',          // explorer icon theme: { id, label, file } of a VS Code one; empty: Nerd Font icons
   wrap: false,        // preview: wrap long lines
   lineNumbers: true,  // preview: line number gutter
+  changes: true,      // preview: the lines changed since HEAD beside the file's lines and on its scrollbar
   images: 'auto',     // preview images: 'auto' (pixels when the terminal has the Kitty graphics protocol, else half
                       // blocks), 'blocks' (half blocks), 'pixels' (pixels without waiting for the terminal's answer)
   reviewPrefix: '',   // review notes: text typed before them when sent to the agent (A), such as an instruction

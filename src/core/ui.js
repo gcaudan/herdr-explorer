@@ -538,13 +538,20 @@ const scrollbars = new Set(); // all of them, let go when the pane loses the foc
 class Scrollbar {
   constructor(scrollTo) { this.scrollTo = scrollTo; this.bar = null; this.held = null; scrollbars.add(this); }
   // The list's length, the rows shown and the first shown; returns the columns the bar takes: 1, or 0 when hidden.
-  set(total, height, top) {
+  // marks: rows to show on the bar, { row, color, weight }: a cell of the rail or thumb takes the colour of the
+  // heaviest mark of the rows it stands for.
+  set(total, height, top, marks = []) {
     this.bar = null;
     if (height < 2 || total <= height) return 0;
     const max = total - height, arrows = height >= 4 ? 1 : 0, track = height - 2 * arrows;
     const size = Math.max(1, Math.min(track - 1, Math.round(track * height / total)));
     top = Math.max(0, Math.min(top, max));
-    this.bar = { height, max, top, arrows, track, size, at: arrows + Math.round((track - size) * top / max) };
+    const tints = new Array(track).fill(null);
+    for (const m of marks) {
+      const t = Math.min(track - 1, Math.floor(m.row * track / total));
+      if (!tints[t] || tints[t].weight < m.weight) tints[t] = m;
+    }
+    this.bar = { height, max, top, arrows, track, size, at: arrows + Math.round((track - size) * top / max), tints };
     return 1;
   }
   // The bar's cell on row k of the list (from 0), to add after the row's line; nothing when hidden.
@@ -553,7 +560,9 @@ class Scrollbar {
     if (!b) return '';
     if (b.arrows && k === 0) return UP;
     if (b.arrows && k === b.height - 1) return DOWN;
-    return k >= b.at && k < b.at + b.size ? THUMB : RAIL;
+    const thumb = k >= b.at && k < b.at + b.size, tint = b.tints[k - b.arrows];
+    if (tint) return fg(tint.color) + (thumb ? '┃' : '│') + '\x1b[0m';
+    return thumb ? THUMB : RAIL;
   }
   // The top that puts the thumb at row r, kept within the list.
   topAt(r) {

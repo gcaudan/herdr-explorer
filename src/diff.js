@@ -403,6 +403,30 @@ async function collect({ cwd, file = '', base = 'head', scope = null, turn = nul
   return { text, staged, top, baseName };
 }
 
+// The lines of a file changed since HEAD, for the preview's File view, as buffer.lineDiff gives them: { kinds,
+// deleted }, kinds[i] 'add' or 'mod' for line i (from 0), deleted the lines just under removed ones (the line count
+// for the end); every line added for an untracked file of count lines. null outside a repository, before the first
+// commit, or when git fails; nothing changed for an ignored file.
+async function lineChanges(file, count) {
+  const cwd = path.dirname(file), abs = path.resolve(file);
+  const env = { ...await gitEnv(cwd), GIT_LITERAL_PATHSPECS: '1' };
+  const git = (...args) => run(GIT, ['-c', 'core.quotePath=false', ...args], { cwd, env });
+  const untracked = await git('ls-files', '--others', '--exclude-standard', '-z', '--', abs);
+  if (untracked === null) return null;
+  if (untracked) return { kinds: new Array(count).fill('add'), deleted: new Set() };
+  const text = await git('diff', ...DIFF_OPTS, '-U0', '--no-renames', 'HEAD', '--', abs);
+  if (text === null) return null;
+  const kinds = [], deleted = new Set();
+  for (const m of text.matchAll(/^@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/gm)) {
+    const del = m[1] === undefined ? 1 : +m[1], add = m[3] === undefined ? 1 : +m[3];
+    // Without new lines, the hunk names the line before the removed ones.
+    const at = add ? +m[2] - 1 : +m[2];
+    for (let k = 0; k < add; k++) kinds[at + k] = k < del ? 'mod' : 'add';
+    if (del > add) deleted.add(at + add);
+  }
+  return { kinds, deleted };
+}
+
 // The parsed changes of what collect returned: with the staged changes apart (HEAD), each file of either section
 // marked sec 'staged' or 'unstaged', and the files in path order, a path's staged changes before its unstaged ones.
 function changesOf(res) {
@@ -446,7 +470,7 @@ function widestOf(parsed) {
   return WIDEST.get(parsed);
 }
 
-module.exports = { DIFF_OPTS, MAX_UNTRACKED, SPLIT_MIN, parse, render, collect, showArgs, show, changesOf, shownLines, defaultMode, savedMode, saveMode, layoutOf, widestOf, diskLines, unquote, main };
+module.exports = { DIFF_OPTS, MAX_UNTRACKED, SPLIT_MIN, parse, render, collect, lineChanges, showArgs, show, changesOf, shownLines, defaultMode, savedMode, saveMode, layoutOf, widestOf, diskLines, unquote, main };
 
 // --- pane
 

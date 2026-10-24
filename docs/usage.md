@@ -226,7 +226,7 @@ setting. The settings are shared by every explorer. See [configuration.md](confi
 | Appearance | Theme, Icon set, Icon theme                                         |
 | Tree       | Hidden files, Git-ignored files, Compact folders, Follow terminal   |
 | Opening    | Enter opens (preview or editor), Preview follows selection, Editor  |
-| Preview    | Wrap lines, Line numbers, Images, Diff layout (auto, split, inline) |
+| Preview    | Wrap lines, Line numbers, Changes, Images, Diff layout (auto, split, inline) |
 | Review     | Notes prefix                                                        |
 | New tabs   | Open automatically, Dock side (left or right)                       |
 | Advanced   | Key bindings, Check for updates                                     |
@@ -323,8 +323,8 @@ added and removed lines). On the right:
   `abc123` or `vs feature` ([diff scope](#diff-scope); the rest shows in the content itself); a click opens `b`'s menu;
 - the **File · Diff** switch, the active choice filled: a click on the other one switches ([Diff view](#diff-view));
 - `⚙` (or `,`, as the explorer's settings), which opens the **View** menu of the view's options, as the explorer's settings show them: a choice
-  in blue, or `● on` / `○ off`. **Markdown** (rendered or raw, `m`), **Wrap lines** (`w`) and **Line numbers** (`L`)
-  for text, **Edit here** (`i`), **Image** (sharp or pixelated, `p`); in the Diff view, **Layout** (inline or split, `v`), **Wrap lines** (`w`)
+  in blue, or `● on` / `○ off`. **Markdown** (rendered or raw, `m`), **Wrap lines** (`w`), **Line numbers** (`L`)
+  and **Changes** (`c`) for text, **Edit here** (`i`), **Image** (sharp or pixelated, `p`); in the Diff view, **Layout** (inline or split, `v`), **Wrap lines** (`w`)
   and **Compare with** (the [diff scope](#diff-scope), `b`). The key beside each does the same outside the menu. `left` / `right`,
   `enter`, `space` or a click changes the option in place, the menu staying open; `up` / `down` move, `escape`, `q`,
   `,` or a click elsewhere close it. The footer's actions are not repeated there, and the footer leaves out what the
@@ -357,6 +357,8 @@ a click runs, and the scroll percentage.
 | `,`                          | the View menu of the view's options (or `⚙`)            |
 | `w`                          | toggle line wrap (saved), also of the Diff view's lines  |
 | `L`                          | toggle line numbers (saved)                              |
+| `c`                          | toggle the [changes since HEAD](#changes-in-the-file-view) beside the lines and on the scrollbar (saved) |
+| `]` / `[`                    | next / previous block of changes since HEAD, a third of the way down |
 | `m`                          | Markdown: rendered / source                              |
 | `p`                          | image: sharp / pixelated, in this pane only (see [Sharp images](#sharp-images)) |
 | `r`                          | reload                                                   |
@@ -457,6 +459,18 @@ Every match is highlighted, the current one brighter, also in wrapped lines and 
   *sharp if possible*, and on **Sharp images ↗** opens [Sharp images](#sharp-images) in the browser.
 - The **wheel** scrolls 3 lines. In the header, **File · Diff** switches the view and `⚙` opens the View menu.
 - On a tab: a click shows it, a double-click keeps it, a click on its `×` or a middle click closes it.
+
+### Changes in the File view
+
+In a git repository, the File view marks the lines changed since HEAD (staged or not) in the first column of the
+line numbers, or in a column of its own when they are hidden (`L`) and the file has changes, with the edit mode's
+signs: `▎` in green an added line, in blue a changed one, `▔` in red removed lines just above, `▁` at the end of the
+file. An untracked file is added in full; an ignored file, or one outside a repository, shows nothing. The same
+colours tint the scrollbar where the changes are, removed lines over changed ones over added ones: a click there
+goes to them. `]` and `[` go to the next and previous block of changes, a third of the way down. They are read again
+at each reload and when the pane gets the focus back (after a commit, for example); not in rendered Markdown (`m`
+shows the source), nor while editing (`i` marks the changes since the file was opened). `c` or **Changes** in the
+View menu hides them (saved, see [`changes`](configuration.md#settings)).
 
 ### Diff view
 
@@ -884,7 +898,8 @@ first of `nano`, `nvim`, `vim`, `vi` found (`edit`, `nvim`, `vim`, `nano` on Win
 ## Scrollbars
 
 A list that does not fit shows a scrollbar in its last column: a rail `│`, a thumb `┃` sized to the part shown,
-and `▴` `▾` buttons from 4 rows tall.
+and `▴` `▾` buttons from 4 rows tall. The preview's File view tints it where the lines changed since HEAD are
+([Changes in the File view](#changes-in-the-file-view)).
 
 - A press on the thumb grabs it: the list follows the mouse until the button is released, even outside the
   column. A press elsewhere on the rail moves the thumb under the mouse, then drags it the same way.
