@@ -63,13 +63,14 @@ async function write(module, exports, cases) {
   console.log(`${path.relative(repo, file)}: ${done.length} cases`);
 }
 
-// The modules, one file each under tools/fixtures/modules/, exporting [module, cases].
+// The modules, one file each under tools/fixtures/modules/, exporting { module, cases }, and impl for functions
+// that are not a module of src/ (Node's own, called as the JS calls them).
 (async () => {
   if (process.platform === 'win32') throw new Error('fixtures are generated on Linux');
   const only = process.argv.slice(2);
   for (const f of fs.readdirSync(path.join(__dirname, 'modules')).sort()) {
-    const { module, cases } = require(path.join(__dirname, 'modules', f));
+    const { module, cases, impl } = require(path.join(__dirname, 'modules', f));
     if (only.length && !only.includes(module)) continue;
-    await write(module, require(path.join(repo, 'src', module)), cases);
+    await write(module, impl || require(path.join(repo, 'src', module)), cases);
   }
 })().catch(e => { console.error(e); process.exit(1); });

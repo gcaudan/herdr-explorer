@@ -45,3 +45,28 @@ fn core_places() {
 fn core_scope() {
     support::replay("core/scope", |_, _| Err("not ported".into()));
 }
+
+/// Node's own codecs as the JS calls them (tools/fixtures/modules/node.codec.js): inflate's input and output in base64.
+#[cfg(unix)]
+#[test]
+fn node_codec() {
+    use herdr_explorer::codec::{base64, inflate, sha};
+    support::replay("node/codec", |name, args| {
+        let text = args[0].as_str().unwrap_or("");
+        Ok(match name {
+            "base64Encode" => Value::Str(base64::encode(text.as_bytes())),
+            "base64Decode" => Value::Arr(base64::decode(text).into_iter().map(|b| Value::Num(b as f64)).collect()),
+            "sha1" => Value::Str(sha::hex(&sha::sha1(text.as_bytes()))),
+            "sha256" => Value::Str(sha::hex(&sha::sha256(text.as_bytes()))),
+            "inflate" => {
+                let max = args[1].as_f64().unwrap() as usize;
+                match inflate::inflate_zlib(&base64::decode(text), max) {
+                    Ok(out) => Value::Str(base64::encode(&out)),
+                    Err(inflate::Error::TooLarge) => return Err("too large".into()),
+                    Err(inflate::Error::Data(_)) => return Err("data".into()),
+                }
+            }
+            _ => return Err(format!("no function {name}")),
+        })
+    });
+}
