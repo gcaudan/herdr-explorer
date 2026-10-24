@@ -1,0 +1,322 @@
+{
+ "module": "core/scope",
+ "cases": [
+  {
+   "fn": "label",
+   "args": [
+    {
+     "kind": "head"
+    }
+   ],
+   "out": "HEAD"
+  },
+  {
+   "fn": "label",
+   "args": [
+    {
+     "kind": "branch"
+    }
+   ],
+   "out": "main base"
+  },
+  {
+   "fn": "label",
+   "args": [
+    {
+     "kind": "branch"
+    },
+    "develop"
+   ],
+   "out": "develop base"
+  },
+  {
+   "fn": "label",
+   "args": [
+    {
+     "kind": "turn"
+    }
+   ],
+   "out": "last turn"
+  },
+  {
+   "fn": "label",
+   "args": [
+    {
+     "kind": "rev",
+     "rev": "refs/heads/a..refs/remotes/origin/b"
+    }
+   ],
+   "out": "a..origin/b"
+  },
+  {
+   "fn": "label",
+   "args": [
+    {
+     "kind": "ref",
+     "rev": "feature"
+    }
+   ],
+   "out": "vs feature"
+  },
+  {
+   "fn": "label",
+   "args": [
+    {
+     "kind": "other"
+    }
+   ],
+   "out": "HEAD"
+  },
+  {
+   "fn": "same",
+   "args": [
+    {
+     "kind": "rev",
+     "rev": "a"
+    },
+    {
+     "kind": "rev",
+     "rev": "a"
+    }
+   ],
+   "out": true
+  },
+  {
+   "fn": "same",
+   "args": [
+    {
+     "kind": "rev",
+     "rev": "a"
+    },
+    {
+     "kind": "rev",
+     "rev": "b"
+    }
+   ],
+   "out": false
+  },
+  {
+   "fn": "same",
+   "args": [
+    {
+     "kind": "head"
+    },
+    {
+     "kind": "head",
+     "rev": ""
+    }
+   ],
+   "out": true
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "out": {
+    "kind": "head"
+   }
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "scope-w1_t1.json": "{\"kind\":\"branch\"}"
+   },
+   "out": {
+    "kind": "branch"
+   }
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "scope-w1_t1.json": "{\"kind\":\"rev\",\"rev\":\"a..b\"}"
+   },
+   "out": {
+    "kind": "rev",
+    "rev": "a..b"
+   }
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "scope-w1_t1.json": "{\"kind\":\"rev\",\"rev\":\"\"}"
+   },
+   "out": {
+    "kind": "head"
+   }
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "scope-w1_t1.json": "{\"kind\":\"ref\"}"
+   },
+   "out": {
+    "kind": "head"
+   }
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "scope-w1_t1.json": "{\"kind\":\"nope\"}"
+   },
+   "out": {
+    "kind": "head"
+   }
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "scope-w1_t1.json": "not json"
+   },
+   "out": {
+    "kind": "head"
+   }
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "scope-w1_t1.json": "{\"kind\":\"turn\",\"extra\":1}"
+   },
+   "out": {
+    "kind": "turn",
+    "extra": 1
+   }
+  },
+  {
+   "fn": "read",
+   "args": [
+    ""
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "out": {
+    "kind": "head"
+   }
+  },
+  {
+   "fn": "write",
+   "args": [
+    "w1:t1",
+    {
+     "kind": "head"
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "scope-w1_t1.json": "{\"kind\":\"turn\"}"
+   },
+   "after": {
+    "scope-w1_t1.json": null
+   },
+   "out": true
+  },
+  {
+   "fn": "write",
+   "args": [
+    "w1:t1",
+    {
+     "kind": "branch"
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "after": {
+    "scope-w1_t1.json": "{\"kind\":\"branch\"}"
+   },
+   "out": true
+  },
+  {
+   "fn": "write",
+   "args": [
+    "w1:t1",
+    {
+     "kind": "rev",
+     "rev": "a...b"
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "after": {
+    "scope-w1_t1.json": "{\"kind\":\"rev\",\"rev\":\"a...b\"}"
+   },
+   "out": true
+  },
+  {
+   "fn": "write",
+   "args": [
+    "w1:t1",
+    {
+     "kind": "turn",
+     "rev": ""
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "after": {
+    "scope-w1_t1.json": "{\"kind\":\"turn\"}"
+   },
+   "out": true
+  },
+  {
+   "fn": "write",
+   "args": [
+    "w1:t1",
+    {
+     "kind": "branch"
+    }
+   ],
+   "out": false
+  }
+ ]
+}
