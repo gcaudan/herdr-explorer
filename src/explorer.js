@@ -362,11 +362,14 @@ async function follow() {
   const cwd = p && (p.foreground_cwd || p.cwd);
   // Retried once the menu, the settings, the filter or the prompt is closed.
   if (stopped || !cwd || cwd === lastCwd || state.filter || state.menu || state.settings || state.help || state.prompt || state.confirm || state.choice) return;
+  const first = lastCwd === null;
   lastCwd = cwd;
   const inside = (dir, root) => { const r = path.relative(root, dir); return !r.startsWith('..') && !path.isAbsolute(r); };
   // Outside the root: back to the space folder when it holds the terminal folder, else the terminal folder itself.
-  // Never $HOME, one of its parents or the filesystem root, where the tree would be too big to follow.
+  // Never $HOME, one of its parents or the filesystem root, where the tree would be too big to follow. Not at the
+  // first check: the terminal has not moved, and the root may be the one Set as root chose before a herdr restart.
   if (!inside(cwd, ROOT)) {
+    if (first) return;
     if (inside(cwd, HOME)) setRoot(HOME);
     else if (big(cwd)) return;
     else setRoot(cwd);
