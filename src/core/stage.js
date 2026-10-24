@@ -209,11 +209,13 @@ async function apply(top, parsed, sel, mode, opts = {}) {
   }
   const trash = opts.trash || require('./actions').trash;
   const left = [];
-  for (const name of remove) {
-    if (await trash(path.join(top, name))) pruneDirs(path.join(top, name), top); else left.push(name);
-  }
-  // The files deleted for good that could not be: the others are still deleted, and their index entry goes.
+  // The files deleted for good that could not be: the others are still deleted, and their index entry goes. Never a
+  // path that resolves outside the repository, through a symbolic link too (within).
   const failed = new Map();
+  for (const name of remove) {
+    if (!within(path.join(top, name), top)) failed.set(name, 'outside the repository');
+    else if (await trash(path.join(top, name))) pruneDirs(path.join(top, name), top); else left.push(name);
+  }
   if (left.length && opts.noTrash && await opts.noTrash(left)) {
     for (const name of left.splice(0)) {
       try { fs.rmSync(path.join(top, name)); } catch (e) { failed.set(name, e.code || e.message); continue; }

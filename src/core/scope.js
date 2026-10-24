@@ -10,7 +10,8 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { writeAtomic, tabFile, run, GIT, gitEnv } = require('./exec');
+const crypto = require('crypto');
+const { writeAtomic, tabFile, run, GIT, gitEnv, realPath } = require('./exec');
 
 const KINDS = ['head', 'branch', 'turn', 'rev', 'ref'];
 const HEAD = { kind: 'head' };
@@ -92,9 +93,11 @@ function revKey(field, k) {
 
 // The branches of the repository holding cwd, local then remote, the latest commit first, for Branch….
 async function branches(cwd) {
-  const out = await run(GIT, ['for-each-ref', '--sort=-committerdate', '--format=%(refname:short)', 'refs/heads', 'refs/remotes'],
+  const out = await run(GIT, ['for-each-ref', '--sort=-committerdate', '--format=%(refname)%00%(refname:short)', 'refs/heads', 'refs/remotes'],
     { cwd, env: await gitEnv(cwd) }) || '';
-  return out.split('\n').map(s => s.trim()).filter(s => s && !s.endsWith('/HEAD'));
+  // origin/HEAD, whose short name is origin, left out on its full name.
+  return out.split('\n').map(l => l.split('\0')).filter(([full, short]) => short && !/^refs\/remotes\/[^/]+\/HEAD$/.test(full))
+    .map(([, short]) => short.trim());
 }
 
 // --- the agent's last turn
@@ -106,29 +109,36 @@ const MAX_SNAPSHOT_FILE = 10 << 20;
 // A tree object of the repository's working tree as it is: tracked files with their changes, and untracked ones
 // that are not ignored (up to MAX_SNAPSHOT_FILE), added to a copy of the index (the real one left alone), so that git
 // rehashes only the files changed since. Its blobs stay in the repository's objects until git gc prunes them. Returns the tree's id, or null.
-// keep: the copy is kept in the git folder (herdr-explorer-index) for the next call, so that the untracked files too
-// are rehashed only once changed (the Diff view reloaded); copied again when the real index changes.
+// keep: the copy is kept in the state folder (index/, one per index file of a repository) for the next call, so that
+// the untracked files too are rehashed only once changed (the Diff view reloaded); copied again when the real index
+// changes. Not in the git folder: a repository received with it (an archive) could hold a symbolic link there, which
+// the copy would follow to overwrite any file of the user.
 // only: a file or folder, the one path the caller compares, the only one added (the rest of the tree is then as last
 // added, not as it is now).
 async function worktree(top, env, keep = false, only = null) {
-  const git = (args, extra = {}) => run(GIT, args, { cwd: top, env: { ...env, ...extra } });
+  // The exclusions below need the pathspec magic that GIT_LITERAL_PATHSPECS turns off: the paths are made literal
+  // one by one instead.
+  const { GIT_LITERAL_PATHSPECS, ...plain } = env;
+  const git = (args, extra = {}) => run(GIT, args, { cwd: top, env: { ...plain, ...extra } });
   const index = (await git(['rev-parse', '--git-path', 'index']) || '').trim();
   if (!index) return null;
   // The large untracked files left out: the last turn shows them as new.
-  const big = ((await git(['ls-files', '-o', '--exclude-standard', '-z', '--', only || '.'])) || '').split('\0')
+  const big = ((await git(['ls-files', '-o', '--exclude-standard', '-z', '--', only ? `:(literal)${only}` : '.'])) || '').split('\0')
     .filter(f => { try { return f && fs.statSync(path.join(top, f)).size > MAX_SNAPSHOT_FILE; } catch { return false; } });
-  const paths = ['--', only || '.', ...big.map(f => `:(exclude,literal)${f}`)];
-  if (keep) {
-    const kept = path.resolve(top, (await git(['rev-parse', '--git-path', 'herdr-explorer-index']) || '').trim());
+  const paths = ['--', only ? `:(literal)${only}` : '.', ...big.map(f => `:(exclude,literal)${f}`)];
+  const kept = keep && keptIndex(path.resolve(top, index));
+  if (kept) {
     const st = fs.statSync(path.resolve(top, index), { throwIfNoEntry: false });
     const from = st ? `${st.mtimeMs}:${st.size}` : 'none';
     try {
       if (fs.readFileSync(`${kept}.from`, 'utf8') !== from || !fs.existsSync(kept)) throw new Error('stale');
     } catch {
       try {
-        if (st) fs.copyFileSync(path.resolve(top, index), kept); else fs.rmSync(kept, { force: true });
-        fs.writeFileSync(`${kept}.from`, from);
-      } catch { return worktree(top, env, false, only); }
+        fs.mkdirSync(path.dirname(kept), { recursive: true });
+        if (st) { fs.copyFileSync(path.resolve(top, index), `${kept}.${process.pid}`); fs.renameSync(`${kept}.${process.pid}`, kept); }
+        else fs.rmSync(kept, { force: true });
+        if (!writeAtomic(`${kept}.from`, from)) throw new Error('not written');
+      } catch { try { fs.rmSync(`${kept}.${process.pid}`, { force: true }); } catch { } return worktree(top, env, false, only); }
     }
     if (await git(['add', '-A', ...paths], { GIT_INDEX_FILE: kept }) !== null) {
       const tree = (await git(['write-tree'], { GIT_INDEX_FILE: kept }) || '').trim();
@@ -147,6 +157,13 @@ async function worktree(top, env, keep = false, only = null) {
   } finally {
     try { fs.rmSync(dir, { recursive: true, force: true }); } catch { }
   }
+}
+
+// The copy of an index file kept by worktree: index/<hash of its path> in the state folder, null without one. Those
+// not used for a week are removed by sweepState (core/exec.js).
+function keptIndex(index) {
+  const dir = process.env.HERDR_PLUGIN_STATE_DIR;
+  return dir ? path.join(dir, 'index', crypto.createHash('sha1').update(realPath(index)).digest('hex')) : null;
 }
 
 // What turn-<tab id>.json keeps: { pane, top, tree, t, ended }, the working tree of the repository of the pane whose

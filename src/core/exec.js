@@ -267,6 +267,12 @@ function sweepState(tabs, livePanes) {
   for (const f of staleState(dir, list(dir), list(path.join(dir, 'panes')), tabs, livePanes)) {
     try { if (fs.statSync(f).mtimeMs < since) fs.rmSync(f, { recursive: true, force: true }); } catch { }
   }
+  // The copies of indexes that the agent-turn snapshots keep (scope.js keptIndex), unused for a week.
+  const week = Date.now() - 7 * 24 * 3600 * 1000;
+  for (const n of list(path.join(dir, 'index'))) {
+    const f = path.join(dir, 'index', n);
+    try { if (fs.statSync(f).mtimeMs < week) fs.rmSync(f, { force: true }); } catch { }
+  }
 }
 
 // Key bindings, editable by the user: keys.json in the plugin config folder, one object per pane (only the

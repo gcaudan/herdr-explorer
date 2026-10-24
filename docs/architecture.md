@@ -201,7 +201,9 @@ herdr keeps pane ids across a restart, which is what lets each pane find its sav
 (`core/scope.js`): when an agent starts working after having been idle or done, or another agent of the tab does, it
 writes the tree of the repository's working tree to `turn-<tab id>.json`. The tree is made from a copy of the index
 (`GIT_INDEX_FILE`, `git add -A`, `git write-tree`), so the real index is left alone and git rehashes only the files
-changed since; its objects stay in the repository until `git gc` prunes them.
+changed since; its objects stay in the repository until `git gc` prunes them. The copy is kept in `index/` in the
+state folder, not in the git folder, which a repository received as an archive could fill with a symbolic link; the
+copies unused for a week are removed at startup.
 
 ## Updates
 

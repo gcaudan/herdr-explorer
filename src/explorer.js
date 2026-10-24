@@ -388,6 +388,7 @@ let requests = null;
 actions.tabOf(PANE).then(tab => {
   if (!tab || stopped) return;
   requests = actions.requestFile(tab.me.tab_id);
+  if (!requests) return; // no state folder
   let seen = 0;
   try { seen = fs.statSync(requests).mtimeMs; } catch { }
   fs.watchFile(requests, { interval: 300 }, stat => {
