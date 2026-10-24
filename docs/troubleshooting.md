@@ -135,6 +135,8 @@
 | `Cannot create` / `rename` / `duplicate` / `delete: <code>` | file system error (`EACCES`, `EPERM`…)                                  |
 | `N untracked files kept: no trash`               | **Discard changes** (or `D`, deleting for good declined) could not trash untracked files. Install a trash tool |
 | `Cannot stage` / `Cannot unstage` / `Cannot discard` | the git command failed. Try in a terminal to see git's error                   |
+| `Staged N lines; cannot stage <file>: …`, `Discarded N lines; cannot delete <file>: <code>` | part of the selection went through, the rest failed (git error, or file system error such as `EACCES`). Nothing is undone |
+| `Busy…`                                          | `s`, `u` or `D` pressed again before the last one ended                            |
 | `<theme>: not found`                             | the icon theme was uninstalled. Choose another one                                 |
 | `<key>: already bound`, `<key> taken from <action>` | (Key bindings) the key already had that action, or moved from another one |
 | `No config folder`, `Cannot write keys.json`     | herdr gave no config folder, or `keys.json` cannot be written (fix or delete an unreadable file) |
@@ -185,7 +187,7 @@
 | `Fetching` / `Pulling` / `Pushing` / `Publishing` / `Force refused: the repository sets <key>; use the terminal` | the repository's own config sets network settings (`http.*`, `url.*.insteadOf`, `remote.*.proxy`, `remote.*.vcs`, `core.alternateRefsCommand`). Check them, then run the command in a terminal |
 | `No upstream branch to pull from`                                  | push first (publishes the branch), or set an upstream               |
 | `<branch> and <upstream> have diverged (…): merge or rebase in the terminal` | pull only fast-forwards                                  |
-| `Could not delete N files`                                         | discarding could not delete these untracked files                 |
+| `Could not delete N files`                                         | discarding could not delete these files, or refused them: their folder leads outside the repository through a symbolic link |
 | `Detached HEAD: switch to a branch to push`                        | check out a branch                                                  |
 | `No remote: add one with git remote add`                           | add a remote                                                        |
 | `Invalid remote name: …`                                           | a remote name starting with `-` is refused                          |

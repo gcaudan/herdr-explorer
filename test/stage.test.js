@@ -200,3 +200,51 @@ test('the last line added to a file without newline is taken out without adding 
     assert.strictEqual(mode === 'discard' ? r.read('f.txt') : r.git('show', ':f.txt').stdout, 'a\nb');
   }
 });
+
+// chmod does not stop root, nor Windows.
+const noPerms = process.platform === 'win32' || (process.getuid && process.getuid() === 0);
+
+test('discarding for good goes on after a file it cannot delete', { skip: noPerms }, async () => {
+  const r = repo({ 'a.txt': 'x\n' });
+  if (!r) return;
+  fs.mkdirSync(path.join(r.top, 'ro'));
+  r.write('ro/a.txt', 'a\n');
+  r.write('b.txt', 'b\n');
+  const parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+  const list = diff.render(parsed, 200, 'inline');
+  const files = list.filter(x => x.f && (x.f.to === 'ro/a.txt' || x.f.to === 'b.txt'));
+  fs.chmodSync(path.join(r.top, 'ro'), 0o555);
+  try {
+    const said = await stage.apply(r.top, parsed, stage.picked(files), 'discard', { trash: async () => false, noTrash: async () => true });
+    assert.strictEqual(said, 'Discarded 1 line; cannot delete ro/a.txt: EACCES');
+    assert.ok(fs.existsSync(path.join(r.top, 'ro/a.txt')));
+    assert.ok(!fs.existsSync(path.join(r.top, 'b.txt')));
+  } finally { fs.chmodSync(path.join(r.top, 'ro'), 0o755); }
+});
+
+test('whole files failing after a patch say what was staged', { skip: noPerms }, async () => {
+  const r = repo({ 'a.txt': 'one\n' });
+  if (!r) return;
+  r.write('a.txt', 'one\ntwo\n');
+  r.write('u.txt', 'u\n');
+  const parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+  const list = diff.render(parsed, 200, 'inline');
+  const sel = stage.picked([...list.filter(x => x.ref && x.ref.sec === 'unstaged' && plain(x).includes('+ two')),
+    ...list.filter(x => x.f && x.f.to === 'u.txt')]);
+  fs.chmodSync(path.join(r.top, 'u.txt'), 0);
+  try {
+    assert.match(await stage.apply(r.top, parsed, sel, 'stage'), /^Staged 1 line; cannot stage u\.txt: /);
+    assert.match(r.git('diff', '--cached').stdout, /\+two/);
+  } finally { fs.chmodSync(path.join(r.top, 'u.txt'), 0o644); }
+});
+
+test('within refuses a path whose folder links outside the repository', { skip: process.platform === 'win32' }, () => {
+  const top = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'within-')));
+  const out = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'outside-')));
+  fs.mkdirSync(path.join(top, 'dir'));
+  fs.symlinkSync(out, path.join(top, 'sub'));
+  assert.ok(stage.within(path.join(top, 'a.txt'), top));
+  assert.ok(stage.within(path.join(top, 'dir/a.txt'), top));
+  assert.ok(!stage.within(path.join(top, 'sub/x'), top));
+  assert.ok(!stage.within(path.join(top, '../x'), top));
+});

@@ -403,7 +403,7 @@ function empty(w, h, text, pairs = []) {
 
 // A message after an action, with its mark: ✓ done (the text plain), ✕ error (in red), ⋯ going on (an ellipsis at the
 // end, dimmed), · nothing to do. kind: one of those, else guessed from the text.
-const ERROR = /^(Cannot|Can't|Could not|Not |No (editor|terminal)|Action failed|Update failed|Already exists|VS Code not found|Unknown )|\b(not found|unavailable)\b|: already bound$/;
+const ERROR = /^(Cannot|Can't|Could not|Not |No (editor|terminal)|Action failed|Update failed|Already exists|VS Code not found|Unknown )|\b(not found|unavailable)\b|: already bound$|; cannot /;
 const messageKind = text => (/…$/.test(text) ? 'busy' : ERROR.test(text) ? 'error' : /^(No |Nothing)/.test(text) ? 'info' : 'ok');
 // How long it shows: an error twice as long.
 const messageTime = kind => (kind === 'error' ? 4000 : 2000);

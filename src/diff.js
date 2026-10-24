@@ -134,8 +134,8 @@ function cells(spans, width, style, base, strong, { wrap = false, left = 0 } = {
 }
 
 const num = (v, w) => (v === null || v === undefined ? '' : String(v)).padStart(w);
-let DIM, GREEN, RED, CYAN;
-ui.onTheme(() => { DIM = ui.fg(ui.C.dim); GREEN = ui.fg(ui.C.green); RED = ui.fg(ui.GIT.D); CYAN = ui.fg(ui.C.blue); });
+let DIM, GREEN, RED, CYAN, NOTE;
+ui.onTheme(() => { DIM = ui.fg(ui.C.dim); GREEN = ui.fg(ui.C.green); RED = ui.fg(ui.GIT.D); CYAN = ui.fg(ui.C.blue); NOTE = ui.fg(ui.C.yellow); });
 
 // Header lines of a commit (show) and its stat, coloured here.
 function preRow(l) {
@@ -487,14 +487,20 @@ function main() {
     }
   }
 
-  const NOTE = ui.fg(ui.C.yellow);
   // Lines covered by a note of the tab, by path relative to the repository.
   const reals = new Map(); // the real path of each file of the diff, looked up once
+  // diskLines of a staged row, once per parsed (noted runs at each draw).
+  const DISK = new WeakMap();
+  const diskOf = ref => {
+    if (!DISK.has(parsed)) DISK.set(parsed, new Map());
+    const m = DISK.get(parsed), key = `${ref.file}\0${ref.from}\0${ref.to}`;
+    return m.has(key) ? m.get(key) : m.set(key, diskLines(parsed, ref)).get(key);
+  };
   const realOf = f => (reals.has(f) ? reals.get(f) : reals.set(f, notes.real(path.join(top, f))).get(f));
   // A staged row is at its index line, the notes at disk lines (noteKey): compared where it is on disk.
   const noted = r => {
     if (!r.ref || !r.ref.from || !tabNotes.length) return false;
-    const at = r.ref.sec === 'staged' && parsed ? diskLines(parsed, r.ref) : r.ref;
+    const at = r.ref.sec === 'staged' && parsed ? diskOf(r.ref) : r.ref;
     return !!at && tabNotes.some(n => n.from && !n.stale && n.file === realOf(r.ref.file) && at.from >= n.from && at.to <= n.to);
   };
 
@@ -684,21 +690,27 @@ function main() {
   // s, u, D: the rows selected staged, unstaged or discarded (core/stage.js), with HEAD as the scope only (the others
   // show changes the index has nothing to do with); D asks first. The cursor then stays where it was.
   let confirm = null; // { text, run, no } while D asks
+  let busy = false; // while stage.apply runs: a second s, u or D would apply the same rows again
   function edit(mode) {
     if (!parsed || !rows.length) return;
+    if (busy) return say('Busy…');
     if (scope.kind !== 'head') return say('Not with this scope: stage compared with HEAD (b)');
     const [from, to] = range(), sel = stage.picked(rows.slice(from, to + 1));
     const go = async () => {
       confirm = null;
-      // Untracked files the trash did not take: deleted for good once asked again.
-      const noTrash = names => new Promise(resolve => {
-        confirm = { text: `No trash: delete ${names.length > 1 ? `${names.length} files` : names[0]} for good?`, run: () => resolve(true), no: () => resolve(false) };
-        draw();
-      });
-      say(await stage.apply(top, parsed, sel, mode, { noTrash }).catch(() => `Cannot ${mode}`));
-      const d = await changes();
-      if (d === null) return;
-      parsed = d; cache = ''; stay = cur; readViewed(); draw();
+      if (busy) return say('Busy…');
+      busy = true;
+      try {
+        // Untracked files the trash did not take: deleted for good once asked again.
+        const noTrash = names => new Promise(resolve => {
+          confirm = { text: `No trash: delete ${names.length > 1 ? `${names.length} files` : names[0]} for good?`, run: () => resolve(true), no: () => resolve(false) };
+          draw();
+        });
+        say(await stage.apply(top, parsed, sel, mode, { noTrash }).catch(() => `Cannot ${mode}`));
+        const d = await changes();
+        if (d === null) return;
+        parsed = d; cache = ''; stay = cur; readViewed(); draw();
+      } finally { busy = false; }
     };
     if (mode !== 'discard') return go();
     const n = stage.count(parsed, sel, mode);

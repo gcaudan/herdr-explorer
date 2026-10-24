@@ -276,9 +276,11 @@ if (TAB) {
 // s, u, D in the Diff view: the rows selected with the mouse, else the hunk n went to, else the hunk at the top (the
 // first hunk of the file whose name is there), staged, unstaged or discarded (core/stage.js), compared with HEAD
 // only; D asks first.
+let editing = false; // while stage.apply runs: a second s, u or D would apply the same rows again
 function editDiff(mode) {
   const d = state.diff;
   if (!d || !d.parsed) return;
+  if (editing) return flash('Busy…');
   if (state.scope.kind !== 'head') return flash('Not with this scope: stage compared with HEAD (b)');
   const list = rows(), sel = state.select && state.select.moved ? state.select : null;
   // The hunk n went to while some of it is in view: scrolled away from, the top's.
@@ -296,13 +298,19 @@ function editDiff(mode) {
   }
   const picked = stage.picked(list.slice(a, b + 1));
   const go = async () => {
+    if (editing) return flash('Busy…');
+    editing = true;
     state.select = null;
     // Untracked files the trash did not take: deleted for good once asked again.
     const noTrash = names => new Promise(resolve => ask({ title: 'No trash: delete for good?',
       name: names.length > 1 ? `${names.length} files` : names[0], note: 'This cannot be undone.',
       buttons: [{ key: 'd', label: 'Delete', tone: 'danger' }, { key: 'escape', label: 'Cancel' }],
       on: { d: () => resolve(true) }, dropped: () => resolve(false) }));
-    flash(await stage.apply(d.top, d.parsed, picked, mode, { noTrash }).catch(() => `Cannot ${mode}`));
+    try { flash(await stage.apply(d.top, d.parsed, picked, mode, { noTrash }).catch(() => `Cannot ${mode}`)); }
+    finally { editing = false; }
+    // The rows move once reloaded (the staged section first): the next s aims at the top again, not at a hunk n
+    // went to that is no longer where it was.
+    state.hunk = null;
     loadDiff(true);
   };
   if (mode !== 'discard') return go();

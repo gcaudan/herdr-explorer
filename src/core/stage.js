@@ -168,7 +168,9 @@ async function apply(top, parsed, sel, mode, opts = {}) {
   const list = targets(parsed, sel, mode);
   if (!list.length) return mode === 'unstage' ? 'Nothing staged selected' : 'Nothing unstaged selected';
   const env = { ...await gitEnv(top), GIT_LITERAL_PATHSPECS: '1' };
-  const fail = res => `Cannot ${mode}: ${(res.err || res.out).trim().split('\n')[0] || 'git failed'}`;
+  const why = res => (res.err || res.out).trim().split('\n')[0] || 'git failed';
+  const fail = res => `Cannot ${mode}: ${why(res)}`;
+  const nameOf = t => t.f.to || t.f.from;
   const patches = [], whole = [], ita = [], remove = [], unindex = [];
   // Added files the index already has (git add -N by the user): their entry is kept on a failure, and goes with the
   // file on a discard.
@@ -190,7 +192,7 @@ async function apply(top, parsed, sel, mode, opts = {}) {
     const res = await git(top, env, ['add', '-N', '--', ...ita]);
     if (res.code !== 0) return fail(res);
   }
-  const patch = patches.filter(Boolean).join('');
+  const patch = patches.filter(Boolean).join(''), patched = list.filter(t => !whole.includes(nameOf(t)) && !remove.includes(nameOf(t)));
   if (patch) {
     const res = await git(top, env, ['apply', ...(mode === 'discard' ? [] : ['--cached']), ...(mode === 'stage' ? [] : ['-R']),
       '--whitespace=nowarn', '-'], patch);
@@ -202,25 +204,33 @@ async function apply(top, parsed, sel, mode, opts = {}) {
     const args = mode === 'stage' ? ['add', '-A', '--'] : mode === 'unstage' ? (hasHead ? ['reset', '-q', '--'] : ['rm', '--cached', '-q', '--'])
       : ['checkout', '-q', '--'];
     const res = await git(top, env, [...args, ...whole]);
-    if (res.code !== 0) return fail(res);
+    // The patch already applied stays: said, not undone.
+    if (res.code !== 0) return patch ? `${VERB[mode]} ${summary(patched)}; cannot ${mode} ${whole.length > 1 ? plural(whole.length, 'file') : whole[0]}: ${why(res)}` : fail(res);
   }
   const trash = opts.trash || require('./actions').trash;
   const left = [];
   for (const name of remove) {
     if (await trash(path.join(top, name))) pruneDirs(path.join(top, name), top); else left.push(name);
   }
+  // The files deleted for good that could not be: the others are still deleted, and their index entry goes.
+  const failed = new Map();
   if (left.length && opts.noTrash && await opts.noTrash(left)) {
     for (const name of left.splice(0)) {
-      try { fs.rmSync(path.join(top, name)); } catch (e) { return `Cannot discard: ${e.code || e.message}`; }
+      try { fs.rmSync(path.join(top, name)); } catch (e) { failed.set(name, e.code || e.message); continue; }
       pruneDirs(path.join(top, name), top);
     }
   }
-  const gone = unindex.filter(name => !left.includes(name));
+  const gone = unindex.filter(name => !left.includes(name) && !failed.has(name));
   if (gone.length) {
     const res = await git(top, env, ['rm', '--cached', '-q', '--', ...gone]);
     if (res.code !== 0) return fail(res);
   }
   if (left.length) return `${plural(left.length, 'untracked file')} kept: no trash`;
+  if (failed.size) {
+    const [name, code] = [...failed][0], done = list.filter(t => !failed.has(nameOf(t)));
+    const cannot = `delete ${failed.size > 1 ? plural(failed.size, 'file') : name}: ${code}`;
+    return done.length ? `${VERB[mode]} ${summary(done)}; cannot ${cannot}` : `Cannot ${cannot}`;
+  }
   return `${VERB[mode]} ${summary(list)}`;
 }
 
@@ -232,4 +242,12 @@ function pruneDirs(abs, top) {
   }
 }
 
-module.exports = { SECTION, picked, targets, patchOf, quote, count, apply, pruneDirs };
+// Whether the file abs is in the repository's folder top, its folder too once symbolic links are followed (an index
+// naming sub/x while sub links to the home folder is not).
+function within(abs, top) {
+  const real = p => { try { return fs.realpathSync(p); } catch { return null; } };
+  const root = real(top), dir = real(path.dirname(path.resolve(abs)));
+  return path.resolve(abs).startsWith(path.resolve(top) + path.sep) && !!root && !!dir && (dir === root || dir.startsWith(root + path.sep));
+}
+
+module.exports = { SECTION, picked, targets, patchOf, quote, count, apply, pruneDirs, within };
