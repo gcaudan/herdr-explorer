@@ -99,18 +99,25 @@ async function branches(cwd) {
 
 // --- the agent's last turn
 
+// Untracked files above this size stay out of the snapshot (a dataset or a build output not ignored): hashed, each
+// would take its size again in the repository's objects until git gc.
+const MAX_SNAPSHOT_FILE = 10 << 20;
+
 // A tree object of the repository's working tree as it is: tracked files with their changes, and untracked ones
-// that are not ignored, added to a copy of the index (the real one left alone), so that git rehashes only the files
-// changed since. Its blobs stay in the repository's objects until git gc prunes them. Returns the tree's id, or null.
+// that are not ignored (up to MAX_SNAPSHOT_FILE), added to a copy of the index (the real one left alone), so that git
+// rehashes only the files changed since. Its blobs stay in the repository's objects until git gc prunes them. Returns the tree's id, or null.
 // keep: the copy is kept in the git folder (herdr-explorer-index) for the next call, so that the untracked files too
 // are rehashed only once changed (the Diff view reloaded); copied again when the real index changes.
 // only: a file or folder, the one path the caller compares, the only one added (the rest of the tree is then as last
 // added, not as it is now).
 async function worktree(top, env, keep = false, only = null) {
-  const paths = ['--', only || '.'];
   const git = (args, extra = {}) => run(GIT, args, { cwd: top, env: { ...env, ...extra } });
   const index = (await git(['rev-parse', '--git-path', 'index']) || '').trim();
   if (!index) return null;
+  // The large untracked files left out: the last turn shows them as new.
+  const big = ((await git(['ls-files', '-o', '--exclude-standard', '-z', '--', only || '.'])) || '').split('\0')
+    .filter(f => { try { return f && fs.statSync(path.join(top, f)).size > MAX_SNAPSHOT_FILE; } catch { return false; } });
+  const paths = ['--', only || '.', ...big.map(f => `:(exclude,literal)${f}`)];
   if (keep) {
     const kept = path.resolve(top, (await git(['rev-parse', '--git-path', 'herdr-explorer-index']) || '').trim());
     const st = fs.statSync(path.resolve(top, index), { throwIfNoEntry: false });

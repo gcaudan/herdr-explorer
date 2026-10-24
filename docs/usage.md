@@ -812,7 +812,8 @@ with** in the View menu) opens its menu; the scope chosen holds for every pane o
 - **Last agent turn**: the working tree as it was when the agent of the tab last started working, so only what it
   changed since. herdr tells the plugin when an agent's status changes; when it starts working after having been idle
   or done (or for another agent of the tab), the plugin records a snapshot of the repository's working tree, tracked
-  and untracked files, without touching the index. Before any turn, it says so;
+  and untracked files, without touching the index. Untracked files over 10 MB are left out of it, and show as new.
+  Before any turn, it says so;
 - **Commit or range…**: a commit (its own changes, against its parent), `a..b` or `a...b` (since `b` left `a`), a
   side left out being `HEAD` (`main..`, `..main`), typed in
   the footer (`enter` to apply, `escape` to cancel);
