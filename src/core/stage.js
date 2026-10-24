@@ -206,10 +206,13 @@ async function apply(top, parsed, sel, mode, opts = {}) {
   }
   const trash = opts.trash || require('./actions').trash;
   const left = [];
-  for (const name of remove) if (!await trash(path.join(top, name))) left.push(name);
+  for (const name of remove) {
+    if (await trash(path.join(top, name))) pruneDirs(path.join(top, name), top); else left.push(name);
+  }
   if (left.length && opts.noTrash && await opts.noTrash(left)) {
     for (const name of left.splice(0)) {
       try { fs.rmSync(path.join(top, name)); } catch (e) { return `Cannot discard: ${e.code || e.message}`; }
+      pruneDirs(path.join(top, name), top);
     }
   }
   const gone = unindex.filter(name => !left.includes(name));
@@ -221,4 +224,12 @@ async function apply(top, parsed, sel, mode, opts = {}) {
   return `${VERB[mode]} ${summary(list)}`;
 }
 
-module.exports = { SECTION, picked, targets, patchOf, quote, count, apply };
+// The folders left empty by the file abs gone, up to the repository's folder top (kept).
+function pruneDirs(abs, top) {
+  const root = path.resolve(top);
+  for (let d = path.dirname(path.resolve(abs)); d.startsWith(root + path.sep); d = path.dirname(d)) {
+    try { fs.rmdirSync(d); } catch { break; }
+  }
+}
+
+module.exports = { SECTION, picked, targets, patchOf, quote, count, apply, pruneDirs };

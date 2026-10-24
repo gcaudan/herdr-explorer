@@ -9,6 +9,7 @@ const ui = require('../core/ui');
 const diffs = require('../diff');
 const actions = require('../core/actions');
 const { WIN, which } = require('../core/exec');
+const { pruneDirs } = require('../core/stage');
 const { ROOT, MAX_PROMPT, S, frame, draw, follow, base, files, flash, confirm } = require('./context');
 const {
   exec, git, errorOf, op, net, fromFile, nul, loadStatus, schedule, ongoing, mergeOptions, continues, headName, openPicker,
@@ -50,11 +51,9 @@ async function unstageAll() {
 }
 
 // Folders left empty by a file gone go too.
-function prune(abs) {
-  for (let d = path.dirname(abs); d.startsWith(S.repo.top + path.sep); d = path.dirname(d)) {
-    try { fs.rmdirSync(d); } catch { break; }
-  }
-}
+const prune = abs => pruneDirs(abs, S.repo.top);
+const onDisk = rel => { try { return !!fs.lstatSync(path.resolve(S.repo.top, rel)); } catch { return false; } };
+
 // Files of the repository (paths from its top) to the trash; those it does not take are deleted for good once asked
 // again. Never a path that resolves outside the repository.
 async function toTrash(list) {
@@ -94,7 +93,8 @@ function discard(items, sec) {
       if (others.length && !await op('Discarding', ['restore', '--staged', '--worktree', '--source=HEAD', ...fromFile], { input: nul(others) })) return;
       if (!added.length) return;
       if (!await op('Discarding', ['rm', '--cached', '-r', '-q', ...fromFile], { input: nul(added) })) return;
-      await toTrash(added.map(i => i.path));
+      // A file deleted since it was added (AD) has nothing left to move to the trash.
+      await toTrash(added.map(i => i.path).filter(onDisk));
     });
   }
   const untracked = items.filter(i => i.untracked), tracked = items.filter(i => !i.untracked);
