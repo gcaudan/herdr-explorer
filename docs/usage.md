@@ -149,7 +149,7 @@ pasted text.
 | Key                               | Action                              |
 | --------------------------------- | ----------------------------------- |
 | `left` `right`, `ctrl+b` `ctrl+f` | move the cursor                     |
-| `home` `ctrl+a`, `end`            | start / end                         |
+| `home`, `end`                     | start / end                         |
 | `backspace`, `delete` `ctrl+d`    | delete before / after the cursor    |
 | `ctrl+u` / `ctrl+k`               | delete to the start / to the end    |
 | `ctrl+w` `alt+backspace`          | delete the word before the cursor   |
