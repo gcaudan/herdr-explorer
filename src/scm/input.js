@@ -59,17 +59,20 @@ function inlineKey(k) {
 
 // --- diffs
 
-// Keys of a focused comparison: the selection moves over the commits, Enter shows the selected one.
+// Keys of a focused comparison: the selection moves over the commits, Enter shows the selected one. Below SPLIT
+// columns, the tab's preview follows the selected commit, as it follows a History row.
 function compareKey(k, d, page) {
   const at = (d.rows || []).map((r, i) => (r.commit ? i : -1)).filter(i => i >= 0);
   if (!at.length) return false;
   const pos = Math.max(0, at.indexOf(d.sel));
+  const commitRow = () => ({ type: 'commit', key: `commit:${d.rows[d.sel].commit.hash}`, commit: d.rows[d.sel].commit });
   const move = i => {
     d.sel = at[Math.max(0, Math.min(i, at.length - 1))];
     const body = ui.size().H - 3;
     if (d.sel < d.top + 1) d.top = Math.max(0, d.sel - 1);
     if (d.sel >= d.top + body) d.top = d.sel - body + 1;
     draw();
+    if (!wide()) { clearTimeout(compareKey.timer); compareKey.timer = setTimeout(() => { previewRow(commitRow(), !previewed); previewed = true; }, 120); }
     return true;
   };
   if (k === 'up' || k === 'k') return move(d.sel < 0 ? 0 : pos - 1);
@@ -79,6 +82,7 @@ function compareKey(k, d, page) {
   if (k === 'home' || k === 'g') return move(0);
   if (k === 'end' || k === 'G') return move(at.length - 1);
   if (k === 'enter' && d.sel >= 0) {
+    if (!wide()) { clearTimeout(compareKey.timer); previewRow(commitRow(), true, true); return true; }
     const c = d.rows[d.sel].commit;
     showDiff(`commit:${c.hash}`, `${c.short} ${c.subject}`,
       ['show', ...diffs.DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', '--format=fuller', '--decorate=short', c.hash]);
@@ -95,6 +99,7 @@ function compareKey(k, d, page) {
 const previewable = row => !!row && (row.type === 'file' || !!showOf(row));
 function previewRow(row, open = true, focus = false) {
   const PANE = process.env.HERDR_PANE_ID, top = S.repo.top;
+  previewRow.key = row ? row.key : null;
   const asked = row && row.type === 'file'
     ? actions.preview(path.join(top, row.item.path), top, PANE, 0, focus, open, { view: 'diff', beside: PANE })
     : actions.preview('', top, PANE, 0, focus, open, { show: { ...(showOf(row) || { blank: true }), cwd: top }, beside: PANE });
@@ -114,8 +119,14 @@ function follow() {
   follow.timer = setTimeout(() => {
     if (!S.repo) return;
     const row = frame.rows[S.cursor];
-    // Narrow: the preview opened below the pane follows the selected file.
-    if (!wide()) { previewRow(row, !previewed); previewed = true; return; }
+    // Narrow: the preview opened below the pane follows the selected file. Asked again only for another row: each
+    // request reloads the preview, which would drop the lines selected there at each refresh.
+    if (!wide()) {
+      if (S.diff && row && S.diff.key === row.key) return; // its comparison open, which shows its commits there
+      if (!previewed || (row ? row.key : null) !== previewRow.key) previewRow(row, !previewed);
+      previewed = true;
+      return;
+    }
     if (diffable(row)) {
       // showDiff sets S.diff before it waits for git.
       if (!showing(row)) { openRow(row, true); if (S.diff && S.diff.key === row.key) S.diff.auto = true; }
@@ -160,11 +171,9 @@ function diffKey(k) {
 // A choice of the menu, by key or click: the menu closes, then the item runs; the diff's options show again with
 // their new values (keep).
 function menuChoice(r) {
-  const view = S.menu && S.menu.view, sel = S.menu && S.menu.sel;
-  if (r === 'close' || (r && r.run)) S.menu = null;
+  const menu = S.menu;
+  menu.choose(r, () => { S.menu = null; draw(); }, menu.view ? openDiffView : null);
   draw();
-  if (r && r.run) r.run();
-  if (r && r.keep && view) openDiffView(sel);
 }
 
 function fieldKey(k) {

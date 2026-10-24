@@ -11,7 +11,7 @@ const graph = require('../render/graph');
 const { WIN, GIT, gitEnv, gitOperation, readSettings, writeSettings, realPath, addConfig, exec } = require('../core/exec');
 const parse = require('./parse');
 const { errorOf } = parse;
-const { ROOT, NET_TIMEOUT, S, frame, late, draw, select, follow, base, flash } = require('./context');
+const { ROOT, REVIEW, NET_TIMEOUT, S, frame, late, draw, select, follow, base, flash } = require('./context');
 
 // --- running git
 
@@ -144,16 +144,12 @@ async function loadHistory() {
   S.histLoaded = true;
 }
 
-// Where the current branch leaves the default branch (the remote's HEAD, else main or master, as the Diff view's main
-// base): the history's graph changes colour there. null on the default branch, or a branch it already has.
+// Where the current branch leaves the default branch (diffs.defaultBranch, the Diff view's main base): the history's
+// graph changes colour there. null on the default branch, or a branch it already has.
 async function forkPoint() {
   if (!S.repo.hasHead) return null;
   const out = async args => { const r = await git(args); return r.code === 0 ? r.out.trim() : ''; };
-  let name = await out(['rev-parse', '--abbrev-ref', '-q', '--verify', 'refs/remotes/origin/HEAD']);
-  for (const b of ['main', 'master', 'origin/main', 'origin/master']) {
-    if (name) break;
-    if (await out(['rev-parse', '--verify', '-q', `${b}^{commit}`])) name = b;
-  }
+  const name = await diffs.defaultBranch(out);
   if (!name) return null;
   const [fork, head] = await Promise.all([out(['merge-base', 'HEAD', name]), out(['rev-parse', 'HEAD'])]);
   return fork && fork !== head ? fork : null;
@@ -343,11 +339,12 @@ async function compare(row) {
 
 // = also has the Changes pane and the preview's Diff view of the tab show the branch's changes since it left the base
 // (the scope base...branch, core/scope.js, in full names as compare has them: a tag of the same name does not stand
-// in); a branch merely selected leaves the scope alone.
+// in); a branch merely selected leaves the scope alone. In a review, the tab reviewed too (REVIEW), not only the
+// review's own, whose preview shows the files.
 let myTab;
 async function shareCompare(row) {
   if (myTab === undefined) myTab = (await actions.tabOf(process.env.HERDR_PANE_ID).catch(() => null) || { me: {} }).me.tab_id || null;
-  if (myTab) Scope.write(myTab, { kind: 'rev', rev: `${baseRef()}...${fullRef(row.ref)}` });
+  for (const tab of new Set([myTab, REVIEW].filter(Boolean))) Scope.write(tab, { kind: 'rev', rev: `${baseRef()}...${fullRef(row.ref)}` });
 }
 
 // --- diffs
