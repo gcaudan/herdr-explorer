@@ -153,10 +153,7 @@ pub fn insert(fields: &mut Vec<(String, Value)>, key: String, value: Value) {
     }
     match index(&key) {
         Some(n) => {
-            let at = fields
-                .iter()
-                .position(|(k, _)| index(k).is_none_or(|m| m > n))
-                .unwrap_or(fields.len());
+            let at = fields.iter().position(|(k, _)| index(k).is_none_or(|m| m > n)).unwrap_or(fields.len());
             fields.insert(at, (key, value));
         }
         None => fields.push((key, value)),
@@ -175,10 +172,7 @@ fn index(key: &str) -> Option<u32> {
 
 /// Parses a JSON text as `JSON.parse` does; `Err` holds a short reason.
 pub fn parse(text: &str) -> Result<Value, String> {
-    let mut p = Parser {
-        s: text.as_bytes(),
-        at: 0,
-    };
+    let mut p = Parser { s: text.as_bytes(), at: 0 };
     p.ws();
     let v = p.value(0)?;
     p.ws();
@@ -566,21 +560,7 @@ mod tests {
 
     #[test]
     fn refuses_what_json_parse_refuses() {
-        for bad in [
-            "",
-            "01",
-            "1.",
-            ".5",
-            "+1",
-            "[1,]",
-            "{\"a\":1,}",
-            "'a'",
-            "\"\t\"",
-            "nul",
-            "[1] x",
-            "{a:1}",
-            "-",
-        ] {
+        for bad in ["", "01", "1.", ".5", "+1", "[1,]", "{\"a\":1,}", "'a'", "\"\t\"", "nul", "[1] x", "{a:1}", "-"] {
             assert!(parse(bad).is_err(), "{bad:?}");
         }
         assert_eq!(parse(" \n[ ]\r\t").unwrap(), Value::Arr(vec![]));

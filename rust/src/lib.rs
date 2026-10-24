@@ -2,6 +2,7 @@
 
 pub mod cli;
 pub mod json;
+pub mod sys;
 
 /// The plugin's version, from herdr-plugin.toml at build time: the one that runs.
 pub const VERSION: &str = env!("HERDR_EXPLORER_VERSION");

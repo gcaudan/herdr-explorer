@@ -79,14 +79,8 @@ mod tests {
     #[test]
     fn parses_the_manifest_entries() {
         assert_eq!(parse(args(&["--version"])), Ok(Command::Version));
-        assert_eq!(
-            parse(args(&["pane", "tree", "/x"])),
-            Ok(Command::Pane("tree", args(&["/x"])))
-        );
-        assert_eq!(
-            parse(args(&["hook", "--closed"])),
-            Ok(Command::Hook(args(&["--closed"])))
-        );
+        assert_eq!(parse(args(&["pane", "tree", "/x"])), Ok(Command::Pane("tree", args(&["/x"]))));
+        assert_eq!(parse(args(&["hook", "--closed"])), Ok(Command::Hook(args(&["--closed"]))));
         assert_eq!(parse(args(&["peek", "--last"])), Ok(Command::Peek(args(&["--last"]))));
         assert!(parse(args(&["pane", "nope"])).is_err());
         assert!(parse(args(&[])).is_err());
@@ -96,9 +90,6 @@ mod tests {
     fn embeds_the_manifest_version() {
         let toml = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../herdr-plugin.toml")).unwrap();
         let line = format!("version = \"{}\"", crate::VERSION);
-        assert!(
-            toml.lines().any(|l| l == line),
-            "{line} is not a line of herdr-plugin.toml"
-        );
+        assert!(toml.lines().any(|l| l == line), "{line} is not a line of herdr-plugin.toml");
     }
 }
