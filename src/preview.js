@@ -1647,9 +1647,11 @@ function startNote() {
   const at = selectedLines();
   // In the Diff view, the anchor is the text of the lines in the version shown, not on disk (notes.add).
   const d = state.view === 'diff' && at && state.diff && state.diff.parsed;
-  const lines = !d ? undefined : at[2] === null || !diffs ? null
-    : diffs.shownLines(d, { file: path.relative(state.diff.top, notes.real(state.file)).split(path.sep).join('/'), sec: at[2], from: at[0], to: at[1] });
-  state.note = { field: new ui.Field(), kind: '', from: at ? at[0] : 0, to: at ? at[1] : 0, lines };
+  const ref = d && { file: path.relative(state.diff.top, notes.real(state.file)).split(path.sep).join('/'), sec: at[2], from: at[0], to: at[1] };
+  const lines = !d ? undefined : at[2] === null || !diffs ? null : diffs.shownLines(d, ref);
+  // A staged line: placed where it is on disk, which notes follow; stale when changed there since.
+  const disk = d && diffs && at[2] === 'staged' ? diffs.diskLines(d, ref) : undefined;
+  state.note = { field: new ui.Field(), kind: '', ...(disk || { from: at ? at[0] : 0, to: at ? at[1] : 0 }), lines, stale: disk === null };
   render();
 }
 
@@ -1666,7 +1668,7 @@ function noteKey(k) {
     state.note = null;
     if (!n.field.value.trim()) return render();
     state.select = null;
-    const msg = notes.add(TAB, { file: state.file, from: n.from, to: n.to, kind: n.kind, text: n.field.value, lines: n.lines });
+    const msg = notes.add(TAB, { file: state.file, from: n.from, to: n.to, kind: n.kind, text: n.field.value, lines: n.lines, stale: n.stale });
     keepTab();
     loadNotes();
     return flash(msg);

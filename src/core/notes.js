@@ -95,8 +95,9 @@ function update(tab, moved) {
 // A file as notes name it: its real path (realPath, exported as real), so that the preview (from the explorer's
 // folder, maybe through a symbolic link such as /home → /var/home) and the diff (from the repository's real folder)
 // agree. The lines are those of the file on disk, or given (lines: the text from to to of the version shown, as a diff
-// of the index or of a commit shows it; null when it is not known, for no anchor).
-function add(tab, { file, from = 0, to = from, kind = '', text, lines: shown }) {
+// of the index or of a commit shows it; null when it is not known, for no anchor). stale: those lines are no longer
+// on disk.
+function add(tab, { file, from = 0, to = from, kind = '', text, lines: shown, stale = false }) {
   text = clean(text);
   if (!text || !file) return 'Empty note';
   if (from > to) [from, to] = [to, from];
@@ -106,7 +107,8 @@ function add(tab, { file, from = 0, to = from, kind = '', text, lines: shown }) 
     if (shown !== undefined) anchor = shown && shown.length === to - from + 1 ? shown : null;
     else { const lines = linesOf(real); anchor = lines && to <= lines.length ? lines.slice(from - 1, to) : null; }
   }
-  list.push({ file: real, from, to, kind: KINDS.includes(kind) ? kind : '', text, t: Date.now(), ...(anchor ? { anchor } : {}) });
+  list.push({ file: real, from, to, kind: KINDS.includes(kind) ? kind : '', text, t: Date.now(), ...(anchor ? { anchor } : {}),
+    ...(stale && anchor ? { stale: true } : {}) });
   return write(tab, list) ? `Note added (${list.length})` : 'Cannot save the note';
 }
 

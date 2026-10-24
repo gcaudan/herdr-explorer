@@ -125,7 +125,7 @@ function diffKey(k) {
   if (k === ',') return openDiffView();
   // Without wrap, the text 8 columns sideways, up to the longest line.
   if (k === 'left' || k === 'h') { if (!settings.wrap && d.left) { d.left = Math.max(0, d.left - 8); draw(); } return; }
-  if (k === 'right' || k === 'l') { if (!settings.wrap && (d.left || 0) + 8 < widest(d)) { d.left = (d.left || 0) + 8; draw(); } return; }
+  if (k === 'right' || k === 'l') { if (!settings.wrap && (d.left || 0) + 8 < diffs.widestOf(d.parsed)) { d.left = (d.left || 0) + 8; draw(); } return; }
   if (k === 'n' || k === 'N') {
     const r = d.rows || [];
     const i = k === 'n' ? r.findIndex((x, j) => j > d.top && x.hunk) : r.map((x, j) => (j < d.top && x.hunk ? j : -1)).filter(j => j >= 0).pop();
@@ -143,15 +143,6 @@ function menuChoice(r) {
   draw();
   if (r && r.run) r.run();
   if (r && r.keep && view) openDiffView(sel);
-}
-// The width of the diff's longest line, the most ← → can scroll.
-function widest(d) {
-  if (!d.parsed) return 0;
-  if (d.widest === undefined) {
-    d.widest = 0;
-    for (const f of d.parsed.files) for (const h of f.hunks) for (const l of h.lines) d.widest = Math.max(d.widest, ui.textWidth(ui.cleanLine(l[1])));
-  }
-  return d.widest;
 }
 
 function fieldKey(k) {

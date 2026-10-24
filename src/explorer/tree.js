@@ -136,12 +136,12 @@ function create(root, settings) {
 
   // Compact folders: a folder whose only entry (in list) is a folder shows on one row with it, src/main/java, as the
   // last one (its rel, expanded or not), chain the names before it ('src/main/'), from the first one's rel. At most
-  // 32 folders, as a link to a folder above would make the chain endless. expanded, for the tree as it is unfolded:
-  // a folder folded (nothing of it unfolded) is chained only through folders already read, so that the rows never
-  // read a folder they do not show; it shows its chain once unfolded.
-  function compact(e, list, expanded = null) {
+  // 32 folders, as a link to a folder above would make the chain endless. unfolded, for the tree as it is unfolded
+  // (see unfoldedOf): a folder folded (nothing of it unfolded) is chained only through folders already read, so that
+  // the rows never read a folder they do not show; it shows its chain once unfolded.
+  function compact(e, list, unfolded = null) {
     if (!settings.compact || !e.dir) return e;
-    const lazy = expanded && ![...expanded].some(r => r === e.rel || r.startsWith(`${e.rel}/`));
+    const lazy = unfolded && !unfolded.has(e.rel);
     let last = e;
     const names = [];
     for (let n = 0; n < 32; n++) {
@@ -152,6 +152,15 @@ function create(root, settings) {
       last = kids[0];
     }
     return last === e ? e : { ...last, from: e.rel, chain: `${names.join('/')}/` };
+  }
+
+  // The folders expanded and their parents: those with something unfolded.
+  function unfoldedOf(expanded) {
+    const out = new Set();
+    for (const rel of expanded) {
+      for (let r = rel; r && !out.has(r); r = r.slice(0, Math.max(0, r.lastIndexOf('/')))) out.add(r);
+    }
+    return out;
   }
 
   // The rows of a view: { query } the filter's text in lower case (no compact folders), { changed } the changed files
@@ -188,9 +197,10 @@ function create(root, settings) {
       };
       walk('', 0);
     } else {
+      const unfolded = settings.compact ? unfoldedOf(expanded) : null;
       const walk = (rel, depth) => {
         for (const entry of visible(rel)) {
-          const e = compact(entry, visible, expanded);
+          const e = compact(entry, visible, unfolded);
           // A chain is open when its last folder is, or its first one (unfolded while it showed alone).
           const open = e.dir && (expanded.has(e.rel) || (!!e.from && expanded.has(e.from)));
           rows.push({ ...e, depth, open });

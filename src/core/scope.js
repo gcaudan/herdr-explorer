@@ -80,7 +80,10 @@ async function branches(cwd) {
 // changed since. Its blobs stay in the repository's objects until git gc prunes them. Returns the tree's id, or null.
 // keep: the copy is kept in the git folder (herdr-explorer-index) for the next call, so that the untracked files too
 // are rehashed only once changed (the Diff view reloaded); copied again when the real index changes.
-async function worktree(top, env, keep = false) {
+// only: a file or folder, the one path the caller compares, the only one added (the rest of the tree is then as last
+// added, not as it is now).
+async function worktree(top, env, keep = false, only = null) {
+  const paths = ['--', only || '.'];
   const git = (args, extra = {}) => run(GIT, args, { cwd: top, env: { ...env, ...extra } });
   const index = (await git(['rev-parse', '--git-path', 'index']) || '').trim();
   if (!index) return null;
@@ -94,21 +97,21 @@ async function worktree(top, env, keep = false) {
       try {
         if (st) fs.copyFileSync(path.resolve(top, index), kept); else fs.rmSync(kept, { force: true });
         fs.writeFileSync(`${kept}.from`, from);
-      } catch { return worktree(top, env); }
+      } catch { return worktree(top, env, false, only); }
     }
-    if (await git(['add', '-A', '--', '.'], { GIT_INDEX_FILE: kept }) !== null) {
+    if (await git(['add', '-A', ...paths], { GIT_INDEX_FILE: kept }) !== null) {
       const tree = (await git(['write-tree'], { GIT_INDEX_FILE: kept }) || '').trim();
       if (tree) return tree;
     }
     // Another pane updating it at the same time (its lock taken): a copy of its own.
-    return worktree(top, env);
+    return worktree(top, env, false, only);
   }
   let dir;
   try { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'herdr-explorer-index-')); } catch { return null; }
   const tmp = path.join(dir, 'index');
   try {
     try { fs.copyFileSync(path.resolve(top, index), tmp); } catch { }
-    if (await git(['add', '-A', '--', '.'], { GIT_INDEX_FILE: tmp }) === null) return null;
+    if (await git(['add', '-A', ...paths], { GIT_INDEX_FILE: tmp }) === null) return null;
     return (await git(['write-tree'], { GIT_INDEX_FILE: tmp }) || '').trim() || null;
   } finally {
     try { fs.rmSync(dir, { recursive: true, force: true }); } catch { }

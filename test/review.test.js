@@ -111,6 +111,13 @@ test('diff scopes: a commit, a range, a branch, the last agent turn', async () =
   const turn = { top, tree };
   const res = await diff.collect({ cwd: top, scope: { kind: 'turn' }, turn });
   assert.deepStrictEqual(diff.parse(res.text).files.map(f => f.to), ['a.txt', 'other.txt']);
+  // Limited to one file, which alone is added again: a new one untracked too.
+  fs.writeFileSync(path.join(top, 'third.txt'), 'z\n');
+  const one = await diff.collect({ cwd: top, file: path.join(top, 'third.txt'), scope: { kind: 'turn' }, turn });
+  assert.deepStrictEqual(diff.parse(one.text).files.map(f => f.to), ['third.txt']);
+  fs.writeFileSync(path.join(top, 'a.txt'), 'one!!\n');
+  const again = await diff.collect({ cwd: top, file: path.join(top, 'a.txt'), scope: { kind: 'turn' }, turn });
+  assert.match(again.text, /^\+one!!$/m);
   assert.ok((await diff.collect({ cwd: top, scope: { kind: 'turn' }, turn: null })).error);
 });
 
@@ -223,4 +230,16 @@ test('a diff row cut from another column is made again alike (redo)', () => {
     at0.forEach((r, i) => { if (r.redo) assert.deepStrictEqual(r.redo(16), at16[i].segs, `${mode} row ${i}`); });
     assert.ok(at0.some(r => r.redo));
   }
+});
+
+test('a staged note is placed where its lines are on disk', () => {
+  const staged = ['diff --git a/x b/x', '--- a/x', '+++ b/x', '@@ -1,2 +1,2 @@', ' one', '-two', '+2', ''].join('\n');
+  // On disk: a line added at the top, and line 2 of the index (2) changed.
+  const unstaged = ['diff --git a/x b/x', '--- a/x', '+++ b/x', '@@ -0,0 +1 @@', '+zero', '@@ -2 +3 @@', '-2', '+deux', ''].join('\n');
+  const parsed = diff.changesOf({ staged, text: unstaged });
+  assert.deepStrictEqual(diff.diskLines(parsed, { file: 'x', sec: 'staged', from: 1, to: 1 }), { from: 2, to: 2 });
+  assert.strictEqual(diff.diskLines(parsed, { file: 'x', sec: 'staged', from: 2, to: 2 }), null);
+  assert.strictEqual(diff.diskLines(parsed, { file: 'x', sec: 'staged', from: 1, to: 2 }), null);
+  // No unstaged change: the same lines.
+  assert.deepStrictEqual(diff.diskLines(diff.changesOf({ staged, text: '' }), { file: 'x', sec: 'staged', from: 2, to: 2 }), { from: 2, to: 2 });
 });

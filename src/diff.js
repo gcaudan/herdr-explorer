@@ -206,6 +206,32 @@ function shownLines(parsed, ref) {
   return out;
 }
 
+// Where the lines from to to of the index (a staged note's ref) are in the file on disk, through the unstaged changes
+// of the same path: { from, to }, the same lines without unstaged changes; null when some were changed or removed
+// since they were staged.
+function diskLines(parsed, ref) {
+  const f = parsed.files.find(x => (x.to || x.from) === ref.file && x.sec === 'unstaged');
+  if (!f) return { from: ref.from, to: ref.to };
+  const at = i => {
+    let delta = 0;
+    for (const h of f.hunks) {
+      const m = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))?/.exec(h.head);
+      if (!m) return null;
+      const [a, b, c, d] = [+m[1], m[2] === undefined ? 1 : +m[2], +m[3], m[4] === undefined ? 1 : +m[4]];
+      if (b && i >= a && i < a + b) { const l = h.lines.find(x => x[2] === i); return l && l[0] === ' ' ? l[3] : null; }
+      // The first line after the hunk, on each side (after line a when it holds none).
+      const [oldNext, newNext] = [b ? a + b : a + 1, d ? c + d : c + 1];
+      if (oldNext <= i) delta = newNext - oldNext;
+      else break;
+    }
+    return i + delta;
+  };
+  const from = at(ref.from);
+  if (from == null) return null;
+  for (let i = ref.from + 1; i <= ref.to; i++) if (at(i) !== from + i - ref.from) return null;
+  return { from, to: from + ref.to - ref.from };
+}
+
 // Lines of a hunk grouped: unchanged lines, notes ("No newline at end of file"), and changes (removed lines
 // followed by added ones, paired for the word highlight and the side-by-side rows).
 function blocks(lines) {
@@ -322,7 +348,8 @@ async function collect({ cwd, file = '', base = 'head', scope = null, turn = nul
   if (kind === 'turn') {
     if (!turn || path.resolve(turn.top) !== path.resolve(top)) return { text: '', top, baseName, error: 'No agent turn recorded in this repository' };
     if (!turn.tree) return { text: '', top, baseName, error: 'The agent turn is still being recorded' };
-    const now = await require('./core/scope').worktree(top, env, true);
+    // Only the file compared added: the preview reloads at each save of it.
+    const now = await require('./core/scope').worktree(top, env, true, file || null);
     if (!now) return { text: '', top, baseName, error: 'Cannot read the working tree' };
     return { text: diff(turn.tree, now, ...target), top, baseName };
   }
@@ -389,7 +416,19 @@ function saveMode(width, mode) {
 // The layout of a diff of that width: the one chosen for its size, else by width.
 const layoutOf = width => savedMode(width) || defaultMode(width);
 
-module.exports = { DIFF_OPTS, MAX_UNTRACKED, SPLIT_MIN, parse, render, collect, changesOf, shownLines, defaultMode, savedMode, saveMode, layoutOf, unquote, main };
+// The width of the longest line of parsed changes (parse), the most ← → can scroll; 0 without them.
+const WIDEST = new WeakMap();
+function widestOf(parsed) {
+  if (!parsed) return 0;
+  if (!WIDEST.has(parsed)) {
+    let w = 0;
+    for (const f of parsed.files) for (const h of f.hunks) for (const l of h.lines) w = Math.max(w, ui.textWidth(ui.cleanLine(l[1])));
+    WIDEST.set(parsed, w);
+  }
+  return WIDEST.get(parsed);
+}
+
+module.exports = { DIFF_OPTS, MAX_UNTRACKED, SPLIT_MIN, parse, render, collect, changesOf, shownLines, defaultMode, savedMode, saveMode, layoutOf, widestOf, diskLines, unquote, main };
 
 // --- pane
 
@@ -398,6 +437,7 @@ if (require.main === module) main();
 function main() {
   const file = process.env.EXPLORER_FILE;
   const cwd = process.env.EXPLORER_ROOT || (file ? path.dirname(file) : process.cwd());
+  require('./launch').home(); // the pane's folder for new spaces, tabs and panes made from it
   const PANE = process.env.HERDR_PANE_ID;
   // The explorer's pane, whose terminal the notes go to; this pane's own when opened without it.
   const FROM = process.env.EXPLORER_PANE || PANE;
@@ -431,17 +471,7 @@ function main() {
   // left is not in it: the rows cut from another column are made again when drawn (redo).
   const keyOf = (width, m) => `${width}:${m}:${wrap}:${[...viewed].join('\0')}`;
   const scrollbar = new ui.Scrollbar(t => { top0 = t; draw(); });
-  // The width of the longest line of the changes, the most ← → can scroll.
-  const WIDEST = new WeakMap();
-  const widest = () => {
-    if (!parsed) return 0;
-    if (!WIDEST.has(parsed)) {
-      let w = 0;
-      for (const f of parsed.files) for (const h of f.hunks) for (const l of h.lines) w = Math.max(w, ui.textWidth(ui.cleanLine(l[1])));
-      WIDEST.set(parsed, w);
-    }
-    return WIDEST.get(parsed);
-  };
+  const widest = () => widestOf(parsed);
 
   function layout(width, m) {
     const key = keyOf(width, m);
@@ -619,8 +649,10 @@ function main() {
       const n = note;
       note = null;
       if (!n.field.value.trim()) return draw();
-      const msg = notes.add(tab, { file: path.join(top, n.ref.file), from: n.ref.from, to: n.ref.to, kind: n.kind, text: n.field.value,
-        lines: parsed ? shownLines(parsed, n.ref) : undefined });
+      // A staged line: placed where it is on disk, which notes follow; stale when changed there since.
+      const disk = parsed && n.ref.from && n.ref.sec === 'staged' ? diskLines(parsed, n.ref) : undefined;
+      const msg = notes.add(tab, { file: path.join(top, n.ref.file), ...(disk || { from: n.ref.from, to: n.ref.to }), kind: n.kind,
+        text: n.field.value, lines: parsed ? shownLines(parsed, n.ref) : undefined, stale: disk === null });
       tabNotes = notes.current(tab);
       return say(msg);
     }

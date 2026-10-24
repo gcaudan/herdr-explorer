@@ -344,7 +344,6 @@ async function showDiff(key, title, args, item, tag) {
   const res = await git(args);
   if (S.diff !== d) return;
   d.parsed = diffs.parse(res.out);
-  d.widest = undefined;
   d.cache = '';
   draw();
 }

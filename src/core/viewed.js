@@ -14,9 +14,17 @@ function read(tab) {
   } catch { return {}; }
 }
 
-// What the file holds now, in short: a hash of its content, 'gone' once deleted.
+// What the file holds now, in short: a hash of its content, 'gone' once deleted. Hashed again only when its size or
+// times change, as git does: the Changes pane asks at each reload.
+const signs = new Map(); // file → { stat: 'size mtime ctime', sign }
 function sign(file) {
-  try { return crypto.createHash('sha1').update(fs.readFileSync(file)).digest('hex'); } catch { return 'gone'; }
+  try {
+    const st = fs.statSync(file), stat = `${st.size} ${st.mtimeMs} ${st.ctimeMs}`, known = signs.get(file);
+    if (known && known.stat === stat) return known.sign;
+    const sign = crypto.createHash('sha1').update(fs.readFileSync(file)).digest('hex');
+    signs.set(file, { stat, sign });
+    return sign;
+  } catch { signs.delete(file); return 'gone'; }
 }
 
 // Viewed, and unchanged since.
