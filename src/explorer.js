@@ -353,7 +353,8 @@ async function close() {
 // The folder of the terminal next to the explorer (that of its running program when herdr knows it), revealed in
 // the tree when it changes; outside the root, the root changes. The setting is read each time, so that a change
 // made in another explorer applies here too.
-let lastCwd = null;
+// forced: the setting was just turned on, so the first check follows the terminal at once.
+let lastCwd = null, forced = false;
 async function follow() {
   settings.follow = readSettings().follow;
   if (!settings.follow || !PANE) return;
@@ -362,8 +363,8 @@ async function follow() {
   const cwd = p && (p.foreground_cwd || p.cwd);
   // Retried once the menu, the settings, the filter or the prompt is closed.
   if (stopped || !cwd || cwd === lastCwd || state.filter || state.menu || state.settings || state.help || state.prompt || state.confirm || state.choice) return;
-  const first = lastCwd === null;
-  lastCwd = cwd;
+  const first = lastCwd === null && !forced;
+  lastCwd = cwd; forced = false;
   const inside = (dir, root) => { const r = path.relative(root, dir); return !r.startsWith('..') && !path.isAbsolute(r); };
   // Outside the root: back to the space folder when it holds the terminal folder, else the terminal folder itself.
   // Never $HOME, one of its parents or the filesystem root, where the tree would be too big to follow. Not at the
@@ -643,7 +644,7 @@ function setSetting(name, value) {
   if (name === 'theme') ui.useTheme(ui.settingTheme(value));
   cache.clear();
   buildRows();
-  if (name === 'follow') { lastCwd = null; follow(); }
+  if (name === 'follow') { lastCwd = null; forced = true; follow(); }
   return null;
 }
 
