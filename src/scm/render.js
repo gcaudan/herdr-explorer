@@ -113,7 +113,7 @@ const UNDERLINE = '\x1b[4m\x1b[58;2;55;148;255m'; // the active tab, underlined 
 const PRIMARY = bg([14, 99, 156]) + fg([255, 255, 255]) + BOLD; // the main button of the header and the commit box
 const LIT = () => bg(C.blue) + fg(C.canvas) + BOLD; // a button or the branch while its menu hangs under it
 // A pill: its colour on a shade of it, close to the theme's background.
-const shade = rgb => rgb.map((v, i) => Math.round(C.canvas[i] + (v - C.canvas[i]) * 0.25));
+const { shade } = ui;
 const PILLS = { heads: () => C.green, remotes: () => C.blue, tags: () => C.yellow };
 const pill = (name, kind, style = '') => [` ${name} `, bg(shade(PILLS[kind]())) + fg(PILLS[kind]()) + style];
 // Colours of the graph's lanes, in turn; a branch's pill takes the colour of its lane, on a shade of it.

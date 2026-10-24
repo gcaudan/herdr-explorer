@@ -476,14 +476,7 @@ function coloured(rel, lines, size) {
 function cleanRanges(text, found) {
   if (!found.length || !/[\x00-\x1f\x7f-\x9f]/.test(text)) return found;
   const at = [];
-  let s = '';
-  for (let i = 0; i < text.length; i++) {
-    at.push(s.length);
-    const ch = text[i];
-    if (ch === '\t') s += ' '.repeat(4 - (Array.from(s).length % 4));
-    else if (!/[\x00-\x1f\x7f-\x9f]/.test(ch)) s += ch;
-  }
-  at.push(s.length);
+  ui.cleanLine(text, 4, at);
   return found.map(([a, b]) => [at[a], at[b]]);
 }
 

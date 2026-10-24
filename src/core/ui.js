@@ -11,6 +11,8 @@ const KITTY_OK = /^\x1b_Gi=31;OK/;
 
 const fg = rgb => `\x1b[38;2;${rgb.join(';')}m`;
 const bg = rgb => `\x1b[48;2;${rgb.join(';')}m`;
+// A shade of a colour close to the theme's background, for a pill's background.
+const shade = rgb => rgb.map((v, i) => Math.round(C.canvas[i] + (v - C.canvas[i]) * 0.25));
 const glyph = code => String.fromCodePoint(code);
 // The glyphs of the panes' controls in the icon set chosen in the settings: Nerd Font glyphs, or characters any
 // font has. G.search is the magnifier before every find and filter field; G.set the set's name.
@@ -92,14 +94,18 @@ function backgroundOf(reply) {
 // cursor, change colours or hide text.
 const CONTROL = /[\x00-\x1f\x7f-\x9f]/g;
 const clean = text => text.replace(CONTROL, '?');
-// Tabs expanded to spaces, other control characters removed: for file contents.
-function cleanLine(text, tab = 4) {
-  if (!/[\x00-\x1f\x7f-\x9f]/.test(text)) return text;
+// Tabs expanded to spaces, other control characters removed: for file contents. at: an array that receives, for
+// each index of text and its end, where it lands in the cleaned text.
+function cleanLine(text, tab = 4, at = null) {
+  if (!at && !/[\x00-\x1f\x7f-\x9f]/.test(text)) return text;
   let s = '';
-  for (const ch of text) {
+  for (let i = 0; i < text.length; i++) {
+    if (at) at.push(s.length);
+    const ch = text[i];
     if (ch === '\t') s += ' '.repeat(tab - (Array.from(s).length % tab));
     else if (!/[\x00-\x1f\x7f-\x9f]/.test(ch)) s += ch;
   }
+  if (at) at.push(s.length);
   return s;
 }
 
@@ -903,7 +909,7 @@ class Menu {
 
 module.exports = {
   KITTY_QUERY, KITTY_OK,
-  fg, bg, glyph, G, useGlyphs, C, GIT, useTheme, onTheme, themeName, settingTheme, backgroundOf, clean, cleanLine, cols, fit, textWidth, ellipsis, line, keys, keyAt, help, helpKey, helpMouse, wrap, empty, message, messageKind, messageTime, confirm, confirmKey, confirmMouse, ask, askKey, askMouse,
+  fg, bg, shade, glyph, G, useGlyphs, C, GIT, useTheme, onTheme, themeName, settingTheme, backgroundOf, clean, cleanLine, cols, fit, textWidth, ellipsis, line, keys, keyAt, help, helpKey, helpMouse, wrap, empty, message, messageKind, messageTime, confirm, confirmKey, confirmMouse, ask, askKey, askMouse,
   segWidth, segText, slice, split, mark, Scrollbar, segmented, switchStyle, onOff, Menu, head, tail,
   keyName, keyLabel, decode, printable, Field, screen, restart, size,
 };

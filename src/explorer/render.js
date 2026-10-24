@@ -6,7 +6,7 @@ const path = require('path');
 const icons = require('../core/icons');
 const ui = require('../core/ui');
 
-const { C, GIT, fg, bg, line, fit, textWidth } = ui;
+const { C, GIT, fg, bg, shade, line, fit, textWidth } = ui;
 const G = ui.G;
 const chevron = open => (open ? G.open : G.closed);
 
@@ -90,7 +90,6 @@ module.exports = ctx => {
   // while after an update its notes (what's new); the mark alone in a narrow pane. pillWidth: its columns and the
   // space after it, 0 without it.
   const showUpdate = () => !!(ctx.finish || (ctx.latest && settings.updateCheck && !ctx.updating) || ctx.notice);
-  const shade = rgb => rgb.map((v, i) => Math.round(C.canvas[i] + (v - C.canvas[i]) * 0.25));
   function pill(W) {
     if (!showUpdate()) return null;
     const [mark, text, rgb] = ctx.finish ? ['!', 'finish', C.yellow] : ctx.latest && settings.updateCheck && !ctx.updating
