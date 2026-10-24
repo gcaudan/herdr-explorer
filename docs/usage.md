@@ -791,7 +791,8 @@ index, `u` takes those of the Staged section out of it, and `D` takes those of t
 tree, once confirmed. A selection covering both sections only takes, for each key, the lines of its own. The
 selection is, in the Changes pane, the cursor's row or the rows selected with `shift` (a file's name row: the whole
 file; a hunk's `@@` row: the whole hunk); in the Diff view, the rows selected with the mouse, else the hunk `n` or
-`N` went to (a blue bar on its `@@` row), else the hunk or file at the top. On a side by side row, the removed line
+`N` went to (a blue bar on its `@@` row), else the hunk at the top (a file's name there: its first hunk, the whole
+file when it has none). On a side by side row, the removed line
 and the added one both count.
 
 The plugin makes a patch of the lines chosen from the diff shown and hands it to `git apply` (`--cached` for the
