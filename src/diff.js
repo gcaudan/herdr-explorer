@@ -5,6 +5,7 @@
 // Required as a module (by the preview and source control), it exports the parser, the renderer, the collection of
 // changes and the layout setting.
 'use strict';
+const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const ui = require('./core/ui');
@@ -330,6 +331,22 @@ async function show(cwd, what) {
   return out === null ? null : parse(out);
 }
 
+// The options every diff's View menu starts with (⚙ or ,), each changing in place, the menu kept open: layout,
+// 'inline' or 'split'; wrap, the Wrap lines setting. As in the Diff pane, the preview and source control.
+const viewItems = (layout, wrap, switchLayout, toggleWrap) => [
+  { label: 'Layout', key: 'v', value: [layout, CYAN], keep: true, run: switchLayout },
+  { label: 'Wrap lines', key: 'w', value: ui.onOff(wrap), keep: true, run: toggleWrap },
+];
+
+// The default branch: the remote's HEAD (origin/main), else main, master, origin/main or origin/master, the first
+// that exists; '' when none does. out(args): git's trimmed output for args ('' on a failure), or a promise of it.
+async function defaultBranch(out) {
+  const name = await out(['rev-parse', '--abbrev-ref', '-q', '--verify', 'refs/remotes/origin/HEAD']);
+  if (name) return name;
+  for (const b of ['main', 'master', 'origin/main', 'origin/master']) if (await out(['rev-parse', '--verify', '-q', `${b}^{commit}`])) return b;
+  return '';
+}
+
 // The changes to show, as git diff writes them, for a scope (core/scope.js): those of the working tree compared with
 // the last commit ('head'), where the branch left the default one ('branch', so every change of the branch,
 // committed or not) or a branch ('ref'), untracked files in full; those since the agent's last turn started ('turn',
@@ -352,8 +369,7 @@ async function collect({ cwd, file = '', base = 'head', scope = null, turn = nul
   let from = git('rev-parse', '--verify', '-q', 'HEAD').trim() ? 'HEAD' : null;
   // The default branch, named whatever the base, for the switch: the remote's HEAD, else main or master.
   if (from) {
-    baseName = git('rev-parse', '--abbrev-ref', '-q', '--verify', 'refs/remotes/origin/HEAD').trim()
-      || ['main', 'master', 'origin/main', 'origin/master'].find(b => git('rev-parse', '--verify', '-q', `${b}^{commit}`).trim()) || '';
+    baseName = await defaultBranch(args => git(...args).trim());
   }
   if (from && kind === 'branch') {
     const fork = baseName && git('merge-base', 'HEAD', baseName).trim();
@@ -407,8 +423,49 @@ async function collect({ cwd, file = '', base = 'head', scope = null, turn = nul
 // deleted }, kinds[i] 'add' or 'mod' for line i (from 0), deleted the lines just under removed ones (the line count
 // for the end); every line added for an untracked file of count lines. null outside a repository, before the first
 // commit, or when git fails; nothing changed for an ignored file.
+// Kept while the file and HEAD stay the same (cacheKey), since the preview asks again at each focus and reload.
+const lineCache = new Map();
 async function lineChanges(file, count) {
-  const cwd = path.dirname(file), abs = path.resolve(file);
+  const abs = path.resolve(file), key = cacheKey(abs, count), hit = lineCache.get(abs);
+  if (key && hit && hit.key === key) return hit.res;
+  const res = await readLineChanges(abs, count);
+  lineCache.delete(abs);
+  if (key && res) lineCache.set(abs, { key, res });
+  if (lineCache.size > 50) lineCache.delete(lineCache.keys().next().value);
+  return res;
+}
+
+// What lineChanges depends on, read without git: the file's mtime and size, and HEAD (its text, and the times of the
+// branch it names and of packed-refs, which a commit or a reset changes). null outside a repository found as a .git
+// folder or file above the file.
+function cacheKey(abs, count) {
+  const read = f => { try { return fs.readFileSync(f, 'utf8'); } catch { return null; } };
+  const time = f => { try { return fs.statSync(f).mtimeMs; } catch { return 0; } };
+  let st;
+  try { st = fs.statSync(abs); } catch { return null; }
+  for (let d = path.dirname(abs); ; d = path.dirname(d)) {
+    const dot = path.join(d, '.git');
+    const kind = fs.statSync(dot, { throwIfNoEntry: false });
+    if (kind) {
+      let gitdir = dot;
+      if (kind.isFile()) {
+        const m = /^gitdir: (.+)$/m.exec(read(dot) || '');
+        if (!m) return null;
+        gitdir = path.resolve(d, m[1].trim());
+      }
+      const head = read(path.join(gitdir, 'HEAD'));
+      if (head === null) return null;
+      const common = path.resolve(gitdir, (read(path.join(gitdir, 'commondir')) || '.').trim());
+      const ref = (/^ref: (.+)$/m.exec(head) || [])[1];
+      return [abs, count, st.mtimeMs, st.size, head.trim(), ref ? time(path.join(common, ref.trim())) : 0,
+        time(path.join(common, 'packed-refs'))].join('|');
+    }
+    if (path.dirname(d) === d) return null;
+  }
+}
+
+async function readLineChanges(abs, count) {
+  const cwd = path.dirname(abs);
   const env = { ...await gitEnv(cwd), GIT_LITERAL_PATHSPECS: '1' };
   const git = (...args) => run(GIT, ['-c', 'core.quotePath=false', ...args], { cwd, env });
   const untracked = await git('ls-files', '--others', '--exclude-standard', '-z', '--', abs);
@@ -470,7 +527,7 @@ function widestOf(parsed) {
   return WIDEST.get(parsed);
 }
 
-module.exports = { DIFF_OPTS, MAX_UNTRACKED, SPLIT_MIN, parse, render, collect, lineChanges, showArgs, show, changesOf, shownLines, defaultMode, savedMode, saveMode, layoutOf, widestOf, diskLines, unquote, main };
+module.exports = { DIFF_OPTS, MAX_UNTRACKED, SPLIT_MIN, parse, render, collect, defaultBranch, viewItems, lineChanges, showArgs, show, changesOf, shownLines, defaultMode, savedMode, saveMode, layoutOf, widestOf, diskLines, unquote, main };
 
 // --- pane
 
@@ -775,23 +832,17 @@ function main() {
   let menu = null, prompt = null;
   // The view's options (⚙ or ,), as in the preview's Diff view: each changes in place, the menu staying open.
   function openView(sel = 0) {
-    const W = ui.size().W, choice = text => [text, CYAN];
-    menu = new ui.Menu({ title: 'View', at: 1, right: W, items: [
-      { label: 'Layout', key: 'v', value: choice(layoutOf(W)), keep: true, run: switchLayout },
-      { label: 'Wrap lines', key: 'w', value: ui.onOff(wrap), keep: true, run: toggleWrap },
-      { label: 'Compare with', key: 'b', value: choice(Scope.label(scope, baseName)), run: openScopes },
+    const W = ui.size().W;
+    menu = new ui.Menu({ title: 'View', at: 1, right: W, items: [...viewItems(layoutOf(W), wrap, switchLayout, toggleWrap),
+      { label: 'Compare with', key: 'b', value: [Scope.label(scope, baseName), CYAN], run: openScopes },
     ] });
     menu.sel = sel;
     draw();
   }
   // A choice of a menu, by key or click: run; the view's options shown again with the new values, unless closed.
   function menuChoice(r) {
-    if (r === 'close') { menu = null; return draw(); }
-    if (!r || !r.run) return draw();
-    const sel = menu.sel;
-    menu = null;
-    r.run();
-    if (r.keep) openView(sel);
+    menu.choose(r, () => { menu = null; }, openView);
+    draw();
   }
   function switchLayout() { const W = ui.size().W; saveMode(W, layoutOf(W) === 'split' ? 'inline' : 'split'); draw(); }
   function toggleWrap() { wrap = !wrap; left = 0; writeSettings({ ...readSettings(), wrap }); draw(); }
@@ -894,7 +945,7 @@ function main() {
   draw();
   changes().then(d => { if (d !== null) { parsed = d; cache = ''; readViewed(); draw(); } });
   // Wrap lines and the layout changed in another pane (the preview, source control): shown at once.
-  if (SETTINGS_FILE) require('fs').watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
+  if (SETTINGS_FILE) fs.watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
     const now = !!readSettings().wrap;
     if (now !== wrap) { wrap = now; left = 0; }
     draw();

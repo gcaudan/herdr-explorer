@@ -851,6 +851,13 @@ class Menu {
   constructor({ title, items, at = 0, right = 0, left = 1 }) {
     Object.assign(this, { title, items, at, right, left, sel: Math.max(0, items.findIndex(Boolean)), off: 0, x: left, inner: 0 });
   }
+  // A choice r, what key or mouse returned: the menu closes (close) and the item runs; one that keeps it (keep) shows
+  // it again with its new values, at the same row (reopen(sel)). The caller draws after.
+  choose(r, close, reopen) {
+    const sel = this.sel;
+    if (r === 'close' || (r && r.run)) close();
+    if (r && r.run) { r.run(); if (r.keep && reopen) reopen(sel); }
+  }
   rows(H) { return Math.max(1, Math.min(this.items.length, H - 2 - this.at)); }
   draw(lines, W, H) {
     const n = this.rows(H), edge = fg(C.dim);

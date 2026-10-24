@@ -469,10 +469,7 @@ function toggleWrap() {
 function openDiffView(sel = 0) {
   const d = S.diff;
   if (!d || d.compare) return;
-  const items = [
-    { label: 'Layout', key: 'v', value: [diffs.layoutOf(d.width), fg(C.blue)], keep: true, run: switchLayout },
-    { label: 'Wrap lines', key: 'w', value: ui.onOff(!!settings.wrap), keep: true, run: toggleWrap },
-  ];
+  const items = diffs.viewItems(diffs.layoutOf(d.width), !!settings.wrap, switchLayout, toggleWrap);
   S.menu = new ui.Menu({ title: 'View', items, at: 2, right: ui.size().W }); // under ⚙
   S.menu.view = true; // reopened after a choice that keeps it
   S.menu.sel = sel;

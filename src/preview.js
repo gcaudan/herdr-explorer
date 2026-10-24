@@ -1004,13 +1004,9 @@ function quit() {
 // menu. The actions of the footer (z, e…) are not repeated here.
 function openMenu(sel = 0) {
   const { W } = ui.size(), items = [], choice = text => [text, fg(C.blue)];
-  if (state.show) {
-    items.push({ label: 'Layout', key: 'v', value: choice(diffMode(W)), run: switchLayout },
-      { label: 'Wrap lines', key: 'w', value: ui.onOff(settings.wrap), run: () => toggle('wrap') });
-  } else if (state.view === 'diff') {
-    items.push({ label: 'Layout', key: 'v', value: choice(diffMode(W)), run: switchLayout },
-      { label: 'Wrap lines', key: 'w', value: ui.onOff(settings.wrap), run: () => toggle('wrap') },
-      { label: 'Compare with', key: 'b', value: choice(Scope.label(state.scope, branchName())), run: openScopes, stay: false });
+  if (state.show || state.view === 'diff') {
+    if (diffs) items.push(...diffs.viewItems(diffMode(W), settings.wrap, switchLayout, () => toggle('wrap')));
+    if (!state.show) items.push({ label: 'Compare with', key: 'b', value: choice(Scope.label(state.scope, branchName())), run: openScopes, stay: false });
   } else {
     if (state.kind === 'markdown' && markdown && !state.edit) {
       items.push({ label: 'Markdown', key: 'm', value: choice(state.raw ? 'raw' : 'rendered'), run: () => { state.raw = !state.raw; state.rows = null; state.top = 0; } });
@@ -1033,9 +1029,7 @@ function openMenu(sel = 0) {
 }
 // A choice of the menu, by key or click: run, then the menu shown again with the new values, unless closed.
 function menuChoice(r) {
-  const sel = state.menu.sel;
-  if (r === 'close' || (r && r.run)) state.menu = null;
-  if (r && r.run) { r.run(); if (r.keep) return openMenu(sel); }
+  state.menu.choose(r, () => { state.menu = null; }, openMenu);
   render();
 }
 function menuKey(k) {
