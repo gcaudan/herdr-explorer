@@ -21,6 +21,9 @@ pub use windows::{file_id, hostname, links};
 #[cfg(target_os = "linux")]
 pub use unix::pty;
 
+mod watch;
+pub use watch::Watcher;
+
 use std::io;
 use std::time::Duration;
 
