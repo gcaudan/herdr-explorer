@@ -1,0 +1,16 @@
+# Search in files: alt+left folds the file of the selected line, alt+right unfolds it; ctrl+end, pageup.
+size 70 12
+file a.txt x1\nx2\nx3\n
+file b.txt x4\nx5\nx6\nx7\nx8\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start
+keys ctrl+f
+text x
+wait 300
+text \e[1;3D
+keys down
+text \e[1;3D
+keys down
+text \e[1;3C
+text \e[1;5F
+keys pageup

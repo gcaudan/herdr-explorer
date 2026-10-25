@@ -1,0 +1,7 @@
+# EXPLORER_QUERY: the search typed in advance, not selected.
+size 60 10
+file alpha.txt a\n
+file beta.txt b\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_QUERY=bet
+start

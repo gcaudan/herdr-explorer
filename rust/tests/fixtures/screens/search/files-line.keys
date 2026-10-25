@@ -1,0 +1,7 @@
+# Go to file wide: path:line, the file on the right around the line, marked.
+size 110 14
+file beta/main.rs fn main() {\n    let a = 1;\n    let b = 2;\n    println!("{}", a + b);\n}\n
+file beta/mod.rs pub mod main;\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start
+text bma:3

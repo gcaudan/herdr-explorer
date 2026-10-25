@@ -1,0 +1,11 @@
+# Search in files wide: matches grouped by file, the first line selected, the file on the right with its matches.
+size 110 16
+file a.txt one foo\n\ttwo FOO foo\nthree\n
+file sub/b.js const foo = 1;\n// nothing\nfoo(foo);\n
+file c.md no match here\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start
+keys ctrl+f
+text foo
+wait 400
+keys down down

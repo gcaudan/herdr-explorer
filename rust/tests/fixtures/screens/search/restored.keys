@@ -1,0 +1,10 @@
+# The last search restored, selected, in Search in files: Go to file's too.
+size 70 12
+file a.txt hello world\nbye\n
+file alpha.txt hello\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+state search.json {"files":"al","content":"hello","include":"*.txt","exclude":"","case":true,"word":false,"regex":false}
+env EXPLORER_MODE=content
+start
+wait 300
+keys tab

@@ -1,0 +1,16 @@
+# Search in files: match case, whole word, then a regex.
+size 70 14
+file a.txt foo Foo foobar\nfoo_bar FOO\n
+file b.txt barfoo foo.\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start
+keys ctrl+f
+text foo
+wait 300
+keys alt+c
+wait 300
+keys alt+w
+wait 300
+keys alt+r backspace backspace backspace
+text f.o\\b|bar$
+wait 400

@@ -11,6 +11,7 @@ pub mod launch;
 pub mod peek;
 pub mod preview;
 pub mod render;
+pub mod search;
 pub mod sys;
 pub mod unicode;
 

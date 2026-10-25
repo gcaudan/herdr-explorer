@@ -1,0 +1,8 @@
+tab	get	w1:t1
+pane	get	w1:p2
+tab	focus	w1:t2
+pane	get	w1:p2
+pane	list	--workspace	w1
+plugin	pane	open	--plugin	gcaudan.explorer	--entrypoint	preview	--placement	split	--target-pane	w1:p2	--direction	right	--no-focus	--env	EXPLORER_FILE=$ROOT/work/a.txt	--env	EXPLORER_ROOT=$ROOT/work	--env	EXPLORER_LINE=0	--env	EXPLORER_TAB=w1:t2	--env	EXPLORER_SEEN=0	--env	EXPLORER_REVIEW=1
+pane	get	w1:p2
+pane	list	--workspace	w1

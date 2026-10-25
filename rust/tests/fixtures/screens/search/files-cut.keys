@@ -1,0 +1,15 @@
+# Go to file narrow: a long folder cut from the left, wide characters, the wheel and a double-click.
+size 40 10
+file some/very/long/folder/name/deep/inside/target.txt t\n
+file 界界界/界界界界界界界界界界界界/x.txt w\n
+file a/t1.txt a\n
+file a/t2.txt a\n
+file a/t3.txt a\n
+file a/t4.txt a\n
+file a/t5.txt a\n
+file a/t6.txt a\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start
+text t
+text \e[<65;5;5M
+text \e[<0;5;5M\e[<0;5;5M

@@ -121,9 +121,9 @@ panes! {
     ready {
         tree: "tree";
         preview: "preview";
+        search: "search";
     }
     pending {
-        search: "search", "case 14";
         scm: "scm", "case 17";
         diff: "diff", "case 15";
         edit: "edit", "case 18";

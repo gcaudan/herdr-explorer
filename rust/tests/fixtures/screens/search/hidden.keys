@@ -1,0 +1,13 @@
+# alt+h: hidden and ignored files listed too (from Search in files: in Go to file the JS crashes).
+size 60 12
+file a.txt a\n
+file .cfg/b.txt b\n
+file node_modules/m.js c\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start
+keys ctrl+f
+text b
+wait 300
+keys alt+h
+wait 300
+keys ctrl+p

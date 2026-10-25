@@ -1,0 +1,8 @@
+# Search in files: an invalid regex says why.
+size 70 10
+file a.txt foo\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start
+keys ctrl+f alt+r
+text (fo
+wait 300

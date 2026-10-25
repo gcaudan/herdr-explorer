@@ -1,0 +1,11 @@
+# In a repository: the files git lists, ignored ones left out.
+size 60 12
+file a.txt a\n
+file b.txt b\n
+file .gitignore ign/\n
+file ign/x.txt x\n
+git init -q
+git add .
+git commit -q -m init
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start

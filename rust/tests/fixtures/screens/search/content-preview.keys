@@ -1,0 +1,39 @@
+# Search in files wide: the file on the right with tabs and control characters, its matches marked there.
+size 110 12
+file a.txt \tone\x01 hit\n\t\thit two hit\nplain\n
+file b1.txt hit 1
+file b2.txt hit 2
+file b3.txt hit 3
+file b4.txt hit 4
+file b5.txt hit 5
+file b6.txt hit 6
+file b7.txt hit 7
+file b8.txt hit 8
+file b9.txt hit 9
+file b10.txt hit 10
+file b11.txt hit 11
+file b12.txt hit 12
+file b13.txt hit 13
+file b14.txt hit 14
+file b15.txt hit 15
+file b16.txt hit 16
+file b17.txt hit 17
+file b18.txt hit 18
+file b19.txt hit 19
+file b20.txt hit 20
+file b21.txt hit 21
+file b22.txt hit 22
+file b23.txt hit 23
+file b24.txt hit 24
+file b25.txt hit 25
+file b26.txt hit 26
+file b27.txt hit 27
+file b28.txt hit 28
+file b29.txt hit 29
+file b30.txt hit 30
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start
+keys ctrl+f
+text hit
+wait 400
+keys down

@@ -1,0 +1,7 @@
+# Enter: the file shown in the preview of the pane's tab (herdr asked), the message when it cannot.
+size 60 10
+file alpha.txt a\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_PANE=w1:p1
+start
+keys enter

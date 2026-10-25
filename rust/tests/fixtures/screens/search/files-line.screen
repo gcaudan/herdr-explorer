@@ -1,0 +1,15 @@
+size 110x14
+⟪bg=#252526⟫ ⟪fg=#ffffff bg=#04395e b⟫ Go to file ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ Search in files ⟪bg=#252526⟫                                                                          ⟪fg=#8c8c8c bg=#252526⟫work⟪bg=#252526⟫ ⟪⟫
+⟪fg=#8c8c8c⟫ ⌕ ⟪⟫bma:3⟪r⟫ ⟪⟫                                                                                    ⟪fg=#8c8c8c⟫1 of 2  ⟪fg=#8c8c8c bg=#2d2d2d⟫ hidden ⟪⟫
+⟪fg=#8c8c8c⟫──────────────────────────────────────────────────────────────────────────────────────────────────────────────⟪⟫
+⟪bg=#04395e⟫ ⟪fg=#18a3ff bg=#04395e b⟫ma⟪bg=#04395e⟫in.rs                                          ⟪fg=#18a3ff bg=#04395e b⟫b⟪fg=#8c8c8c bg=#04395e⟫eta⟪bg=#04395e⟫ ⟪fg=#8c8c8c⟫│⟪bg=#252526 b⟫ beta/main.rs:3⟪bg=#252526⟫                                       ⟪⟫
+                                                       ⟪fg=#8c8c8c⟫│ 1 ⟪fg=#569cd6⟫fn⟪⟫ ⟪fg=#dcdcaa⟫main⟪⟫() {
+                                                       ⟪fg=#8c8c8c⟫│ 2 ⟪⟫    ⟪fg=#569cd6⟫let⟪⟫ ⟪fg=#9cdcfe⟫a⟪⟫ = ⟪fg=#b5cea8⟫1⟪⟫;
+                                                       ⟪fg=#8c8c8c⟫│⟪fg=#d4d4d4 bg=#37373d⟫ 3 ⟪bg=#37373d⟫    ⟪fg=#569cd6 bg=#37373d⟫let⟪bg=#37373d⟫ ⟪fg=#9cdcfe bg=#37373d⟫b⟪bg=#37373d⟫ = ⟪fg=#b5cea8 bg=#37373d⟫2⟪bg=#37373d⟫;                                     ⟪⟫
+                                                       ⟪fg=#8c8c8c⟫│ 4 ⟪⟫    ⟪fg=#dcdcaa⟫println!⟪⟫(⟪fg=#ce9178⟫"{}"⟪⟫, ⟪fg=#9cdcfe⟫a⟪⟫ + ⟪fg=#9cdcfe⟫b⟪⟫);
+                                                       ⟪fg=#8c8c8c⟫│ 5 ⟪⟫}
+                                                       ⟪fg=#8c8c8c⟫│⟪⟫
+                                                       ⟪fg=#8c8c8c⟫│⟪⟫
+                                                       ⟪fg=#8c8c8c⟫│⟪⟫
+                                                       ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ↵⟪fg=#8c8c8c bg=#252526⟫ open⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+f⟪fg=#8c8c8c bg=#252526⟫ search in files⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+e⟪fg=#8c8c8c bg=#252526⟫ editor⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+o⟪fg=#8c8c8c bg=#252526⟫ app⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+t⟪fg=#8c8c8c bg=#252526⟫ insert⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+y⟪fg=#8c8c8c bg=#252526⟫ copy relative path⟪bg=#252526⟫     ⟪⟫

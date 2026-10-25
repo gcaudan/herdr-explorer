@@ -1,0 +1,11 @@
+size 40x10
+⟪bg=#252526⟫ ⟪fg=#ffffff bg=#04395e b⟫ Go to file ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ Search in files ⟪bg=#252526⟫    ⟪fg=#8c8c8c bg=#252526⟫work⟪bg=#252526⟫ ⟪⟫
+⟪fg=#8c8c8c⟫ ⌕ ⟪⟫t⟪r⟫ ⟪⟫                  ⟪fg=#8c8c8c⟫8 of 8  ⟪fg=#8c8c8c bg=#2d2d2d⟫ hidden ⟪⟫
+⟪fg=#8c8c8c⟫── ⟪fg=#cc3e44⟫ ✕ Cannot preview⟪⟫ ⟪fg=#8c8c8c⟫───────────────────⟪⟫
+ ⟪fg=#18a3ff b⟫t⟪⟫3.txt                              ⟪fg=#8c8c8c⟫a⟪⟫ ⟪fg=#8c8c8c⟫▴⟪⟫
+⟪bg=#04395e⟫ ⟪fg=#18a3ff bg=#04395e b⟫t⟪bg=#04395e⟫4.txt                              ⟪fg=#8c8c8c bg=#04395e⟫a⟪bg=#04395e⟫ ⟪fg=#3c3c3c⟫│⟪⟫
+ ⟪fg=#18a3ff b⟫t⟪⟫5.txt                              ⟪fg=#8c8c8c⟫a⟪⟫ ⟪fg=#828282⟫┃⟪⟫
+ ⟪fg=#18a3ff b⟫t⟪⟫6.txt                              ⟪fg=#8c8c8c⟫a⟪⟫ ⟪fg=#828282⟫┃⟪⟫
+ ⟪fg=#18a3ff b⟫t⟪⟫arget.txt  ⟪fg=#8c8c8c⟫…/folder/name/deep/inside⟪⟫ ⟪fg=#828282⟫┃⟪⟫
+ x.⟪fg=#18a3ff b⟫t⟪⟫xt  ⟪fg=#8c8c8c⟫…界界/界界界界界界界界界界界界⟪⟫ ⟪fg=#8c8c8c⟫▾⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ↵⟪fg=#8c8c8c bg=#252526⟫ open⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+f⟪fg=#8c8c8c bg=#252526⟫ search in files⟪bg=#252526⟫        ⟪⟫

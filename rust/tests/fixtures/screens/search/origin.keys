@@ -1,0 +1,11 @@
+# In a tab of its own (EXPLORER_ORIGIN): no preview on the right, the result asked of the tab's preview instead.
+size 110 10
+file a.txt foo\n
+file b.txt foo\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+herdr pane get {"result":{"pane":{"pane_id":"w1:p2","tab_id":"w1:t2","workspace_id":"w1","label":"Search","cwd":"$ROOT/work"}}}
+env EXPLORER_ORIGIN=w1:t1
+start
+wait 400
+keys down
+wait 400

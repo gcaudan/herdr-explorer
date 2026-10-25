@@ -67,6 +67,7 @@ pub fn run(args: Vec<OsString>) -> ExitCode {
             match cmd {
                 Command::Pane("tree", args) => return done(crate::explorer::run(&strings(args))),
                 Command::Pane("preview", args) => return done(crate::preview::run(&strings(args))),
+                Command::Pane("search", args) => return done(crate::search::run(&strings(args))),
                 _ => {}
             }
             eprintln!("herdr-explorer: not implemented yet: {cmd:?}");
