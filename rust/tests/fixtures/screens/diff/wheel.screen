@@ -1,0 +1,11 @@
+size 80x10
+⟪bg=#252526 b⟫ work⟪fg=#8dc149 bg=#252526⟫ +4⟪fg=#c74e39 bg=#252526⟫ −1⟪bg=#252526⟫                                                          ⟪fg=#d4d4d4 bg=#04395e b⟫ HEAD ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫  ⟪bg=#252526⟫ ⟪⟫
+ ⟪fg=#8c8c8c⟫ 4  5  ⟪⟫ five                                                                  ⟪fg=#8c8c8c⟫▴⟪⟫
+⟪bg=#1e242c⟫ ⟪fg=#519aba bg=#1e242c⟫ @@ -7,5 +8,5 @@ seven⟪bg=#1e242c⟫                                                        ⟪fg=#3c3c3c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫ 7  8  ⟪⟫ eight                                                                 ⟪fg=#3c3c3c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫ 8  9  ⟪⟫ nine                                                                  ⟪fg=#828282⟫┃⟪⟫
+ ⟪fg=#8c8c8c⟫ 9 10  ⟪⟫ ten                                                                   ⟪fg=#828282⟫┃⟪⟫
+⟪bg=#481e1e⟫ ⟪fg=#8c8c8c bg=#481e1e⟫10    ⟪fg=#c74e39 bg=#481e1e⟫-⟪bg=#481e1e⟫ eleven                                                                ⟪fg=#3c3c3c⟫│⟪⟫
+⟪bg=#233c24⟫ ⟪fg=#8c8c8c bg=#233c24⟫   11 ⟪fg=#8dc149 bg=#233c24⟫+⟪bg=#233c24⟫ eleven⟪bg=#2e6934⟫!⟪bg=#233c24⟫                                                               ⟪fg=#3c3c3c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫11 12  ⟪⟫ twelve                                                                ⟪fg=#8c8c8c⟫▾⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ s⟪fg=#8c8c8c bg=#252526⟫ stage⟪fg=#d4d4d4 bg=#252526 b⟫   u⟪fg=#8c8c8c bg=#252526⟫ unstage⟪fg=#d4d4d4 bg=#252526 b⟫   a⟪fg=#8c8c8c bg=#252526⟫ note⟪fg=#d4d4d4 bg=#252526 b⟫   n N⟪fg=#8c8c8c bg=#252526⟫ hunks⟪fg=#d4d4d4 bg=#252526 b⟫   q⟪fg=#8c8c8c bg=#252526⟫ close⟪fg=#d4d4d4 bg=#252526 b⟫   ?⟪fg=#8c8c8c bg=#252526⟫ keys                38% ⟪⟫

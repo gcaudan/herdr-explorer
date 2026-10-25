@@ -1,0 +1,22 @@
+# a: a note typed, its kind changed with tab, saved: its lines marked, A in the footer.
+size 80 16
+file a.txt one\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\neleven\ntwelve\n
+file b.txt alpha\nbeta\n
+git init -q -b main
+git add a.txt b.txt
+git commit -q -m first
+file a.txt one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\neleven!\ntwelve\n
+file b.txt alpha\nbeta\ngamma\n
+file c.txt new file\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+herdr pane get {"result":{"pane":{"pane_id":"w1:p2","tab_id":"t1","workspace_id":"w1"}}}
+env EXPLORER_ROOT=$ROOT/work
+start
+wait 800
+keys n j
+keys a
+text check this
+keys tab tab
+wait 200
+keys enter
+until 1800

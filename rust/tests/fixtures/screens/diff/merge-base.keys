@@ -1,0 +1,21 @@
+# Merge base with main: the changes since the branch left it.
+size 80 16
+file a.txt one\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\neleven\ntwelve\n
+file b.txt alpha\nbeta\n
+git init -q -b main
+git add a.txt b.txt
+git commit -q -m first
+file a.txt one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\neleven!\ntwelve\n
+file b.txt alpha\nbeta\ngamma\n
+file c.txt new file\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+herdr pane get {"result":{"pane":{"pane_id":"w1:p2","tab_id":"t1","workspace_id":"w1"}}}
+git checkout -q -b feature
+git add a.txt
+git commit -q -m second
+env EXPLORER_ROOT=$ROOT/work
+start
+wait 800
+keys b
+keys down enter
+until 2000

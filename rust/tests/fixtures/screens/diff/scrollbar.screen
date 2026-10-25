@@ -1,0 +1,11 @@
+size 80x10
+⟪bg=#252526 b⟫ work⟪fg=#8dc149 bg=#252526⟫ +4⟪fg=#c74e39 bg=#252526⟫ −1⟪bg=#252526⟫                                                          ⟪fg=#d4d4d4 bg=#04395e b⟫ HEAD ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫  ⟪bg=#252526⟫ ⟪⟫
+⟪bg=#1e242c⟫ ⟪fg=#519aba bg=#1e242c⟫ @@ -1,2 +1,3 @@⟪bg=#1e242c⟫                                                              ⟪fg=#8c8c8c⟫▴⟪⟫
+ ⟪fg=#8c8c8c⟫1 1  ⟪⟫ alpha                                                                   ⟪fg=#3c3c3c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫2 2  ⟪⟫ beta                                                                    ⟪fg=#3c3c3c⟫│⟪⟫
+⟪bg=#233c24⟫ ⟪fg=#8c8c8c bg=#233c24⟫  3 ⟪fg=#8dc149 bg=#233c24⟫+⟪bg=#233c24⟫ gamma                                                                   ⟪fg=#3c3c3c⟫│⟪⟫
+                                                                               ⟪fg=#3c3c3c⟫│⟪⟫
+⟪bg=#252526⟫ ⟪bg=#252526 b⟫ c.txt⟪fg=#8c8c8c bg=#252526⟫  added  unstaged⟪bg=#252526⟫                                                ⟪fg=#8dc149 bg=#252526⟫ +1⟪fg=#c74e39 bg=#252526⟫ −0 ⟪fg=#828282⟫┃⟪⟫
+⟪bg=#1e242c⟫ ⟪fg=#519aba bg=#1e242c⟫ @@ -0,0 +1 @@⟪bg=#1e242c⟫                                                                ⟪fg=#828282⟫┃⟪⟫
+⟪bg=#233c24⟫ ⟪fg=#8c8c8c bg=#233c24⟫  1 ⟪fg=#8dc149 bg=#233c24⟫+⟪bg=#233c24⟫ new file                                                                ⟪fg=#8c8c8c⟫▾⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ s⟪fg=#8c8c8c bg=#252526⟫ stage⟪fg=#d4d4d4 bg=#252526 b⟫   u⟪fg=#8c8c8c bg=#252526⟫ unstage⟪fg=#d4d4d4 bg=#252526 b⟫   a⟪fg=#8c8c8c bg=#252526⟫ note⟪fg=#d4d4d4 bg=#252526 b⟫   n N⟪fg=#8c8c8c bg=#252526⟫ hunks⟪fg=#d4d4d4 bg=#252526 b⟫   q⟪fg=#8c8c8c bg=#252526⟫ close⟪fg=#d4d4d4 bg=#252526 b⟫   ?⟪fg=#8c8c8c bg=#252526⟫ keys               100% ⟪⟫

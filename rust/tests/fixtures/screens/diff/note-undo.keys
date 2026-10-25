@@ -1,0 +1,19 @@
+# U removes the last note.
+size 80 16
+file a.txt one\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\neleven\ntwelve\n
+file b.txt alpha\nbeta\n
+git init -q -b main
+git add a.txt b.txt
+git commit -q -m first
+file a.txt one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\neleven!\ntwelve\n
+file b.txt alpha\nbeta\ngamma\n
+file c.txt new file\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+herdr pane get {"result":{"pane":{"pane_id":"w1:p2","tab_id":"t1","workspace_id":"w1"}}}
+state notes-t1.json [{"file":"$ROOT/work/a.txt","from":2,"to":2,"kind":"","text":"first","t":1}]
+env EXPLORER_ROOT=$ROOT/work
+start
+wait 800
+wait 300
+keys U
+until 2600

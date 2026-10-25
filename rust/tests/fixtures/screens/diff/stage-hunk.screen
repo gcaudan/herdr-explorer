@@ -1,0 +1,17 @@
+size 80x16
+⟪bg=#252526 b⟫ work⟪fg=#8dc149 bg=#252526⟫ +4⟪fg=#c74e39 bg=#252526⟫ −1⟪bg=#252526⟫                                                          ⟪fg=#d4d4d4 bg=#04395e b⟫ HEAD ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫  ⟪bg=#252526⟫ ⟪⟫
+⟪fg=#519aba bg=#1e242c⟫▌ @@ -1,4 +1,5 @@⟪bg=#1e242c⟫                                                              ⟪fg=#8c8c8c⟫▴⟪⟫
+ ⟪fg=#8c8c8c⟫1 1  ⟪⟫ one                                                                     ⟪fg=#3c3c3c⟫│⟪⟫
+⟪bg=#233c24⟫ ⟪fg=#8c8c8c bg=#233c24⟫  2 ⟪fg=#8dc149 bg=#233c24⟫+⟪bg=#233c24⟫ two                                                                     ⟪fg=#828282⟫┃⟪⟫
+ ⟪fg=#8c8c8c⟫2 3  ⟪⟫ three                                                                   ⟪fg=#828282⟫┃⟪⟫
+ ⟪fg=#8c8c8c⟫3 4  ⟪⟫ four                                                                    ⟪fg=#828282⟫┃⟪⟫
+ ⟪fg=#8c8c8c⟫4 5  ⟪⟫ five                                                                    ⟪fg=#828282⟫┃⟪⟫
+                                                                               ⟪fg=#828282⟫┃⟪⟫
+⟪bg=#252526⟫ ⟪bg=#252526 b⟫ a.txt⟪fg=#8c8c8c bg=#252526⟫  unstaged⟪bg=#252526⟫                                                       ⟪fg=#8dc149 bg=#252526⟫ +1⟪fg=#c74e39 bg=#252526⟫ −1 ⟪fg=#828282⟫┃⟪⟫
+⟪bg=#1e242c⟫ ⟪fg=#519aba bg=#1e242c⟫ @@ -8,5 +8,5 @@ seven⟪bg=#1e242c⟫                                                        ⟪fg=#3c3c3c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫ 8  8  ⟪⟫ eight                                                                 ⟪fg=#3c3c3c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫ 9  9  ⟪⟫ nine                                                                  ⟪fg=#3c3c3c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫10 10  ⟪⟫ ten                                                                   ⟪fg=#3c3c3c⟫│⟪⟫
+⟪bg=#481e1e⟫ ⟪fg=#8c8c8c bg=#481e1e⟫11    ⟪fg=#c74e39 bg=#481e1e⟫-⟪bg=#481e1e⟫ eleven                                                                ⟪fg=#3c3c3c⟫│⟪⟫
+⟪bg=#233c24⟫ ⟪fg=#8c8c8c bg=#233c24⟫   11 ⟪fg=#8dc149 bg=#233c24⟫+⟪bg=#233c24⟫ eleven⟪bg=#2e6934⟫!⟪bg=#233c24⟫                                                               ⟪fg=#8c8c8c⟫▾⟪⟫
+⟪fg=#8dc149 bg=#252526⟫ ✓ ⟪bg=#252526⟫Staged 1 line                                                                ⟪⟫

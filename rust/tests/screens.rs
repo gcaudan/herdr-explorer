@@ -122,10 +122,10 @@ panes! {
         tree: "tree";
         preview: "preview";
         search: "search";
+        diff: "diff";
     }
     pending {
         scm: "scm", "case 17";
-        diff: "diff", "case 15";
         edit: "edit", "case 18";
     }
 }

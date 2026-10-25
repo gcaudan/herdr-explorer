@@ -1,6 +1,7 @@
 //! The Changes pane, as the JS's src/diff.js: git's diff read (parse), then laid out and shown.
 
 mod collect;
+pub mod pane;
 mod parse;
 mod render;
 

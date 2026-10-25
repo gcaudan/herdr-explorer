@@ -1,0 +1,3 @@
+pane	get	w1:p2
+pane	list	--workspace	w1
+pane	zoom	w1:p2	--toggle
