@@ -141,7 +141,7 @@ fn pipe_or_socket(m: &std::fs::Metadata) -> bool {
 /// Node's `fs.realpathSync` (its JS walk, not the system's realpath): the path resolved first (`..` taken off by
 /// name), then each part lstat'ed from the root, a link read and followed, and the walk started over from its target.
 /// On Windows the case, short names and mapped drives stay as written.
-fn node_realpath(p: &str) -> std::io::Result<String> {
+pub fn node_realpath(p: &str) -> std::io::Result<String> {
     let is_sep = |c: u8| c == b'/' || (WIN && c == b'\\');
     // The root: / on Unix; C:, \\server\share and the separators after it on Windows.
     let split_root = |s: &str| -> usize {

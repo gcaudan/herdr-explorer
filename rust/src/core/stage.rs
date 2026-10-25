@@ -6,7 +6,7 @@
 //!   discard  lines of the Unstaged section, taken out of the working tree (the caller confirms first)
 //! Files, hunks and lines are named by their place in the diff: file index, (file, hunk), (file, hunk, line).
 
-use super::exec::{Env, Exec, Opts, env_set, exec, git, git_env, strip_verbatim};
+use super::exec::{Env, Exec, Opts, env_set, exec, git, git_env, node_realpath};
 use super::paths;
 use crate::diff::{self, Diff, Line};
 use std::collections::HashSet;
@@ -544,7 +544,7 @@ pub fn prune_dirs(abs: &str, top: &str) {
 /// Whether the file abs is in the repository's folder top, its folder too once symbolic links are followed (an
 /// index naming sub/x while sub links to the home folder is not).
 pub fn within(abs: &str, top: &str) -> bool {
-    let real = |p: &str| std::fs::canonicalize(p).ok().map(|r| strip_verbatim(r.to_string_lossy().into_owned()));
+    let real = |p: &str| node_realpath(p).ok();
     let (root, dir) = (real(top), real(&paths::dirname(&paths::resolve(&[abs]))));
     let sep = paths::SEP;
     if !paths::resolve(&[abs]).starts_with(&format!("{}{sep}", paths::resolve(&[top]))) {
