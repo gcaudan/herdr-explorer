@@ -6,8 +6,10 @@
 // Lanes of each commit: { cells: [[char, color]], color, above, below }, cells two columns per lane, the commit
 // as ●, colors as lane numbers (the caller picks the colours: a lane keeps its colour from its first commit to its
 // last); above: its lane comes from a commit above (a child), below: it goes on to a parent. commits: [{ hash,
-// parents: [hash] }].
-function layout(commits) {
+// parents: [hash] }]. base: the commit where the current branch leaves the default branch, from which its lane takes
+// another colour, so that the branch's own commits stand apart even when it is a straight line ahead of the default
+// branch: the colour of a lane joining there (the default branch's, when it went on), else a new one.
+function layout(commits, base = null) {
   const lanes = []; // { hash expected next in this lane, color }
   let colors = 0;
   return commits.map(c => {
@@ -19,10 +21,12 @@ function layout(commits) {
       if (col < 0) col = lanes.length;
       lanes[col] = { hash: c.hash, color: colors++ };
     }
-    const before = lanes.slice(), color = lanes[col].color;
+    const before = lanes.slice();
     // Other lanes waiting for this commit end here: the branches that started from it.
     const closing = [];
     before.forEach((l, i) => { if (l && i !== col && l.hash === c.hash) { closing.push(i); lanes[i] = null; } });
+    if (above && c.hash === base) lanes[col] = { ...lanes[col], color: closing.length ? before[closing[0]].color : colors++ };
+    const color = lanes[col].color;
     const [first, ...rest] = c.parents;
     lanes[col] = first ? { hash: first, color } : null;
     // The other parents of a merge: the lane already waiting for one, or a new lane on the right.

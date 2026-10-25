@@ -95,6 +95,19 @@ test('a menu drawn on the right keeps what is left of it', () => {
   assert.strictEqual(menu.key('escape', 24), 'close');
 });
 
+test('tail keeps the colours before its column and spaces a cut wide character', () => {
+  const row = ui.line([['abcdef', ui.fg(ui.C.red)], ['界ghij', '\x1b[1m']], 20);
+  assert.strictEqual(plain(ui.tail(row, 7)), ' ghij        ');
+  assert.ok(ui.tail(row, 7).startsWith(`${ui.fg(ui.C.red)}\x1b[0m\x1b[1m`));
+  assert.strictEqual(ui.textWidth(plain(ui.head(row, 4) + ui.tail(row, 4))), 20);
+});
+
+test('a menu drawn in the middle keeps what is right of it', () => {
+  const lines = ['', ui.line([['abcdefghijklmnopqrstuvwxyz', '']], 26), ui.line([['abcdefghijklmnopqrstuvwxyz', '']], 26), ui.line([['abcdefghijklmnopqrstuvwxyz', '']], 26)];
+  new ui.Menu({ title: 'M', items: [{ label: 'A' }], at: 1, left: 4 }).draw(lines, 26, 24);
+  assert.deepStrictEqual(lines.slice(1).map(plain), ['abc╭ M ──╮klmnopqrstuvwxyz', 'abc│ A   │klmnopqrstuvwxyz', 'abc╰─────╯klmnopqrstuvwxyz']);
+});
+
 test('a menu item with a key and no value keeps its whole label', () => {
   const plain = s => s.replace(/\x1b\[[0-9;]*m/g, '');
   const lines = ['', '', ''];
@@ -118,4 +131,51 @@ test('arrows change an option of a menu, never run an action', () => {
   assert.strictEqual(menu.key('enter', 24).run(), 'push');
   menu.move(1, 24);
   assert.strictEqual(menu.key('left', 24).run(), 'wrap');
+});
+
+test('backgroundOf reads the terminal background from its OSC 11 answer', () => {
+  assert.strictEqual(ui.backgroundOf('\x1b]11;rgb:0c0c/0c0c/0c0c\x1b\\'), 'dark');
+  assert.strictEqual(ui.backgroundOf('\x1b]11;rgb:ffff/ffff/ffff\x07'), 'light');
+  assert.strictEqual(ui.backgroundOf('\x1b]11;rgb:fd/f6/e3\x07'), 'light');
+  assert.strictEqual(ui.backgroundOf('\x1b]10;rgb:ffff/ffff/ffff\x07'), null);
+});
+
+test('useTheme swaps the colours in place and tells the modules that work styles out once', () => {
+  const C = ui.C, seen = [];
+  ui.onTheme(t => seen.push(t));
+  ui.useTheme('light');
+  assert.strictEqual(ui.C, C);
+  assert.deepStrictEqual(C.strong, [0, 0, 0]);
+  assert.strictEqual(ui.themeName(), 'light');
+  ui.useTheme('nope');
+  assert.deepStrictEqual(C.strong, [255, 255, 255]);
+  assert.deepStrictEqual(seen, ['dark', 'light', 'dark']);
+});
+
+test('a card with several answers wraps its buttons to fit the pane', () => {
+  const plain = l => l.replace(/\x1b\[[0-9;]*m/g, '');
+  for (const [W, H] of [[80, 30], [34, 24], [20, 12], [30, 5]]) {
+    const lines = Array.from({ length: H }, () => ' '.repeat(W));
+    const q = { title: 'Update herdr-explorer', name: '0.7.1 → 0.9.0', list: ['a change', 'another change'], note: 'and 2 more',
+      buttons: [{ key: 'y', label: 'Update', tone: 'go' }, { key: 'r', label: 'Notes' }, { key: 's', label: 'Skip version' }, { key: 'n', label: 'Later' }], focus: 3 };
+    ui.ask(lines, W, H, q);
+    for (const l of lines) assert.strictEqual(ui.textWidth(plain(l)), W, `${W}×${H}: ${plain(l)}`);
+    assert.deepStrictEqual(q.zones.buttons.map(b => b[2]).sort(), ['n', 'r', 's', 'y'], `${W}×${H}: every button clickable`);
+    for (const [x0, , key, y] of q.zones.buttons) assert.strictEqual(ui.askMouse({ press: true, button: 0, x: x0, y: y + 1 }, q), key);
+  }
+});
+
+test('the scrollbar takes the colour of the heaviest mark of the rows a cell stands for', () => {
+  const bar = new ui.Scrollbar(() => { });
+  const red = [200, 0, 0], green = [0, 200, 0];
+  // 100 rows, 10 shown: 8 cells of track between the buttons, about 12 rows each.
+  assert.strictEqual(bar.set(100, 10, 0, [{ row: 50, color: green, weight: 1 }, { row: 51, color: red, weight: 3 }, { row: 99, color: green, weight: 1 }]), 1);
+  const cells = Array.from({ length: 10 }, (_, k) => bar.cell(k));
+  assert.ok(cells[5].includes(ui.fg(red)) && plain(cells[5]) === '│');
+  assert.ok(cells[8].includes(ui.fg(green)));
+  assert.ok(!cells[2].includes(ui.fg(red)) && !cells[2].includes(ui.fg(green)));
+  // On the thumb: its glyph, in the mark's colour.
+  bar.set(100, 10, 45, [{ row: 50, color: red, weight: 3 }]);
+  assert.strictEqual(plain(bar.cell(5)), '┃');
+  assert.ok(bar.cell(5).includes(ui.fg(red)));
 });

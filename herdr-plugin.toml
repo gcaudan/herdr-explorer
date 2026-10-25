@@ -1,7 +1,7 @@
 id = "gcaudan.explorer"
 name = "Explorer"
 version = "0.7.1"
-min_herdr_version = "0.9.3"
+min_herdr_version = "0.9.4"
 description = "VS Code-style file explorer, preview, search and source control for every tab"
 platforms = ["linux", "macos", "windows"]
 
@@ -11,6 +11,22 @@ command = ["node", "src/hook.js", "--restore"]
 [[events]]
 on = "tab.created"
 command = ["node", "src/hook.js"]
+
+[[events]]
+on = "tab.closed"
+command = ["node", "src/hook.js", "--closed"]
+
+[[events]]
+on = "workspace.closed"
+command = ["node", "src/hook.js", "--closed"]
+
+[[events]]
+on = "pane.agent_status_changed"
+command = ["node", "src/hook.js", "--agent"]
+
+[[events]]
+on = "tab.focused"
+command = ["node", "src/hook.js", "--focused"]
 
 [[panes]]
 id = "tree"
@@ -27,32 +43,30 @@ command = ["node", "src/preview.js"]
 [[panes]]
 id = "search"
 title = "Search"
-placement = "popup"
-width = "80%"
-height = "80%"
+placement = "tab"
 command = ["node", "src/search.js"]
 
 [[panes]]
 id = "scm"
 title = "Source Control"
-placement = "zoomed"
+placement = "tab"
 command = ["node", "src/scm.js"]
 
 [[panes]]
 id = "diff"
 title = "Changes"
-placement = "zoomed"
+placement = "split"
 command = ["node", "src/diff.js"]
 
 [[panes]]
 id = "edit"
 title = "Editor"
-placement = "zoomed"
+placement = "tab"
 command = ["node", "src/edit.js"]
 
 [[actions]]
 id = "toggle"
-title = "Show or hide the explorer"
+title = "Open, focus or close the explorer"
 contexts = ["tab"]
 command = ["node", "src/hook.js", "--toggle"]
 
@@ -73,3 +87,15 @@ id = "peek"
 title = "Preview the last changed file"
 contexts = ["tab"]
 command = ["node", "src/peek.js", "--last"]
+
+[[actions]]
+id = "open-link"
+title = "Preview the file of a clicked link"
+command = ["node", "src/peek.js", "--url"]
+
+# Ctrl-click on a file:// hyperlink (OSC 8) in any pane: the file in the tab's preview.
+[[link_handlers]]
+id = "file"
+title = "Preview the file"
+pattern = "^file://"
+action = "open-link"

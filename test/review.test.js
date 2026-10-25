@@ -34,6 +34,38 @@ test('notes go on one line, sorted, relative to the terminal', () => {
   assert.strictEqual(notes.where(list[0], '/elsewhere'), '/r/src/b.js:3');
 });
 
+test('notes follow their lines, or go stale once they are gone', () => {
+  const n = { file: '/r/a.js', from: 3, to: 4, text: 'x', anchor: ['c', 'd'] };
+  assert.strictEqual(notes.locate(n, ['a', 'b', 'c', 'd']), n, 'in place: the same note');
+  assert.deepStrictEqual([notes.locate(n, ['new', 'a', 'b', 'c', 'd']).from, notes.locate(n, ['new', 'a', 'b', 'c', 'd']).to], [4, 5]);
+  // In several places: the nearest to where it was.
+  assert.strictEqual(notes.locate(n, ['c', 'd', 'x', 'x', 'x', 'c', 'd']).from, 1);
+  assert.strictEqual(notes.locate({ ...n, from: 5, to: 6 }, ['c', 'd', 'x', 'x', 'x', 'c', 'd']).from, 6);
+  const stale = notes.locate(n, ['a', 'b', 'c!', 'd']);
+  assert.strictEqual(stale.stale, true);
+  assert.strictEqual(stale.from, 3);
+  // Back once the lines are: no longer stale.
+  const back = notes.locate(stale, ['c', 'd']);
+  assert.deepStrictEqual([back.from, back.stale], [1, undefined]);
+  assert.strictEqual(notes.locate(n, null).stale, true, 'the file gone');
+  assert.strictEqual(notes.locate(n, undefined), n, 'the lines not known: as it was');
+  const whole = { file: '/r/a.js', from: 0, to: 0, text: 'x' };
+  assert.strictEqual(notes.locate(whole, []), whole);
+  assert.strictEqual(notes.format([{ ...stale, kind: 'fix' }], '/r', ' Fix these:'), 'Fix these: Review notes: a.js:3-4 (fix, stale): x ');
+});
+
+test('a file stays viewed until its content changes', () => {
+  const viewed = require('../src/core/viewed');
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'viewed-')), 'a.txt');
+  fs.writeFileSync(file, 'one\n');
+  const map = { [file]: viewed.sign(file) };
+  assert.ok(viewed.is(map, file));
+  fs.writeFileSync(file, 'two\n');
+  assert.ok(!viewed.is(map, file));
+  fs.unlinkSync(file);
+  assert.strictEqual(viewed.sign(file), 'gone');
+});
+
 test('notes stay relative from a folder reached through a link', () => {
   const real = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'notes-')));
   fs.mkdirSync(path.join(real, 'src'));
@@ -54,6 +86,43 @@ test('untracked files of a subfolder are named from the repository', async () =>
   assert.deepStrictEqual(diff.parse(text).files.map(f => f.to), ['app/src/new.js']);
 });
 
+test('diff scopes: a commit, a range, a branch, the last agent turn', async () => {
+  // The long form on Windows (runneradmin, not RUNNER~1), as git gives it: the turn's folder is compared with it.
+  const top = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'scope-')));
+  const git = (...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd: top, encoding: 'utf8' });
+  if (git('init', '-q', '-b', 'main').status !== 0) return;
+  const commit = (file, text) => { fs.writeFileSync(path.join(top, file), text); git('add', '-A'); git('commit', '-q', '-m', file); };
+  commit('a.txt', 'one\n');
+  commit('b.txt', 'two\n');
+  git('switch', '-q', '-c', 'feature');
+  commit('c.txt', 'three\n');
+  const names = async scope => diff.parse((await diff.collect({ cwd: top, scope })).text).files.map(f => f.to);
+  assert.deepStrictEqual(await names({ kind: 'rev', rev: 'main' }), ['b.txt']);
+  assert.deepStrictEqual(await names({ kind: 'rev', rev: 'main...feature' }), ['c.txt']);
+  assert.deepStrictEqual(await names({ kind: 'rev', rev: 'HEAD~2..HEAD' }), ['b.txt', 'c.txt']);
+  fs.writeFileSync(path.join(top, 'new.txt'), 'x\n');
+  assert.deepStrictEqual(await names({ kind: 'ref', rev: 'main' }), ['c.txt', 'new.txt']);
+  assert.ok((await diff.collect({ cwd: top, scope: { kind: 'rev', rev: 'nope' } })).error);
+  // The turn: what changed since its snapshot, untracked files included; the index stays as it was.
+  const Scope = require('../src/core/scope');
+  const tree = await Scope.worktree(top, process.env);
+  assert.strictEqual(git('status', '--porcelain').stdout, '?? new.txt\n');
+  fs.writeFileSync(path.join(top, 'a.txt'), 'one!\n');
+  fs.writeFileSync(path.join(top, 'other.txt'), 'y\n');
+  const turn = { top, tree };
+  const res = await diff.collect({ cwd: top, scope: { kind: 'turn' }, turn });
+  assert.ok(!res.error, res.error);
+  assert.deepStrictEqual(diff.parse(res.text).files.map(f => f.to), ['a.txt', 'other.txt']);
+  // Limited to one file, which alone is added again: a new one untracked too.
+  fs.writeFileSync(path.join(top, 'third.txt'), 'z\n');
+  const one = await diff.collect({ cwd: top, file: path.join(top, 'third.txt'), scope: { kind: 'turn' }, turn });
+  assert.deepStrictEqual(diff.parse(one.text).files.map(f => f.to), ['third.txt']);
+  fs.writeFileSync(path.join(top, 'a.txt'), 'one!!\n');
+  const again = await diff.collect({ cwd: top, file: path.join(top, 'a.txt'), scope: { kind: 'turn' }, turn });
+  assert.match(again.text, /^\+one!!$/m);
+  assert.ok((await diff.collect({ cwd: top, scope: { kind: 'turn' }, turn: null })).error);
+});
+
 test('diff rows know the lines they show', () => {
   const text = ['diff --git a/x.js b/x.js', '--- a/x.js', '+++ b/x.js', '@@ -1,3 +1,3 @@', ' one', '-two', '+2', ' three', ''].join('\n');
   const parsed = diff.parse(text);
@@ -62,6 +131,26 @@ test('diff rows know the lines they show', () => {
     // The file, the hunk, then its lines: the removed line is at the place of the added one.
     assert.deepStrictEqual(refs, mode === 'inline' ? ['0-0', '1-3', '1-1', '2-2', '2-2', '3-3'] : ['0-0', '1-3', '1-1', '2-2', '3-3'], mode);
   }
+});
+
+test('diff rows wrap long lines, or scroll them from a column', () => {
+  const long = 'abcdefghij'.repeat(6);
+  const text = ['diff --git a/x.js b/x.js', '--- a/x.js', '+++ b/x.js', '@@ -1,2 +1,2 @@', ' short', `-${long}`, `+${long}!`, ''].join('\n');
+  const parsed = diff.parse(text);
+  const plain = r => r.segs.map(([t]) => t).join('');
+  for (const mode of ['inline', 'split']) {
+    const rows = diff.render(parsed, 40, mode, true, { wrap: true });
+    // Every row fills the width; a wrapped line goes on with rows marked more, at the same place.
+    assert.ok(rows.filter(r => r.place).every(r => ui.segWidth(r.segs) === 40), mode);
+    const more = rows.filter(r => r.more);
+    assert.ok(more.length >= 2 && more.every(r => r.place === 2), mode);
+    assert.strictEqual(diff.render(parsed, 40, mode, true).filter(r => r.more).length, 0, mode);
+  }
+  const cut = diff.render(parsed, 40, 'inline', true, { left: 10 });
+  // The hunk's header, then the lines: the gutter stays, the text starts at its 11th column.
+  assert.ok(!plain(cut[1]).includes('short'), 'the short line scrolled out');
+  assert.ok(plain(cut[2]).includes(` ${long.slice(10, 30)}`));
+  assert.ok(cut.filter(r => r.place).every(r => ui.segWidth(r.segs) === 40));
 });
 
 // A little-endian TIFF of the given pixels, one strip, with the tags given (tag → [type, values]).
@@ -126,4 +215,33 @@ test('progressive JPEG decodes', () => {
     const o = (y * 24 + x) * 4, got = [...img.data.slice(o, o + 3)];
     assert.ok(got.every((v, i) => Math.abs(v - want[i]) <= 24), `(${x}, ${y}): ${got} instead of ${want}`);
   }
+});
+
+test('the lines a note takes from a diff are those of the version shown', () => {
+  const parsed = diff.changesOf({ staged: 'diff --git a/f b/f\n--- a/f\n+++ b/f\n@@ -1,3 +1,3 @@\n a\n-b\n+B\n c\n', text: '' });
+  assert.deepStrictEqual(diff.shownLines(parsed, { file: 'f', sec: 'staged', from: 2, to: 3 }), ['B', 'c']);
+  assert.strictEqual(diff.shownLines(parsed, { file: 'f', sec: 'staged', from: 3, to: 5 }), null, 'past the hunk');
+  assert.strictEqual(diff.shownLines(parsed, { file: 'f', sec: 'unstaged', from: 2, to: 2 }), null, 'another section');
+});
+
+test('a diff row cut from another column is made again alike (redo)', () => {
+  const parsed = diff.parse('diff --git a/f b/f\n--- a/f\n+++ b/f\n@@ -1,2 +1,2 @@\n ' + 'x'.repeat(90) + '\n-' + 'old '.repeat(30) + '\n+' + 'new '.repeat(30) + '\n');
+  for (const mode of ['inline', 'split']) {
+    const at0 = diff.render(parsed, 80, mode), at16 = diff.render(parsed, 80, mode, false, { left: 16 });
+    assert.strictEqual(at0.length, at16.length);
+    at0.forEach((r, i) => { if (r.redo) assert.deepStrictEqual(r.redo(16), at16[i].segs, `${mode} row ${i}`); });
+    assert.ok(at0.some(r => r.redo));
+  }
+});
+
+test('a staged note is placed where its lines are on disk', () => {
+  const staged = ['diff --git a/x b/x', '--- a/x', '+++ b/x', '@@ -1,2 +1,2 @@', ' one', '-two', '+2', ''].join('\n');
+  // On disk: a line added at the top, and line 2 of the index (2) changed.
+  const unstaged = ['diff --git a/x b/x', '--- a/x', '+++ b/x', '@@ -0,0 +1 @@', '+zero', '@@ -2 +3 @@', '-2', '+deux', ''].join('\n');
+  const parsed = diff.changesOf({ staged, text: unstaged });
+  assert.deepStrictEqual(diff.diskLines(parsed, { file: 'x', sec: 'staged', from: 1, to: 1 }), { from: 2, to: 2 });
+  assert.strictEqual(diff.diskLines(parsed, { file: 'x', sec: 'staged', from: 2, to: 2 }), null);
+  assert.strictEqual(diff.diskLines(parsed, { file: 'x', sec: 'staged', from: 1, to: 2 }), null);
+  // No unstaged change: the same lines.
+  assert.deepStrictEqual(diff.diskLines(diff.changesOf({ staged, text: '' }), { file: 'x', sec: 'staged', from: 2, to: 2 }), { from: 2, to: 2 });
 });

@@ -4,6 +4,7 @@
 const path = require('path');
 const actions = require('../core/actions');
 const ui = require('../core/ui');
+const { holds } = require('./tree');
 
 // While filtering, typed characters go to the filter; arrows and Enter act on the list.
 const FILTER_EDIT = new Set(['backspace', 'delete', 'ctrl+u', 'ctrl+d']);
@@ -19,7 +20,7 @@ module.exports = ctx => {
   const { state, settings, out, WIDTH, PANE, git, scrollbar, render, runAction, flash, buildRows, reveal, revealRel, select,
     toggle, close, schedule, openFile, openMenu, openHelp, openSettings, setSetting, newEntry, renameEntry, deleteEntry,
     setRoot, showChanged, viewChanges, nextChange, widen, absOf, parentOf, settingsPage, bodyHeight, showUpdate,
-    finishUpdate, askUpdate } = ctx;
+    pillWidth, pillAction } = ctx;
 
   // --- action menu
 
@@ -46,8 +47,16 @@ module.exports = ctx => {
 
   // --- keyboard and mouse
 
-  // A question (ui.confirmKey), or a prompt.
+  // A question with several answers (ui.askKey; escape: its escape answer, else none), a question (ui.confirmKey), or
+  // a prompt.
+  function choose(q, answer) {
+    if (!answer || answer === 'move') return render();
+    state.choice = null;
+    const fn = q.on[answer];
+    return fn ? runAction(fn) : render();
+  }
   function promptKey(k) {
+    if (state.choice) return choose(state.choice, ui.askKey(k, state.choice));
     if (state.confirm) {
       const q = state.confirm, answer = ui.confirmKey(k, q);
       if (answer === 'move') return render();
@@ -87,7 +96,7 @@ module.exports = ctx => {
   }
 
   function key(k) {
-    if (state.confirm || state.prompt) return promptKey(k);
+    if (state.choice || state.confirm || state.prompt) return promptKey(k);
     if (state.menu) return menuKey(k);
     if (state.settings) return settingsPage().key(k);
     if (state.help) { if (!ui.helpKey(k, state.help)) state.help = null; return render(); }
@@ -140,7 +149,7 @@ module.exports = ctx => {
         break;
       case 'collapse':
         if (r && r.dir && r.open && !state.filter) toggle(r, false);
-        else if (r) { const p = state.rows.findIndex(x => x.rel === parentOf(r.rel)); if (p >= 0) select(p); }
+        else if (r) { const up = parentOf(r.from || r.rel), p = state.rows.findIndex(x => holds(x, up)); if (p >= 0) select(p); }
         break;
       case 'refresh': schedule(); return;
       case 'filter': state.filter = { field: new ui.Field(state.filter ? state.filter.field.value : ''), active: true }; buildRows(); break;
@@ -156,7 +165,7 @@ module.exports = ctx => {
       case 'delete': if (r) deleteEntry(r); return;
       case 'edit': if (r && !r.dir) runAction(() => actions.edit(absOf(r.rel), PANE)); return;
       case 'openInEditor': if (r) runAction(() => actions.editor(absOf(r.rel), PANE)); return;
-      case 'openInApp': if (r && !r.dir) runAction(() => actions.system(absOf(r.rel))); return;
+      case 'openInApp': if (r) runAction(() => actions.app(absOf(r.rel), PANE)); return;
       case 'preview': if (r && !r.dir) runAction(() => actions.preview(absOf(r.rel), ctx.ROOT, PANE, 0, true, true, { keep: true })); return;
       case 'copyPath': if (r) runAction(() => actions.copy(absOf(r.rel))); return;
       case 'copyRelativePath': if (r) runAction(() => actions.copy(r.rel)); return;
@@ -181,7 +190,8 @@ module.exports = ctx => {
 
   function mouse(m) {
     const H = out.rows || 24, W = out.columns || WIDTH;
-    // A question: a click on its first button confirms, any other click cancels.
+    // A question: a click on a button answers, out of the card escapes; for confirm, any other click cancels.
+    if (state.choice) return choose(state.choice, ui.askMouse(m, state.choice));
     if (state.confirm) {
       const q = state.confirm, answer = ui.confirmMouse(m, q);
       if (!answer) return;
@@ -213,7 +223,7 @@ module.exports = ctx => {
       if (btn !== 0) return render();
       // Each icon and the cell after it: a Nerd Font glyph often spills over the next cell.
       if (x >= W - 2) return openSettings();
-      if (x >= W - 4 && showUpdate()) return runAction(ctx.finish ? finishUpdate : askUpdate);
+      if (x >= W - 2 - pillWidth(W) && showUpdate()) return runAction(pillAction());
       return render();
     }
     if (y > bodyHeight() + 1) { if (state.filter) { state.filter.active = true; render(); } return; }

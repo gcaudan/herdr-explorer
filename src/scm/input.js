@@ -1,18 +1,20 @@
 // Keys and mouse of the source control pane, and the selection, which the diff beside the list follows.
 'use strict';
+const path = require('path');
 const ui = require('../core/ui');
 const diffs = require('../diff');
+const actions = require('../core/actions');
 const { GIT, gitEnv } = require('../core/exec');
-const { ROOT, SPLIT, VIEWS, S, frame, draw, wide, flash, confirm, quit } = require('./context');
+const { ROOT, REVIEW, SPLIT, VIEWS, S, frame, draw, wide, flash, confirm, quit, settings } = require('./context');
 const {
-  exec, english, errorOf, schedule, filterPicker, openPicker, compare, showDiff, closeDiff, comparable, diffable, showing, allFiles,
+  exec, english, errorOf, schedule, filterPicker, openPicker, compare, shareCompare, showDiff, closeDiff, comparable, diffable, showing, allFiles,
   setView, toggleAllBranches, toggleTree, toggle,
 } = require('./state');
 const {
   stage, unstage, stageAll, unstageAll, discard, commit, abort, toggleAmend, generate, pickBranch, newBranch, deleteBranch,
-  fetch, pull, push, newStash, stashAction, integrate, cherryPick, newTag, setBase, openRow, search, fileAction, openMenu,
+  fetch, pull, push, newStash, stashAction, integrate, cherryPick, newTag, setBase, showOf, openRow, search, fileAction, openMenu,
 } = require('./ops');
-const { listBar, diffBar, resizeList } = require('./render');
+const { listBar, diffBar, resizeList, openDiffView, switchLayout, toggleWrap } = require('./render');
 
 function select(i) {
   const rows = frame.rows;
@@ -57,17 +59,20 @@ function inlineKey(k) {
 
 // --- diffs
 
-// Keys of a focused comparison: the selection moves over the commits, Enter shows the selected one.
+// Keys of a focused comparison: the selection moves over the commits, Enter shows the selected one. Below SPLIT
+// columns, the tab's preview follows the selected commit, as it follows a History row.
 function compareKey(k, d, page) {
   const at = (d.rows || []).map((r, i) => (r.commit ? i : -1)).filter(i => i >= 0);
   if (!at.length) return false;
   const pos = Math.max(0, at.indexOf(d.sel));
+  const commitRow = () => ({ type: 'commit', key: `commit:${d.rows[d.sel].commit.hash}`, commit: d.rows[d.sel].commit });
   const move = i => {
     d.sel = at[Math.max(0, Math.min(i, at.length - 1))];
     const body = ui.size().H - 3;
     if (d.sel < d.top + 1) d.top = Math.max(0, d.sel - 1);
     if (d.sel >= d.top + body) d.top = d.sel - body + 1;
     draw();
+    if (!wide()) { clearTimeout(compareKey.timer); compareKey.timer = setTimeout(() => { previewRow(commitRow(), !previewed); previewed = true; }, 120); }
     return true;
   };
   if (k === 'up' || k === 'k') return move(d.sel < 0 ? 0 : pos - 1);
@@ -77,9 +82,10 @@ function compareKey(k, d, page) {
   if (k === 'home' || k === 'g') return move(0);
   if (k === 'end' || k === 'G') return move(at.length - 1);
   if (k === 'enter' && d.sel >= 0) {
+    if (!wide()) { clearTimeout(compareKey.timer); previewRow(commitRow(), true, true); return true; }
     const c = d.rows[d.sel].commit;
     showDiff(`commit:${c.hash}`, `${c.short} ${c.subject}`,
-      ['show', ...diffs.DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', '--format=fuller', c.hash]);
+      ['show', ...diffs.DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', '--format=fuller', '--decorate=short', c.hash]);
     S.diff.back = d;
     S.diff.focus = true;
     return true;
@@ -87,13 +93,40 @@ function compareKey(k, d, page) {
   return false;
 }
 
+// Below SPLIT columns (always in a review), the selection shows in the tab's preview, opened on the right of the pane
+// (open): a file's changes, a commit, a stash or a tag, else a line saying to select one (blank). focus: the
+// preview's.
+const previewable = row => !!row && (row.type === 'file' || !!showOf(row));
+function previewRow(row, open = true, focus = false) {
+  const PANE = process.env.HERDR_PANE_ID, top = S.repo.top;
+  previewRow.key = row ? row.key : null;
+  const asked = row && row.type === 'file'
+    ? actions.preview(path.join(top, row.item.path), top, PANE, 0, focus, open, { view: 'diff', beside: PANE })
+    : actions.preview('', top, PANE, 0, focus, open, { show: { ...(showOf(row) || { blank: true }), cwd: top }, beside: PANE });
+  // Its share set once the preview is in the layout: the resize that its opening sends may come before.
+  return asked.then(msg => (msg ? flash(msg, true) : open && keepShare()));
+}
+// The preview opens by itself once, with the first selection; closed (q there), only Enter opens it again.
+let previewed = false;
+
+// A review's share of its tab beside the preview (reviewShare setting, actions.sharer).
+const keepShare = REVIEW ? actions.sharer(process.env.HERDR_PANE_ID, 'reviewShare') : async () => { };
+
 // From SPLIT columns, the diff shows the selected file, commit, stash or tag (shortly after, when moving fast).
 // A branch other than the base shows its comparison with the base.
 function follow() {
   clearTimeout(follow.timer);
   follow.timer = setTimeout(() => {
-    if (!S.repo || !wide()) return;
+    if (!S.repo) return;
     const row = frame.rows[S.cursor];
+    // Narrow: the preview opened below the pane follows the selected file. Asked again only for another row: each
+    // request reloads the preview, which would drop the lines selected there at each refresh.
+    if (!wide()) {
+      if (S.diff && row && S.diff.key === row.key) return; // its comparison open, which shows its commits there
+      if (!previewed || (row ? row.key : null) !== previewRow.key) previewRow(row, !previewed);
+      previewed = true;
+      return;
+    }
     if (diffable(row)) {
       // showDiff sets S.diff before it waits for git.
       if (!showing(row)) { openRow(row, true); if (S.diff && S.diff.key === row.key) S.diff.auto = true; }
@@ -120,11 +153,12 @@ function diffKey(k) {
   if (k === 'ctrl+d') return scroll(Math.ceil(page / 2));
   if (k === 'home' || k === 'g') { d.top = 0; return draw(); }
   if (k === 'end' || k === 'G') { d.top = Infinity; return draw(); }
-  if (k === 's') {
-    const width = ui.size().W < SPLIT ? ui.size().W : ui.size().W - frame.listW - 1;
-    diffs.saveMode(width, diffs.layoutOf(width) === 'split' ? 'inline' : 'split');
-    return draw();
-  }
+  if (k === 'v') return switchLayout();
+  if (k === 'w') return toggleWrap();
+  if (k === ',') return openDiffView();
+  // Without wrap, the text 8 columns sideways, up to the longest line.
+  if (k === 'left' || k === 'h') { if (!settings.wrap && d.left) { d.left = Math.max(0, d.left - 8); draw(); } return; }
+  if (k === 'right' || k === 'l') { if (!settings.wrap && (d.left || 0) + 8 < diffs.widestOf(d.parsed)) { d.left = (d.left || 0) + 8; draw(); } return; }
   if (k === 'n' || k === 'N') {
     const r = d.rows || [];
     const i = k === 'n' ? r.findIndex((x, j) => j > d.top && x.hunk) : r.map((x, j) => (j < d.top && x.hunk ? j : -1)).filter(j => j >= 0).pop();
@@ -134,11 +168,12 @@ function diffKey(k) {
 
 // --- views and keys
 
-// A choice of the menu, by key or click: the menu closes, then the item runs.
+// A choice of the menu, by key or click: the menu closes, then the item runs; the diff's options show again with
+// their new values (keep).
 function menuChoice(r) {
-  if (r === 'close' || (r && r.run)) S.menu = null;
+  const menu = S.menu;
+  menu.choose(r, () => { S.menu = null; draw(); }, menu.view ? openDiffView : null);
   draw();
-  if (r && r.run) r.run();
 }
 
 function fieldKey(k) {
@@ -168,6 +203,7 @@ async function key(k) {
   // The key help (ui.helpKey): scrolls, finds with /, closes with esc, q, ? or f1.
   if (S.help) { if (!ui.helpKey(k, S.help)) S.help = null; return draw(); }
   if ((k === '?' || k === 'f1') && S.repo) { S.help = { top: 0, find: null }; return draw(); }
+  if (k === 'z') return actions.zoom(process.env.HERDR_PANE_ID);
   if (S.diff && (S.diff.focus || ui.size().W < SPLIT)) return diffKey(k);
   if (!S.repo) {
     if (k === 'q' || k === 'escape') return quit();
@@ -208,6 +244,7 @@ async function key(k) {
         if (S.diff && S.diff.key === row.key) { S.diff.focus = true; S.diff.auto = false; }
         break;
       }
+      if (!wide() && previewable(row)) return previewRow(row, true, true);
       return openRow(row);
     case '1': case '2': case '3': case '4': return setView(VIEWS[+k - 1][0]);
     case 'r': flash('Refreshed'); return schedule();
@@ -221,7 +258,10 @@ async function key(k) {
     case 'b': return openPicker();
     case 'm': case 'menu': case 'shift+f10': return openMenu();
     case 'T': return newTag(null);
-    case '<': case '>': if (wide()) resizeList(frame.listW + (k === '<' ? -4 : 4)); break;
+    case '<': case '>':
+      if (wide()) resizeList(frame.listW + (k === '<' ? -4 : 4));
+      else if (REVIEW) keepShare(k === '<' ? -0.04 : 0.04);
+      break;
     case 'shift+left': case 'shift+right': if (wide()) resizeList(frame.listW + (k === 'shift+left' ? -4 : 4)); break;
     case 'c': if (S.view !== 'changes') setView('changes'); S.editing = true; break;
     case 'ctrl+g': if (S.view !== 'changes') setView('changes'); return generate();
@@ -240,7 +280,7 @@ function viewKey(k, row) {
     if (k === 'd') return row && row.items && discard(row.items, row.sec);
     if (k === 't') return toggleTree();
     if (k === 'X') return abort();
-    if (['y', 'Y', 'e', 'o'].includes(k)) return fileAction(k, row);
+    if (['y', 'Y', 'e', 'E', 'o'].includes(k)) return fileAction(k, row);
   } else if (S.view === 'history') {
     if (k === 'a') return toggleAllBranches();
     if (k === 'x' && S.histFile) return allFiles();
@@ -257,6 +297,7 @@ function viewKey(k, row) {
     if (k === 'D' && row && row.type === 'branch') return deleteBranch(row.ref);
     if (k === '=' && row && row.type === 'branch') {
       if (!comparable(row)) return flash(`${row.ref.name} is the base of the comparisons: select another branch`);
+      shareCompare(row);
       return compare(row).then(() => { if (S.diff) { S.diff.focus = true; draw(); } });
     }
     if (k === 'B' && row && row.type === 'branch') return setBase(row);
@@ -335,4 +376,4 @@ function mouse(m) {
   draw();
 }
 
-module.exports = { select, follow, key, mouse };
+module.exports = { select, follow, key, mouse, keepShare };

@@ -7,16 +7,21 @@ The plugin is a set of CommonJS Node.js scripts that use only Node's built-in mo
 | --------- | ---------- | ----------------------------- | ------------------------- |
 | startup   |            | `node src/hook.js --restore`  |                           |
 | event     | `tab.created` | `node src/hook.js`         |                           |
+| event     | `tab.closed`, `workspace.closed` | `node src/hook.js --closed` |        |
+| event     | `pane.agent_status_changed` | `node src/hook.js --agent` |              |
+| event     | `tab.focused` | `node src/hook.js --focused` |                         |
 | pane      | `tree`     | `node src/explorer.js`        | split                     |
 | pane      | `preview`  | `node src/preview.js`         | split                     |
-| pane      | `search`   | `node src/search.js`          | popup, 80% × 80%          |
-| pane      | `scm`      | `node src/scm.js`             | zoomed                    |
-| pane      | `diff`     | `node src/diff.js`            | zoomed                    |
-| pane      | `edit`     | `node src/edit.js`            | zoomed                    |
+| pane      | `search`   | `node src/search.js`          | tab                       |
+| pane      | `scm`      | `node src/scm.js`             | tab                       |
+| pane      | `diff`     | `node src/diff.js`            | split                     |
+| pane      | `edit`     | `node src/edit.js`            | tab                       |
 | action    | `toggle`   | `node src/hook.js --toggle`   | tab context               |
 | action    | `search`   | `node src/hook.js --search`   | tab context               |
 | action    | `scm`      | `node src/hook.js --scm`      | tab context               |
 | action    | `peek`     | `node src/peek.js --last`     | tab context               |
+| action    | `open-link` | `node src/peek.js --url`     | link handler `file`       |
+| link      | `file`     | `^file://` → `open-link`      | ctrl+click on a link      |
 
 The scripts herdr runs are at the root of `src/`, with `launch.js` (the launcher of the explorer and preview, see
 [Launcher and self-restart](#launcher-and-self-restart)). Shared modules are in `src/core/` (programs and state files,
@@ -34,9 +39,9 @@ Changes, Editor). [CONTRIBUTING.md](../CONTRIBUTING.md#project-structure) gives 
 ## Placement
 
 **Explorer** (`hook.js`, which exits at once when herdr is not found). When a tab is created, the hook skips the
-tab unless `autoOpen` is on and the tab has a single pane that is not already an explorer. `--toggle` closes the
-tab's explorer, and its preview, if there is one, and opens one otherwise. `--all`, bound to no action, opens one in
-every tab that has a single pane.
+tab unless `autoOpen` is on and the tab has a single pane that is not already an explorer. `--toggle` opens the
+tab's explorer when it has none, and closes it, with its preview, when it has one. The hook and `--toggle` open no
+explorer in a tab holding only the plugin's panes (the editor's).
 
 1. The hook takes the top-left pane, or the top-right pane when docked on the right.
 2. It opens the `tree` pane as a split to the right of that pane, without focus. The root is the
@@ -54,8 +59,19 @@ every tab that has a single pane.
 **Preview** (`actions.preview`). The first file opens the `preview` pane as a split to the right of
 the terminal next to the explorer, giving `explorer | terminal | preview`.
 
-**Popups and full-tab panes**. The search opens as a popup over the active pane. Source control, the
-changes pane and the editor open *zoomed* (full tab), targeting the explorer's tab. `--search` and `--scm` use the
+**Side panes, tabs of their own and the editor**. The search opens in a tab of its own (`EXPLORER_ORIGIN`: the tab
+it was opened from, recorded in `search-<tab id>.json`, `actions.holdTab`), beside a preview of the result selected,
+which keeps its share of the width (`searchShare`); the result opened goes to the origin's preview. The changes
+pane opens on the right of the terminal, in place of the preview (`actions.sidePane`). Source control opens a review
+in a tab of its own (`actions.scm`, `EXPLORER_REVIEW`: the tab reviewed), renamed `(SC <label>)`, and records it in
+`review-<tab id>.json`; the `tab.focused` event leads from the tab reviewed to its review (`hook.js --focused`), and
+the review's exit, whatever its cause, removes the record and closes the review's previews, so its tab. The selection there shows in
+a preview on the right of source control (`beside`, which also tells it that `q` closes it; a commit as a `show`
+request, `diffs.showArgs`; another line as a blank one), opened by the first selection and then by `Enter` only, which keeps its share of the width (`keepShare`,
+`reviewShare` setting). The editor opens in a tab of its own, in the explorer's workspace; closing it closes the tab. `z` zooms the preview,
+source control and the changes pane, which take the zoom off when they lose the focus (focus reports,
+`actions.unzoom`): herdr's zoom belongs to the tab and follows the focus, so a zoom left on would show the agent alone
+once the focus comes back to it, the explorer hidden. `--search` and `--scm` use the
 explorer's saved root, else the focused terminal's folder, else the workspace folder, and pass the explorer's pane
 (`EXPLORER_PANE`), so that the files they open go to that tab's preview.
 
@@ -83,7 +99,7 @@ Inputs reach a pane through `--env` variables of `herdr plugin pane open`:
 | `EXPLORER_KEEP` | preview | `1`: the file opens in a kept tab rather than the temporary one |
 | `EXPLORER_TABS` | preview | the tabs to restore, `{ list, current }` (JSON), after a herdr restart or a self-restart |
 | `EXPLORER_TAB` | preview | the tab id, which names its request file |
-| `EXPLORER_SEEN` | preview | the last request handled, across a restart |
+| `EXPLORER_SEEN` | preview | the last request handled, across a restart; on opening, the request file as it was, to take the requests made while the preview starts |
 | `EXPLORER_PANE` | search, scm, diff | the pane to act from (the diff's notes go to the terminal next to it) |
 | `EXPLORER_HISTORY` | scm | a file whose history to show, in place of `EXPLORER_FILE` |
 | `EXPLORER_MODE`, `EXPLORER_QUERY` | search | `files` or `content`, and the first query |
@@ -92,13 +108,26 @@ Inputs reach a pane through `--env` variables of `herdr plugin pane open`:
 ## Review notes
 
 The notes of a tab are kept in `notes-<tab id>.json` in the state folder, written to a temporary file then renamed:
-a list of `{ file, from, to, kind, text, t }`, the file's real path (symbolic links resolved) and the lines 1-based
-(0 for the whole file). The preview and the Changes pane add to it and poll it every 500 ms (`fs.watchFile`), so that
+a list of `{ file, from, to, kind, text, t, anchor, stale }`, the file's real path (symbolic links resolved) and the
+lines 1-based (0 for the whole file). `anchor` holds the text of the lines when the note was taken (up to 200 lines);
+`notes.current`, called when the notes or the file are read again, looks for it in the file as it is (the nearest
+place to the old one), moves the note there, or marks it `stale`, and saves the list when a note changed. The preview and the Changes pane add to it and poll it every 500 ms (`fs.watchFile`), so that
 a note taken in one shows in the other. Sending (`notes.send`) finds the terminal next to the explorer as **Insert into terminal** does,
 builds one line with the paths relative to that terminal's folder, types it with `herdr pane send-text` (no newline,
 so nothing is submitted, and control characters are removed from the notes), then removes the notes sent. Copying
 (`notes.copy`) puts them on the clipboard, one per line, and keeps them. The diff pane finds its tab with
 `herdr pane get`.
+
+## Theme
+
+`ui.C` and `ui.GIT` hold the colours of the theme in use, dark or light; `ui.useTheme` swaps them in place, and calls
+back the modules that work styles out once (`ui.onTheme`: syntax colours, Markdown, diff colours, scrollbars…). A pane
+reads the `theme` setting at start (`ui.settingTheme`): on `auto`, the `background` file of the state folder, dark
+without it. `ui.screen` then asks the terminal its background colour (OSC 11, `ESC ] 11 ; ? BEL`; herdr answers for
+the outer terminal) when the setting is `auto`. `ui.decode` passes the answer (`ESC ] 11 ; rgb:rrrr/gggg/bbbb`) to the
+pane's `reply`; a luminance above one half means light. The pane writes `background` when it changed, so that the next
+panes open in the right theme at once, and, when its own theme differs, swaps it and redraws everything (its `theme`
+handler, else `resize`). A terminal that does not answer leaves the theme as it was.
 
 ## Images
 
@@ -124,7 +153,8 @@ Each tab has at most one preview, reused for every file. To show a file, the exp
 `hook.js --restore` call `actions.preview`, which looks for a pane labelled *Preview* in the tab (source control and
 the Changes pane show files only through the search they open). If there is one, it writes `{ file, root, line, marks, view, keep, t }` to
 `preview-<tab id>.json` in the state folder, which the preview polls every 200 ms (`fs.watchFile`), loading each
-new request at its line; otherwise it opens a new preview pane with the file in its environment. `marks`, from
+new request at its line; otherwise it opens a new preview pane with the file in its environment. Calls run one at a time, so that clicks made
+while a preview opens find it rather than each opening their own. `marks`, from
 `peek.js` only, are the parts to highlight, `{ from, to, a, b }` (lines, and columns, 0 for whole lines): the preview
 keeps at most 200 well-formed ones (`EXPLORER_MARKS` for a new pane). `view: 'diff'` opens the Diff view
 (`EXPLORER_VIEW`), whose changes come from `diff.collect`, the function the Changes pane uses too, run from the
@@ -163,17 +193,29 @@ they showed, each pane writes its state to `panes/<pane id>.json`:
 At startup, `hook.js --restore` closes, in every workspace, the panes labelled as the plugin's whose foreground
 process is not `node`. In each tab that had an explorer, it opens a new one, at the saved root when both saved
 folders still exist; in each tab that had a preview, it reopens the saved tabs whose file still exists, on the
-current one. The other plugin panes are not reopened. It then deletes the state files of panes that no longer exist.
+current one. The other plugin panes are not reopened. It then deletes the state files of tabs and panes that no longer exist, as `--closed` does on the
+`tab.closed` and `workspace.closed` events.
 herdr keeps pane ids across a restart, which is what lets each pane find its saved state.
+
+`hook.js --agent` follows the agents' turns for the [Last agent turn](usage.md#diff-scope) scope
+(`core/scope.js`): when an agent starts working after having been idle or done, or another agent of the tab does, it
+writes the tree of the repository's working tree to `turn-<tab id>.json`. The tree is made from a copy of the index
+(`GIT_INDEX_FILE`, `git add -A`, `git write-tree`), so the real index is left alone and git rehashes only the files
+changed since; its objects stay in the repository until `git gc` prunes them. The copy is kept in `index/` in the
+state folder, not in the git folder, which a repository received as an archive could fill with a symbolic link; the
+copies unused for a week are removed at startup.
 
 ## Updates
 
 The startup and `tab.created` hooks, never the panes, run the update check (`update.check`): unless `updateCheck` is
-off, at most once a day, it asks the GitHub releases API for the latest release and saves it in `update.json`, which
-the explorers poll to show `↑` when it is newer than the version in `herdr-plugin.toml`. Updating is a
-`git pull --ff-only` of the clone, one at a time across tabs (`update.lock`, taken over after 2 minutes). When the
-manifest, other than its version, or the installer changed, `update.json` gets `finish` and the explorer shows `!`.
-The panes then restart on the new code (see [Launcher and self-restart](#launcher-and-self-restart)).
+off, at most once a day, it asks the GitHub releases API for the latest release and saves it in `update.json`, with
+the changes its text lists (`update.releaseNotes`: the bullets of release-please's notes, links and emphasis dropped)
+and its page. The explorers poll it to show `↑` and the version when it is newer than the version in
+`herdr-plugin.toml` and not the one skipped (`skip`). Updating is a `git pull --ff-only` of the clone, one at a time
+across tabs (`update.lock`, taken over after 2 minutes); it writes `updated` (`{ from, to, t }`), so that the explorers
+restarting on the new code show it for a while. When the manifest, other than its version, or the installer changed,
+`update.json` gets `finish` and the explorer shows `! finish`. The panes then restart on the new code (see
+[Launcher and self-restart](#launcher-and-self-restart)).
 
 ## Refresh and watchers
 

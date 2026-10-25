@@ -2,21 +2,37 @@
 // numbers), not a parser. Strings and comments spanning lines carry a state from one line to the next.
 // Output: one array of [text, style] segments per source line, ready for ui.line().
 'use strict';
-const { fg, cleanLine } = require('../core/ui');
+const { fg, cleanLine, onTheme } = require('../core/ui');
 
-// VS Code Dark+ token colours.
+// Token colours of VS Code Dark+ and Light+, by theme (ui.useTheme).
 const COLORS = {
-  keyword: [86, 156, 214], control: [197, 134, 192], string: [206, 145, 120], number: [181, 206, 168],
-  comment: [106, 153, 85], type: [78, 201, 176], function: [220, 220, 170], variable: [156, 220, 254],
-  constant: [79, 193, 255], regexp: [209, 105, 105], escape: [215, 186, 125], tag: [86, 156, 214],
-  attribute: [156, 220, 254], punctuation: [128, 128, 128], selector: [215, 186, 125], heading: [86, 156, 214],
-  added: [129, 184, 139], removed: [244, 135, 113], meta: [155, 155, 155],
+  dark: {
+    keyword: [86, 156, 214], control: [197, 134, 192], string: [206, 145, 120], number: [181, 206, 168],
+    comment: [106, 153, 85], type: [78, 201, 176], function: [220, 220, 170], variable: [156, 220, 254],
+    constant: [79, 193, 255], regexp: [209, 105, 105], escape: [215, 186, 125], tag: [86, 156, 214],
+    attribute: [156, 220, 254], punctuation: [128, 128, 128], selector: [215, 186, 125], heading: [86, 156, 214],
+    added: [129, 184, 139], removed: [244, 135, 113], meta: [155, 155, 155],
+  },
+  light: {
+    keyword: [0, 0, 255], control: [175, 0, 219], string: [163, 21, 21], number: [9, 134, 88],
+    comment: [0, 128, 0], type: [38, 127, 153], function: [121, 94, 38], variable: [0, 16, 128],
+    constant: [0, 112, 193], regexp: [129, 31, 63], escape: [238, 0, 0], tag: [128, 0, 0],
+    attribute: [229, 0, 0], punctuation: [110, 110, 110], selector: [128, 0, 0], heading: [128, 0, 0],
+    added: [9, 134, 88], removed: [163, 21, 21], meta: [110, 110, 110],
+  },
 };
+// The styles of the theme, changed in place. The language tables name them ('string'), and the compiled languages,
+// which hold the escapes, are dropped at each change of theme.
 const S = {};
-for (const [k, rgb] of Object.entries(COLORS)) S[k] = fg(rgb);
-S.heading = '\x1b[1m' + S.heading;
-S.bold = '\x1b[1m';
-S.italic = '\x1b[3m';
+onTheme(theme => {
+  for (const [k, rgb] of Object.entries(COLORS[theme])) S[k] = fg(rgb);
+  S.heading = '\x1b[1m' + S.heading;
+  S.bold = '\x1b[1m';
+  S.italic = '\x1b[3m';
+});
+
+// A style of the language tables: a name of S, else the style itself ('' or a function).
+const named = style => (typeof style === 'string' && style in S ? S[style] : style);
 
 const LONG = 2000; // longer lines are left plain: minified files would cost too much for nothing readable
 
@@ -47,14 +63,14 @@ function compile(spec) {
   opens.sort((a, b) => b.re.length - a.re.length);
   const rules = [
     ...opens.map(open => ({ re: open.re, open })),
-    ...(spec.rules || []).map(([re, style]) => ({ re, style })),
+    ...(spec.rules || []).map(([re, style]) => ({ re, style: named(style) })),
     { re: NUMBER, style: S.number },
     { re: spec.word || WORD, word: true },
   ];
   return {
     spec, rules, re: new RegExp(rules.map(r => `(${r.re})`).join('|'), spec.ci ? 'gi' : 'g'),
     kw: words(spec.kw || ''), ctl: words(spec.ctl || ''), consts: words(spec.consts || ''),
-    types: words(spec.types || ''),
+    types: words(spec.types || ''), ident: spec.ident === undefined ? undefined : named(spec.ident),
   };
 }
 
@@ -91,9 +107,9 @@ function wordStyle(c, line, w, start, end) {
   if (c.types.has(k)) return S.type;
   PAREN.lastIndex = end;
   if (PAREN.test(line)) return S.function;
-  if (line[start - 1] === '.' && c.spec.ident === undefined) return S.variable;
+  if (line[start - 1] === '.' && c.ident === undefined) return S.variable;
   if (c.spec.capType && w.charCodeAt(0) >= 65 && w.charCodeAt(0) <= 90 && /[a-z]/.test(w)) return S.type;
-  return c.spec.ident !== undefined ? c.spec.ident : S.variable;
+  return c.ident !== undefined ? c.ident : S.variable;
 }
 
 function generic(spec) {
@@ -147,8 +163,8 @@ const JS = {
   rules: [
     // A regular expression literal after an operator or an opening bracket (not a division).
     ['\\/(?![*/])(?<=(?:^|[(,=:\\[!&|?{};+\\-*%<>~^]|\\breturn|\\btypeof)\\s*\\/)'
-      + '(?:\\\\.|\\[(?:\\\\.|[^\\]\\\\])*\\]|[^/\\\\[\\n])+\\/[dgimsuyv]*', S.regexp],
-    ['@[\\w.]+', S.function], ['#[A-Za-z_]\\w*', S.variable],
+      + '(?:\\\\.|\\[(?:\\\\.|[^\\]\\\\])*\\]|[^/\\\\[\\n])+\\/[dgimsuyv]*', 'regexp'],
+    ['@[\\w.]+', 'function'], ['#[A-Za-z_]\\w*', 'variable'],
   ],
 };
 const PY = {
@@ -157,7 +173,7 @@ const PY = {
   ctl: 'if elif else for while break continue return try except finally raise with as import from yield assert match'
     + ' case await',
   types: 'int float str bool list dict set tuple bytes object type',
-  rules: [['@[\\w.]+', S.function], ['\\b[rRbBfFuU]{1,2}(?=["\'])', S.keyword]],
+  rules: [['@[\\w.]+', 'function'], ['\\b[rRbBfFuU]{1,2}(?=["\'])', 'keyword']],
   capType: true,
 };
 const SHELL = {
@@ -165,7 +181,7 @@ const SHELL = {
   kw: 'function local export declare readonly typeset unset alias source set shift trap eval exec end begin not and or',
   ctl: 'if then else elif fi for while until do done case esac in select return exit break continue time switch',
   rules: [
-    ['\\$\\{[^}\\s]*\\}|\\$(?:[A-Za-z_]\\w*|[\\d@#?$!*-])', S.variable], ['(?<=\\s|^)--?[\\w-]+', S.constant],
+    ['\\$\\{[^}\\s]*\\}|\\$(?:[A-Za-z_]\\w*|[\\d@#?$!*-])', 'variable'], ['(?<=\\s|^)--?[\\w-]+', 'constant'],
   ],
   word: '[A-Za-z_][\\w.-]*', ident: '',
 };
@@ -176,11 +192,11 @@ const PS = {
   ctl: 'if elseif else switch foreach for while do until break continue return try catch finally throw trap exit in',
   consts: '$true $false $null',
   rules: [
-    ['\\$(?:true|false|null)\\b', S.keyword], ['\\$[\\w:]+|\\$\\{[^}]*\\}', S.variable],
-    ['\\b[A-Za-z]+-[A-Za-z]\\w*', S.function],
+    ['\\$(?:true|false|null)\\b', 'keyword'], ['\\$[\\w:]+|\\$\\{[^}]*\\}', 'variable'],
+    ['\\b[A-Za-z]+-[A-Za-z]\\w*', 'function'],
     ['-(?:eq|ne|gt|ge|lt|le|like|notlike|match|notmatch|contains|notcontains|in|notin|and|or|not|xor|is|isnot|as'
-      + '|replace|split|join|f)\\b', S.keyword],
-    ['\\[[\\w.]+\\]', S.type],
+      + '|replace|split|join|f)\\b', 'keyword'],
+    ['\\[[\\w.]+\\]', 'type'],
   ],
   ident: '',
 };
@@ -192,8 +208,8 @@ const RUST = {
   consts: 'true false None Some Ok Err',
   types: 'i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize f32 f64 bool char str String Vec Option Result Box',
   rules: [
-    ["b?'(?:\\\\.|[^\\\\'])'", S.string], ["'[A-Za-z_]\\w*", S.keyword], ['#!?\\[[^\\]]*\\]', S.meta],
-    ['\\w+!', S.function],
+    ["b?'(?:\\\\.|[^\\\\'])'", 'string'], ["'[A-Za-z_]\\w*", 'keyword'], ['#!?\\[[^\\]]*\\]', 'meta'],
+    ['\\w+!', 'function'],
   ],
 };
 const GO = {
@@ -210,7 +226,7 @@ const C_KW = 'int char float double void long short signed unsigned struct union
 const C = {
   ...C_LIKE, str: ['"', "'"], kw: C_KW, ctl: C_CTL, consts: 'true false NULL nullptr',
   types: 'size_t ssize_t ptrdiff_t int8_t int16_t int32_t int64_t uint8_t uint16_t uint32_t uint64_t FILE',
-  rules: [['^\\s*#\\s*\\w+', S.control], ['(?<=#\\s*include\\s*)<[^>]*>', S.string]],
+  rules: [['^\\s*#\\s*\\w+', 'control'], ['(?<=#\\s*include\\s*)<[^>]*>', 'string']],
 };
 const CPP = {
   ...C, kw: C_KW + ' class namespace template typename public private protected virtual override final friend'
@@ -226,7 +242,7 @@ const CS = {
     + ' event operator implicit explicit unsafe fixed lock checked unchecked where required',
   ctl: C_CTL + ' foreach yield await when',
   consts: 'true false null',
-  rules: [['^\\s*#\\s*\\w+', S.control]],
+  rules: [['^\\s*#\\s*\\w+', 'control']],
 };
 const JAVA = {
   ...C_LIKE, str: [['"""', '"""', 'm'], '"', "'"],
@@ -234,7 +250,7 @@ const JAVA = {
     + ' native synchronized transient volatile strictfp new this super void int long short byte char boolean float'
     + ' double var instanceof throws assert permits sealed',
   ctl: C_CTL + ' yield', consts: 'true false null',
-  rules: [['@\\w+', S.type]],
+  rules: [['@\\w+', 'type']],
 };
 const KOTLIN = {
   ...C_LIKE, str: [['"""', '"""', 'mr'], '"', "'"],
@@ -242,7 +258,7 @@ const KOTLIN = {
     + ' annotation open override abstract final private protected public internal inline suspend operator infix'
     + ' lateinit const vararg reified this super is as in out by get set where',
   ctl: 'if else when for while do break continue return throw try catch finally', consts: 'true false null',
-  rules: [['@\\w+', S.type]],
+  rules: [['@\\w+', 'type']],
 };
 const SWIFT = {
   ...C_LIKE, str: [['"""', '"""', 'm'], '"'],
@@ -252,7 +268,7 @@ const SWIFT = {
   ctl: 'if else guard switch case default for while repeat break continue return throw do try catch defer'
     + ' fallthrough await',
   consts: 'true false nil',
-  rules: [['@\\w+', S.type]],
+  rules: [['@\\w+', 'type']],
 };
 const PHP = {
   ...C_LIKE, line: ['//', '#(?!\\[)'], str: [['"', '"', 'm'], ["'", "'", 'm']], ci: true,
@@ -261,7 +277,7 @@ const PHP = {
   ctl: 'if else elseif endif for foreach endforeach while endwhile do switch case default break continue return'
     + ' throw try catch finally yield include require include_once require_once as match',
   consts: 'true false null',
-  rules: [['<\\?(?:php|=)?|\\?>', S.meta], ['\\$\\w+', S.variable]],
+  rules: [['<\\?(?:php|=)?|\\?>', 'meta'], ['\\$\\w+', 'variable']],
 };
 const RUBY = {
   line: ['#'], block: [['=begin', '=end']], str: [['"', '"', 'm'], ["'", "'", 'm'], ['`', '`', 'm']],
@@ -269,7 +285,7 @@ const RUBY = {
     + ' attr_writer require require_relative include extend private protected public',
   ctl: 'if elsif else unless case when while until for in do end begin rescue ensure raise return break next redo'
     + ' retry yield then',
-  rules: [['(?<![:\\w]):[A-Za-z_]\\w*[?!]?', S.constant], ['@@?\\w+|\\$\\w+', S.variable]],
+  rules: [['(?<![:\\w]):[A-Za-z_]\\w*[?!]?', 'constant'], ['@@?\\w+|\\$\\w+', 'variable']],
   word: '[A-Za-z_]\\w*[?!]?', capType: true,
 };
 const LUA = {
@@ -291,11 +307,11 @@ const JSON_ = {
   line: ['//'], block: [['/*', '*/']], str: ['"'], keys: true, consts: 'true false null', ident: '',
 };
 const YAML = {
-  line: ['(?<!\\S)#'], str: ['"', ["'", "'", 'r']], keys: true, ci: true, ident: S.string,
+  line: ['(?<!\\S)#'], str: ['"', ["'", "'", 'r']], keys: true, ci: true, ident: 'string',
   consts: 'true false null yes no on off',
   rules: [
-    ['^\\s*(?:-\\s+)*[^\\s#:\'"\\-][^:#]*(?=:(?:\\s|$))', S.keyword], ['^(?:---|\\.\\.\\.)(?=\\s|$)', S.control],
-    ['[&*][\\w-]+', S.type], ['!!?[\\w-]*', S.type], ['^\\s*-(?=\\s|$)', ''], ['[|>][+-]?(?=\\s*$)', S.control],
+    ['^\\s*(?:-\\s+)*[^\\s#:\'"\\-][^:#]*(?=:(?:\\s|$))', 'keyword'], ['^(?:---|\\.\\.\\.)(?=\\s|$)', 'control'],
+    ['[&*][\\w-]+', 'type'], ['!!?[\\w-]*', 'type'], ['^\\s*-(?=\\s|$)', ''], ['[|>][+-]?(?=\\s*$)', 'control'],
   ],
   word: '[A-Za-z_~][\\w.-]*',
 };
@@ -303,25 +319,25 @@ const INI = {
   line: ['(?<!\\S)[#;]'], str: [['"""', '"""', 'm'], ["'''", "'''", 'mr'], '"', ["'", "'", 'r']],
   consts: 'true false', ident: '',
   rules: [
-    ['^\\s*\\[[^\\]]*\\]\\]?', S.type], ['^\\s*(?:export\\s+)?[\\w.\\-]+(?=\\s*[=:])', S.variable],
-    ['\\$\\{[^}\\s]*\\}', S.variable],
+    ['^\\s*\\[[^\\]]*\\]\\]?', 'type'], ['^\\s*(?:export\\s+)?[\\w.\\-]+(?=\\s*[=:])', 'variable'],
+    ['\\$\\{[^}\\s]*\\}', 'variable'],
   ],
 };
 const DOCKER = {
   ci: true, line: ['^\\s*#'], str: ['"', "'"], ident: '',
   rules: [
     ['^\\s*(?:from|run|cmd|label|maintainer|expose|env|add|copy|entrypoint|volume|user|workdir|arg|onbuild|stopsignal'
-      + '|healthcheck|shell)\\b', S.keyword],
-    ['\\bas\\b(?=\\s+\\w+\\s*$)', S.keyword], ['\\$\\{[^}\\s]*\\}|\\$\\w+', S.variable],
-    ['(?<=\\s)--[\\w-]+', S.constant],
+      + '|healthcheck|shell)\\b', 'keyword'],
+    ['\\bas\\b(?=\\s+\\w+\\s*$)', 'keyword'], ['\\$\\{[^}\\s]*\\}|\\$\\w+', 'variable'],
+    ['(?<=\\s)--[\\w-]+', 'constant'],
   ],
 };
 const MAKE = {
   line: ['#'], str: ['"', "'"], ident: '',
   ctl: 'ifeq ifneq ifdef ifndef else endif include define endef export override unexport vpath',
   rules: [
-    ['\\$\\([^)\\s]*\\)|\\$\\{[^}\\s]*\\}|\\$[@<^+?*%$]', S.variable],
-    ['^[\\w.\\-]+(?=\\s*[:+?!]?=)', S.variable], ['^[^\\s:#=$][^:#=]*(?=:(?!=))', S.function],
+    ['\\$\\([^)\\s]*\\)|\\$\\{[^}\\s]*\\}|\\$[@<^+?*%$]', 'variable'],
+    ['^[\\w.\\-]+(?=\\s*[:+?!]?=)', 'variable'], ['^[^\\s:#=$][^:#=]*(?=:(?!=))', 'function'],
   ],
   word: '[A-Za-z_][\\w-]*',
 };
@@ -519,6 +535,7 @@ const SPECS = {
 };
 const FNS = { diff, markdown, html, xml: html, css };
 const cacheFns = {};
+onTheme(() => { for (const id in cacheFns) delete cacheFns[id]; });
 function lineFn(id) {
   if (!cacheFns[id]) cacheFns[id] = FNS[id] || (SPECS[id] && generic(SPECS[id]));
   return cacheFns[id];

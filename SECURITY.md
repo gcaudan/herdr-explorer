@@ -111,8 +111,9 @@ contains spaces or control characters is refused; the others pass after `--end-o
 - **Saving** an edited file writes a new temporary file beside its target, created exclusively (`wx`, never through a
   file or link already there) with the file's permissions and group, then renames it over the file. A file with hard
   links, owned by another user, or in a folder that cannot be written is written in place instead.
-- **Discard**: source control deletes untracked files only when they resolve inside the repository; the explorer's
-  *Discard changes* sends them to the trash instead.
+- **Discard**: untracked files discarded go to the trash, from the explorer's *Discard changes*, source control's
+  `d` and `D` in the preview and the Changes pane alike; without a trash, they are deleted for good only after a
+  second question. Source control touches them only when they resolve inside the repository.
 - **Opening files**: a double-click opens with the system application only documents and media (images, PDF,
   Office, archives, audio, video); everything else goes to the preview or an editor, so it never starts an
   executable, a script or a shortcut. *Open in app* adds only `txt`, `md`, `csv`, `log`, `json`, `xml`, `html` and
@@ -142,6 +143,9 @@ contains spaces or control characters is refused; the others pass after `--end-o
 - **`peek.js`** shows, in the preview, a regular file the caller names: anything the user can read, as the preview
   already does, never a folder or a device. An agent calling it changes what you see, not what is run. It writes the
   request file of the state folder only, whose path it reads from `state-dir` in the plugin's config folder.
+- **Ctrl-clicked links**: herdr hands the plugin only `file://` hyperlinks. A link naming another host than this
+  machine (or `localhost`) is refused, since on Windows it would reach a network share; the file then shows as with
+  `peek.js`, never run.
 
 ## Commit messages from Claude
 

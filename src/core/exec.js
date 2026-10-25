@@ -2,7 +2,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { execFile } = require('child_process');
+const { execFile, spawn } = require('child_process');
 
 const WIN = process.platform === 'win32';
 const PLUGIN = process.env.HERDR_PLUGIN_ID || 'gcaudan.explorer';
@@ -79,6 +79,35 @@ const run = (cmd, args, opts = {}) => new Promise(resolve => {
   if (!cmd) return resolve(null);
   execFile(cmd, args, { windowsHide: true, maxBuffer: 64 << 20, ...opts }, (err, stdout) => resolve(err ? null : stdout));
 });
+
+// Runs a program: { code, out, err }, code null when it could not start or timed out; input goes to stdin.
+// run() returns stdout only, and git's error messages and stdin (commit message, pathspecs) are
+// needed here. detached (not on Windows): a session without terminal, so that ssh, gpg or a credential helper
+// cannot take over the pane to ask for a password; they fail instead, or use their graphical prompt.
+function exec(cmd, args, { cwd, env, input, timeout = 0, detached = false, shell = false } = {}) {
+  return new Promise(resolve => {
+    if (!cmd) return resolve({ code: null, out: '', err: 'not found' });
+    let child;
+    try { child = spawn(cmd, args, { cwd, env, shell, windowsHide: true, detached: detached && !WIN }); }
+    catch (e) { return resolve({ code: null, out: '', err: e.message }); }
+    const out = [], err = [];
+    let size = 0, errSize = 0, done = false, timer = null;
+    const finish = code => {
+      if (done) return;
+      done = true; clearTimeout(timer);
+      resolve({ code, out: Buffer.concat(out).toString('utf8'), err: Buffer.concat(err).toString('utf8') });
+    };
+    // Detached, the child leads its own process group: killed with it, ssh started by git does not outlive it.
+    const kill = () => { try { if (detached && !WIN) process.kill(-child.pid); else child.kill(); } catch { } };
+    if (timeout) timer = setTimeout(() => { kill(); finish(null); }, timeout);
+    child.stdout.on('data', d => { if ((size += d.length) <= 64 << 20) out.push(d); });
+    child.stderr.on('data', d => { if ((errSize += d.length) <= 64 << 20) err.push(d); });
+    child.on('error', e => { err.push(Buffer.from(e.message)); finish(null); });
+    child.on('close', code => finish(code));
+    child.stdin.on('error', () => { });
+    child.stdin.end(input || '');
+  });
+}
 
 // The result of a herdr command's JSON answer, or null.
 function result(stdout) {
@@ -172,13 +201,17 @@ const DEFAULTS = {
   singleClick: false, // the preview follows the selection (click or arrows): Preview follows selection
   side: 'left',       // explorer docked to the left or the right of the tab
   autoOpen: true,     // open the explorer in every new tab that has a single pane
-  follow: false,      // reveal the folder of the terminal next to the explorer when it changes
+  compact: true,      // compact folders: a folder whose only entry is a folder shows on one row with it
+  follow: true,       // reveal the folder of the terminal next to the explorer when it changes
   glyphs: 'nerd',     // icon set: 'nerd' (Nerd Font glyphs), 'emoji', 'unicode' or 'ascii', for terminals without a Nerd Font
+  theme: 'auto',      // colours: 'dark', 'light', or 'auto', by the terminal's background (ui.settingTheme)
   icons: '',          // explorer icon theme: { id, label, file } of a VS Code one; empty: Nerd Font icons
   wrap: false,        // preview: wrap long lines
   lineNumbers: true,  // preview: line number gutter
+  changes: true,      // preview: the lines changed since HEAD beside the file's lines and on its scrollbar
   images: 'auto',     // preview images: 'auto' (pixels when the terminal has the Kitty graphics protocol, else half
                       // blocks), 'blocks' (half blocks), 'pixels' (pixels without waiting for the terminal's answer)
+  reviewPrefix: '',   // review notes: text typed before them when sent to the agent (A), such as an instruction
   diffLayout: '',     // diffs 'inline' or 'split' (side by side), or { narrow, wide } (diff.js); empty: by the pane's width
   updateCheck: true,  // check GitHub once a day for a newer release
   scmTree: false,     // source control: the changes as a folder tree rather than a list
@@ -196,13 +229,53 @@ function writeSettings(settings) {
 // What each plugin pane shows, one file per pane in the state folder (panes/), since herdr does not keep it across a
 // restart: the explorer's space folder and tree root, which Set as root may have moved; the preview's file.
 const PANES_DIR = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'panes');
-const paneFile = pane => PANES_DIR && pane && path.join(PANES_DIR, `${pane.replace(/[^\w.-]/g, '_')}.json`);
+const paneName = pane => `${pane.replace(/[^\w.-]/g, '_')}.json`;
+const paneFile = pane => PANES_DIR && pane && path.join(PANES_DIR, paneName(pane));
 function readPaneState(pane) {
   try { return JSON.parse(fs.readFileSync(paneFile(pane), 'utf8')); } catch { return null; }
 }
 function writePaneState(pane, data) {
   const file = paneFile(pane);
   if (file) writeAtomic(file, JSON.stringify(data));
+}
+
+// What a tab keeps in the state folder, one file per tab and kind: <kind>-<tab id>.json. The kinds: the review notes
+// (notes.js), the preview's requests (actions.js), the diff scope and the agent's last turn (scope.js), the files viewed (viewed.js). Read from the environment at each call, as peek.js sets the state
+// folder after loading this module.
+const TAB_KINDS = ['notes', 'preview', 'review', 'scope', 'search', 'turn', 'viewed'];
+const tabName = (kind, tab) => `${kind}-${String(tab).replace(/[^\w-]/g, '_')}.json`;
+const tabFile = (kind, tab) => process.env.HERDR_PLUGIN_STATE_DIR && tab
+  && path.join(process.env.HERDR_PLUGIN_STATE_DIR, tabName(kind, tab));
+
+// The state files left by tabs and panes that no longer exist: names, the files of the state folder; panes, those of
+// its panes folder; tabs and livePanes, the ids that still exist. Returns the paths to remove.
+function staleState(dir, names, panes, tabs, livePanes) {
+  const keepTabs = new Set(TAB_KINDS.flatMap(k => tabs.map(t => tabName(k, t))));
+  const kinds = new RegExp(`^(${TAB_KINDS.join('|')})-.+[.]json$`);
+  const keepPanes = new Set(livePanes.map(paneName));
+  return [...names.filter(n => kinds.test(n) && !keepTabs.has(n)).map(n => path.join(dir, n)),
+    ...panes.filter(n => !keepPanes.has(n)).map(n => path.join(dir, 'panes', n))];
+}
+
+// Removes the state of the tabs and panes that no longer exist (staleState); the ids of those that do, from herdr.
+// A file written in the last 10 s stays: a tab opened after herdr gave its list may already have one.
+function sweepState(tabs, livePanes) {
+  const dir = process.env.HERDR_PLUGIN_STATE_DIR;
+  if (!dir) return;
+  const list = d => { try { return fs.readdirSync(d); } catch { return []; } };
+  const since = Date.now() - 10 * 1000;
+  for (const f of staleState(dir, list(dir), list(path.join(dir, 'panes')), tabs, livePanes)) {
+    try { if (fs.statSync(f).mtimeMs < since) fs.rmSync(f, { recursive: true, force: true }); } catch { }
+  }
+  // The copies of indexes that the agent-turn snapshots keep (scope.js keptIndex), unused for a week: a copy goes by
+  // the date of its .from, touched at each use. The same week for a lock left by a process that died (scope.js never
+  // removes one, git may be using it).
+  const week = Date.now() - 7 * 24 * 3600 * 1000;
+  const old = f => { try { return fs.statSync(f).mtimeMs < week; } catch { return false; } };
+  // All judged before any goes: a copy whose .from went first would be judged by its own date.
+  const names = list(path.join(dir, 'index')), has = new Set(names);
+  const stale = names.filter(n => old(path.join(dir, 'index', /^[0-9a-f]+$/.test(n) && has.has(`${n}.from`) ? `${n}.from` : n)));
+  for (const n of stale) try { fs.rmSync(path.join(dir, 'index', n), { force: true }); } catch { }
 }
 
 // Key bindings, editable by the user: keys.json in the plugin config folder, one object per pane (only the
@@ -255,6 +328,6 @@ function saveKeys(all) {
 }
 
 module.exports = {
-  WIN, PLUGIN, pathDirs, which, remoteLink, realPath, writeAtomic, addConfig, OWN_PANES, words, run, result, HERDR, GIT, gitEnv, gitOperation, version, newer, DEFAULT_WIDTH, WIDTH_FILE, readWidth,
-  SETTINGS_FILE, readSettings, writeSettings, PANES_DIR, paneFile, readPaneState, writePaneState, KEYS_FILE, readKeys, keysTemplate, writeKeys,
+  WIN, PLUGIN, pathDirs, which, remoteLink, realPath, writeAtomic, addConfig, OWN_PANES, words, run, exec, result, HERDR, GIT, gitEnv, gitOperation, version, newer, DEFAULT_WIDTH, WIDTH_FILE, readWidth,
+  SETTINGS_FILE, readSettings, writeSettings, PANES_DIR, paneFile, readPaneState, writePaneState, TAB_KINDS, tabFile, staleState, sweepState, KEYS_FILE, readKeys, keysTemplate, writeKeys,
 };

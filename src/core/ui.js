@@ -1,6 +1,9 @@
 // Terminal helpers shared by the plugin's panes: colours, text width, lines, input decoding, a one-line text
 // field, and the alternate screen setup.
 'use strict';
+const fs = require('fs');
+const path = require('path');
+const { readSettings, writeAtomic } = require('./exec');
 
 // The Kitty graphics protocol query (a 1×1 image, not kept), and the start of the answer of a terminal that has it.
 const KITTY_QUERY = '\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\';
@@ -8,43 +11,102 @@ const KITTY_OK = /^\x1b_Gi=31;OK/;
 
 const fg = rgb => `\x1b[38;2;${rgb.join(';')}m`;
 const bg = rgb => `\x1b[48;2;${rgb.join(';')}m`;
+// A shade of a colour close to the theme's background, for a pill's background.
+const shade = rgb => rgb.map((v, i) => Math.round(C.canvas[i] + (v - C.canvas[i]) * 0.25));
 const glyph = code => String.fromCodePoint(code);
 // The glyphs of the panes' controls in the icon set chosen in the settings: Nerd Font glyphs, or characters any
-// font has. G.search is the magnifier before every find and filter field; G.set the set's name.
+// font has. G.search is the magnifier before every find and filter field; G.remote marks a branch whose remote one is at
+// the same commit; G.set the set's name.
 const GLYPHS = {
-  nerd: { closed: glyph(0xeab6), open: glyph(0xeab4), gear: glyph(0xf013), search: glyph(0xf002), branch: glyph(0xe0a0) },
-  unicode: { closed: '▸', open: '▾', gear: '⚙', search: '⌕', branch: '⎇' },
-  ascii: { closed: '>', open: 'v', gear: '=', search: '/', branch: '*' },
+  nerd: { closed: glyph(0xeab6), open: glyph(0xeab4), gear: glyph(0xf013), search: glyph(0xf002), branch: glyph(0xe0a0), remote: glyph(0xf0c2) },
+  unicode: { closed: '▸', open: '▾', gear: '⚙', search: '⌕', branch: '⎇', remote: '☁' },
+  ascii: { closed: '>', open: 'v', gear: '=', search: '/', branch: '*', remote: '^' },
 };
 GLYPHS.emoji = GLYPHS.unicode;
 const G = {};
 const useGlyphs = set => Object.assign(G, GLYPHS[set] || GLYPHS.nerd, { set: GLYPHS[set] ? set : 'nerd' });
 useGlyphs('nerd');
 
-// Colours from the VS Code Dark+ theme (git decorations) and the Seti theme (icons).
-const C = {
+// Colours of the dark theme, from VS Code Dark+ (git decorations) and Seti (icons), and of the light one, from
+// Light+. C and GIT hold the theme's (useTheme): a pane reading C.x at each render follows it, a module that works
+// styles out once does it again in onTheme.
+const DARK = {
   yellow: [203, 203, 65], blue: [81, 154, 186], orange: [227, 121, 51], green: [141, 193, 73],
   purple: [160, 116, 196], red: [204, 62, 68], grey: [109, 128, 134], folder: [220, 182, 122],
   dim: [140, 140, 140], text: [212, 212, 212], select: [4, 57, 94], selectBlur: [55, 55, 61],
   header: [37, 37, 38], added: [35, 60, 36], removed: [72, 30, 30], find: [120, 90, 20],
+  addedWord: [46, 105, 52], removedWord: [125, 42, 42], gap: [30, 30, 30], section: [30, 36, 44], // diffs
+  rail: [60, 60, 60], thumb: [130, 130, 130], switch: [58, 58, 62], field: [60, 60, 60], panel: [49, 49, 49],
+  menu: [30, 30, 30], hit: [24, 163, 255], current: [200, 140, 30], found: [120, 70, 20], warn: [64, 48, 16],
+  pulse: [32, 58, 40], strong: [255, 255, 255], canvas: [30, 30, 30],
+  buttonOn: [96, 96, 96], buttonOff: [45, 45, 45], danger: [138, 47, 42], go: [46, 110, 58],
+  dangerText: [229, 120, 109], goText: [111, 191, 142],
 };
-const GIT = {
+const LIGHT = {
+  yellow: [148, 116, 0], blue: [0, 106, 177], orange: [196, 90, 0], green: [56, 128, 30],
+  purple: [128, 60, 180], red: [205, 49, 49], grey: [110, 120, 125], folder: [184, 134, 60],
+  dim: [110, 110, 110], text: [40, 40, 40], select: [173, 214, 255], selectBlur: [228, 230, 236],
+  header: [243, 243, 243], added: [221, 243, 221], removed: [252, 225, 225], find: [250, 222, 140],
+  addedWord: [172, 226, 170], removedWord: [245, 180, 180], gap: [240, 240, 240], section: [226, 234, 244],
+  rail: [215, 215, 215], thumb: [160, 160, 160], switch: [225, 225, 228], field: [232, 232, 232], panel: [236, 236, 236],
+  menu: [248, 248, 248], hit: [0, 102, 204], current: [240, 160, 40], found: [250, 200, 120], warn: [253, 236, 200],
+  pulse: [214, 240, 214], strong: [0, 0, 0], canvas: [255, 255, 255],
+  buttonOn: [110, 110, 110], buttonOff: [225, 225, 225], danger: [196, 43, 28], go: [46, 125, 50],
+  dangerText: [180, 35, 24], goText: [30, 120, 50],
+};
+const GIT_DARK = {
   M: [226, 192, 141], A: [129, 184, 139], U: [115, 201, 145], R: [115, 201, 145],
   D: [199, 78, 57], C: [228, 103, 107], '!': [140, 140, 140],
 };
+const GIT_LIGHT = { M: [137, 85, 3], A: [88, 124, 12], U: [0, 113, 0], R: [0, 113, 0], D: [173, 7, 7], C: [173, 7, 7], '!': [142, 142, 144] };
+const THEMES = { dark: [DARK, GIT_DARK], light: [LIGHT, GIT_LIGHT] };
+const C = { ...DARK }, GIT = { ...GIT_DARK };
+
+let theme = 'dark';
+const themed = [];
+function useTheme(name) {
+  theme = THEMES[name] ? name : 'dark';
+  Object.assign(C, THEMES[theme][0]);
+  Object.assign(GIT, THEMES[theme][1]);
+  for (const fn of themed) fn(theme);
+}
+// fn(theme) now and whenever the theme changes: for the styles a module works out once.
+function onTheme(fn) { themed.push(fn); fn(theme); }
+const themeName = () => theme;
+
+// The theme setting: 'dark', 'light', or 'auto', the terminal's background as last seen (the background file of the
+// state folder, written when a pane reads it from the terminal, see screen), dark until then.
+const BACKGROUND = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'background');
+const themeSetting = () => { const t = readSettings().theme; return t === 'dark' || t === 'light' ? t : 'auto'; };
+function seenBackground() {
+  try { return fs.readFileSync(BACKGROUND, 'utf8').trim() === 'light' ? 'light' : 'dark'; } catch { return 'dark'; }
+}
+const settingTheme = (t = themeSetting()) => (t === 'auto' ? seenBackground() : t);
+useTheme(settingTheme());
+// The terminal's background from its answer to OSC 11 (rgb:rrrr/gggg/bbbb): 'light' or 'dark', null when unreadable.
+function backgroundOf(reply) {
+  const m = /^\x1b\]11;rgb:([0-9a-f]+)\/([0-9a-f]+)\/([0-9a-f]+)/i.exec(reply);
+  if (!m) return null;
+  const [r, g, b] = m.slice(1, 4).map(h => parseInt(h, 16) / (16 ** h.length - 1));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5 ? 'light' : 'dark';
+}
 
 // Control characters from file names or contents are never written to the terminal: they could move the
 // cursor, change colours or hide text.
 const CONTROL = /[\x00-\x1f\x7f-\x9f]/g;
 const clean = text => text.replace(CONTROL, '?');
-// Tabs expanded to spaces, other control characters removed: for file contents.
-function cleanLine(text, tab = 4) {
-  if (!/[\x00-\x1f\x7f-\x9f]/.test(text)) return text;
+// Tabs expanded to spaces, other control characters removed: for file contents. at: an array that receives, for
+// each index of text and its end, where it lands in the cleaned text.
+function cleanLine(text, tab = 4, at = null) {
+  if (!at && !/[\x00-\x1f\x7f-\x9f]/.test(text)) return text;
   let s = '';
-  for (const ch of text) {
+  for (let i = 0; i < text.length; i++) {
+    if (at) at.push(s.length);
+    const ch = text[i];
     if (ch === '\t') s += ' '.repeat(tab - (Array.from(s).length % tab));
     else if (!/[\x00-\x1f\x7f-\x9f]/.test(ch)) s += ch;
   }
+  if (at) at.push(s.length);
   return s;
 }
 
@@ -192,8 +254,8 @@ function helpMouse(m, state) {
 // 'no') }. Its title, the name concerned and where it is, a note, then the buttons,
 // the action in red (green for tone 'go'), the focused one lit, the other dimmed. Their columns are kept for clicks
 // (zones).
-const BUTTON = { danger: [138, 47, 42], go: [46, 110, 58] }, BUTTON_ON = [96, 96, 96], BUTTON_OFF = [45, 45, 45];
-const DANGER_TEXT = { danger: [229, 120, 109], go: [111, 191, 142] };
+const BUTTON = { get danger() { return C.danger; }, get go() { return C.go; } };
+const DANGER_TEXT = { get danger() { return C.dangerText; }, get go() { return C.goText; } };
 function confirm(lines, W, H, q) {
   // No room for the card's edges: keys only.
   q.zones = null;
@@ -217,8 +279,8 @@ function confirm(lines, W, H, q) {
   const yes = ` y ${q.action} `, no = ' n Cancel ';
   const gap = Math.max(1, Math.min(3, inner - 3 - textWidth(yes) - textWidth(no)));
   const tone = BUTTON[q.tone] ? q.tone : 'danger', lit = '\x1b[1m' + fg([255, 255, 255]);
-  const yesStyle = q.focus === 'yes' ? lit + bg(BUTTON[tone]) : fg(DANGER_TEXT[tone]) + bg(BUTTON_OFF);
-  const noStyle = q.focus === 'yes' ? fg(C.dim) + bg(BUTTON_OFF) : lit + bg(BUTTON_ON);
+  const yesStyle = q.focus === 'yes' ? lit + bg(BUTTON[tone]) : fg(DANGER_TEXT[tone]) + bg(C.buttonOff);
+  const noStyle = q.focus === 'yes' ? fg(C.dim) + bg(C.buttonOff) : lit + bg(C.buttonOn);
   text.push(...(gaps ? [[]] : []), [['  ', ''], [yes, yesStyle], [' '.repeat(gap), ''], [no, noStyle]]);
   const h = text.length + 2, x = Math.max(0, Math.floor((W - inner - 2) / 2));
   const y = Math.max(1, Math.min(H - h, Math.floor((H - h) / 3)));
@@ -248,34 +310,41 @@ function confirmMouse(m, q) {
 }
 
 // A question in a card with more answers than confirm's two, drawn as confirm draws its card: q: { title, name, where,
-// note, buttons: [{ key, label, tone }], focus (the index of the button lit) }. Each button shows its key and label,
-// the focused one lit in its tone ('go' green, 'danger' red, else grey). The columns of the buttons are kept for clicks
-// (zones), and the card's (box).
+// note, list, buttons: [{ key, label, tone }], focus (the index of the button lit) }; list: lines shown as bullets
+// under the name. Each button shows its key and label, the focused one lit in its tone ('go' green, 'danger' red,
+// else grey), on as many rows as the card's width needs. The columns of the buttons are kept for clicks (zones), and
+// the card's (box).
 function ask(lines, W, H, q) {
   q.zones = null; q.box = null;
   if (W < 2) return;
   const inner = Math.min(48, Math.max(W - 4, Math.min(12, W - 2), 0)), room = Math.max(1, inner - 2);
   const names = q.name ? wrap(q.name, room).slice(0, 3).map(l => [[` ${l}`, '']]) : [];
+  const list = (q.list || []).map(l => [[' • ', fg(C.dim)], [ellipsis(l, Math.max(1, room - 3)), '']]);
   const where = q.where ? [[[` ${ellipsis(q.where, room)}`, fg(C.dim)]]] : [];
   const note = q.note ? [[[` ${ellipsis(q.note, room)}`, fg(C.dim)]]] : [];
-  // A low pane: the same order as confirm's to leave things out, the buttons last.
+  // The buttons in rows that fit the card, 2 spaces apart (1 when that keeps them on one row).
+  const labels = q.buttons.map(b => ` ${keyLabel(b.key)} ${b.label} `);
+  const total = g => labels.reduce((s, l) => s + textWidth(l), 0) + g * (labels.length - 1);
+  const gap = total(2) <= inner - 2 || total(1) > inner - 2 ? 2 : 1, bands = [[]];
+  let used = 0;
+  labels.forEach((l, i) => {
+    const band = bands[bands.length - 1];
+    if (band.length && used + gap + textWidth(l) > inner - 2) { bands.push([i]); used = textWidth(l); } else { used += (band.length ? gap : 0) + textWidth(l); band.push(i); }
+  });
+  // A low pane: the list goes first, then the same order as confirm's to leave things out, the buttons last.
   let gaps = 2, title = true;
-  const rows = () => +title + 1 + gaps + names.length + where.length + note.length, fit = Math.max(1, H - 3);
+  const rows = () => +title + bands.length + gaps + names.length + list.length + where.length + note.length, fit = Math.max(1, H - 3);
+  while (rows() > fit && list.length) list.pop();
   while (rows() > fit && gaps) gaps--;
   if (rows() > fit) where.length = 0;
   while (rows() > fit && names.length > 1) names.pop();
   if (rows() > fit) note.length = 0;
   if (rows() > fit) names.length = 0;
   if (rows() > fit) title = false;
-  const text = [...(title ? [[[` ${ellipsis(q.title, room)}`, '\x1b[1m']]] : []), ...(gaps > 1 ? [[]] : []), ...names, ...where, ...note];
-  const labels = q.buttons.map(b => ` ${keyLabel(b.key)} ${b.label} `);
-  const gap = labels.reduce((s, l) => s + textWidth(l), 0) + 2 * (labels.length - 1) <= inner - 2 ? 2 : 1;
-  const lit = '\x1b[1m' + fg([255, 255, 255]), buttons = [['  ', '']];
-  q.buttons.forEach((b, i) => {
-    if (i) buttons.push([' '.repeat(gap), '']);
-    buttons.push([labels[i], i === q.focus ? lit + bg(BUTTON[b.tone] || BUTTON_ON) : fg(DANGER_TEXT[b.tone] || C.dim) + bg(BUTTON_OFF)]);
-  });
-  text.push(...(gaps ? [[]] : []), buttons);
+  const text = [...(title ? [[[` ${ellipsis(q.title, room)}`, '\x1b[1m']]] : []), ...(gaps > 1 ? [[]] : []), ...names, ...list, ...where, ...note];
+  const lit = '\x1b[1m' + fg([255, 255, 255]);
+  text.push(...(gaps ? [[]] : []), ...bands.map(band => [['  ', ''], ...band.flatMap((i, k) => [[k ? ' '.repeat(gap) : '', ''],
+    [labels[i], i === q.focus ? lit + bg(BUTTON[q.buttons[i].tone] || C.buttonOn) : fg(DANGER_TEXT[q.buttons[i].tone] || C.dim) + bg(C.buttonOff)]])]));
   const h = text.length + 2, x = Math.max(0, Math.floor((W - inner - 2) / 2));
   const y = Math.max(1, Math.min(H - h, Math.floor((H - h) / 3)));
   const edge = fg(C.dim), left = ' '.repeat(x), right = ' '.repeat(Math.max(0, W - x - inner - 2));
@@ -286,15 +355,18 @@ function ask(lines, W, H, q) {
   // Screen columns from 1: the card's edge, then 2 spaces before the first button; a button cut by the edge is
   // clickable up to it, one past it not at all.
   const end = x + inner + 1;
-  let bx = x + 4;
   q.box = { x0: x + 1, x1: x + inner + 2, y0: y + 1, y1: y + h };
-  if (y + h - 2 < H) {
-    q.zones = { y: y + h - 2, buttons: [] };
-    labels.forEach((l, i) => {
-      if (bx <= end) q.zones.buttons.push([bx, Math.min(bx + textWidth(l) - 1, end), q.buttons[i].key]);
-      bx += textWidth(l) + gap;
-    });
-  }
+  q.zones = { buttons: [] };
+  bands.forEach((band, r) => {
+    const by = y + h - 1 - bands.length + r;
+    let bx = x + 4;
+    if (by < H) {
+      for (const i of band) {
+        if (bx <= end) q.zones.buttons.push([bx, Math.min(bx + textWidth(labels[i]) - 1, end), q.buttons[i].key, by]);
+        bx += textWidth(labels[i]) + gap;
+      }
+    }
+  });
 }
 // A key for the question: ← → (and tab) move between the buttons ('move'), Enter and space press the focused one,
 // a button's key presses it, escape and ctrl+c give 'escape'; other keys nothing (null), the card staying.
@@ -309,7 +381,7 @@ function askKey(k, q) {
 // A click: on a button, its key; out of the card, 'escape'; null for the rest.
 function askMouse(m, q) {
   if (!m.press || m.drag || m.wheel || m.button !== 0) return null;
-  const z = q.zones, hit = z && m.y - 1 === z.y && z.buttons.find(([a, b]) => m.x >= a && m.x <= b);
+  const z = q.zones, hit = z && z.buttons.find(([a, b, , y]) => m.y - 1 === y && m.x >= a && m.x <= b);
   if (hit) return hit[2];
   const b = q.box;
   return b && m.x >= b.x0 && m.x <= b.x1 && m.y >= b.y0 && m.y <= b.y1 ? null : 'escape';
@@ -332,7 +404,7 @@ function empty(w, h, text, pairs = []) {
 
 // A message after an action, with its mark: ✓ done (the text plain), ✕ error (in red), ⋯ going on (an ellipsis at the
 // end, dimmed), · nothing to do. kind: one of those, else guessed from the text.
-const ERROR = /^(Cannot|Can't|Could not|Not |No (editor|terminal)|Action failed|Update failed|Already exists|VS Code not found)|\b(not found|unavailable)\b|: already bound$/;
+const ERROR = /^(Cannot|Can't|Could not|Not |No (editor|terminal)|Action failed|Update failed|Already exists|VS Code not found|Unknown )|\b(not found|unavailable)\b|: already bound$|; cannot /;
 const messageKind = text => (/…$/.test(text) ? 'busy' : ERROR.test(text) ? 'error' : /^(No |Nothing)/.test(text) ? 'info' : 'ok');
 // How long it shows: an error twice as long.
 const messageTime = kind => (kind === 'error' ? 4000 : 2000);
@@ -458,19 +530,29 @@ function mark(segs, ranges, style) {
 // The scrollbar of a list shown height rows at a time, in a column on its right, hidden while the list fits: a thin
 // rail, its thumb, and ▴ ▾ buttons at its ends when there is room. One per list, set again at each render; it keeps a
 // drag or a held button going from one mouse event to the next. scrollTo(top): moves the list and renders it.
-const RAIL = fg([60, 60, 60]) + '│\x1b[0m', THUMB = fg([130, 130, 130]) + '┃\x1b[0m';
-const UP = fg([140, 140, 140]) + '▴\x1b[0m', DOWN = fg([140, 140, 140]) + '▾\x1b[0m';
+let RAIL, THUMB, UP, DOWN;
+onTheme(() => {
+  RAIL = fg(C.rail) + '│\x1b[0m'; THUMB = fg(C.thumb) + '┃\x1b[0m';
+  UP = fg(C.dim) + '▴\x1b[0m'; DOWN = fg(C.dim) + '▾\x1b[0m';
+});
 const scrollbars = new Set(); // all of them, let go when the pane loses the focus (see screen())
 class Scrollbar {
   constructor(scrollTo) { this.scrollTo = scrollTo; this.bar = null; this.held = null; scrollbars.add(this); }
   // The list's length, the rows shown and the first shown; returns the columns the bar takes: 1, or 0 when hidden.
-  set(total, height, top) {
+  // marks: rows to show on the bar, { row, color, weight }: a cell of the rail or thumb takes the colour of the
+  // heaviest mark of the rows it stands for.
+  set(total, height, top, marks = []) {
     this.bar = null;
     if (height < 2 || total <= height) return 0;
     const max = total - height, arrows = height >= 4 ? 1 : 0, track = height - 2 * arrows;
     const size = Math.max(1, Math.min(track - 1, Math.round(track * height / total)));
     top = Math.max(0, Math.min(top, max));
-    this.bar = { height, max, top, arrows, track, size, at: arrows + Math.round((track - size) * top / max) };
+    const tints = new Array(track).fill(null);
+    for (const m of marks) {
+      const t = Math.min(track - 1, Math.floor(m.row * track / total));
+      if (!tints[t] || tints[t].weight < m.weight) tints[t] = m;
+    }
+    this.bar = { height, max, top, arrows, track, size, at: arrows + Math.round((track - size) * top / max), tints };
     return 1;
   }
   // The bar's cell on row k of the list (from 0), to add after the row's line; nothing when hidden.
@@ -479,7 +561,9 @@ class Scrollbar {
     if (!b) return '';
     if (b.arrows && k === 0) return UP;
     if (b.arrows && k === b.height - 1) return DOWN;
-    return k >= b.at && k < b.at + b.size ? THUMB : RAIL;
+    const thumb = k >= b.at && k < b.at + b.size, tint = b.tints[k - b.arrows];
+    if (tint) return fg(tint.color) + (thumb ? '┃' : '│') + '\x1b[0m';
+    return thumb ? THUMB : RAIL;
   }
   // The top that puts the thumb at row r, kept within the list.
   topAt(r) {
@@ -547,7 +631,7 @@ const SEQ = {
   '\r': 'enter', '\n': 'enter', '\t': 'tab', '\x7f': 'backspace', '\x08': 'backspace', '\x1b': 'escape',
   '\x1b\x7f': 'alt+backspace', '\x1b\r': 'alt+enter', ' ': 'space',
 };
-const TOKEN = /\x1b\[200~[\s\S]*?\x1b\[201~|\x1b_[^\x1b]*\x1b\\|\x1b\[(\d+(?:;\d+)*)t|\x1b\[<(\d+);(\d+);(\d+)([Mm])|\x1b\[([IO])|\x1b\[[\d;]*[A-Za-z~]|\x1bO[A-Za-z]|\x1b[^\x1b]|[\s\S]/gu;
+const TOKEN = /\x1b\[200~[\s\S]*?\x1b\[201~|\x1b_[^\x1b]*\x1b\\|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b\[(\d+(?:;\d+)*)t|\x1b\[<(\d+);(\d+);(\d+)([Mm])|\x1b\[([IO])|\x1b\[[\d;]*[A-Za-z~]|\x1bO[A-Za-z]|\x1b[^\x1b]|[\s\S]/gu;
 
 function keyName(k) {
   if (SEQ[k]) return SEQ[k];
@@ -568,7 +652,7 @@ function keyName(k) {
 function decode(data, handlers) {
   for (const m of data.matchAll(TOKEN)) {
     const t = m[0];
-    if (t.startsWith('\x1b_') || m[1] !== undefined) { if (handlers.reply) handlers.reply(t); continue; }
+    if (t.startsWith('\x1b_') || t.startsWith('\x1b]') || m[1] !== undefined) { if (handlers.reply) handlers.reply(t); continue; }
     if (t.startsWith('\x1b[200~')) {
       const raw = t.slice(6, -6).replace(/\r\n?/g, '\n');
       if (handlers.paste) handlers.paste(raw.replace(/[\x00-\x09\x0b-\x1f\x7f-\x9f]/g, ''), raw);
@@ -604,8 +688,8 @@ class Field {
     else if (name === 'delete' || name === 'ctrl+d') chars.splice(at, 1);
     else if (name === 'left' || name === 'ctrl+b') this.cursor = Math.max(0, at - 1);
     else if (name === 'right' || name === 'ctrl+f') this.cursor = Math.min(chars.length, at + 1);
-    else if (name === 'home' || name === 'ctrl+a') this.cursor = 0;
-    else if (name === 'end' || name === 'ctrl+e') this.cursor = chars.length;
+    else if (name === 'home') this.cursor = 0;
+    else if (name === 'end') this.cursor = chars.length;
     else if (name === 'ctrl+u') { chars.splice(0, at); this.cursor = 0; }
     else if (name === 'ctrl+k') chars.splice(at);
     else if (name === 'ctrl+w' || name === 'alt+backspace') {
@@ -641,20 +725,44 @@ function screen(handlers, { mouse = true, motion = false, focus = true } = {}) {
     + (focus ? '\x1b[?1004h' : '');
   off = (focus ? '\x1b[?1004l' : '') + (mouse ? '\x1b[?1006l\x1b[?1002l\x1b[?1000l' : '')
     + '\x1b[?2004l\x1b[?7h\x1b[?25h\x1b[?1049l';
-  out.write(on);
+  // With the theme on auto, the terminal's background asked (OSC 11): a pane opened in a light terminal turns light,
+  // and the next ones open light at once.
+  out.write(on + (themeSetting() === 'auto' ? '\x1b]11;?\x07' : ''));
   process.on('exit', () => { if (!handed) out.write(off); });
   for (const sig of ['SIGTERM', 'SIGHUP', 'SIGINT']) process.on(sig, () => process.exit(0));
   if (process.stdin.isTTY) process.stdin.setRawMode(true);
   process.stdin.setEncoding('utf8');
   // A button released out of the pane may never be reported: a held scrollbar stops with the focus.
-  const input = { ...handlers, focus: f => { if (!f) for (const b of scrollbars) b.stop(); if (handlers.focus) handlers.focus(f); } };
-  // A long paste arrives in several reads: held until its end marker, so that its text never reads as keys.
-  let pending = '';
+  const input = { ...handlers, focus: f => { if (!f) for (const b of scrollbars) b.stop(); if (handlers.focus) handlers.focus(f); },
+    reply: t => {
+      const seen = t.startsWith('\x1b]11;') ? backgroundOf(t) : null;
+      if (!seen) return handlers.reply && handlers.reply(t);
+      if (BACKGROUND && seen !== seenBackground()) writeAtomic(BACKGROUND, seen);
+      if (seen === theme || themeSetting() !== 'auto') return;
+      useTheme(seen);
+      shown = [];
+      (handlers.theme || handlers.resize || (() => { }))();
+    } };
+  // A long paste arrives in several reads: held until its end marker, so that its text never reads as keys. So does
+  // a terminal's answer (OSC, APC) cut between reads, for 100 ms at most: alt+] or alt+_ alone then reads as keys.
+  let pending = '', flush = null;
+  // Only after the last paste: its text may hold an ESC ] of its own.
+  const unended = data => {
+    const pasted = data.lastIndexOf('\x1b[201~');
+    const start = Math.max(data.lastIndexOf('\x1b]'), data.lastIndexOf('\x1b_'));
+    return start > pasted && !/\x07|\x1b\\/.test(data.slice(start + 2)) ? start : -1;
+  };
   process.stdin.on('data', data => {
+    clearTimeout(flush);
     data = pending + data;
     pending = '';
     const start = data.lastIndexOf('\x1b[200~');
     if (start >= 0 && data.indexOf('\x1b[201~', start) < 0) { pending = data.slice(start); data = data.slice(0, start); }
+    const reply = pending ? -1 : unended(data);
+    if (reply >= 0) {
+      pending = data.slice(reply); data = data.slice(0, reply);
+      flush = setTimeout(() => { const d = pending; pending = ''; decode(d, input); }, 100);
+    }
     if (data) decode(data, input);
   });
   // Only the lines changed since the last frame are written, each at its row: a whole frame is large, and on Windows
@@ -692,10 +800,9 @@ const size = () => ({ W: process.stdout.columns || 80, H: process.stdout.rows ||
 
 // Two or more ways to see the same thing, the active one filled: [id, label] choices. Returns { segs, width, hits },
 // hits: the columns of each choice from 0, { id, from, to }, for clicks.
-const SWITCH = [58, 58, 62];
 // An option's value as the explorer's settings show it.
 const onOff = on => (on ? ['● on', fg(C.green)] : ['○ off', fg(C.dim)]);
-const switchStyle = on => (on ? bg(C.select) + fg(C.text) + '\x1b[1m' : bg(SWITCH) + fg(C.dim));
+const switchStyle = on => (on ? bg(C.select) + fg(C.text) + '\x1b[1m' : bg(C.switch) + fg(C.dim));
 function segmented(choices, active) {
   const segs = [], hits = [];
   let x = 0;
@@ -721,6 +828,21 @@ function head(text, n) {
   return `${out}\x1b[0m${' '.repeat(Math.max(0, n - w))}`;
 }
 
+// A drawn line from column n (from 0), its colours kept: the part of a line right of something drawn over it. The
+// styles met before n are kept in front; a wide character cut by n leaves spaces.
+function tail(text, n) {
+  let pre = '', out = '', w = 0, prev;
+  for (const tok of text.match(/\x1b\[[0-9;?]*[A-Za-z]|[\s\S]/gu) || []) {
+    if (tok[0] === '\x1b') { if (w >= n) out += tok; else pre += tok; continue; }
+    const c = cols(tok, prev);
+    prev = tok;
+    if (w >= n) out += tok;
+    else if (w + c > n) out += ' '.repeat(w + c - n);
+    w += c;
+  }
+  return `${pre}${out}\x1b[0m`;
+}
+
 // A menu in a frame over a pane: items { label, run, key, value, danger }, or null for a rule. key:
 // the key that does the same outside the menu, dimmed after the label; value: [text, style] on the right, as in the
 // explorer's settings (onOff gives ● on / ○ off). at: the screen line (from 0) of its top border; right: its right
@@ -728,6 +850,13 @@ function head(text, n) {
 class Menu {
   constructor({ title, items, at = 0, right = 0, left = 1 }) {
     Object.assign(this, { title, items, at, right, left, sel: Math.max(0, items.findIndex(Boolean)), off: 0, x: left, inner: 0 });
+  }
+  // A choice r, what key or mouse returned: the menu closes (close) and the item runs; one that keeps it (keep) shows
+  // it again with its new values, at the same row (reopen(sel)). The caller draws after.
+  choose(r, close, reopen) {
+    const sel = this.sel;
+    if (r === 'close' || (r && r.run)) close();
+    if (r && r.run) { r.run(); if (r.keep && reopen) reopen(sel); }
   }
   rows(H) { return Math.max(1, Math.min(this.items.length, H - 2 - this.at)); }
   draw(lines, W, H) {
@@ -739,10 +868,13 @@ class Menu {
     const inner = this.inner = Math.min(W - 2 - (this.right ? 1 : this.left), want);
     // From its left column x (from 1): the frame takes inner + 2 columns after a space.
     const x = this.x = this.right ? Math.max(1, this.right - inner - 2) : this.left;
-    // Left of the frame, what the line showed; right of it, blank.
-    const rest = ' '.repeat(Math.max(0, W - x - inner - 2));
-    let pad = '';
-    const keep = i => { pad = x > 1 ? head(lines[i] || '', x - 1) : ''; };
+    // On both sides of the frame, what the line showed.
+    let pad = '', rest = '';
+    const keep = i => {
+      const l = lines[i] || line([], W);
+      pad = x > 1 ? head(l, x - 1) : '';
+      rest = tail(l, x + inner + 1);
+    };
     const border = (l, r, t, more) => `${pad}${line([[`${l}${t}${'─'.repeat(Math.max(0, inner - textWidth(t) - (more ? 2 : 0)))}${more ? more + '─' : ''}${r}`, edge]], inner + 2)}${rest}`;
     keep(this.at);
     lines[this.at] = border('╭', '╮', ` ${ellipsis(this.title, Math.max(1, inner - 4))} `, this.off > 0 && '▴');
@@ -794,7 +926,7 @@ class Menu {
 
 module.exports = {
   KITTY_QUERY, KITTY_OK,
-  fg, bg, glyph, G, useGlyphs, C, GIT, clean, cleanLine, cols, fit, textWidth, ellipsis, line, keys, keyAt, help, helpKey, helpMouse, wrap, empty, message, messageKind, messageTime, confirm, confirmKey, confirmMouse, ask, askKey, askMouse,
-  segWidth, segText, slice, split, mark, Scrollbar, segmented, switchStyle, onOff, Menu,
+  fg, bg, shade, glyph, G, useGlyphs, C, GIT, useTheme, onTheme, themeName, settingTheme, backgroundOf, clean, cleanLine, cols, fit, textWidth, ellipsis, line, keys, keyAt, help, helpKey, helpMouse, wrap, empty, message, messageKind, messageTime, confirm, confirmKey, confirmMouse, ask, askKey, askMouse,
+  segWidth, segText, slice, split, mark, Scrollbar, segmented, switchStyle, onOff, Menu, head, tail,
   keyName, keyLabel, decode, printable, Field, screen, restart, size,
 };

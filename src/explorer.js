@@ -36,7 +36,7 @@ const DEFAULT_KEYS = {
   open: ['enter', 'space'], expand: ['right', 'l'], collapse: ['left', 'h'], close: ['escape', 'q'],
   menu: ['m', 'menu', 'shift+f10'], refresh: ['r'], filter: ['/'], goToFile: ['ctrl+p'], searchInFiles: ['ctrl+f'],
   sourceControl: ['s'], settings: [','], toggleHidden: ['.'], toggleIgnored: ['i'], newFile: ['n'], newFolder: ['N'],
-  rename: ['R', 'f2'], delete: ['delete'], edit: ['e'], openInEditor: ['o'], openInApp: ['O'], preview: ['p'], copyPath: ['y'],
+  rename: ['R', 'f2'], delete: ['delete'], edit: ['E'], openInEditor: ['e'], openInApp: ['o'], preview: ['p'], copyPath: ['y'],
   copyRelativePath: ['Y'], parentRoot: ['backspace'], changedOnly: ['c'], viewChanges: ['d'], nextChange: [']'], previousChange: ['['], fileHistory: ['H'], narrower: ['>', INNER === 'right' ? 'shift+left' : 'shift+right'],
   wider: ['<', INNER === 'right' ? 'shift+right' : 'shift+left'], halfPageUp: ['ctrl+u'], halfPageDown: ['ctrl+d'], help: ['?', 'f1'],
 };
@@ -47,7 +47,7 @@ const HELP = [
     ['filter', 'filter']]],
   ['Review', [['changedOnly', 'changed files only'], ['viewChanges', 'changes in the preview'], ['nextChange', 'next changed file'], ['previousChange', 'previous changed file'],
     ['fileHistory', 'history of the file']]],
-  ['Open', [['open', 'open, fold'], ['preview', 'preview'], ['edit', 'edit (terminal)'], ['openInEditor', 'open in editor'], ['openInApp', 'open in app'],
+  ['Open', [['open', 'open, fold'], ['preview', 'preview'], ['openInEditor', 'open in editor'], ['edit', 'edit (terminal)'], ['openInApp', 'open in app'],
     ['copyPath', 'copy path'], ['copyRelativePath', 'copy relative path']]],
   ['Files', [['newFile', 'new file'], ['newFolder', 'new folder'], ['rename', 'rename'], ['delete', 'to the trash'],
     ['menu', 'actions menu']]],
@@ -72,12 +72,13 @@ if (theme ? theme.entry.file !== settings.icons.file : settings.icons && setting
 }
 // The icon theme or icon set chosen in another explorer, the update check, the opening in new tabs, what Enter opens,
 // the editor and the preview following the selection changed there, and the preview and diff settings changed in
-// their panes (shown by an open settings view). Hidden and ignored files and Follow terminal stay this explorer's.
+// their panes (shown by an open settings view). Hidden and ignored files stay this explorer's; Follow terminal is
+// read again at each check (follow).
 if (SETTINGS_FILE) fs.watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
   // A file read while being written is skipped, rather than taken for the default settings.
   let saved, chosen;
   try { saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')); chosen = saved.icons || ''; } catch { return; }
-  for (const name of ['updateCheck', 'autoOpen', 'open', 'editor', 'singleClick', 'wrap', 'lineNumbers', 'images', 'diffLayout', 'glyphs']) {
+  for (const name of ['updateCheck', 'autoOpen', 'open', 'editor', 'singleClick', 'wrap', 'lineNumbers', 'changes', 'images', 'diffLayout', 'glyphs']) {
     if (saved[name] === undefined || saved[name] === settings[name]) continue;
     settings[name] = saved[name];
     if (name === 'glyphs') ui.useGlyphs(saved.glyphs);
@@ -88,14 +89,23 @@ if (SETTINGS_FILE) fs.watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
   theme = icons.load(chosen);
   render();
 });
-// A newer release, found by the hook's daily check: ↑ in the header.
-let latest = update.available();
-// An update that changed the manifest or the installer, which the installer must finish: ! in the header.
+// A newer release, found by the hook's daily check: ↑ and its version in the header; skipped: the one the user
+// skipped, only in the settings.
+let latest = update.available(), skipped = update.skipped();
+// An update that changed the manifest or the installer, which the installer must finish: ! finish in the header.
 let finish = update.finishing();
 let updating = false; // a pull running: no second one, ↑ hidden
+// Restarted on the code of an update done here: the version in a message, and the release's notes in the header's
+// pill for half a minute.
+let notice = update.justUpdated();
+if (notice) setTimeout(() => { notice = null; render(); }, 30 * 1000);
 // Restarted on new code: this process only waits for the new one, its async work still running stops there.
 let stopped = false;
-if (update.FILE) fs.watchFile(update.FILE, { interval: 1000 }, () => { latest = update.available(); finish = update.finishing(); render(); });
+if (update.FILE) {
+  fs.watchFile(update.FILE, { interval: 1000 }, () => {
+    latest = update.available(); skipped = update.skipped(); finish = update.finishing(); render();
+  });
+}
 
 const state = {
   expanded: new Set(['']), rows: [], cursor: 0, top: 0, selected: null, focused: true,
@@ -111,6 +121,7 @@ const state = {
   prompt: null,    // { label, field, done(value), inline }: a name typed in the tree (inline: { rel } or
                    // { dir, folder }) or at the bottom
   confirm: null,   // { title, name, where, note, action, tone, yes(), focus }: y, or Enter on the action's button
+  choice: null,    // a question with several answers (ui.ask): { title, name, list, note, buttons, focus, on: { key: fn } }
                    // (focus 'yes', moved with ← →), to confirm; any other key to cancel
 };
 const scrollbar = new ui.Scrollbar(top => { state.top = top; render(); });
@@ -119,7 +130,7 @@ const { git, cache, decoration, changedFiles } = tree;
 
 // The repository config is read again before each call, as it may change while the explorer runs.
 const gitRun = async args => run(GIT_BIN, args, { cwd: ROOT, env: await gitEnv(ROOT) });
-const { parentOf, treeBefore } = Tree;
+const { parentOf, treeBefore, holds } = Tree;
 const absOf = rel => path.join(ROOT, rel);
 
 // --- tree
@@ -129,7 +140,8 @@ const absOf = rel => path.join(ROOT, rel);
 function buildRows() {
   const query = state.filter && state.filter.field.value.toLowerCase();
   const rows = state.rows = tree.rows({ query, changed: state.changed, expanded: state.expanded });
-  const i = state.selected === null ? -1 : rows.findIndex(r => r.rel === state.selected);
+  // An entry within a compact folder row: that row.
+  const i = state.selected === null ? -1 : rows.findIndex(r => holds(r, state.selected));
   select(i >= 0 ? i : query ? rows.findIndex(r => r.hit) : state.cursor);
 }
 
@@ -140,8 +152,12 @@ function select(i) {
 
 function toggle(row, open) {
   if (!row || !row.dir || state.filter || state.changed) return;
-  if (open === undefined) open = !state.expanded.has(row.rel);
-  if (open) state.expanded.add(row.rel); else state.expanded.delete(row.rel);
+  if (open === undefined) open = !row.open;
+  // Opened, a compact folder row unfolds each folder of its chain, as they show when the setting is off; closed, it
+  // folds them all.
+  for (let a = row.rel; a && a !== parentOf(row.from || row.rel); a = parentOf(a)) {
+    if (open) state.expanded.add(a); else state.expanded.delete(a);
+  }
   buildRows();
   save();
 }
@@ -177,6 +193,7 @@ function setRoot(dir) {
   save();
   ROOT = dir;
   writePaneState(PANE, { home: HOME, root: ROOT });
+  announce();
   state.expanded = new Set(['']); state.filter = null; state.top = 0; state.cursor = 0;
   state.selected = null;
   load();
@@ -231,12 +248,17 @@ async function refresh() {
   if (stopped) return;
   if (busy) { again = true; return; }
   busy = true;
-  cache.clear();
+  tree.stale();
   await refreshGit();
   buildRows();
   render();
   busy = false;
   if (again) { again = false; schedule(); }
+}
+
+// The root as the folder herdr gives the new spaces, tabs and panes made from this one: the launcher's (launch.js).
+function announce() {
+  if (process.send) process.send({ cwd: ROOT });
 }
 
 let rootWatcher = null;
@@ -308,7 +330,7 @@ function widen(cols) {
 }
 
 // Alone in its tab by the pane list too: the layout alone can show a single pane while the tab has others (a
-// source control pane zoomed over the explorer, a client attaching), and closing then lost the explorer.
+// pane zoomed over the explorer, a client attaching), and closing then lost the explorer.
 async function alone() {
   const me = (result(await run(HERDR, ['pane', 'get', PANE])) || {}).pane;
   if (!me) return false;
@@ -331,7 +353,8 @@ async function close() {
 // The folder of the terminal next to the explorer (that of its running program when herdr knows it), revealed in
 // the tree when it changes; outside the root, the root changes. The setting is read each time, so that a change
 // made in another explorer applies here too.
-let lastCwd = null;
+// forced: the setting was just turned on, so the first check follows the terminal at once.
+let lastCwd = null, forced = false;
 async function follow() {
   settings.follow = readSettings().follow;
   if (!settings.follow || !PANE) return;
@@ -339,12 +362,15 @@ async function follow() {
   const p = target && (result(await run(HERDR, ['pane', 'get', target])) || {}).pane;
   const cwd = p && (p.foreground_cwd || p.cwd);
   // Retried once the menu, the settings, the filter or the prompt is closed.
-  if (stopped || !cwd || cwd === lastCwd || state.filter || state.menu || state.settings || state.help || state.prompt || state.confirm) return;
-  lastCwd = cwd;
+  if (stopped || !cwd || cwd === lastCwd || state.filter || state.menu || state.settings || state.help || state.prompt || state.confirm || state.choice) return;
+  const first = lastCwd === null && !forced;
+  lastCwd = cwd; forced = false;
   const inside = (dir, root) => { const r = path.relative(root, dir); return !r.startsWith('..') && !path.isAbsolute(r); };
   // Outside the root: back to the space folder when it holds the terminal folder, else the terminal folder itself.
-  // Never $HOME, one of its parents or the filesystem root, where the tree would be too big to follow.
+  // Never $HOME, one of its parents or the filesystem root, where the tree would be too big to follow. Not at the
+  // first check: the terminal has not moved, and the root may be the one Set as root chose before a herdr restart.
   if (!inside(cwd, ROOT)) {
+    if (first) return;
     if (inside(cwd, HOME)) setRoot(HOME);
     else if (big(cwd)) return;
     else setRoot(cwd);
@@ -356,6 +382,28 @@ async function follow() {
   render();
 }
 
+// A file opened from the search in the tab's preview (reveal in its request, actions.preview): selected in the tree,
+// its folders expanded, when it is under the root. The tab's request file is watched once the tab is known.
+let requests = null;
+actions.tabOf(PANE).then(tab => {
+  if (!tab || stopped) return;
+  requests = actions.requestFile(tab.me.tab_id);
+  if (!requests) return; // no state folder
+  let seen = 0;
+  try { seen = fs.statSync(requests).mtimeMs; } catch { }
+  fs.watchFile(requests, { interval: 300 }, stat => {
+    if (stopped || !stat.mtimeMs || stat.mtimeMs === seen) return;
+    seen = stat.mtimeMs;
+    let req = null;
+    try { req = JSON.parse(fs.readFileSync(requests, 'utf8')); } catch { }
+    if (!req || req.reveal !== true || typeof req.file !== 'string') return;
+    const rel = path.relative(ROOT, req.file);
+    if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) return;
+    revealRel(rel.split(path.sep).join('/'));
+    render();
+  });
+}, () => { });
+
 // --- rendering
 
 // The tree, or a page in its place (settings, key help), and a question over it.
@@ -364,6 +412,7 @@ function render() {
   const lines = state.settings ? settingsPage().view(W, H) : treeView(W, H);
   if (state.help) ui.help(lines, W, 'Explorer', helpGroups(), state.help);
   if (state.confirm) ui.confirm(lines, W, H, state.confirm);
+  if (state.choice) ui.ask(lines, W, H, state.choice);
   paint(lines);
 }
 
@@ -477,7 +526,7 @@ function menuItems(r) {
       items.push(['Open in editor', () => actions.editor(abs, PANE), 'openInEditor']);
       if (actions.canOpen(abs)) items.push(['Open in app', () => actions.system(abs), 'openInApp']);
       items.push(['Edit in terminal', () => actions.edit(abs, PANE), 'edit']);
-    } else items.push(['Open in editor', () => actions.editor(abs, PANE), 'openInEditor']);
+    } else items.push(['Open in editor', () => actions.editor(abs, PANE), 'openInEditor'], ['Open in file manager', () => actions.app(abs, PANE), 'openInApp']);
     items.push(['Insert into terminal', () => actions.insert(abs, PANE)], null);
     items.push(['New file…', () => newEntry(dirRel, false), 'newFile'], ['New folder…', () => newEntry(dirRel, true), 'newFolder']);
     if (r.dir) items.push(['Search in folder…', () => actions.search(abs, PANE, 'content'), 'searchInFiles'], ['Set as root', () => setRoot(abs)]);
@@ -516,17 +565,19 @@ function menuItems(r) {
   return items;
 }
 
-// A fast-forward pull of the plugin's clone; the panes then restart on the new code by themselves (update.watch).
-// Refused: the reason only, since the command would bypass the checks. The pull failed: the command copied, to run in
-// the terminal. "Updating…" stays until the pull ends, which may take up to a minute. Installed by herdr: herdr's
-// update command copied instead, since only herdr may move its checkout (herdr not answering: the pull, whose checks
-// refuse such a checkout).
+// The newer release: the versions, its first changes (the release's text, kept by the daily check), and the answers:
+// update, its notes in the browser, skip it (not for one skipped already), later (focused, as escape).
+// The update: a fast-forward pull of the plugin's clone; the panes then restart on the new code by themselves
+// (update.watch). Refused: the reason only, since the command would bypass the checks. The pull failed: the command
+// copied, to run in the terminal. "Updating…" stays until the pull ends, which may take up to a minute. Installed by
+// herdr: herdr's update command copied instead, since only herdr may move its checkout (herdr not answering: the
+// pull, whose checks refuse such a checkout).
 async function askUpdate() {
   if (updating) return 'Update in progress';
   if (await update.managed()) return actions.copy(update.HERDR_UPDATE, 'Update command copied');
-  const to = latest;
-  confirm({ title: `Update to ${to}?`, name: 'herdr-explorer', note: 'The panes restart on the new code.', action: 'Update',
-    tone: 'go' }, async () => {
+  const to = latest || skipped, { notes, url } = update.release();
+  if (!to) return null;
+  const install = async () => {
     updating = true;
     clearTimeout(flash.timer);
     state.flash = 'Updating…';
@@ -536,16 +587,40 @@ async function askUpdate() {
     state.flash = null;
     if (ok || !retry) return message;
     return `${message}: ${await actions.copy(`git -C "${update.DIR}" pull --ff-only --no-rebase`, 'update command copied')}`;
-  });
+  };
+  const buttons = [{ key: 'y', label: 'Update', tone: 'go' }, { key: 'r', label: 'Notes' },
+    ...(latest ? [{ key: 's', label: 'Skip version' }] : []), { key: 'n', label: 'Later' }];
+  state.menu = null;
+  state.choice = {
+    title: 'Update herdr-explorer', name: `${update.CURRENT || '?'} → ${to}`, list: notes.slice(0, 3),
+    note: notes.length > 3 ? `and ${notes.length - 3} more (r)` : 'The panes restart on the new code.',
+    buttons, focus: buttons.length - 1,
+    on: { y: install, r: () => actions.web(url, 'the release notes'), s: () => { update.skip(to); return `${to} skipped: Settings to update anyway`; } },
+  };
+  render();
   return null;
 }
 
-// The installer command copied, to run in a terminal; the ! then goes away in every explorer.
-async function finishUpdate() {
-  const done = await actions.copy(update.INSTALLER, 'Installer command copied');
-  if (done !== 'Clipboard unavailable') update.finished();
-  return done;
+// The update the installer must finish: its command shown, then copied to run in a terminal; the ! finish then goes
+// away in every explorer.
+function finishUpdate() {
+  state.menu = null;
+  state.choice = {
+    title: `Finish the ${finish} update`, name: update.INSTALLER, note: 'Run it once in a terminal.',
+    buttons: [{ key: 'c', label: 'Copy command', tone: 'go' }, { key: 'n', label: 'Later' }], focus: 0,
+    on: { c: async () => {
+      const done = await actions.copy(update.INSTALLER, 'Installer command copied');
+      if (done !== 'Clipboard unavailable') update.finished();
+      return done;
+    } },
+  };
+  render();
+  return null;
 }
+
+// What the header's pill does (render.js pill): finish, update, or the notes of the update just done.
+const pillAction = () => (finish ? finishUpdate : latest && settings.updateCheck && !updating ? askUpdate
+  : () => actions.web(update.release().url, 'the release notes'));
 
 function openMenu(i) {
   const r = i === null ? null : state.rows[i];
@@ -588,9 +663,10 @@ function setSetting(name, value) {
   settings[name] = value;
   writeSettings({ ...readSettings(), [name]: value });
   if (name === 'glyphs') ui.useGlyphs(value);
+  if (name === 'theme') ui.useTheme(ui.settingTheme(value));
   cache.clear();
   buildRows();
-  if (name === 'follow') { lastCwd = null; follow(); }
+  if (name === 'follow') { lastCwd = null; forced = true; follow(); }
   return null;
 }
 
@@ -655,10 +731,12 @@ const ctx = {
   get keys() { return keys; },
   set keys(k) { keys = k; },
   get latest() { return latest; },
+  get skipped() { return skipped; },
   get finish() { return finish; },
+  get notice() { return notice; },
   get updating() { return updating; },
   get graphics() { return graphics; },
-  keysOf, render, flash, runAction, ask, setSetting, askUpdate, finishUpdate, select, toggle, reveal, revealRel, buildRows,
+  keysOf, render, flash, runAction, ask, setSetting, askUpdate, finishUpdate, pillAction, select, toggle, reveal, revealRel, buildRows,
   close, schedule, openFile, openMenu, openHelp, newEntry, renameEntry, deleteEntry, setRoot, showChanged, viewChanges,
   nextChange, widen, absOf, parentOf,
 };
@@ -680,12 +758,15 @@ const paint = ui.screen({
     render();
   },
   resize: () => { resized(); reveal(); render(); },
+  theme: () => { cache.clear(); buildRows(); render(); },
 }, { motion: true });
 // The Kitty graphics query, as the preview sends it.
 process.stdout.write(ui.KITTY_QUERY);
+if (notice) flash(`Updated to ${notice.to}`);
 setTimeout(() => { if (graphics === null) { graphics = false; render(); } }, 500);
 
 watchRoot();
+if (ROOT !== HOME) announce();
 const timers = [
   setInterval(schedule, 30000), // safety net in case a file event is lost
   setInterval(follow, 2000),
@@ -693,14 +774,14 @@ const timers = [
 
 // Updated plugin: this explorer starts again on the new code, at the same root, once nothing is being typed or
 // chosen. This process stops watching and acting, the new one taking over the pane.
-update.watch(() => !updating && !state.prompt && !state.confirm && !state.menu && !state.settings && !state.help && !(state.filter && state.filter.active), () => {
+update.watch(() => !updating && !state.prompt && !state.confirm && !state.choice && !state.menu && !state.settings && !state.help && !(state.filter && state.filter.active), () => {
   stopped = true;
   save();
   writePaneState(PANE, { home: HOME, root: ROOT });
   for (const t of timers) clearInterval(t);
   clearTimeout(settle); clearTimeout(timer);
   for (const w of [rootWatcher, gitWatcher]) if (w) w.close();
-  for (const f of [KEYS_FILE, SETTINGS_FILE, update.FILE]) if (f) fs.unwatchFile(f);
+  for (const f of [KEYS_FILE, SETTINGS_FILE, update.FILE, requests]) if (f) fs.unwatchFile(f);
   ui.restart({ EXPLORER_TREE: ROOT });
 });
 

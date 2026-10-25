@@ -91,8 +91,11 @@
 - **VS Code or another graphical editor opens behind the terminal** (KDE Wayland): KWin's focus stealing prevention
   keeps a window started from a terminal in the background, as with `code <file>` typed in Konsole. Lower *Focus
   stealing prevention* in the KWin window behavior settings, or switch to the window by hand.
-- **No `↑` although a release is out**: `updateCheck` is off, the check already ran today, or the clone is ahead of
-  the release. Delete `update.json` to check again at the next tab creation.
+- **No `↑` although a release is out**: `updateCheck` is off, the check already ran today, the release was skipped
+  (**Settings**: `u` updates anyway), or the clone is ahead of the release. Delete `update.json` to check again at the next tab creation.
+- **Cannot rename or delete the project folder on Windows** (*access denied* or *in use*): the plugin's panes work
+  in that folder, so that new spaces, tabs and panes made from them start there, and Windows keeps a folder in use
+  from being renamed or deleted. Close the explorer (and the other plugin panes of the tab) first.
 - **A setting edited by hand has no effect**: some are read only when a pane starts (see
   [Settings](configuration.md#settings)): close and reopen the explorer.
 
@@ -119,19 +122,21 @@
 | `Cannot insert`, `Cannot type into the terminal` | `herdr pane send-text` failed                                                      |
 | `Not opened: file type not allowed`              | **Open in app** accepts only documents, media and `txt md csv log json xml html htm` |
 | `Cannot open`                                    | `xdg-open` / `open` / `explorer.exe` could not start                               |
-| `File manager not found`                         | `xdg-open`, `open -R` or `explorer.exe` could not start. On Linux, install `xdg-open` |
+| `File manager not found`                         | `xdg-open`, Finder (`osascript`, else `open -R`) or `explorer.exe` could not start. On Linux, install `xdg-open` |
 | `<cmd> not found` / `<cmd> not found (an .exe is needed)` | fix the editor command in the settings. On Windows, give an `.exe` (VS Code's `code.cmd` is handled) |
 | `VS Code not found`                              | the editor command is `code` but VS Code was not found                             |
 | `No editor: set one in the settings`             | opening a folder needs an external editor. Set **Editor**                          |
 | `No terminal editor found: set $EDITOR.`         | (Editor pane) no `nano`/`nvim`/`vim`/`vi` found (`edit`/`nvim`/`vim`/`nano` on Windows). Set `$EDITOR` or the editor command |
 | `Cannot start <editor>: <code>`                  | (Editor pane) the editor could not start                                           |
-| `Cannot open the editor` / `the preview` / `the search` / `source control`, `Cannot show changes` | herdr refused to open the pane: check that it runs and is 0.9.3 or later |
+| `Cannot open the editor` / `the preview` / `the search` / `source control`, `Cannot show changes` | herdr refused to open the pane: check that it runs and is 0.9.4 or later |
 | `Cannot preview`                                 | herdr did not report the pane's tab, or the request file could not be written     |
 | `Invalid name`                                   | empty, absolute, containing a control character, or leaving the folder (`..`)     |
 | `Already exists`                                 | choose another name                                                                |
 | `Cannot create` / `rename` / `duplicate` / `delete: <code>` | file system error (`EACCES`, `EPERM`…)                                  |
-| `N untracked files kept: no trash`               | **Discard changes** could not trash untracked files. Install a trash tool          |
+| `N untracked files kept: no trash`               | **Discard changes** (or `D`, deleting for good declined) could not trash untracked files. Install a trash tool |
 | `Cannot stage` / `Cannot unstage` / `Cannot discard` | the git command failed. Try in a terminal to see git's error                   |
+| `Staged N lines; cannot stage <file>: …`, `Discarded N lines; cannot delete <file>: <code>` | part of the selection went through, the rest failed (git error, or file system error such as `EACCES`). Nothing is undone |
+| `Busy…`                                          | `s`, `u` or `D` pressed again before the last one ended                            |
 | `<theme>: not found`                             | the icon theme was uninstalled. Choose another one                                 |
 | `<key>: already bound`, `<key> taken from <action>` | (Key bindings) the key already had that action, or moved from another one |
 | `No config folder`, `Cannot write keys.json`     | herdr gave no config folder, or `keys.json` cannot be written (fix or delete an unreadable file) |
@@ -143,6 +148,8 @@
 | `The terminal did not answer the Kitty graphics query: the image may not show` | (Preview) pixels were asked for in a terminal that did not answer. See [Sharp images](usage.md#sharp-images) |
 | `Find works in the file: d`                      | (Preview) `/` in the Diff view. `d` goes back to the file                          |
 | `No default branch: compared with HEAD`          | (Diff view, Changes pane) no `origin/HEAD`, `main` or `master`, or no common commit with it |
+| `No agent turn recorded in this repository`      | (Diff view, Changes pane) scope **Last agent turn**, but the tab's agent has not started working in this repository since the plugin was installed. `b` picks another scope |
+| `The agent turn is still being recorded`         | (Diff view, Changes pane) the agent just started working and the snapshot of the working tree is not written yet: in a moment, `r` in the preview, or **Last agent turn** chosen again with `b` in the Changes pane |
 | `Cannot edit this file here (e: in the terminal)` | (Preview) editing needs a text or Markdown file in the File view                  |
 | `Cannot edit: over 2 MB` / `binary file` / `not UTF-8` / `<code>` | (Preview) see [Limits](#limits)                                   |
 | `Mixed line endings: saved as LF` / `CRLF`       | (Preview) the file mixes LF and CRLF: saving writes the more frequent one everywhere (LF on a tie) |
@@ -180,7 +187,7 @@
 | `Fetching` / `Pulling` / `Pushing` / `Publishing` / `Force refused: the repository sets <key>; use the terminal` | the repository's own config sets network settings (`http.*`, `url.*.insteadOf`, `remote.*.proxy`, `remote.*.vcs`, `core.alternateRefsCommand`). Check them, then run the command in a terminal |
 | `No upstream branch to pull from`                                  | push first (publishes the branch), or set an upstream               |
 | `<branch> and <upstream> have diverged (…): merge or rebase in the terminal` | pull only fast-forwards                                  |
-| `Could not delete N files`                                         | discarding could not delete these untracked files                 |
+| `Could not delete N files`                                         | discarding could not delete these files, or refused them: their folder leads outside the repository through a symbolic link |
 | `Detached HEAD: switch to a branch to push`                        | check out a branch                                                  |
 | `No remote: add one with git remote add`                           | add a remote                                                        |
 | `Invalid remote name: …`                                           | a remote name starting with `-` is refused                          |
@@ -192,11 +199,11 @@
 | `git am in progress: continue or abort it in the terminal`         | `git am` is not handled by the pane                                 |
 | `No merge, rebase, cherry-pick or revert in progress`              | nothing to abort                                                    |
 | `<branch> is the base of the comparisons: select another branch`   | `B` on another branch changes the base                              |
-| `<file> is deleted`                                                | `e` and `o` need the file on disk                                   |
+| `<file> is deleted`                                                | `e`, `E` and `o` need the file on disk                              |
 | `Claude not available: message from the file names`               | the `claude` CLI is missing or failed. The fallback message is used |
 | `Branch name starting with "-": not switched`, `A branch name cannot start with "-"` | rename the branch in a terminal                  |
 | `Remote branches are not deleted from here`, `Cannot delete the current branch` | use a terminal, or switch first                        |
-| `Select a file first`                                              | `y`, `Y`, `e` or `o` on a row that is not a file                    |
+| `Select a file first`                                              | `y`, `Y`, `e`, `E` or `o` on a row that is not a file               |
 | `Nothing to stage`, `Nothing staged`, `Nothing to commit`, `No changes to describe`, `Already staged`, `Not staged` | informational |
 
 ### peek

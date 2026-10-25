@@ -1,7 +1,8 @@
 // File preview of a tab, opened next to the terminal by the explorer and the search: syntax-highlighted text,
 // rendered Markdown, images (in pixels with the Kitty graphics protocol, else drawn with half blocks), a hex dump for
 // other binary files; or the file's git changes (Diff view, d). Reloads by itself when the file changes on disk, and
-// shows the next file the explorer asks for (request file, see actions.preview), in tabs (core/tabs.js).
+// shows the next file the explorer asks for (request file, see actions.preview), in tabs (core/tabs.js); a commit,
+// stash or tag that source control asks for shows over the tabs (enterShow).
 'use strict';
 // The pane's first process only starts the real one (launch.js).
 if (require('./launch').launch()) return;
@@ -14,10 +15,13 @@ const notes = require('./core/notes');
 const Tabs = require('./core/tabs');
 const buffer = require('./core/buffer');
 const update = require('./core/update');
+const Scope = require('./core/scope');
+const stage = require('./core/stage');
 const { run, HERDR, readSettings, writeSettings, writePaneState, SETTINGS_FILE, remoteLink } = require('./core/exec');
 
 const PANE = process.env.HERDR_PANE_ID;
 const TAB = process.env.EXPLORER_TAB;
+const REVIEW = !!process.env.EXPLORER_REVIEW; // beside a review's source control: q closes, whatever it shows
 const REQUEST = TAB && actions.requestFile(TAB);
 const MAX_BYTES = 8 << 20;     // larger files: the start only
 const MAX_HIGHLIGHT = 1 << 20; // larger files: plain text
@@ -55,11 +59,16 @@ const state = {
   mark: 0,          // the mark n and N went to last
   view: process.env.EXPLORER_VIEW === 'diff' ? 'diff' : 'file', // the file, or its git changes (d)
   diff: null,       // the Diff view's changes: { parsed, top, baseName }, or { loading: true }
-  base: 'head',     // what the Diff view compares with: 'head', or 'branch' (where the branch started, b)
+  scope: Scope.HEAD, // what the Diff view compares with: the tab's scope (core/scope.js, b)
+  revPrompt: null,  // the field of a commit or range typed for the scope (b, Commit or range…)
+  hunk: null,       // the hunk n or N went to in the Diff view, which s, u and D take without a selection
   menu: null,       // the view's options (ui.Menu) while open
   wantTop: null,    // the scroll of a tab shown again in the Diff view, for once its changes are loaded
   edit: null,       // the edit mode (i, see startEdit): { ed (buffer.Editor), base, disk, prompt, hl }
   ask: null,        // a question in a card (ui.ask): { …, on: { key: what to do } }
+  show: null,       // a commit, stash or tag shown over the tabs (source control's review), see enterShow
+  changes: null,    // the file's lines changed since HEAD (diff.lineChanges): { file, kinds, deleted, lines }, lines
+                    // those that start a block of changes; null outside git
 };
 
 // Marks from a request or the environment, kept only when well formed: at most 200, in order.
@@ -78,15 +87,15 @@ try { state.marks = cleanMarks(JSON.parse(process.env.EXPLORER_MARKS || '[]')); 
 // italics) until kept: t, a double-click on it, e, o, a note, or an Enter or double-click in the explorer.
 // EXPLORER_TABS: the tabs saved before a restart, { list, current }.
 // edit: a tab being edited keeps its text, cursor and history while another tab shows (never saved for a restart).
-const VIEW = ['root', 'line', 'top', 'left', 'view', 'marks', 'mark', 'raw', 'base', 'edit'];
-const DEFAULTS = { line: 0, top: 0, left: 0, view: 'file', marks: [], mark: 0, raw: false, base: 'head', edit: null };
+const VIEW = ['root', 'line', 'top', 'left', 'view', 'marks', 'mark', 'raw', 'edit'];
+const DEFAULTS = { line: 0, top: 0, left: 0, view: 'file', marks: [], mark: 0, raw: false, edit: null };
 let tabs = { list: [], current: 0 };
 try {
   const t = JSON.parse(process.env.EXPLORER_TABS || 'null');
   const list = t && Array.isArray(t.list) ? t.list.filter(x => x && typeof x.file === 'string' && x.file).slice(0, Tabs.MAX) : [];
   tabs = { current: Math.max(0, Math.min((t && +t.current) || 0, list.length - 1)), list: list.map(x => ({
     file: x.file, kept: !!x.kept, root: typeof x.root === 'string' ? x.root : '', line: +x.line || 0, top: +x.top || 0, left: +x.left || 0,
-    view: x.view === 'diff' ? 'diff' : 'file', marks: cleanMarks(x.marks), mark: 0, raw: !!x.raw, base: x.base === 'branch' ? 'branch' : 'head',
+    view: x.view === 'diff' ? 'diff' : 'file', marks: cleanMarks(x.marks), mark: 0, raw: !!x.raw,
   })) };
 } catch { }
 // The file of the environment in its tab; restored: that tab was saved, with its scroll (see startup).
@@ -169,24 +178,97 @@ function load(keepScroll) {
   if (state.find && state.find.field.value) search(false);
   if (state.view === 'diff') loadDiff(keepScroll);
   if (state.edit) diskChanged();
+  loadChanges();
   render();
+}
+
+// The lines changed since HEAD, shown beside the File view's lines and on its scrollbar (Changes setting, c). Those
+// of the file shown before stay until they come, so that a reload does not blink.
+let changesRun = 0;
+async function loadChanges() {
+  const run = ++changesRun, file = state.file;
+  if (state.changes && state.changes.file !== file) state.changes = null;
+  if (!diffs || !settings.changes || (state.kind !== 'text' && state.kind !== 'markdown')) {
+    if (state.changes) { state.changes = null; render(); }
+    return;
+  }
+  let res;
+  try { res = await diffs.lineChanges(file, state.plain.length); } catch { res = null; }
+  if (run !== changesRun || state.file !== file) return;
+  const n = state.plain.length, changed = i => !!(res.kinds[i] || res.deleted.has(i));
+  // Where each block starts; removed lines at the end go to the last line.
+  const lines = res ? [...Array(n + 1).keys()].filter(i => changed(i) && !(i && changed(i - 1))).map(i => Math.max(0, Math.min(i, n - 1))) : [];
+  state.changes = res && lines.length ? { file, ...res, lines } : null;
+  render();
+}
+// The changes beside the lines: in the File view of a text file or of a Markdown file's source.
+const changesShown = () => !!(state.changes && state.changes.file === state.file && state.view === 'file' && !state.show && !state.edit
+  && !markdownView() && (state.kind === 'text' || state.kind === 'markdown'));
+// The change of row i of the list: 'add', 'mod', 'del' (removed lines: above a line, on its first row; at the end of
+// the file, on its last row), or ''.
+function changeOf(list, i) {
+  const r = list[i], { kinds, deleted } = state.changes;
+  if (r.src < 0) return '';
+  if (kinds[r.src]) return kinds[r.src];
+  if (r.first && deleted.has(r.src)) return 'del';
+  const last = r.src === state.plain.length - 1 && !(list[i + 1] && list[i + 1].src === r.src);
+  return last && deleted.has(state.plain.length) ? 'del' : '';
+}
+// Each change's sign in the column beside the lines, its colour, and its weight on the scrollbar: removed lines over
+// changed ones over added ones.
+const CHANGE = { add: { color: 'green', weight: 1 }, mod: { color: 'blue', weight: 2 }, del: { color: 'red', weight: 3 } };
+function changeSign(list, i) {
+  const k = changeOf(list, i);
+  if (!k) return [' ', ''];
+  const r = list[i];
+  return [k !== 'del' ? '▎' : r.first && state.changes.deleted.has(r.src) ? '▔' : '▁', fg(C[CHANGE[k].color])];
+}
+// The changes on the scrollbar, for the rows of the list.
+function changeMarks(list) {
+  if (!changesShown()) return [];
+  if (list.changeMarks && list.changeMarks.of === state.changes) return list.changeMarks;
+  const marks = [];
+  list.forEach((r, i) => {
+    const k = changeOf(list, i);
+    if (k) marks.push({ row: i, color: C[CHANGE[k].color], weight: CHANGE[k].weight });
+  });
+  marks.of = state.changes;
+  return (list.changeMarks = marks);
+}
+// ] and [: the next or previous block of changes, a third of the way down, as n and N do with the marks.
+function nextChange(dir) {
+  if (!changesShown()) return flash(state.view !== 'file' || markdownView() ? 'Changes show in the file\'s source' : 'No changes since HEAD');
+  const third = Math.floor((ui.size().H - 2) / 3), at = state.top + third, lines = state.changes.lines;
+  const k = dir > 0 ? lines.findIndex(l => rowOf(l) > at) : lines.findLastIndex(l => rowOf(l) < at);
+  if (k < 0) return flash(dir > 0 ? 'Last change' : 'First change');
+  state.top = Math.max(0, rowOf(lines[k]) - third);
+  state.line = lines[k] + 1;
+  flash(`Change ${k + 1}/${lines.length}`);
 }
 
 // --- Diff view
 
-// The file's changes (diff.collect), from the nearest folder still on disk (that of a deleted file may be gone).
-// keepScroll: a reload, where the view stays; otherwise it goes to the line asked for, or the first change.
+// The nearest folder of the file still on disk (that of a deleted file may be gone).
+function nearDir(file) {
+  let cwd = path.dirname(file);
+  while (!fs.existsSync(cwd) && path.dirname(cwd) !== cwd) cwd = path.dirname(cwd);
+  return cwd;
+}
+
+// The file's changes (diff.collect), from nearDir. keepScroll: a reload, where the view stays; otherwise it goes to
+// the line asked for, or the first change.
 let diffRun = 0;
 async function loadDiff(keepScroll) {
   if (!diffs) return;
   const run = ++diffRun, file = state.file;
   if (!keepScroll || !state.diff) state.diff = { loading: true };
-  let cwd = path.dirname(file);
-  while (!fs.existsSync(cwd) && path.dirname(cwd) !== cwd) cwd = path.dirname(cwd);
+  const cwd = nearDir(file);
   let res;
-  try { res = await diffs.collect({ cwd, file, base: state.base }); } catch { res = { text: '', top: cwd, baseName: '' }; }
+  const scope = state.scope, turn = scope.kind === 'turn' && TAB ? Scope.readTurn(TAB) : null;
+  try { res = await diffs.collect({ cwd, file, scope, turn }); } catch { res = { text: '', top: cwd, baseName: '' }; }
   if (run !== diffRun || state.file !== file) return;
-  state.diff = { parsed: diffs.parse(res.text), top: res.top, baseName: res.baseName };
+  if (res.error) flash(res.error);
+  state.diff = { parsed: diffs.changesOf(res), top: res.top, baseName: res.baseName };
   state.rows = null;
   if (!keepScroll) goToLine();
   else if (state.wantTop !== null) state.top = state.wantTop;
@@ -210,27 +292,107 @@ function toggleView() {
   else if (state.line) state.top = Math.max(0, rowOf(state.line - 1) - Math.floor((ui.size().H - 2) / 3));
   render();
 }
-// The diff's rows: one column for the marks' bar on the left.
+// The diff's rows: one column for the marks' bar on the left. Long lines wrap with the file's setting (w), else the
+// text scrolls from state.left (← →): rendered from column 0, a row cut from another column is made again (redo).
+// A commit shown (state.show) takes the same rows, without the file's name when it has a single file.
 function diffRows(W) {
   if (!diffs) return [{ empty: 'No diff renderer', pairs: [['d', 'file'], ['q', 'close']], src: -1 }];
-  if (!state.diff || state.diff.loading) return [{ empty: 'Loading…', pairs: [['d', 'file']], src: -1 }];
+  const d = state.show || state.diff;
+  if (state.show && d.what.blank) return [{ empty: d.what.text, pairs: [['q', 'close']], src: -1 }];
+  if (state.show && d.failed) return [{ empty: 'Cannot show it', pairs: [['q', qLabel()]], src: -1 }];
+  if (!d || d.loading || !d.parsed) return [{ empty: 'Loading…', pairs: state.show ? [['q', qLabel()]] : [['d', 'file']], src: -1 }];
   const width = Math.max(10, W - 2);
   const mode = diffs.layoutOf(width);
-  const list = diffs.render(state.diff.parsed, width, mode, true)
-    .map(r => ({ segs: [[diffMarked(r) ? '▌' : ' ', fg(C.blue)], ...r.segs], back: r.back, ref: r.ref, hunk: r.hunk, src: -1 }));
-  return list.length ? list : [{ empty: 'No changes', pairs: [['d', 'file'], ['b', 'base'], ['q', 'close']], src: -1 }];
+  const list = diffs.render(d.parsed, width, mode, !state.show, { wrap: settings.wrap })
+    .map(r => {
+      const bar = [diffMarked(r) ? '▌' : ' ', fg(C.blue)];
+      return { segs: [bar, ...r.segs], redo: r.redo && (left => [bar, ...r.redo(left)]), back: r.back, ref: r.ref, hunk: r.hunk,
+        more: r.more, src: -1, f: r.f, h: r.h, lines: r.lines };
+    });
+  if (!list.length && state.show) return [{ empty: 'No changes', pairs: [['q', qLabel()]], src: -1 }];
+  return list.length ? list : [{ empty: 'No changes', pairs: [['d', 'file'], ['b', 'compare with'], ['q', 'close']], src: -1 }];
 }
-// A row of the Diff view on a marked line (whole lines: the diff has no columns of the file).
-const diffMarked = r => r.ref && !r.hunk && r.ref.from && r.ref.from === r.ref.to && state.marks.some(m => r.ref.from >= m.from && r.ref.from <= m.to);
-// n and N in the Diff view without marks: the next or previous hunk, its header at the top.
+// A row of the Diff view on a marked line (whole lines: the diff has no columns of the file), or the @@ row of the
+// hunk n went to.
+const diffMarked = r => (r.h && r.h === state.hunk)
+  || (!state.show && r.ref && !r.hunk && r.ref.from && r.ref.from === r.ref.to && state.marks.some(m => r.ref.from >= m.from && r.ref.from <= m.to));
+// n and N in the Diff view without marks: the next or previous hunk, its header at the top, marked (state.hunk) for
+// s, u and D, even when the diff is too short to scroll.
 function nextHunk(dir) {
-  const list = rows(), at = state.top;
+  const list = rows(), was = state.hunk ? list.findIndex(r => r.h === state.hunk) : -1, at = was >= 0 ? was : state.top;
   const i = dir > 0 ? list.findIndex((r, k) => k > at && r.hunk) : list.map((r, k) => (k < at && r.hunk ? k : -1)).filter(k => k >= 0).pop();
-  if (i !== undefined && i >= 0) { state.top = i; render(); }
+  if (i !== undefined && i >= 0) { state.top = i; state.hunk = list[i].h || null; state.rows = null; render(); }
 }
-function switchBase() {
-  state.base = state.base === 'head' ? 'branch' : 'head';
-  loadDiff(false).then(() => { if (state.base === 'branch' && state.diff && !state.diff.baseName) flash('No default branch: compared with HEAD'); });
+// b: the menu of the scopes (Scope.items); a scope chosen holds for every pane of the tab (scope-<tab>.json). The
+// one already chosen loads its changes again (a new agent turn, a branch moved), as in the Changes pane.
+function pickScope(s) {
+  state.menu = null; state.revPrompt = null;
+  if (!Scope.same(s, state.scope)) {
+    state.scope = s;
+    if (TAB) Scope.write(TAB, s);
+  }
+  reloadScope();
+}
+function reloadScope() {
+  if (state.view !== 'diff') return render();
+  loadDiff(false).then(() => { if (state.scope.kind === 'branch' && state.diff && !state.diff.baseName) flash('No default branch: compared with HEAD'); });
+}
+function openScopes() {
+  state.menu = Scope.menu(state.scope, branchName(), nearDir(state.file), { pick: pickScope, say: flash,
+    show: m => { state.menu = m; render(); }, prompt: rev => { state.revPrompt = new ui.Field(rev); render(); } });
+  render();
+}
+// The tab's scope chosen in another pane (the Changes pane, source control's compare).
+if (TAB) {
+  const followScope = () => { const s = Scope.read(TAB); if (!Scope.same(s, state.scope)) { state.scope = s; reloadScope(); } };
+  state.scope = Scope.read(TAB);
+  Scope.watch(TAB, followScope);
+}
+// s, u, D in the Diff view: the rows selected with the mouse, else the hunk n went to, else the hunk at the top (the
+// first hunk of the file whose name is there), staged, unstaged or discarded (core/stage.js), compared with HEAD
+// only; D asks first.
+let editing = false; // while stage.apply runs: a second s, u or D would apply the same rows again
+function editDiff(mode) {
+  const d = state.diff;
+  if (!d || !d.parsed) return;
+  if (editing) return flash('Busy…');
+  if (state.scope.kind !== 'head') return flash('Not with this scope: stage compared with HEAD (b)');
+  const list = rows(), sel = state.select && state.select.moved ? state.select : null;
+  // The hunk n went to while some of it is in view: scrolled away from, the top's.
+  let chosen = state.hunk ? list.findIndex(r => r.h === state.hunk) : -1;
+  const after = chosen < 0 ? -1 : list.findIndex((r, i) => i > chosen && (r.h || r.f));
+  if (chosen >= state.top + ui.size().H - 2 || (after >= 0 && after <= state.top)) chosen = -1;
+  let a = chosen >= 0 ? chosen : state.top, b = a;
+  if (sel) [a, b] = before(sel.from, sel.to) ? [sel.from.row, sel.to.row] : [sel.to.row, sel.from.row];
+  else if (chosen < 0) {
+    while (a > 0 && list[a] && !list[a].h && !list[a].f) a--;
+    // On a file's name, its first hunk: the whole file only when it has none.
+    const next = list[a] && list[a].f ? list.findIndex((r, i) => i > a && (r.h || r.f)) : -1;
+    if (next >= 0 && list[next].h) a = next;
+    b = a;
+  }
+  const picked = stage.picked(list.slice(a, b + 1));
+  const go = async () => {
+    if (editing) return flash('Busy…');
+    editing = true;
+    state.select = null;
+    // Untracked files the trash did not take: deleted for good once asked again.
+    const noTrash = names => new Promise(resolve => ask({ title: 'No trash: delete for good?',
+      name: names.length > 1 ? `${names.length} files` : names[0], note: 'This cannot be undone.',
+      buttons: [{ key: 'd', label: 'Delete', tone: 'danger' }, { key: 'escape', label: 'Cancel' }],
+      on: { d: () => resolve(true) }, dropped: () => resolve(false) }));
+    try { flash(await stage.apply(d.top, d.parsed, picked, mode, { noTrash }).catch(() => `Cannot ${mode}`)); }
+    finally { editing = false; }
+    // The rows move once reloaded (the staged section first): the next s aims at the top again, not at a hunk n
+    // went to that is no longer where it was.
+    state.hunk = null;
+    loadDiff(true);
+  };
+  if (mode !== 'discard') return go();
+  const n = stage.count(d.parsed, picked, mode);
+  if (!n) return flash('Nothing unstaged selected');
+  ask({ title: 'Discard from the working tree?', name: n, where: path.basename(state.file),
+    buttons: [{ key: 'd', label: 'Discard', tone: 'danger' }, { key: 'escape', label: 'Cancel' }], on: { d: go } });
 }
 function switchLayout() {
   if (!diffs) return;
@@ -239,6 +401,71 @@ function switchLayout() {
   state.rows = null;
   render();
 }
+
+// --- a commit, stash or tag (source control's review)
+//
+// Source control asks for one through the request file (show), as for a file: it shows over the tabs, read only,
+// until a file is asked for or q. state.show: { what (diffs.showArgs's, with title and cwd; or { blank } when nothing
+// with changes is selected there), parsed, loading, failed, back: the scroll of the tab under it }.
+let showRun = 0;
+function cleanShow(s) {
+  if (!diffs || !s || typeof s !== 'object' || typeof s.cwd !== 'string' || !path.isAbsolute(s.cwd)) return null;
+  if (s.blank === true) return { blank: true, text: ui.cleanLine(String(s.text || 'Select a file, commit, stash or tag')).slice(0, 80), title: '', cwd: s.cwd };
+  const what = { kind: s.kind, ref: s.ref, paths: Array.isArray(s.paths) ? s.paths : [], title: String(s.title || s.ref), cwd: s.cwd };
+  return diffs.showArgs(what) ? what : null;
+}
+async function enterShow(asked) {
+  const what = cleanShow(asked);
+  if (!what) return;
+  // Asked again (source control follows its selection at each refresh): left as it is, scroll included. A stash's
+  // name moves to another stash once one is added: loaded again, without clearing the screen meanwhile.
+  const same = state.show && JSON.stringify(state.show.what) === JSON.stringify(what);
+  if (same && what.kind !== 'stash') return;
+  if (same) {
+    const d = state.show, run = ++showRun, parsed = await diffs.show(what.cwd, what).catch(() => null);
+    if (run !== showRun || state.show !== d || !parsed) return;
+    d.parsed = parsed; state.rows = null;
+    return render();
+  }
+  dropAsk();
+  const back = state.show ? state.show.back : { top: state.top, left: state.left };
+  const d = state.show = { what, parsed: null, loading: true, failed: false, back };
+  Object.assign(state, { top: 0, left: 0, rows: null, hunk: null, select: null, find: null, matches: [], menu: null, help: null });
+  render();
+  const run = ++showRun;
+  if (what.blank) return;
+  const parsed = await diffs.show(what.cwd, what).catch(() => null);
+  if (run !== showRun || state.show !== d) return;
+  Object.assign(d, { parsed, loading: false, failed: !parsed });
+  state.rows = null;
+  render();
+}
+// The tab under it shown again, where it was.
+function dropShow() {
+  if (!state.show) return;
+  const { back } = state.show;
+  Object.assign(state, { show: null, rows: null, top: back.top, left: back.left, hunk: null, select: null });
+}
+// q on what is shown: back to the tab under it, or the preview closed.
+const qLabel = () => (REVIEW || !state.file ? 'close' : 'back');
+function leaveShow() {
+  if (!state.file || REVIEW) return quit();
+  dropShow();
+  render();
+}
+// Its title and line counts, then ⚙ on the right, which opens the diff's options (,).
+function showHeader(W) {
+  const gear = 3; // as in header()
+  const d = state.show.parsed, info = d ? `  +${d.add} −${d.del}` : '';
+  const [title] = ui.fit(` ${ui.cleanLine(state.show.what.title)}`, Math.max(1, W - ui.textWidth(info) - gear - 1));
+  const used = ui.textWidth(title) + ui.textWidth(info), x = Math.max(used + 1, W - gear + 1);
+  state.chips = [{ id: 'menu', from: x, to: x + gear - 1 }];
+  return ui.line([[title, '\x1b[1m'], [info, fg(C.dim)], [' '.repeat(Math.max(0, x - 1 - used)), ''],
+    [` ${ui.G.gear} `, state.menu ? fg(C.text) : fg(C.dim)]], W, C.header);
+}
+// The keys of a commit shown: moving, hunks, layout, wrap, the options, zoom, width, help; q and Escape go back.
+const SHOW_KEYS = new Set(['?', 'f1', 'ctrl+c', 'up', 'k', 'down', 'j', 'enter', 'pageup', 'pagedown', 'space', 'ctrl+u', 'ctrl+d',
+  'home', 'g', 'end', 'G', 'left', 'h', 'right', 'l', 'n', 'N', 'v', 'w', ',', 'z', '<', '>', 'shift+left', 'shift+right']);
 
 function setError(text) {
   state.kind = 'error'; state.info = text; state.rows = null;
@@ -266,18 +493,21 @@ function hexdump(buf) {
 
 // While editing, a Markdown file shows its source.
 const markdownView = () => state.view === 'file' && state.kind === 'markdown' && !state.raw && !state.edit && markdown;
-const gutter = () => (state.view === 'file' && settings.lineNumbers && !markdownView() && state.kind !== 'binary' && state.kind !== 'image'
-  ? String(state.source.length).length + 2 : 0);
+// The line numbers, the first of their columns taking the changes' signs; without them, a column of its own for the
+// changes, only when the file has some.
+const gutter = () => (state.view === 'file' && !state.show && settings.lineNumbers && !markdownView() && state.kind !== 'binary' && state.kind !== 'image'
+  ? String(state.source.length).length + 2 : changesShown() ? 1 : 0);
 
 // Display rows for the current width: wrapped or rendered text, built again when the width changes.
 function rows() {
   const { W, H } = ui.size();
   const width = Math.max(1, W - gutter() - 1);
+  // state.left is not in the key: the rows are cut there when drawn (segsOf, ui.slice).
   if (state.rows && state.rows.width === width && state.rows.height === H) return state.rows;
   // A selection holds positions in the old rows.
   state.select = null;
   let list = [];
-  if (state.view === 'diff') list = diffRows(W);
+  if (state.view === 'diff' || state.show) list = diffRows(W);
   else if (state.kind === 'image' && (state.converting || waiting())) list = [];
   else if (state.kind === 'image' && sharp()) {
     // In pixels: blank rows that the image covers, the first holding what to place (see placeImage).
@@ -322,26 +552,27 @@ function rows() {
   return (state.rows = list);
 }
 
-// The review notes shown in the text: each one under the last line it covers, those on the whole file (and every
-// one where the rows are not the file's lines: rendered Markdown) at the top.
-const NOTE = fg(C.yellow);
+// The review notes shown in the text: each one under the last line it covers, those on the whole file, the stale ones
+// (their lines gone) and every one where the rows are not the file's lines (rendered Markdown) at the top.
+let NOTE;
+ui.onTheme(() => { NOTE = fg(C.yellow); });
 function withNotes(list, width) {
-  if (!state.notes.length || state.view === 'diff' || state.kind === 'image' || state.kind === 'error' || (list.length === 1 && list[0].empty)) return list;
+  if (!state.notes.length || state.view === 'diff' || state.show || state.kind === 'image' || state.kind === 'error' || (list.length === 1 && list[0].empty)) return list;
   const lines = !markdownView() && state.kind !== 'binary';
-  const rowsOf = n => ui.split([[`✎ ${lines || !n.from ? '' : `${notes.where(n, path.dirname(n.file)).replace(/^.*:/, 'L')} `}`
-    + `${n.kind ? `${n.kind}: ` : ''}${ui.cleanLine(n.text)}`, NOTE]], Math.max(1, width - 2))
+  const rowsOf = n => ui.split([[`✎ ${(lines && !n.stale) || !n.from ? '' : `${notes.where(n, path.dirname(n.file)).replace(/^.*:/, 'L')} `}`
+    + `${n.stale ? 'stale, ' : ''}${n.kind ? `${n.kind}: ` : ''}${ui.cleanLine(n.text)}`, n.stale ? fg(C.dim) : NOTE]], Math.max(1, width - 2))
     .map(segs => ({ segs: [['  ', ''], ...segs], src: -1, note: true }));
-  const top = state.notes.filter(n => !lines || !n.from || n.to > state.plain.length).flatMap(rowsOf);
+  const top = state.notes.filter(n => !lines || !n.from || n.stale || n.to > state.plain.length).flatMap(rowsOf);
   if (!lines) return [...top, ...list];
   const out = [...top];
   list.forEach((r, i) => {
     out.push(r);
     const next = list[i + 1];
-    if (r.src >= 0 && !(next && next.src === r.src)) out.push(...state.notes.filter(n => n.from && n.to === r.src + 1).flatMap(rowsOf));
+    if (r.src >= 0 && !(next && next.src === r.src)) out.push(...state.notes.filter(n => n.from && !n.stale && n.to === r.src + 1).flatMap(rowsOf));
   });
   return out;
 }
-const noted = src => state.notes.some(n => n.from && src + 1 >= n.from && src + 1 <= n.to);
+const noted = src => state.notes.some(n => n.from && !n.stale && src + 1 >= n.from && src + 1 <= n.to);
 
 const rowOf = src => Math.max(0, rows().findIndex(r => r.src >= src));
 
@@ -543,7 +774,7 @@ function forgetFigures() {
 // --- rendering
 
 function render() {
-  if (state.edit) return renderEdit();
+  if (state.edit && !state.show) return renderEdit();
   const { W, H } = ui.size();
   const list = rows();
   const bodyH = H - 2;
@@ -553,21 +784,23 @@ function render() {
   const ranges = matchRanges(), md = markdownView();
   const current = state.find && state.match >= 0 ? state.matches[state.match] : null;
   // Wrapped and rendered rows (see rows()) leave the last column free for the scrollbar.
-  const bw = scrollbar.set(list.length, bodyH, state.top);
+  const bw = scrollbar.set(list.length, bodyH, state.top, changeMarks(list));
+  const signs = changesShown();
   // Nothing to show (an error, an image that cannot be drawn, an empty file): why, centred, and what to do.
-  const none = list.length === 1 && list[0].empty ? list[0] : state.view === 'file' && (state.kind === 'text' || state.kind === 'markdown') && state.text === ''
-    ? { empty: 'Empty file', pairs: [['i', 'edit here'], ['e', 'edit'], ['q', 'close']] } : null;
+  const none = list.length === 1 && list[0].empty ? list[0] : state.view === 'file' && !state.show && (state.kind === 'text' || state.kind === 'markdown') && state.text === ''
+    ? { empty: 'Empty file', pairs: [['i', 'edit here'], ['e', 'editor'], ['q', 'close']] } : null;
   if (none) lines.push(...ui.empty(W, bodyH, none.empty, none.pairs));
   for (let i = state.top; !none && i < Math.min(list.length, state.top + bodyH); i++) {
     const r = list[i];
-    const num = g ? [[(r.first ? String(r.src + 1) : '').padStart(g - 1) + ' ',
+    let num = g > 1 ? [[(r.first ? String(r.src + 1) : '').padStart(g - 1) + ' ',
       r.src >= 0 && noted(r.src) ? NOTE + '\x1b[1m' : fg(r.src + 1 === state.line ? C.text : C.dim)]] : [];
+    if (signs) num = g > 1 ? [changeSign(list, i), [num[0][0].slice(1), num[0][1]]] : [changeSign(list, i)];
     // The find's matches: every one marked, the current one brighter (in rendered Markdown, matches are by row).
     const at = md ? i : r.src, off = r.off || 0;
-    let segs = r.segs;
+    let segs = segsOf(r);
     if ((md || r.src >= 0) && ranges.has(at)) {
       segs = ui.mark(segs, ranges.get(at).map(([a, b]) => [a - off, b - off]), bg(C.find));
-      if (current && current[0] === at) segs = ui.mark(segs, [[current[1] - off, current[2] - off]], bg(CURRENT) + '\x1b[1m');
+      if (current && current[0] === at) segs = ui.mark(segs, [[current[1] - off, current[2] - off]], bg(C.current) + '\x1b[1m'); // the current match, over C.find for the others
     }
     // The caller's marks: parts of the line on the selection's colour, whole lines on the line highlight's (back).
     const cols = !md && r.src >= 0 ? marksOf(r.src).filter(m => m.a).map(m => [m.a - 1 - off, m.b - off]) : [];
@@ -611,46 +844,48 @@ const HELP = [
   ['Scroll', [['↑↓ j k', 'line'], ['pgup pgdn', 'page'], ['space', 'page down'], ['ctrl+u/d', 'half page'], ['g G', 'top, bottom'],
     ['← → h l', 'left, right']]],
   ['Find', [['/', 'find in the file'], ['n N', 'next, previous match (else mark)'], ['esc', 'stop finding, clear the marks']]],
-  ['Diff', [[',', 'the view\'s options (or ⚙)'], ['d', 'the file or its changes'], ['n N', 'next, previous hunk'], ['b', 'compare with HEAD or the default branch'],
-    ['s', 'inline, side by side']]],
+  ['Diff', [[',', 'the view\'s options (or ⚙)'], ['d', 'the file or its changes'], ['n N', 'next, previous hunk'],
+    ['b', 'compare with: HEAD, merge base, last agent turn, a commit or range, a branch'], ['v', 'inline, side by side'],
+    ['s', 'stage the lines selected (drag), else the hunk at the top (HEAD)'], ['u', 'unstage them'], ['D', 'discard them from the working tree']]],
   ['Tabs', [['tab shift+tab', 'next, previous tab'], ['ctrl+pgdn/pgup', 'next, previous tab'], ['t', 'keep the tab (in italics: the next file clicked replaces it)'],
     ['x', 'close the tab (middle click)']]],
+  ['Changes', [[']  [', 'next, previous block changed since HEAD'], ['c', 'show the changes beside the lines and on the scrollbar']]],
   ['View', [['w', 'wrap'], ['L', 'line numbers'], ['m', 'Markdown source'], ['p', 'image sharp or pixelated'], ['z', 'zoom the pane'], ['< >', 'narrower, wider'], ['shift+← →', 'move the border'], ['r', 'reload']]],
   ['Edit', [['i', 'edit the file here (or the View menu)'], ['ctrl+s', 'save'], ['esc', 'stop editing'], ['ctrl+z ctrl+y', 'undo, redo (or ctrl+shift+z)'],
     ['ctrl+f', 'find: ⏎ ↓ next, ↑ previous'], ['ctrl+r', 'replace: ⏎ one, alt+a all, tab to the other field'], ['ctrl+g', 'go to line'],
     ['ctrl+c ctrl+x ctrl+v', 'copy, cut, paste'], ['ctrl+a', 'select all'], ['shift+arrows', 'select (or drag)'], ['ctrl+← →', 'word'],
     ['tab shift+tab', 'indent, outdent'], ['alt+r alt+k', 'file changed on disk: reload, keep yours']]],
-  ['File', [['e', 'edit in the terminal'], ['o', 'open in the editor (media: in its app)'], ['O', 'open with the system'], ['y', 'copy path'],
+  ['File', [['e', 'open in the editor'], ['E', 'edit in the terminal'], ['o', 'open in its app (else the editor)'], ['y', 'copy path'],
     ['Y', 'copy relative path, with the selected lines'], ['H', 'history of the file']]],
   ['Review', [['a', 'note on the selected lines (or the file)'], ['tab', 'kind of note, while typing'], ['A', 'send the notes to the agent'],
-    ['C', 'copy the notes'], ['u', 'remove the last note']]],
+    ['C', 'copy the notes'], ['U', 'remove the last note']]],
   ['Pane', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['? f1', 'keys'], ['q esc', 'close']]],
 ];
 
-// What the Diff view compares with: HEAD, or the default branch (main, master) where the branch started.
+// The default branch the Diff view's merge base is with, for the scope's label.
 const branchName = () => (state.diff && state.diff.baseName) || 'main';
-const base = () => (state.base === 'branch' ? `vs ${branchName()}` : 'vs HEAD');
 const diffMode = W => (diffs ? diffs.layoutOf(Math.max(10, W - 2)) : 'inline');
 
-// What the Diff view compares with, in the header (vs HEAD, vs main): the only option that does not show in the
-// content itself (⚙ changes it).
-const reminder = () => (state.view === 'diff' ? base() : '');
+// What the Diff view compares with, in the header, as in the Changes pane (HEAD, main base, vs feature): the only
+// option that does not show in the content itself; a click opens b's menu, as ⚙ › Compare with.
+const reminder = () => (state.view === 'diff' ? Scope.label(state.scope, branchName()) : '');
 
 // Header: the tabs on the left, or with a single tab, the file's path; then the details; on the right, what the Diff
-// view compares with (dimmed), the File · Diff switch and ⚙, which opens the view's options (,). A narrow pane drops
+// view compares with (clickable), the File · Diff switch and ⚙, which opens the view's options (,). A narrow pane drops
 // the reminder, then the switch, then the details, then the tabs out of reach of the one shown (tabStrip).
 // state.chips: the clickable parts, { id, from, to, tab } in columns from 1.
 function header(W) {
+  if (state.show) return showHeader(W);
   const one = tabs.list.length < 2, t = tabs.list[tabs.current];
   const name = state.root ? path.relative(state.root, state.file) || path.basename(state.file) : path.basename(state.file);
   const sw = diffs && state.file ? ui.segmented([['file', 'File'], ['diff', 'Diff']], state.view) : null;
   let note = reminder();
   const gear = 3; // the glyph and the cell after it, which a Nerd Font glyph often spills over
-  const room = () => W - gear - (sw ? sw.width + 1 : 0) - (note ? ui.textWidth(note) + 2 : 0);
+  const room = () => W - gear - (sw ? sw.width + 1 : 0) - (note ? ui.textWidth(note) + 3 : 0);
   const nameRoom = Math.min(20, ui.textWidth(` ${one ? name : path.basename(state.file)} ×  `));
   if (note && room() < nameRoom) note = '';
   const showSwitch = sw && room() >= nameRoom;
-  const right = (note ? ui.textWidth(note) + 2 : 0) + (showSwitch ? sw.width + 1 : 0) + gear;
+  const right = (note ? ui.textWidth(note) + 3 : 0) + (showSwitch ? sw.width + 1 : 0) + gear;
   state.chips = [];
   let segs, lw;
   if (one) {
@@ -670,7 +905,12 @@ function header(W) {
   const iw = ui.textWidth(info);
   segs.push([info, fg(C.dim)], [' '.repeat(Math.max(0, W - right - lw - iw)), '']);
   let x = W - right + 1;
-  if (note) { segs.push([`${note}  `, fg(C.dim)]); x += ui.textWidth(note) + 2; }
+  if (note) {
+    const chip = ui.segmented([['scope', note]], 'scope');
+    segs.push(...chip.segs, [' ', '']);
+    state.chips.push({ id: 'scope', from: x, to: x + chip.width - 1 });
+    x += chip.width + 1;
+  }
   if (showSwitch) {
     segs.push(...sw.segs, [' ', '']);
     for (const h of sw.hits) state.chips.push({ id: h.id, from: x + h.from, to: x + h.to });
@@ -685,7 +925,6 @@ function header(W) {
 // background, a temporary one in italics; ‹ and › where tabs are hidden, which show the nearest of them. The strip
 // moves only when the tab shown would leave it (stripFirst). Returns { segs, width, chips }.
 let stripFirst = 0;
-const TAB_BACK = [55, 55, 61]; // the tab shown's background
 function tabStrip(room) {
   const names = Tabs.labels(tabs.list.map(t => t.file)).map(n => ui.cleanLine(n));
   const s = Tabs.strip(names.map(n => ui.textWidth(n) + 4), tabs.current, room, stripFirst);
@@ -699,7 +938,7 @@ function tabStrip(room) {
   };
   if (s.first > 0) put('‹ ', fg(C.dim), { id: 'tab', tab: s.first - 1 });
   for (let i = s.first; i <= s.last; i++) {
-    const on = i === tabs.current, back = on ? bg(TAB_BACK) : '';
+    const on = i === tabs.current, back = on ? bg(C.selectBlur) : '';
     const name = on && s.cut ? ui.ellipsis(names[i], Math.max(1, ui.textWidth(names[i]) - s.cut)) : names[i];
     put(` ${name} `, back + fg(on ? C.text : C.dim) + (on ? '\x1b[1m' : '') + (tabs.list[i].kept ? '' : '\x1b[3m'), { id: 'tab', tab: i });
     // ● for unsaved edits, as VS Code: the click still closes, asking first.
@@ -765,16 +1004,17 @@ function quit() {
 // menu. The actions of the footer (z, e…) are not repeated here.
 function openMenu(sel = 0) {
   const { W } = ui.size(), items = [], choice = text => [text, fg(C.blue)];
-  if (state.view === 'diff') {
-    items.push({ label: 'Layout', key: 's', value: choice(diffMode(W)), run: switchLayout },
-      { label: 'Compare with', key: 'b', value: choice(state.base === 'branch' ? branchName() : 'HEAD'), run: switchBase });
+  if (state.show || state.view === 'diff') {
+    if (diffs) items.push(...diffs.viewItems(diffMode(W), settings.wrap, switchLayout, () => toggle('wrap')));
+    if (!state.show) items.push({ label: 'Compare with', key: 'b', value: choice(Scope.label(state.scope, branchName())), run: openScopes, stay: false });
   } else {
     if (state.kind === 'markdown' && markdown && !state.edit) {
       items.push({ label: 'Markdown', key: 'm', value: choice(state.raw ? 'raw' : 'rendered'), run: () => { state.raw = !state.raw; state.rows = null; state.top = 0; } });
     }
     if (!state.edit && (state.kind === 'text' || (state.kind === 'markdown' && state.raw))) {
       items.push({ label: 'Wrap lines', key: 'w', value: ui.onOff(settings.wrap), run: () => toggle('wrap') },
-        { label: 'Line numbers', key: 'L', value: ui.onOff(settings.lineNumbers), run: () => toggle('lineNumbers') });
+        { label: 'Line numbers', key: 'L', value: ui.onOff(settings.lineNumbers), run: () => toggle('lineNumbers') },
+        { label: 'Changes', key: 'c', value: ui.onOff(settings.changes), run: () => { toggle('changes'); loadChanges(); } });
     }
     if (state.edit) items.push({ label: 'Line numbers', key: 'L', value: ui.onOff(settings.lineNumbers), run: () => toggle('lineNumbers') });
     if (state.edit || state.kind === 'text' || state.kind === 'markdown') items.push({ label: 'Edit here', key: 'i', value: ui.onOff(!!state.edit), run: () => (state.edit ? stopEdit() : startEdit()), stay: false });
@@ -789,9 +1029,7 @@ function openMenu(sel = 0) {
 }
 // A choice of the menu, by key or click: run, then the menu shown again with the new values, unless closed.
 function menuChoice(r) {
-  const sel = state.menu.sel;
-  if (r === 'close' || (r && r.run)) state.menu = null;
-  if (r && r.run) { r.run(); if (r.keep) return openMenu(sel); }
+  state.menu.choose(r, () => { state.menu = null; }, openMenu);
   render();
 }
 function menuKey(k) {
@@ -801,6 +1039,10 @@ function menuKey(k) {
 function footer(W) {
   // The keys shown, for clicks: none while the find or a message takes the line.
   state.hints = null;
+  if (state.revPrompt) {
+    const lead = ' Commit or range (abc123, main..HEAD): ';
+    return ui.line([[lead, fg(C.blue)], ...state.revPrompt.segments(Math.max(1, W - ui.textWidth(lead)))], W, C.header);
+  }
   if (state.find && state.find.active) {
     const count = state.find.field.value ? ` ${state.matches.length ? state.match + 1 : 0}/${state.matches.length}` : '';
     return ui.line([[` ${ui.G.search} `, fg(C.dim)], ...state.find.field.segments(W - 4 - count.length), [count, fg(C.dim)]], W, C.header);
@@ -816,10 +1058,12 @@ function footer(W) {
   const all = state.noteCount;
   const send = all ? [['A', `send ${all} note${all > 1 ? 's' : ''}`]] : [];
   const marks = [...(state.marks.length > 1 ? [['n N', `${state.marks.length} marks`]] : []), ...(state.marks.length ? [['esc', 'clear']] : [])];
-  const keys = ui.keys(state.view === 'diff'
+  const keys = ui.keys(state.show && state.show.what.blank ? [['z', 'zoom'], ['q', 'close'], ['?', 'keys']]
+    : state.show ? [['n N', 'hunks'], ['v', 'layout'], ['z', 'zoom'], ['q', qLabel()], ['?', 'keys']]
+    : state.view === 'diff'
     ? [...send, ...marks, ...(state.marks.length > 1 ? [] : [['n N', 'hunks']]), ['a', 'note'], ['z', 'zoom'], ['q', 'close'], ['?', 'keys']]
     : state.kind === 'image' ? [...send, ['p', sharp() ? 'pixelated' : 'sharp'], ['o', 'open'], ['y', 'copy path'], ['q', 'close'], ['?', 'keys']]
-      : [...send, ...marks, ['/', 'find'], ['a', 'note'], ['e', 'edit'], ['o', 'editor'], ['z', 'zoom'], ['q', 'close'], ['?', 'keys']], W - pos.length - 1);
+      : [...send, ...marks, ['/', 'find'], ['a', 'note'], ['e', 'editor'], ['o', 'app'], ['z', 'zoom'], ['q', 'close'], ['?', 'keys']], W - pos.length - 1);
   state.hints = keys;
   return ui.line([...keys, [pos.padStart(Math.max(0, W - ui.segWidth(keys))), fg(C.dim)]], W, C.header);
 }
@@ -850,7 +1094,6 @@ function search(jump = true) {
 }
 
 // Matches by line (by row in rendered Markdown): [[start, end)].
-const CURRENT = [200, 140, 30]; // the current match, over C.find for the others
 function matchRanges() {
   const map = new Map();
   if (!state.matches.length) return map;
@@ -908,10 +1151,13 @@ function charEnd(text, at) {
   return i;
 }
 
+// A row as shown: in the Diff view, made again from state.left (diffRows).
+const segsOf = r => (state.left && r.redo ? r.redo(state.left) : r.segs);
+
 // The position under a screen cell of the body.
 function positionAt(row, x) {
   const r = rows()[row];
-  const text = ui.segText(r.segs);
+  const text = ui.segText(segsOf(r));
   let col = x - 1 - gutter() + (!settings.wrap && r.src >= 0 ? state.left : 0), w = 0, at = 0, prev, prevAt = 0;
   for (const ch of text) {
     const c = ui.cols(ch, prev);
@@ -931,7 +1177,7 @@ function selectedRange(i) {
   const { from, to } = state.select;
   const [a, b] = before(from, to) ? [from, to] : [to, from];
   if (i < a.row || i > b.row) return null;
-  const list = rows(), text = ui.segText(list[i].segs);
+  const list = rows(), text = ui.segText(segsOf(list[i]));
   const start = i === a.row ? a.at : 0;
   const end = i === b.row ? charEnd(text, b.at) : text.length;
   const next = list[i + 1];
@@ -949,7 +1195,7 @@ function selectedText() {
   for (let i = a.row; i <= b.row; i++) {
     const r = list[i];
     const [start, end] = selectedRange(i);
-    let part = ui.segText(r.segs).slice(Math.max(start, r.pad || 0), end);
+    let part = ui.segText(segsOf(r)).slice(Math.max(start, r.pad || 0), end);
     if (r.src < 0) part = part.trimEnd();
     text += (i > a.row && (r.src < 0 || r.first) ? '\n' : '') + part;
   }
@@ -976,7 +1222,7 @@ const WORD = /[\p{L}\p{N}\p{M}_$]/u;
 function wordAt({ row, at }) {
   const chars = [];
   let i = 0;
-  for (const ch of ui.segText(rows()[row].segs)) { chars.push([i, WORD.test(ch) ? 1 : /\s/.test(ch) ? 2 : 3]); i += ch.length; }
+  for (const ch of ui.segText(segsOf(rows()[row]))) { chars.push([i, WORD.test(ch) ? 1 : /\s/.test(ch) ? 2 : 3]); i += ch.length; }
   let a = chars.findIndex(([j]) => j === at), b = a;
   if (a < 0) return null;
   const kind = chars[a][1];
@@ -995,7 +1241,7 @@ function lineAt({ row }) {
     while (a > 0 && list[a - 1].src === list[row].src) a--;
     while (b < list.length - 1 && list[b + 1].src === list[row].src) b++;
   }
-  return { from: { row: a, at: 0 }, to: { row: b, at: ui.segText(list[b].segs).length }, moved: true, fixed: true };
+  return { from: { row: a, at: 0 }, to: { row: b, at: ui.segText(segsOf(list[b])).length }, moved: true, fixed: true };
 }
 
 // --- edit mode
@@ -1054,13 +1300,21 @@ function stopEdit() {
 }
 
 // A question in a card (ui.ask): q.on, what each button's key does; Cancel (escape) leaves things as they were.
-function ask(q) { state.ask = { focus: 0, ...q }; render(); }
+// q.dropped: called when it goes without an answer (canceled, or another question or a request taking its place).
+function ask(q) { dropAsk(); state.ask = { focus: 0, ...q }; render(); }
+function dropAsk() {
+  const q = state.ask;
+  state.ask = null;
+  if (q && q.dropped) q.dropped();
+}
 function askChoice(k) {
   const q = state.ask;
   if (!k) return;
   if (k === 'move') return render();
   state.ask = null;
-  if (q.on[k]) q.on[k](); else render();
+  if (q.on[k]) return q.on[k]();
+  if (q.dropped) q.dropped();
+  render();
 }
 const askKey = k => askChoice(ui.askKey(k, state.ask));
 // The folder of a file for a card: relative to the root, nothing for the root itself.
@@ -1161,14 +1415,13 @@ function found() {
 
 // The rows above the footer: the bar of a file changed on disk, and the replacement's field. Each with its hints, and
 // what a click on one does (act).
-const DISK_BACK = [64, 48, 16];
 function editBars(W) {
   const e = state.edit, out = [];
   if (e.disk) {
     const gone = e.disk === 'gone', lead = gone ? ' ⚠ Deleted on disk ' : ' ⚠ Changed on disk ';
     const hints = ui.keys(gone ? [['ctrl+s', 'save it again'], ['alt+k', 'dismiss']] : [['alt+r', 'reload, dropping your edits'], ['alt+k', 'keep yours']],
       W - ui.textWidth(lead));
-    out.push({ segs: [[lead, fg(C.orange) + '\x1b[1m'], ...hints], hints, from: ui.textWidth(lead), back: DISK_BACK, act: k => editKey(k) });
+    out.push({ segs: [[lead, fg(C.orange) + '\x1b[1m'], ...hints], hints, from: ui.textWidth(lead), back: C.warn, act: k => editKey(k) });
   }
   const p = e.prompt;
   if (p && p.with) {
@@ -1440,8 +1693,14 @@ function scroll(n) {
 function key(k) {
   if (state.ask) return askKey(k);
   if (state.note) return noteKey(k);
+  if (state.revPrompt) {
+    const r = Scope.revKey(state.revPrompt, k);
+    if (!r.done) return r.changed && render();
+    state.revPrompt = null;
+    return r.rev ? pickScope({ kind: 'rev', rev: r.rev }) : render();
+  }
   if (state.menu) return menuKey(k);
-  if (state.edit && !state.help) return editKey(k);
+  if (state.edit && !state.help && !state.show) return editKey(k);
   if (state.find && state.find.active) {
     if (k === 'escape') { state.find = null; state.matches = []; return render(); }
     if (k === 'enter' || k === 'down') { state.find.active = k !== 'enter' || !state.matches.length; return next(1); }
@@ -1454,6 +1713,10 @@ function key(k) {
   // While editing, ctrl+c (copy there) only closes the help, never the pane.
   if (state.help && state.edit && k === 'ctrl+c') { state.help = null; return render(); }
   if (state.help && k !== 'ctrl+c') { if (!ui.helpKey(k, state.help)) state.help = null; return render(); }
+  if (state.show) {
+    if (k === 'q' || k === 'escape') return leaveShow();
+    if (!SHOW_KEYS.has(k)) return;
+  }
   switch (k) {
     case '?': case 'f1': state.help = { top: 0, find: null }; return render();
     case 'q': case 'escape': case 'ctrl+c':
@@ -1474,6 +1737,7 @@ function key(k) {
     case '/': if (state.view === 'diff') return flash('Find works in the file: d'); state.find = { field: new ui.Field(), active: true }; return render();
     case 'n': case 'N': {
       const dir = k === 'n' ? 1 : -1;
+      if (state.show) return nextHunk(dir);
       if (state.marks.length && !state.matches.length) return nextMark(dir);
       return state.view === 'diff' ? nextHunk(dir) : next(dir);
     }
@@ -1483,16 +1747,21 @@ function key(k) {
     case 't': return flash(keepTab() ? 'Tab kept: the next file clicked opens in another tab' : 'Tab already kept');
     case 'x': return closeTab();
     case ',': return openMenu();
-    case 'b': if (state.view === 'diff') switchBase(); return;
-    case 's': if (state.view === 'diff') switchLayout(); return;
+    case 'b': if (state.view === 'diff') openScopes(); return;
+    case 'v': if (state.view === 'diff' || state.show) switchLayout(); return;
+    case 's': if (state.view === 'diff') editDiff('stage'); return;
+    case 'u': if (state.view === 'diff') editDiff('unstage'); return;
+    case 'D': if (state.view === 'diff') editDiff('discard'); return;
     case 'w': return toggle('wrap');
     case 'L': return toggle('lineNumbers');
+    case 'c': toggle('changes'); return loadChanges();
+    case ']': case '[': nextChange(k === ']' ? 1 : -1); return render();
     case 'p': return toggleSharp();
     case 'm': if (state.kind === 'markdown') { state.raw = !state.raw; state.rows = null; state.top = 0; render(); } return;
     case 'r': return load(true);
-    case 'e': keepTab(); return act(actions.edit(state.file, PANE));
-    case 'o': keepTab(); return act(actions.open(state.file, PANE));
-    case 'O': return act(actions.system(state.file));
+    case 'e': keepTab(); return act(actions.editor(state.file, PANE));
+    case 'E': keepTab(); return act(actions.edit(state.file, PANE));
+    case 'o': keepTab(); return act(actions.app(state.file, PANE));
     case 'i': return startEdit();
     case 'y': return act(actions.copy(state.file));
     case 'Y': return copyReference();
@@ -1500,8 +1769,8 @@ function key(k) {
     case 'a': return startNote();
     case 'A': return act(notes.send(TAB, PANE));
     case 'C': return act(notes.copy(TAB, state.root || path.dirname(state.file)));
-    case 'u': return act(Promise.resolve(notes.undo(TAB)));
-    case 'z': if (PANE) herdr('pane', 'zoom', PANE, '--toggle'); return;
+    case 'U': return act(Promise.resolve(notes.undo(TAB)));
+    case 'z': actions.zoom(PANE); return;
     case '<': case '>': return widen(k === '<' ? -4 : 4);
     // The inner border pushed: on the left of a preview that is the right part of its split, as it is most often.
     case 'shift+left': case 'shift+right': return widen((k === 'shift+left') === (keeper.left() === true) ? -4 : 4);
@@ -1520,7 +1789,10 @@ function selectedLines() {
     const list = rows(), sel = state.select && state.select.moved ? state.select : null;
     const [a, b] = sel ? (before(sel.from, sel.to) ? [sel.from.row, sel.to.row] : [sel.to.row, sel.from.row]) : [state.top, state.top];
     const refs = list.slice(a, b + 1).map(r => r.ref).filter(r => r && r.from);
-    return refs.length ? [Math.min(...refs.map(r => r.from)), Math.max(...refs.map(r => r.to))] : null;
+    if (!refs.length) return null;
+    // The section of the lines (staged or not), for their text in the diff (notes' anchor); '' when both are selected.
+    const sec = refs.every(r => (r.sec || '') === (refs[0].sec || '')) ? refs[0].sec || '' : null;
+    return [Math.min(...refs.map(r => r.from)), Math.max(...refs.map(r => r.to)), sec];
   }
   if (state.select && state.select.moved) {
     const { from, to } = state.select;
@@ -1544,7 +1816,13 @@ function startNote() {
   if (!TAB) return flash('Notes need the explorer');
   if (!state.file || state.kind === 'error') return;
   const at = selectedLines();
-  state.note = { field: new ui.Field(), kind: '', from: at ? at[0] : 0, to: at ? at[1] : 0 };
+  // In the Diff view, the anchor is the text of the lines in the version shown, not on disk (notes.add).
+  const d = state.view === 'diff' && at && state.diff && state.diff.parsed;
+  const ref = d && { file: path.relative(state.diff.top, notes.real(state.file)).split(path.sep).join('/'), sec: at[2], from: at[0], to: at[1] };
+  const lines = !d ? undefined : at[2] === null || !diffs ? null : diffs.shownLines(d, ref);
+  // A staged line: placed where it is on disk, which notes follow; stale when changed there since.
+  const disk = d && diffs && at[2] === 'staged' ? diffs.diskLines(d, ref) : undefined;
+  state.note = { field: new ui.Field(), kind: '', ...(disk || { from: at ? at[0] : 0, to: at ? at[1] : 0 }), lines, stale: disk === null };
   render();
 }
 
@@ -1561,7 +1839,7 @@ function noteKey(k) {
     state.note = null;
     if (!n.field.value.trim()) return render();
     state.select = null;
-    const msg = notes.add(TAB, { file: state.file, from: n.from, to: n.to, kind: n.kind, text: n.field.value });
+    const msg = notes.add(TAB, { file: state.file, from: n.from, to: n.to, kind: n.kind, text: n.field.value, lines: n.lines, stale: n.stale });
     keepTab();
     loadNotes();
     return flash(msg);
@@ -1569,15 +1847,16 @@ function noteKey(k) {
   if (n.field.key(k)) render();
 }
 
-// The tab's notes on the shown file, read again when they change (taken or sent in another pane).
-function readNotes() {
-  const all = notes.read(TAB), file = state.file && notes.real(state.file);
+// The tab's notes on the shown file, read again when they change (taken or sent in another pane) and placed again
+// when the file does (notes.current, this file only: the pane showing another one places its own).
+function readNotes(place = true) {
+  const file = state.file && notes.real(state.file), all = place && file ? notes.current(TAB, file) : notes.read(TAB);
   state.noteCount = all.length;
   state.notes = all.filter(n => n.file === file);
 }
 function loadNotes() {
   const was = JSON.stringify(state.notes);
-  readNotes();
+  readNotes(false);
   if (JSON.stringify(state.notes) !== was) state.rows = null;
   render();
 }
@@ -1595,7 +1874,13 @@ function mouse(m) {
     const k = ui.keyAt(state.hints, m.x - 1);
     if (k) return key(k);
   }
-  if (state.edit) return editMouse(m);
+  if (state.edit && !state.show) return editMouse(m);
+  // A commit shown: the wheel and the scrollbar only.
+  if (state.show) {
+    if (m.wheel) return scroll(m.wheel * 3);
+    scrollbar.mouse(m, m.y - 2, m.x === ui.size().W);
+    return;
+  }
   // The wheel scrolls under a selection, which may still be dragged: the button state is unknown here.
   if (m.wheel) return scroll(m.wheel * 3);
   const { W, H } = ui.size();
@@ -1622,6 +1907,7 @@ function headerMouse(m) {
     return showTab(chip.tab);
   }
   if (chip.id === 'menu') return openMenu();
+  if (chip.id === 'scope') return openScopes();
   if (chip.id !== state.view) toggleView();
 }
 
@@ -1675,13 +1961,16 @@ function bodyMouse(m) {
 
 const paint = ui.screen({
   key, mouse, reply,
-  focus: f => { state.focused = f; if (!f) endSelection(); },
+  // Back to the pane: a commit made meanwhile changes what is changed since HEAD.
+  focus: f => { state.focused = f; if (!f) { endSelection(); actions.unzoom(PANE).catch(() => { }); } else loadChanges(); },
   paste: (text, raw) => {
     if (state.ask) return;
     if (state.edit) return editPaste(text, raw);
-    if (state.note) { state.note.field.insert(text); render(); } else if (state.find && state.find.active) { state.find.field.insert(text); search(); }
+    if (state.revPrompt) { state.revPrompt.insert(text); render(); } else if (state.note) { state.note.field.insert(text); render(); } else if (state.find && state.find.active) { state.find.field.insert(text); search(); }
   },
   resize: () => { state.rows = null; render(); keeper.check(); },
+  // The highlighted source too is in the theme's colours: read again.
+  theme: () => { state.rows = null; if (state.edit) state.edit.hl = null; if (state.file) load(true); else render(); },
 }, { motion: true });
 
 // The preview keeps its width when another resize moves it (actions.widthKeeper): the width herdr gave it at first,
@@ -1697,11 +1986,16 @@ function widen(cols) {
 keeper.check();
 
 // The Images setting changed in the explorer's settings, or by a click in another preview: the image drawn again
-// as it says, p's choice forgotten.
+// as it says, p's choice forgotten. Wrap lines and the diff layout chosen in another pane (another preview, the
+// Changes pane, source control): shown at once.
+let layoutSeen = JSON.stringify(readSettings().diffLayout);
 if (SETTINGS_FILE) fs.watchFile(SETTINGS_FILE, { interval: 1000 }, () => {
-  const images = readSettings().images;
-  if (images === settings.images) return;
-  settings.images = images;
+  const saved = readSettings(), layout = JSON.stringify(saved.diffLayout);
+  if (!!saved.wrap !== !!settings.wrap) { settings.wrap = !!saved.wrap; state.left = 0; state.rows = null; render(); }
+  else if (layout !== layoutSeen && state.view === 'diff') { state.rows = null; render(); }
+  layoutSeen = layout;
+  if (saved.images === settings.images) return;
+  settings.images = saved.images;
   state.sharp = null; state.rows = null;
   render();
 });
@@ -1726,8 +2020,9 @@ function savedTabs() {
 const saveFile = () => writePaneState(PANE, { file: state.file, root: state.root, line: state.line, tabs: savedTabs() });
 
 // The explorer and the search ask for another file through the request file.
-// After a restart on new code, seen is the previous process's: a request made while the pane changed hands is still
-// taken, once the file it showed is loaded.
+// After a restart on new code, seen is the previous process's, and on opening that of the request file when the explorer
+// opened the pane: a request made while the pane changed hands or started is still taken, once the file it showed is
+// loaded.
 const handed = process.env.EXPLORER_SEEN !== undefined;
 let seen = +process.env.EXPLORER_SEEN || 0;
 if (REQUEST) {
@@ -1741,9 +2036,11 @@ function take(stat) {
   seen = stat.mtimeMs;
   let req;
   try { req = JSON.parse(fs.readFileSync(REQUEST, 'utf8')); } catch { return; }
+  if (req.show) return enterShow(req.show);
   if (!req.file) return;
+  dropShow();
   // A question of the tab shown is dropped, as canceled: its answer would go to another tab.
-  state.ask = null;
+  dropAsk();
   // In its tab, the temporary one, or a new one (Tabs.open). same: a tab that already showed the file, as it was left;
   // other: the pane shows another file than before.
   const prev = state.file, was = tabs.current;
@@ -1780,7 +2077,8 @@ function watch() {
     watcher = fs.watch(path.dirname(state.file), (ev, f) => {
       if (f && String(f) !== base) return;
       clearTimeout(reload);
-      reload = setTimeout(() => load(true), 80);
+      // The notes follow their lines (notes.current), the file's own reloaded with it.
+      reload = setTimeout(() => { readNotes(); load(true); }, 80);
     });
     watcher.on('error', () => { });
   } catch { }
@@ -1791,7 +2089,7 @@ if (!state.file) { state.file = ''; setError('No file'); } else {
   watch();
   // A tab saved before a restart: at its scroll.
   if (restored) {
-    Object.assign(state, { top: restored.top, left: restored.left, raw: restored.raw, base: restored.base });
+    Object.assign(state, { top: restored.top, left: restored.left, raw: restored.raw });
     if (state.view === 'diff') state.wantTop = state.top;
   }
   load(!!restored);
@@ -1799,6 +2097,8 @@ if (!state.file) { state.file = ''; setError('No file'); } else {
   saveFile();
   if (!restored && state.line && state.view === 'file') { state.top = Math.max(0, rowOf(state.line - 1) - Math.floor((ui.size().H - 2) / 3)); render(); }
 }
+// Opened, or restarted, on a commit of source control.
+try { enterShow(JSON.parse(process.env.EXPLORER_SHOW || 'null')); } catch { }
 
 // Updated plugin: the preview starts again on the new code, on the same file and line, once no search is typed nor
 // selection dragged. This process stops watching, the new one taking over the pane.
@@ -1813,5 +2113,6 @@ update.watch(() => !(state.find && state.find.active) && !state.note && !(state.
   if (REQUEST) fs.unwatchFile(REQUEST);
   if (SETTINGS_FILE) fs.unwatchFile(SETTINGS_FILE);
   ui.restart({ EXPLORER_FILE: state.file, EXPLORER_ROOT: state.root, EXPLORER_LINE: String(state.line), EXPLORER_SEEN: String(seen),
-    EXPLORER_MARKS: JSON.stringify(state.marks), EXPLORER_VIEW: state.view, EXPLORER_TABS: JSON.stringify(savedTabs()) });
+    EXPLORER_MARKS: JSON.stringify(state.marks), EXPLORER_VIEW: state.view, EXPLORER_TABS: JSON.stringify(savedTabs()),
+    EXPLORER_SHOW: state.show ? JSON.stringify(state.show.what) : '' });
 });

@@ -14,7 +14,7 @@ config="${HERDR_CONFIG_PATH:-${XDG_CONFIG_HOME:-$HOME/.config}/herdr/config.toml
 mkdir -p "$(dirname "$config")"
 touch "$config"
 bind() { # key action description
-  grep -q "gcaudan.explorer.$2\"" "$config" && return
+  grep -qF "gcaudan.explorer.$2\"" "$config" && return
   printf '\n[[keys.command]]\nkey = "%s"\ntype = "plugin_action"\ncommand = "gcaudan.explorer.%s"\ndescription = "%s"\n' "$1" "$2" "$3" >> "$config"
   echo "  key     $1 in $config"
 }

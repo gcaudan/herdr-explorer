@@ -3,45 +3,17 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
 const ui = require('../core/ui');
 const diffs = require('../diff');
+const actions = require('../core/actions');
+const Scope = require('../core/scope');
 const graph = require('../render/graph');
-const { WIN, GIT, gitEnv, gitOperation, readSettings, writeSettings, realPath, addConfig } = require('../core/exec');
+const { WIN, GIT, gitEnv, gitOperation, readSettings, writeSettings, realPath, addConfig, exec } = require('../core/exec');
 const parse = require('./parse');
 const { errorOf } = parse;
-const { ROOT, NET_TIMEOUT, S, frame, late, draw, select, follow, base, flash } = require('./context');
+const { ROOT, REVIEW, NET_TIMEOUT, S, frame, late, draw, select, follow, base, flash } = require('./context');
 
 // --- running git
-
-// Runs a program: { code, out, err }, code null when it could not start or timed out; input goes to stdin.
-// exec.js's run() returns stdout only, and git's error messages and stdin (commit message, pathspecs) are
-// needed here. detached (not on Windows): a session without terminal, so that ssh, gpg or a credential helper
-// cannot take over the pane to ask for a password; they fail instead, or use their graphical prompt.
-function exec(cmd, args, { cwd, env, input, timeout = 0, detached = false, shell = false } = {}) {
-  return new Promise(resolve => {
-    if (!cmd) return resolve({ code: null, out: '', err: 'not found' });
-    let child;
-    try { child = spawn(cmd, args, { cwd, env, shell, windowsHide: true, detached: detached && !WIN }); }
-    catch (e) { return resolve({ code: null, out: '', err: e.message }); }
-    const out = [], err = [];
-    let size = 0, done = false, timer = null;
-    const finish = code => {
-      if (done) return;
-      done = true; clearTimeout(timer);
-      resolve({ code, out: Buffer.concat(out).toString('utf8'), err: Buffer.concat(err).toString('utf8') });
-    };
-    // Detached, the child leads its own process group: killed with it, ssh started by git does not outlive it.
-    const kill = () => { try { if (detached && !WIN) process.kill(-child.pid); else child.kill(); } catch { } };
-    if (timeout) timer = setTimeout(() => { kill(); finish(null); }, timeout);
-    child.stdout.on('data', d => { if ((size += d.length) <= 64 << 20) out.push(d); });
-    child.stderr.on('data', d => err.push(d));
-    child.on('error', e => { err.push(Buffer.from(e.message)); finish(null); });
-    child.on('close', code => finish(code));
-    child.stdin.on('error', () => { });
-    child.stdin.end(input || '');
-  });
-}
 
 // Config keys that run a program and that the repository could set in its own config: for the commands that
 // write (commit, switch, stash, fetch, pull, push), each one the repository sets is replaced by the user's
@@ -90,8 +62,9 @@ function english(env) {
 // for the other commands: stash -u relies on pathspec magic internally). opts.safe: the hardened environment,
 // for the commands that write. opts.config: [key, value] pairs, after the repository's config, as GIT_CONFIG_KEY_n
 // (-c would split a key holding '=', which a branch name can).
+// In the repository loaded, or opts.top.
 async function git(args, opts = {}) {
-  const cwd = (S.repo && S.repo.top) || ROOT;
+  const cwd = opts.top || (S.repo && S.repo.top) || ROOT;
   const safe = opts.safe ? await safeEnv(cwd) : null;
   const literal = args.includes('--') || args.includes(fromFile[0]) ? { GIT_LITERAL_PATHSPECS: '1' } : {};
   const env = english({ ...(safe ? safe.env : await gitEnv(cwd)), ...literal, ...opts.env });
@@ -164,11 +137,23 @@ async function loadHistory() {
   // Children before their parents, by date, as the graph needs. For one file, --parents links each commit to the
   // previous one that changed it, so that the graph joins them up.
   const revs = S.allBranches ? [...(S.repo.hasHead ? ['HEAD'] : []), '--branches', '--remotes'] : [];
-  const res = await git(['log', '--no-show-signature', '--decorate=full', '--date-order', '-n', '500',
-    '--format=%H%x1f%h%x1f%s%x1f%an%x1f%at%x1f%D%x1f%P', ...(S.histFile ? ['--parents'] : []), ...revs, '--', ...(S.histFile ? S.histNames : [])]);
+  const [res, fork] = await Promise.all([git(['log', '--no-show-signature', '--decorate=full', '--date-order', '-n', '500',
+    '--format=%H%x1f%h%x1f%s%x1f%an%x1f%at%x1f%D%x1f%P', ...(S.histFile ? ['--parents'] : []), ...revs, '--', ...(S.histFile ? S.histNames : [])]),
+  forkPoint()]);
   S.history = res.code !== 0 ? [] : parse.parseHistory(res.out);
-  graph.layout(S.history).forEach((g, i) => Object.assign(S.history[i], { graph: g.cells, lane: g.color, node: node(g) }));
+  graph.layout(S.history, fork).forEach((g, i) => Object.assign(S.history[i], { graph: g.cells, lane: g.color, node: node(g) }));
   S.histLoaded = true;
+}
+
+// Where the current branch leaves the default branch (diffs.defaultBranch, the Diff view's main base): the history's
+// graph changes colour there. null on the default branch, or a branch it already has.
+async function forkPoint() {
+  if (!S.repo.hasHead) return null;
+  const out = async args => { const r = await git(args); return r.code === 0 ? r.out.trim() : ''; };
+  const name = await diffs.defaultBranch(out);
+  if (!name) return null;
+  const [fork, head] = await Promise.all([out(['merge-base', 'HEAD', name]), out(['rev-parse', 'HEAD'])]);
+  return fork && fork !== head ? fork : null;
 }
 
 // The file whose history is shown, relative to the repository (git runs there), through symbolic links (/home and
@@ -312,10 +297,12 @@ function filterPicker() {
 }
 
 // mode: 'merge' or 'rebase' (the menu's Merge a branch… and Rebase onto a branch…), else the picker switches.
-function openPicker(mode) {
+// anchor: { right, at }, the right edge (column from 0, excluded) and top line of the menu that opened it, where it
+// hangs; else under the header's branch.
+function openPicker(mode, anchor) {
   if (!S.repo) return;
   const first = mode ? 0 : 1;
-  S.picker = { mode, field: new ui.Field(), typing: false, sel: first, top: 0, all: [], items: [] };
+  S.picker = { mode, anchor: mode ? anchor : null, field: new ui.Field(), typing: false, sel: first, top: 0, all: [], items: [] };
   filterPicker();
   draw();
   loadPicker().then(() => { if (S.picker && !S.inline) { S.picker.sel = Math.max(0, Math.min(first, S.picker.items.length - 1)); draw(); } });
@@ -349,6 +336,16 @@ async function compare(row) {
     failed: count.code !== 0 && errorOf(count) };
   d.cache = '';
   draw();
+}
+
+// = also has the Changes pane and the preview's Diff view of the tab show the branch's changes since it left the base
+// (the scope base...branch, core/scope.js, in full names as compare has them: a tag of the same name does not stand
+// in); a branch merely selected leaves the scope alone. In a review, the tab reviewed too (REVIEW), not only the
+// review's own, whose preview shows the files.
+let myTab;
+async function shareCompare(row) {
+  if (myTab === undefined) myTab = (await actions.tabOf(process.env.HERDR_PANE_ID).catch(() => null) || { me: {} }).me.tab_id || null;
+  for (const tab of new Set([myTab, REVIEW].filter(Boolean))) Scope.write(tab, { kind: 'rev', rev: `${baseRef()}...${fullRef(row.ref)}` });
 }
 
 // --- diffs
@@ -415,6 +412,6 @@ function toggle(row, open = !row.open) {
 
 module.exports = {
   exec, english, git, errorOf, op, net, fromFile, nul, loadStatus, histName, renamed, allFiles, schedule, refresh, ongoing,
-  mergeOptions, continues, headName, filterPicker, openPicker, fullRef, baseName, compare, showDiff, openItemDiff,
-  closeDiff, comparable, diffable, showing, setView, toggleAllBranches, toggleTree, toggle,
+  mergeOptions, continues, headName, filterPicker, openPicker, fullRef, baseName, compare, shareCompare, showDiff, openItemDiff,
+  closeDiff, comparable, diffable, showing, setView, toggleAllBranches, toggleTree, toggle, forkPoint,
 };

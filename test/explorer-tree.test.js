@@ -46,6 +46,33 @@ test('rows: dot files with the hidden setting, never .git; the cache until clear
   assert.deepStrictEqual(shown(tree.rows({ expanded: new Set() })), ['a.txt', 'b.txt']);
 });
 
+test('rows: a folded compact folder is chained only through folders already read', t => {
+  const root = folder(['a/b/c/x.txt', 'z.txt']);
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const tree = Tree.create(() => root, { hidden: true, ignored: true, compact: true });
+  const names = rows => rows.map(r => `${r.chain || ''}${r.name}${r.dir ? (r.open ? '/-' : '/+') : ''}`);
+  assert.deepStrictEqual(names(tree.rows({ expanded: new Set(['']) })), ['a/+', 'z.txt']);
+  assert.ok(!tree.cache.has('a'), 'a folded folder is not read');
+  // Unfolded from its row (a): the whole chain, open.
+  assert.deepStrictEqual(names(tree.rows({ expanded: new Set(['', 'a']) })), ['a/b/c/-', 'x.txt', 'z.txt']);
+  // Folded again, the chain read stays.
+  assert.deepStrictEqual(names(tree.rows({ expanded: new Set(['']) })), ['a/b/c/+', 'z.txt']);
+});
+
+test('stale: a folder is read again only when its modification time moved', t => {
+  const root = folder(['a.txt']);
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const old = new Date(Date.now() - 60000);
+  fs.utimesSync(root, old, old);
+  const tree = Tree.create(() => root, { hidden: true, ignored: true });
+  const first = tree.readDir('');
+  tree.stale();
+  assert.strictEqual(tree.readDir(''), first, 'same time: reused');
+  fs.writeFileSync(path.join(root, 'b.txt'), '');
+  tree.stale();
+  assert.deepStrictEqual(tree.readDir('').map(e => e.name), ['a.txt', 'b.txt']);
+});
+
 test('rows: the filter keeps the matches and the folders holding one, unfolded, outside ignored folders', t => {
   const root = folder(['src/', 'src/main.js', 'src/util.js', 'docs/', 'docs/Main.md', 'node_modules/', 'node_modules/main.js', 'readme.md']);
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -113,4 +140,31 @@ test('tree order: folders before files at each level, names in numeric order', (
   const entries = [{ name: 'b', dir: false }, { name: 'B2', dir: true }, { name: 'a10', dir: false }, { name: 'a9', dir: false }];
   assert.deepStrictEqual(entries.sort(Tree.ENTRY_ORDER).map(e => e.name), ['B2', 'a9', 'a10', 'b']);
   assert.deepStrictEqual(['', 'a', 'a/b', 'a/b/c'].map(Tree.parentOf), [null, '', 'a', 'a/b']);
+});
+
+test('compact folders: a folder holding only a folder shares its row, as the last one', t => {
+  const root = folder(['src/main/java/App.java', 'src/main/java/Util.java', 'lib/a.js', 'lib/sub/b.js', 'only/one.txt', 'readme.md']);
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const settings = { hidden: false, ignored: true, compact: true };
+  const tree = Tree.create(() => root, settings);
+  const rows = tree.rows({ expanded: new Set(['', 'src/main/java']) });
+  assert.deepStrictEqual(rows.map(r => `${'  '.repeat(r.depth)}${r.chain || ''}${r.name}${r.dir ? (r.open ? '/-' : '/+') : ''}`),
+    ['lib/+', 'only/+', 'src/main/java/-', '  App.java', '  Util.java', 'readme.md']);
+  const java = rows[2];
+  assert.deepStrictEqual([java.rel, java.from, java.chain], ['src/main/java', 'src', 'src/main/']);
+  // The row stands for every folder of its chain, no other entry.
+  assert.ok(['src', 'src/main', 'src/main/java'].every(rel => Tree.holds(java, rel)));
+  assert.ok(!Tree.holds(java, 'src/main/java/App.java') && !Tree.holds(rows[0], 'lib/sub'));
+  // Not while filtering, nor with the setting off.
+  assert.deepStrictEqual(tree.rows({ query: 'app', expanded: new Set() }).map(r => r.name), ['src', 'main', 'java', 'App.java']);
+  settings.compact = false;
+  assert.deepStrictEqual(tree.rows({ expanded: new Set(['src']) }).map(r => r.name), ['lib', 'only', 'src', 'main', 'readme.md']);
+});
+
+test('compact folders among the changed files: the changed entries only count', t => {
+  const root = folder(['a/b/c.js', 'a/keep.js', 'z.js']);
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const tree = Tree.create(() => root, { hidden: false, ignored: true, compact: true });
+  tree.applyStatus(status([' M a/b/c.js']));
+  assert.deepStrictEqual(tree.rows({ changed: true, expanded: new Set() }).map(r => `${r.depth}:${r.chain || ''}${r.name}`), ['0:a/b', '1:c.js']);
 });

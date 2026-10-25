@@ -9,6 +9,7 @@ const ui = require('../core/ui');
 const diffs = require('../diff');
 const actions = require('../core/actions');
 const { WIN, which } = require('../core/exec');
+const { removeFiles, cannotDelete } = require('../core/stage');
 const { ROOT, MAX_PROMPT, S, frame, draw, follow, base, files, flash, confirm } = require('./context');
 const {
   exec, git, errorOf, op, net, fromFile, nul, loadStatus, schedule, ongoing, mergeOptions, continues, headName, openPicker,
@@ -49,39 +50,67 @@ async function unstageAll() {
   if (await op('Unstaging all', args)) pulse(items, 'changes');
 }
 
-// Changes section: worktree changes restored from the index, untracked files deleted. Staged section: index
-// and worktree back to HEAD (a file added since is deleted).
+// Files of the repository top (paths from it) to the trash; those it does not take are deleted for good once asked
+// again. Never a path that resolves outside the repository, nor one through a symbolic link (refused); one already
+// gone is left out. gone(names), awaited, gets those no longer there: once moved, then once deleted for good. kept:
+// what becomes of those not deleted for good, said in the question.
+async function toTrash(top, list, gone = async () => {}, kept = '') {
+  const failed = new Map();
+  const left = await removeFiles(top, list, failed, actions.trash);
+  const went = async out => {
+    if (out.length) try { await gone(out); } catch (e) { flash(`Discarding failed: ${e.code || e.message}`, true); }
+  };
+  await went(list.filter(n => !left.includes(n) && !failed.has(n)));
+  schedule();
+  if (!left.length) { if (failed.size) flash(`Could not ${cannotDelete(failed)}`, true); return; }
+  // The refusals said in the question, which would hide a flash.
+  confirm({ title: 'No trash: delete for good?', name: left.length === 1 ? left[0] : files(left.length),
+    note: `This cannot be undone.${kept && ` ${kept}`}${failed.size ? ` Could not ${cannotDelete(failed)}.` : ''}`, action: 'Delete' }, () => {
+    // Checked again by removeFiles: a folder may have been made a link while the question was open. confirm does
+    // not wait for it: what fails is said here.
+    const lost = new Map();
+    removeFiles(top, left, lost).then(async kept => {
+      await went(left.filter(n => !kept.includes(n) && !lost.has(n)));
+      if (lost.size) flash(`Could not ${cannotDelete(lost)}`, true);
+    }, e => flash(`Could not delete: ${e.code || e.message}`, true)).then(schedule);
+  });
+}
+
+// Changes section: worktree changes restored from the index, untracked files to the trash. Staged section: index and
+// worktree back to HEAD, the files added since (all of them before the first commit) out of the index and to the
+// trash.
 function discard(items, sec) {
   if (!items.length) return;
   if (sec === 'conflicts') return flash('Merge conflict: edit the file and stage it, or abort the merge', true);
-  const what = items.length === 1 ? items[0].path : files(items.length);
+  // The repository the files were listed in, even if another is loaded meanwhile.
+  const what = items.length === 1 ? items[0].path : files(items.length), top = S.repo.top;
   if (sec === 'staged') {
-    const added = items.filter(i => i.code === 'A').length;
-    return confirm({ title: 'Discard all changes?', name: `${what}, staged and not`, where: added ? `deletes ${files(added)} added since HEAD` : '',
-      note: 'This cannot be undone.', action: 'Discard' }, async () => {
-      if (S.repo.hasHead) await op('Discarding', ['restore', '--staged', '--worktree', '--source=HEAD', ...fromFile], { input: nul(items) });
-      else await op('Discarding', ['rm', '-f', '-r', '-q', ...fromFile], { input: nul(items) });
+    const added = items.filter(i => !S.repo.hasHead || i.code === 'A'), others = items.filter(i => !added.includes(i));
+    return confirm({ title: 'Discard all changes?', name: `${what}, staged and not`,
+      where: added.length ? `moves ${files(added.length)} added since HEAD to the trash` : '',
+      note: others.length ? 'The changes cannot be recovered.' : '', action: 'Discard' }, async () => {
+      const restore = ['restore', '--staged', '--worktree', '--source=HEAD', ...fromFile];
+      if (others.length && !await op('Discarding', restore, { top, input: nul(others) })) return;
+      if (!added.length) return;
+      // Out of the index once gone only: one refused, or kept when not deleted for good, keeps its staged content.
+      // One deleted since it was added (AD) is gone already. Not through op: once deleted, the index follows even
+      // with another command running, in the repository the files were listed in.
+      await toTrash(top, added.map(i => i.path), async out => {
+        const input = nul(added.filter(i => out.includes(i.path)));
+        const res = await git(['rm', '--cached', '-r', '-q', ...fromFile], { top, safe: true, input });
+        if (res.code !== 0) flash(`Discarding failed: ${errorOf(res)}`, true);
+      }, 'Kept, they stay staged.');
     });
   }
   const untracked = items.filter(i => i.untracked), tracked = items.filter(i => !i.untracked);
   const q = untracked.length
-    ? { title: `Delete ${files(untracked.length)} not tracked?`, name: untracked.length === 1 ? untracked[0].path : files(untracked.length),
-      where: tracked.length ? `and discard the changes in ${files(tracked.length)}` : '', action: 'Delete' }
+    ? { title: `Move ${files(untracked.length)} not tracked to the trash?`, name: untracked.length === 1 ? untracked[0].path : files(untracked.length),
+      where: tracked.length ? `and discard the changes in ${files(tracked.length)}` : '', action: 'Discard' }
     : { title: 'Discard the changes?', name: what, action: 'Discard' };
-  confirm({ ...q, note: 'This cannot be undone.' }, async () => {
-    if (tracked.length) await op('Discarding', ['restore', '--worktree', ...fromFile], { input: nul(tracked) });
-    let failed = 0;
-    for (const it of untracked) {
-      const abs = path.resolve(S.repo.top, it.path);
-      if (!abs.startsWith(S.repo.top + path.sep)) { failed++; continue; }
-      try { fs.rmSync(abs, { force: true }); } catch { failed++; continue; }
-      // Folders left empty by the deletion go too.
-      for (let d = path.dirname(abs); d.startsWith(S.repo.top + path.sep); d = path.dirname(d)) {
-        try { fs.rmdirSync(d); } catch { break; }
-      }
-    }
-    if (failed) flash(`Could not delete ${files(failed)}`, true);
-    schedule();
+  confirm({ ...q, note: tracked.length ? 'The changes cannot be recovered.' : '' }, async () => {
+    if (tracked.length) await op('Discarding', ['restore', '--worktree', ...fromFile], { top, input: nul(tracked) });
+    if (untracked.length) await toTrash(top, untracked.map(i => i.path));
+    else schedule();
   });
 }
 
@@ -506,18 +535,21 @@ function setBase(row) {
 
 // --- rows
 
+// A commit, stash or tag row as diffs.showArgs takes it, with a title: null for another row. A commit of a file's
+// history: its changes to that file only.
+function showOf(row) {
+  if (!row) return null;
+  if (row.type === 'commit') return { kind: 'commit', ref: row.commit.hash, paths: S.histFile ? S.histNames : [], title: `${row.commit.short} ${row.commit.subject}` };
+  if (row.type === 'stash') return { kind: 'stash', ref: row.stash.ref, title: `${row.stash.ref} ${row.stash.subject}` };
+  if (row.type === 'tag') return { kind: 'tag', ref: row.ref.name, title: `tag ${row.ref.name}` };
+  return null;
+}
+
 function openRow(row, follow) {
   if (!row) return;
   if (row.type === 'file') return openItemDiff(row.item);
-  if (row.type === 'commit') {
-    return showDiff(row.key, `${row.commit.short} ${row.commit.subject}`,
-      ['show', ...diffs.DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', '--format=fuller', row.commit.hash,
-        ...(S.histFile ? ['--', ...S.histNames] : [])]);
-  }
-  if (row.type === 'stash') {
-    return showDiff(row.key, `${row.stash.ref} ${row.stash.subject}`, ['stash', 'show', ...diffs.DIFF_OPTS, '--stat', '-p', '--include-untracked', row.stash.ref]);
-  }
-  if (row.type === 'tag') return showDiff(row.key, `tag ${row.ref.name}`, ['show', ...diffs.DIFF_OPTS, '--stat', '-p', '--diff-merges=first-parent', `refs/tags/${row.ref.name}`]);
+  const what = showOf(row);
+  if (what) return showDiff(row.key, what.title, diffs.showArgs(what));
   if (follow) return comparable(row) ? compare(row) : undefined;
   if (row.type === 'section' || row.type === 'folder') return toggle(row);
   if (row.type === 'branch') return checkout(row.ref.remote ? row.ref : { ...row.ref, current: row.current });
@@ -530,15 +562,15 @@ async function search(mode) {
   if (msg) flash(msg, true);
 }
 
-// y Y e o on a file of Changes, as in the explorer and the preview: copy its path or relative path, edit it in
-// the terminal, open it in the editor.
+// y Y e E o on a file of Changes, as in the explorer and the preview: copy its path or relative path, open it in the
+// editor, edit it in the terminal, open it in its app.
 async function fileAction(k, row) {
   if (!row || row.type !== 'file') return flash('Select a file first');
   const rel = row.item.path, abs = path.join(S.repo.top, rel);
-  if ((k === 'e' || k === 'o') && !fs.existsSync(abs)) return flash(`${rel} is deleted`, true);
+  if ('eEo'.includes(k) && !fs.existsSync(abs)) return flash(`${rel} is deleted`, true);
   const pane = process.env.HERDR_PANE_ID;
   const msg = k === 'y' ? await actions.copy(abs) : k === 'Y' ? await actions.copy(rel, 'Relative path copied')
-    : k === 'e' ? await actions.edit(abs, pane) : await actions.open(abs, pane);
+    : k === 'e' ? await actions.editor(abs, pane) : k === 'E' ? await actions.edit(abs, pane) : await actions.app(abs, pane);
   // The actions' messages tell success from failure (ui.messageKind), as in the explorer.
   if (msg) flash(msg);
 }
@@ -564,19 +596,22 @@ function openMenu(fromHeader) {
     items.push({ label: 'Create tag…', key: 't', run: () => newTag(c) }, { label: `Cherry-pick onto ${headName()}`, key: 'C', run: () => cherryPick(c) },
       { label: `Reset --hard ${headName()} here…`, danger: true, run: () => resetHard(c) }, null);
   }
-  items.push({ label: 'Merge a branch…', run: () => openPicker('merge') }, { label: 'Rebase onto a branch…', run: () => openPicker('rebase') },
+  // The picker of a branch to merge or rebase onto hangs where this menu was.
+  const anchor = () => ({ right: menu.x + menu.inner + 1, at: menu.at });
+  items.push({ label: 'Merge a branch…', run: () => openPicker('merge', anchor()) }, { label: 'Rebase onto a branch…', run: () => openPicker('rebase', anchor()) },
     { label: 'Create tag on HEAD…', key: 'T', run: () => newTag(null) }, null,
     { label: 'Fetch', key: 'f', run: fetch }, { label: 'Pull', key: 'L', run: pull }, { label: 'Push', key: 'P', run: push },
     { label: 'Force push (with lease)…', danger: true, run: forcePush }, null,
     { label: 'Undo last commit…', run: undoCommit }, { label: 'Reset --hard to HEAD…', danger: true, run: () => resetHard(null) });
   const { W, H } = ui.size(), y = frame.listY + S.cursor - S.top;
   const at = fromHeader || !row ? 1 : Math.max(1, Math.min(y + 1, H - 3 - items.length));
-  S.menu = new ui.Menu({ title, items, at, right: fromHeader ? W : 0 });
+  const menu = S.menu = new ui.Menu({ title, items, at, right: fromHeader ? W : 0 });
+  menu.header = !!fromHeader;
   draw();
 }
 
 module.exports = {
   stage, unstage, stageAll, unstageAll, discard, commit, abort, toggleAmend, generate, pickBranch, checkout, newBranch,
-  deleteBranch, fetch, pull, push, newStash, stashAction, integrate, cherryPick, newTag, setBase, openRow, search,
+  deleteBranch, fetch, pull, push, newStash, stashAction, integrate, cherryPick, newTag, setBase, showOf, openRow, search,
   fileAction, openMenu,
 };

@@ -26,8 +26,7 @@ The plugin is plain Node.js (20 or later) with no dependencies, no build step an
 4. A pane script can also run outside herdr for a quick check, for example
    `EXPLORER_FILE=README.md node src/diff.js` or `node src/search.js <folder>`. Features that need herdr
    (opening panes, the neighbouring terminal) then do nothing or report an error.
-5. `herdr plugin log` shows the hooks' output and errors. `node src/hook.js --all`, run from a herdr
-   pane, adds an explorer to the open tabs that have a single pane.
+5. `herdr plugin log` shows the hooks' output and errors.
 6. Run `node --test` before pushing (see [Tests](#tests)).
 
 Keep the conventions of the existing code:

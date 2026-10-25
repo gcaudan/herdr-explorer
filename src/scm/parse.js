@@ -73,6 +73,21 @@ function refList(D) {
   return out;
 }
 
+// A commit's labels (refList) in the order the history shows them: a branch and the remote ones of the same name at
+// the same commit as one (remote), the branch checked out first (current; head: the commit is HEAD, branch: the
+// branch checked out, '' when detached), then the other branches, the remote ones alone and the tags (tag).
+function labels(refs, head, branch) {
+  const heads = refs.filter(r => r.kind === 'heads'), remotes = refs.filter(r => r.kind === 'remotes');
+  const joined = new Set();
+  const local = heads.map(h => {
+    const mine = remotes.filter(r => r.name.slice(r.name.indexOf('/') + 1) === h.name);
+    mine.forEach(r => joined.add(r));
+    return { name: h.name, remote: mine.length > 0, current: !!head && (h.name === 'HEAD' || h.name === branch) };
+  });
+  return [...local.filter(l => l.current), ...local.filter(l => !l.current),
+    ...remotes.filter(r => !joined.has(r)).map(r => ({ name: r.name })), ...refs.filter(r => r.kind === 'tags').map(t => ({ name: t.name, tag: true }))];
+}
+
 // git stash list --format=%gd%x1f%s%x1f%cr.
 function parseStashes(out) {
   return out.split('\n').filter(Boolean).map(l => {
@@ -150,6 +165,6 @@ function errorOf(res) {
 }
 
 module.exports = {
-  CODE, CONFLICT, parseRepo, parseStatus, parseNames, parseHistory, ago, refList, parseStashes, parseRefs, parseCompare,
+  CODE, CONFLICT, parseRepo, parseStatus, parseNames, parseHistory, ago, refList, labels, parseStashes, parseRefs, parseCompare,
   parseCount, parseNumstat, parseScopes, repoKeys, errorOf,
 };

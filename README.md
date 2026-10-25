@@ -18,7 +18,7 @@ herdr. Plain Node.js, with no dependencies and no build step.
 └──────────────┴───────────────────────────┴──────────────────────┘
 ```
 
-Plugin id `gcaudan.explorer` · herdr 0.9.3 or later · Linux, macOS and Windows.
+Plugin id `gcaudan.explorer` · herdr 0.9.4 or later · Linux, macOS and Windows.
 
 ## Features
 
@@ -44,7 +44,7 @@ Plugin id `gcaudan.explorer` · herdr 0.9.3 or later · Linux, macOS and Windows
   pull, push (also forced with lease), merge, rebase, cherry-pick, tags, undo the last commit, reset, branches,
   stashes and refs; a history with a branch graph, also for a single file, branch comparisons;
   continue or abort a merge, rebase, cherry-pick or revert. Inline or side-by-side diffs with word-level highlights,
-  compared with HEAD or with where the branch started, also in a full-tab *Changes* pane for a file or a folder.
+  compared with HEAD or with where the branch started, also in a *Changes* pane for a file or a folder.
 - **Editors**: your graphical editor (VS Code by default), a terminal editor in a full-tab pane, or the system's
   application for documents and media. Executables and scripts are never run.
 - **Icons**: Nerd Font icons, or the colours of any VS Code icon theme you have installed; emoji, Unicode or ASCII
@@ -55,7 +55,7 @@ Plugin id `gcaudan.explorer` · herdr 0.9.3 or later · Linux, macOS and Windows
 
 ## Requirements
 
-herdr 0.9.3 or later, Node.js 20 or later (`node` on the `PATH` that herdr gives plugins), and a
+herdr 0.9.4 or later, Node.js 20 or later (`node` on the `PATH` that herdr gives plugins), and a
 [Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr, or emoji, Unicode or ASCII icons. git, a graphical editor, a clipboard and
 a trash tool, and the [Claude Code](https://claude.com/claude-code) CLI are optional: see
 [Requirements](docs/installation.md#requirements) for what each one adds.
@@ -95,7 +95,7 @@ Keep the clone where it is, on `main`: herdr runs the plugin from that folder, a
 |---|---|
 | `prefix+f` (`ctrl+b`, then `f`) | show or hide the explorer in the current tab |
 | `prefix+a` | go to file, in the explorer's root (else the focused terminal's folder) |
-| `prefix+d` | source control, for the same folder |
+| `prefix+d` | source control, for the same folder, in a review tab of its own |
 
 1. Open a new tab: the explorer opens on the left, at the tab's folder.
 2. Move with `↑` `↓` (or `j` `k`). `Enter` folds or unfolds a folder; on a file, `Enter` or a double-click shows

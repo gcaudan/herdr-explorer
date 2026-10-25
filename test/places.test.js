@@ -33,3 +33,18 @@ test('places that cannot be are refused', () => {
     assert.throws(() => target(bad, cwd), /wrong place/, bad);
   }
 });
+
+test('a clicked link: a local file:// URL with its line, or the text as it is', () => {
+  const { clicked } = require('../src/core/places');
+  const file = path.join(cwd, 'a b.js');
+  const url = require('url').pathToFileURL(file).href;
+  assert.strictEqual(clicked(url, 'me'), file);
+  assert.strictEqual(clicked(`${url}#L12`, 'me'), `${file}:12`);
+  assert.strictEqual(clicked(`${url}#L12-L14`, 'me'), `${file}:12-14`);
+  assert.strictEqual(clicked(url.replace('file://', 'file://localhost'), 'me'), file);
+  assert.strictEqual(clicked('src/app.js:12:5', 'me'), 'src/app.js:12:5');
+  // Another host (a network share on Windows), another scheme, nothing: refused.
+  assert.strictEqual(clicked('file://server/share/x.js', 'me'), null);
+  assert.strictEqual(clicked('https://example.com/x.js', 'me'), null);
+  assert.strictEqual(clicked('', 'me'), null);
+});

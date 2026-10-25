@@ -1,6 +1,6 @@
-// Search popup opened from the explorer: Go to file (fuzzy match on paths, ctrl+p) and Search in files
-// (text or regex in the contents, ctrl+f), with a preview of the selected result on wide screens.
-// Enter opens the file preview pane at the line; Esc closes the popup.
+// Search opened from the explorer, in a tab of its own (actions.search): Go to file (fuzzy match on paths, ctrl+p) and
+// Search in files (text or regex in the contents, ctrl+f), the selected result in the tab's preview on the right.
+// Enter opens the file in the preview of the tab it was opened from, at the line; Esc closes the search and its tab.
 'use strict';
 const fs = require('fs');
 const fsp = fs.promises;
@@ -10,9 +10,15 @@ const actions = require('./core/actions');
 const { WIN, run, GIT, gitEnv, readSettings, remoteLink, writeAtomic } = require('./core/exec');
 
 const { C, fg, bg, line, textWidth, ellipsis, Field } = ui;
-ui.useGlyphs(readSettings().glyphs);
+const settings = readSettings();
+ui.useGlyphs(settings.glyphs);
+// Optional: the preview on the right shows plain text without it.
+const highlight = (() => { try { return require('./render/highlight'); } catch { return null; } })();
 const ROOT = path.resolve(process.env.EXPLORER_ROOT || process.argv[2] || process.cwd());
+require('./launch').home(); // the pane's folder for new spaces, tabs and panes made from it
 const PANE = process.env.EXPLORER_PANE;
+// The tab the search was opened from, when it has one of its own; its own pane, beside its preview.
+const ORIGIN = process.env.EXPLORER_ORIGIN || '', OWN = process.env.HERDR_PANE_ID;
 const SAVE = process.env.HERDR_PLUGIN_STATE_DIR && path.join(process.env.HERDR_PLUGIN_STATE_DIR, 'search.json');
 const MAX_FILES = 50000;      // walk without git
 const MAX_SIZE = 2 << 20;     // larger files are not searched
@@ -20,10 +26,10 @@ const MAX_MATCHES = 5000;
 const MAX_ROWS = 1000;        // Go to file results kept
 const BATCH = 24;             // files read at once
 const DEBOUNCE = 150;
+const MAX_HIGHLIGHT = 1 << 20; // larger files previewed in plain text, as in the preview pane
 
-const HI = '\x1b[1m' + fg([24, 163, 255]);   // fuzzy-matched characters
-const FOUND = bg([120, 70, 20]) + fg([255, 255, 255]); // text matches
-const DIM = fg(C.dim);
+let HI, FOUND, DIM; // fuzzy-matched characters, text matches
+ui.onTheme(() => { HI = '\x1b[1m' + fg(C.hit); FOUND = bg(C.found) + fg(C.strong); DIM = fg(C.dim); });
 
 // --- state
 
@@ -440,18 +446,43 @@ function contentRow(r, W) {
 
 // --- preview
 
-const previews = new Map(); // rel → { lines } or { error }
+const previews = new Map(); // rel → { lines, segs } or { error }
 function preview(rel) {
   if (previews.has(rel)) return previews.get(rel);
   previews.set(rel, null);
   readText(path.join(ROOT, rel)).then(([text, error]) => {
     if (previews.size > 30) previews.delete(previews.keys().next().value);
-    previews.set(rel, text === null || text === undefined ? { error } : { lines: text.replace(/\r?\n$/, '').split('\n').map(l => l.replace(/\r$/, '')) });
+    if (text === null || text === undefined) previews.set(rel, { error });
+    else {
+      const lines = text.replace(/\r?\n$/, '').split('\n').map(l => l.replace(/\r$/, ''));
+      previews.set(rel, { lines, segs: coloured(rel, lines, text.length) });
+    }
     paintSoon();
   });
   return null;
 }
 
+// The segments of each line, coloured as in the preview pane (plain when the language is unknown or the file large),
+// their text the line's with tabs expanded and control characters dropped (ui.cleanLine).
+function coloured(rel, lines, size) {
+  const lang = highlight && size <= MAX_HIGHLIGHT ? highlight.language(path.basename(rel)) : null;
+  let segs = null;
+  try { segs = lang ? highlight.highlight(lines.join('\n'), lang) : null; } catch { }
+  return lines.map((l, i) => {
+    const t = ui.cleanLine(l);
+    return segs && segs[i] && ui.segText(segs[i]) === t ? segs[i] : [[t, '']];
+  });
+}
+
+// The ranges [start, end) of a line's text moved to its cleaned text (tabs expanded, control characters dropped).
+function cleanRanges(text, found) {
+  if (!found.length || !/[\x00-\x1f\x7f-\x9f]/.test(text)) return found;
+  const at = [];
+  ui.cleanLine(text, 4, at);
+  return found.map(([a, b]) => [at[a], at[b]]);
+}
+
+// The file around the target's line, the line about a third down; long lines wrapped when the preview pane wraps them.
 function previewLines(t, W, H) {
   const out = [];
   if (!t) return out;
@@ -459,14 +490,31 @@ function previewLines(t, W, H) {
   const p = preview(t.rel);
   if (!p) return out;
   if (p.error) return out.concat(line([[` (${p.error})`, DIM]], W));
-  const h = H - 1, at = Math.max(0, (t.line || 1) - 1);
-  const start = t.line ? Math.max(0, Math.min(at - Math.floor(h / 3), p.lines.length - h)) : 0;
-  const digits = String(Math.min(p.lines.length, start + h)).length;
-  for (let n = start; n < Math.min(p.lines.length, start + h); n++) {
-    const l = p.lines[n], current = t.line && n === at;
-    const found = state.mode === 'content' && state.re ? ranges(state.re, l) : [];
-    out.push(line([[` ${String(n + 1).padStart(digits)} `, current ? fg(C.text) : DIM], ...marked(l, found, '', FOUND)], W,
-      current ? C.selectBlur : null));
+  const h = H - 1, n = p.lines.length, at = Math.max(0, Math.min((t.line || 1) - 1, n - 1));
+  const digits = String(n).length, room = Math.max(1, W - digits - 2);
+  // The screen rows of line i: its segments with the matches marked, split when wrapping.
+  const cut = new Map();
+  const rowsOf = i => {
+    if (!cut.has(i)) {
+      const found = state.mode === 'content' && state.re ? cleanRanges(p.lines[i], ranges(state.re, p.lines[i])) : [];
+      const segs = ui.mark(p.segs[i], found, FOUND);
+      cut.set(i, settings.wrap ? ui.split(segs, room) : [segs]);
+    }
+    return cut.get(i).length;
+  };
+  // From the target's line, the lines above it up to a third of the height, then those below, then more above at the end.
+  const first = t.line ? at : 0;
+  let from = first, to = first, used = rowsOf(first);
+  while (from > 0 && used + rowsOf(from - 1) <= Math.floor(h / 3)) used += rowsOf(--from);
+  while (to + 1 < n && used < h) used += rowsOf(++to);
+  while (from > 0 && used + rowsOf(from - 1) <= h) used += rowsOf(--from);
+  for (let i = from; i <= to && out.length <= h; i++) {
+    const current = t.line && i === at;
+    cut.get(i).forEach((segs, k) => {
+      if (out.length > h) return;
+      const num = k ? ' '.repeat(digits) : String(i + 1).padStart(digits);
+      out.push(line([[` ${num} `, current ? fg(C.text) : DIM], ...segs], W, current ? C.selectBlur : null));
+    });
   }
   return out;
 }
@@ -489,9 +537,8 @@ function bar(y, parts, W, back) {
   return line(parts, W, back);
 }
 const width = parts => parts.reduce((w, [t]) => w + textWidth(t), 0);
-const FIELD = [60, 60, 60], CHIP_OFF = [45, 45, 45];
 // An option: blue when on, grey when off.
-const chip = (label, on, fn) => [` ${label} `, on ? bg(C.select) + fg([255, 255, 255]) : bg(CHIP_OFF) + DIM, fn];
+const chip = (label, on, fn) => [` ${label} `, on ? bg(C.select) + fg(C.strong) : bg(C.buttonOff) + DIM, fn];
 
 // The visible part of a field, the cursor shown only in the focused one; restored text shown selected:
 // typing replaces it.
@@ -514,7 +561,7 @@ function render() {
   const content = state.mode === 'content';
 
   // Tabs, and the space folder on the right.
-  const tab = (label, mode) => [` ${label} `, state.mode === mode ? '\x1b[1m' + bg(C.select) + fg([255, 255, 255]) : DIM, () => setMode(mode)];
+  const tab = (label, mode) => [` ${label} `, state.mode === mode ? '\x1b[1m' + bg(C.select) + fg(C.strong) : DIM, () => setMode(mode)];
   const tabs = [[' ', ''], tab('Go to file', 'files'), [' ', ''], tab('Search in files', 'content')];
   const name = ellipsis(path.basename(ROOT), Math.max(0, W - width(tabs) - 2));
   lines.push(bar(0, [...tabs, [' '.repeat(Math.max(0, W - width(tabs) - textWidth(name) - 1)), ''], [name, DIM]], W, C.header));
@@ -539,8 +586,8 @@ function render() {
     // Each glob a field on a lighter background, after its label.
     const globField = (label, k, w) => {
       const l = [label, DIM, () => focus(k)], fw = Math.max(1, w - textWidth(label) - 2);
-      const parts = fieldParts(state.fields[k], fw - 1, state.focus === k).map(([t, st]) => [t, bg(FIELD) + (st || ''), () => focus(k)]);
-      return [l, [' ', bg(FIELD), () => focus(k)], ...parts, [' '.repeat(Math.max(0, fw - 1 - width(parts))), bg(FIELD), () => focus(k)], [' ', '']];
+      const parts = fieldParts(state.fields[k], fw - 1, state.focus === k).map(([t, st]) => [t, bg(C.field) + (st || ''), () => focus(k)]);
+      return [l, [' ', bg(C.field), () => focus(k)], ...parts, [' '.repeat(Math.max(0, fw - 1 - width(parts))), bg(C.field), () => focus(k)], [' ', '']];
     };
     lines.push(bar(2, [...globField('   in ', 'include', half), ...globField('  not in ', 'exclude', W - half)], W));
   }
@@ -568,7 +615,8 @@ function render() {
   if (content && !state.touched && list.length > 1 && state.cursor === 0) state.cursor = 1;
   state.cursor = Math.max(0, Math.min(state.cursor, list.length - 1));
   state.top = Math.max(0, Math.min(state.top, list.length - h));
-  const LW = listW = W >= 100 ? Math.floor(W / 2) : W;
+  // In a tab of its own, the result shows in the tab's preview (follow), not on the right of the list.
+  const LW = listW = !ORIGIN && W >= 100 ? Math.floor(W / 2) : W;
   const right = LW < W ? previewLines(target(list[state.cursor]), W - LW - 1, h) : [];
   const bw = scrollbar.set(list.length, h, state.top), RW = LW - bw;
   // Nothing to list: what to type, or what to try instead.
@@ -585,7 +633,7 @@ function render() {
   }
 
   // Keys.
-  const keys = [['↵', 'open'], content ? ['ctrl+p', 'go to file'] : ['ctrl+f', 'search in files'], ['ctrl+o', 'editor'], ['ctrl+t', 'insert'], ['ctrl+y', 'copy relative path'],
+  const keys = [['↵', 'open'], content ? ['ctrl+p', 'go to file'] : ['ctrl+f', 'search in files'], ['ctrl+e', 'editor'], ['ctrl+o', 'app'], ['ctrl+t', 'insert'], ['ctrl+y', 'copy relative path'],
     ...(content ? [['tab', 'fields'], ['alt+←→', 'fold']] : []), ['esc', 'close'], ['f1', 'keys']];
   while (lines.length < H - 1) lines.push(line([], W));
   lines.length = H - 1;
@@ -593,13 +641,37 @@ function render() {
   lines.push(line(state.hints, W, C.header));
   if (state.help) ui.help(lines, W, state.mode === 'content' ? 'Search in files' : 'Go to file', HELP, state.help);
   paint(lines.slice(0, H));
+  if (ORIGIN) follow();
+}
+
+// In a tab of its own, the tab's preview shows the result selected (the line found, marked), else what to do; it
+// opens with the first one, and once closed (q there) stays closed.
+const share = ORIGIN ? actions.sharer(OWN, 'searchShare') : null;
+let shownKey = null, wantKey = null, followTimer = null, previewed = false;
+function follow() {
+  const t = target(rows()[state.cursor]);
+  const empty = !state.files ? 'Indexing…' : state.mode === 'content' && !state.fields.content.value ? 'Type to search' : 'No results';
+  const want = t ? { file: path.join(ROOT, t.rel), line: t.line || 0 } : { text: empty };
+  const k = JSON.stringify(want);
+  if (k === wantKey || (k === shownKey && !followTimer)) return;
+  wantKey = k;
+  clearTimeout(followTimer);
+  followTimer = setTimeout(() => {
+    followTimer = null; shownKey = k;
+    const open = !previewed;
+    previewed = true;
+    const marks = state.mode === 'content' && want.line ? [{ from: want.line, to: want.line, a: 0, b: 0 }] : [];
+    const asked = t ? actions.preview(want.file, ROOT, OWN, want.line, false, open, { marks, beside: OWN })
+      : actions.preview('', ROOT, OWN, 0, false, open, { show: { blank: true, text: empty, cwd: ROOT }, beside: OWN });
+    asked.then(msg => (msg ? flash(msg) : open && share()), () => { });
+  }, 120);
 }
 
 // The key help (f1: ? is typed in the fields), over the whole pane (ui.help); state.help: { top, find } while it shows.
 const HELP = [
   ['Results', [['↑↓', 'select'], ['ctrl+n', 'next'], ['ctrl+k', 'previous'], ['pgup pgdn', 'page'], ['ctrl+home', 'first'],
     ['ctrl+end', 'last'], ['alt+← →', 'fold, unfold a file']]],
-  ['Open', [['⏎', 'in the preview'], ['ctrl+o', 'in the editor'], ['alt+⏎', 'in the editor'], ['ctrl+t', 'insert in terminal'],
+  ['Open', [['⏎', 'in the preview'], ['ctrl+e', 'in the editor'], ['alt+⏎', 'in the editor'], ['ctrl+o', 'in its app (else the editor)'], ['ctrl+t', 'insert in terminal'],
     ['ctrl+y', 'copy the relative path']]],
   ['Search', [['ctrl+p', 'go to file'], ['ctrl+f', 'search in files'], ['tab', 'next field'], ['alt+c', 'match case'],
     ['alt+w', 'whole word'], ['alt+r', 'regular expression'], ['alt+h', 'hidden files']]],
@@ -663,13 +735,15 @@ async function act(kind) {
   const abs = path.join(ROOT, t.rel);
   let msg;
   try {
-    if (kind === 'open') msg = await actions.preview(abs, ROOT, PANE, t.line || undefined);
+    if (kind === 'open') msg = await actions.preview(abs, ROOT, PANE, t.line || undefined, false, true, { reveal: true });
     else if (kind === 'insert') msg = await actions.insert(abs, PANE);
     else if (kind === 'editor') msg = await actions.editor(abs, PANE);
+    else if (kind === 'app') msg = await actions.app(abs, PANE);
     else if (kind === 'copy') return flash(await actions.copy(t.rel));
   } catch { msg = 'Action failed'; }
-  // An outside editor answers with its name and the file's when it was started.
-  if (!msg || (kind === 'editor' && msg.endsWith(`: ${path.basename(abs)}`))) process.exit(0);
+  // An outside editor answers with its name and the file's when it was started, an app with Opening and the file's.
+  if (!msg || (kind === 'editor' && msg.endsWith(`: ${path.basename(abs)}`))
+    || (kind === 'app' && (msg.endsWith(`: ${path.basename(abs)}`) || msg === `Opening ${path.basename(abs)}`))) process.exit(0);
   flash(msg);
 }
 
@@ -709,7 +783,8 @@ function key(k) {
     case 'alt+left': fold(true); break;
     case 'alt+right': fold(false); break;
     case 'enter': return act('open');
-    case 'alt+enter': case 'ctrl+o': return act('editor');
+    case 'alt+enter': case 'ctrl+e': return act('editor');
+    case 'ctrl+o': return act('app');
     case 'ctrl+t': return act('insert');
     case 'ctrl+y': return act('copy');
     default: {
@@ -758,7 +833,7 @@ function mouse({ button, x, y, press, wheel, drag }) {
   if (zone) return zone.fn();
   const i = state.top + y - 1 - first;
   const r = rows()[i];
-  if (y - 1 < first || !r || y > ui.size().H - 1) return;
+  if (y - 1 < first || !r || y > ui.size().H - 1 || x > listW) return; // not on the preview on the right
   const now = Date.now(), double = state.lastClick && state.lastClick.i === i && now - state.lastClick.t < 400;
   state.lastClick = double ? null : { i, t: now };
   select(i);
@@ -769,7 +844,8 @@ function mouse({ button, x, y, press, wheel, drag }) {
 
 // --- startup
 
-paint = ui.screen({ key, mouse, paste, resize: render }, { motion: true });
+paint = ui.screen({ key, mouse, paste, resize: () => { render(); if (share) share(); } }, { motion: true });
 process.on('exit', save);
+if (ORIGIN) actions.holdTab('search', ORIGIN, 'Search');
 render();
 loadFiles();

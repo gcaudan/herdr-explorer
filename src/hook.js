@@ -1,18 +1,20 @@
 // Opens the explorer to the left (or the right, depending on the settings) of a tab.
 //   node hook.js           tab.created event (creating a space also emits it for its first tab), unless the
 //                          autoOpen setting is off
-//   node hook.js --toggle  key binding action: closes the current tab's explorer, or opens it
-//   node hook.js --all     adds it to existing tabs that have a single pane
+//   node hook.js --toggle  key binding action: opens the current tab's explorer, closes it when it is open
 //   node hook.js --restore startup hook: reopens the explorer and preview panes that herdr restored as shells
 //   node hook.js --search  key binding action: Go to file popup of the current tab's folder
 //   node hook.js --scm     key binding action: source control of the current tab's folder
+//   node hook.js --closed  tab.closed and workspace.closed events: removes the state of the tabs and panes gone
+//   node hook.js --agent   pane.agent_status_changed event: the working tree when the agent starts a turn (scope.js)
+//   node hook.js --focused tab.focused event: a tab under review leads to its review (actions.scm)
 // Each run also saves the state folder for peek.js.
 'use strict';
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const { PLUGIN, HERDR, result, OWN_PANES: OWN, readWidth, readSettings, PANES_DIR, paneFile, readPaneState } = require('./core/exec');
+const { PLUGIN, HERDR, result, OWN_PANES: OWN, readWidth, readSettings, readPaneState, sweepState } = require('./core/exec');
 const { sideSplit } = require('./core/actions');
 const LABEL = 'Explorer';
 if (!HERDR) process.exit(0);
@@ -30,6 +32,12 @@ if (STATE && CONFIG) {
 const herdr = (...args) => result(execFileSync(HERDR, args, { encoding: 'utf8' }));
 const workspacePanes = workspaceId => herdr('pane', 'list', '--workspace', workspaceId).panes;
 const tabPanes = (workspaceId, tabId) => workspacePanes(workspaceId).filter(p => p.tab_id === tabId);
+
+// What the plugin keeps for tabs and panes that no longer exist (notes, pane state, preview tabs), removed.
+function sweep() {
+  const panes = herdr('workspace', 'list').workspaces.flatMap(ws => workspacePanes(ws.workspace_id));
+  sweepState([...new Set(panes.map(p => p.tab_id))], panes.map(p => p.pane_id));
+}
 
 function focusedTab() {
   const ws = herdr('workspace', 'list').workspaces.find(w => w.focused);
@@ -105,27 +113,40 @@ if (process.argv.includes('--toggle')) {
     // The preview closes with the explorer (see close in explorer.js).
     for (const p of panes) if (p.label === 'Preview') herdr('pane', 'close', p.pane_id);
     herdr('pane', 'close', explorer.pane_id);
-  } else if (panes.length) open(panes, ctx.tab_id, ctx.workspace_cwd);
+  } else if (panes.some(p => !OWN.has(p.label))) open(panes, ctx.tab_id, ctx.workspace_cwd);
 } else if (process.argv.includes('--search') || process.argv.includes('--scm')) {
   // From the tab's explorer when there is one, so that the search opens files in that tab's preview.
   const actions = require('./core/actions');
-  const panes = ctx.tab_id ? tabPanes(ctx.workspace_id, ctx.tab_id) : [];
-  const explorer = panes.find(p => p.label === LABEL);
-  const pane = (explorer && explorer.pane_id) || process.env.HERDR_PANE_ID || ctx.pane_id || (panes[0] && panes[0].pane_id);
-  // The explorer's root: workspace_cwd is the folder of the focused pane, the plugin's own when it is one of its panes.
-  const saved = explorer && readPaneState(explorer.pane_id);
-  // The focused terminal first, else the tab's first one.
-  const focused = panes.find(p => p.pane_id === (process.env.HERDR_PANE_ID || ctx.pane_id));
-  const terminal = focused && !OWN.has(focused.label) ? focused : panes.find(p => !OWN.has(p.label));
-  const root = (saved && saved.root) || (terminal && terminal.cwd) || ctx.workspace_cwd;
-  if (pane && root) (process.argv.includes('--scm') ? actions.scm(root, pane) : actions.search(root, pane, 'files'));
-} else if (process.argv.includes('--all')) {
-  for (const ws of herdr('workspace', 'list').workspaces) {
-    const tabs = new Map();
-    for (const p of workspacePanes(ws.workspace_id)) tabs.set(p.tab_id, [...tabs.get(p.tab_id) || [], p]);
-    for (const [tab, panes] of tabs) {
-      if (panes.length === 1 && panes[0].label !== LABEL) open(panes, tab, null);
-    }
+  (async () => {
+    // From a tab of their own (source control, the search), the tab they were opened from (actions.originOf).
+    const here = process.env.HERDR_PANE_ID || ctx.pane_id;
+    const from = here && await actions.originOf(here).catch(() => null);
+    const tabId = from ? from.tab_id : ctx.tab_id;
+    const panes = tabId ? tabPanes(ctx.workspace_id, tabId) : [];
+    const explorer = panes.find(p => p.label === LABEL);
+    const pane = (explorer && explorer.pane_id) || (from ? from.pane_id : here) || (panes[0] && panes[0].pane_id);
+    // The explorer's root: workspace_cwd is the folder of the focused pane, the plugin's own when it is one of its panes.
+    const saved = explorer && readPaneState(explorer.pane_id);
+    // The focused terminal first, else the tab's first one.
+    const focused = panes.find(p => p.pane_id === here);
+    const terminal = focused && !OWN.has(focused.label) ? focused : panes.find(p => !OWN.has(p.label));
+    const root = (saved && saved.root) || (terminal && terminal.cwd) || ctx.workspace_cwd;
+    if (pane && root) await (process.argv.includes('--scm') ? actions.scm(root, pane) : actions.search(root, pane, 'files'));
+  })().catch(() => { });
+} else if (process.argv.includes('--focused')) {
+  const d = JSON.parse(process.env.HERDR_PLUGIN_EVENT_JSON || '{}').data || {};
+  const tab = d.tab_id || (d.tab && d.tab.tab_id);
+  const actions = require('./core/actions');
+  if (tab) actions.reviewOf(tab).then(p => p && actions.focusPane(p)).catch(() => { });
+} else if (process.argv.includes('--closed')) {
+  sweep();
+} else if (process.argv.includes('--agent')) {
+  const ev = JSON.parse(process.env.HERDR_PLUGIN_EVENT_JSON || '{}');
+  const d = ev.data || {};
+  let pane = null;
+  try { pane = d.pane_id && herdr('pane', 'get', d.pane_id).pane; } catch { }
+  if (pane && pane.tab_id && pane.cwd) {
+    require('./core/scope').agentStatus(pane.tab_id, pane.pane_id, d.agent_status, pane.cwd).then(r => console.log(r), () => { });
   }
 } else if (process.argv.includes('--restore')) {
   // herdr restores the plugin's panes as plain shells, its session keeping only their label and folder: close
@@ -167,12 +188,8 @@ if (process.argv.includes('--toggle')) {
         }
       }
     }
-    // The state of panes that no longer exist.
-    const live = new Set(herdr('workspace', 'list').workspaces
-      .flatMap(ws => workspacePanes(ws.workspace_id).map(p => paneFile(p.pane_id))));
-    try {
-      for (const f of fs.readdirSync(PANES_DIR)) if (!live.has(path.join(PANES_DIR, f))) fs.unlinkSync(path.join(PANES_DIR, f));
-    } catch { }
+    // The state of tabs and panes that no longer exist, closed while the plugin was off or before a restart.
+    sweep();
   })();
 } else {
   // Also here, for a herdr session running for days: the check itself happens once a day at most.
@@ -182,6 +199,7 @@ if (process.argv.includes('--toggle')) {
   if (tab && readSettings().autoOpen) {
     const panes = tabPanes(tab.workspace_id, tab.tab_id);
     const root = ctx.workspace_id === tab.workspace_id ? ctx.workspace_cwd : null;
-    if (panes.length === 1 && panes[0].label !== LABEL) open(panes, tab.tab_id, root);
+    // Not in the editor's tab, opened as a tab of its own.
+    if (panes.length === 1 && !OWN.has(panes[0].label)) open(panes, tab.tab_id, root);
   }
 }

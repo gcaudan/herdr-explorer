@@ -12,6 +12,10 @@ const RANK = { U: 1, A: 2, R: 2, M: 3, D: 4, C: 5 };
 
 const parentOf = rel => (rel === '' ? null : rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : '');
 
+// Whether a row shows the entry rel: its own, or a folder of its compact chain (from, the chain's first folder).
+const holds = (row, rel) => row.rel === rel
+  || (!!row.from && (rel === row.from || rel.startsWith(`${row.from}/`)) && row.rel.startsWith(`${rel}/`));
+
 // Folders first, then names, numbers in their order.
 const ENTRY_ORDER = (a, b) => (b.dir - a.dir) || a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
 
@@ -65,24 +69,44 @@ function treeBefore(a, aDir, b, bDir) {
   return x.length < y.length;
 }
 
-// The tree of the folder root() returns (Set as root changes it). settings: hidden and ignored, read at each call.
+// The tree of the folder root() returns (Set as root changes it). settings: hidden, ignored and compact, read at each
+// call.
 function create(root, settings) {
   // gone: the deleted files no longer on disk, which the tree shows only among the changed files.
   const git = { top: null, prefix: '', files: new Map(), dirs: new Map(), untracked: new Set(), ignored: new Set(), gone: [] };
   const cache = new Map(); // relative folder → sorted entries
+  // After a change on disk (stale), a folder read is read again only when its modification time moved: the
+  // compact folders look into every folder shown, collapsed ones included, at each build of the rows. A time too
+  // close to the reading (within the 2 s of the coarsest file systems) is not trusted.
+  const stamps = new Map(); // relative folder → its modification time when read, or null
+  let check = new Set(); // folders read, to compare with their modification time before reuse
+  const mtime = rel => fs.statSync(path.join(root(), rel), { throwIfNoEntry: false })?.mtimeMs ?? null;
+
+  // Whether a link leads to a folder; a link to a network share stays a plain entry, never followed (see remoteLink).
+  const isDir = full => {
+    if (remoteLink(full, root())) return false;
+    try { return fs.statSync(full).isDirectory(); } catch { return false; }
+  };
 
   function readDir(rel) {
-    if (cache.has(rel)) return cache.get(rel);
+    if (cache.has(rel)) {
+      if (!check.has(rel)) return cache.get(rel);
+      check.delete(rel);
+      const was = stamps.get(rel);
+      // A link keeps its folder's time when its target changes: it is looked at again.
+      if (was != null && mtime(rel) === was && cache.get(rel).every(e => !e.link || isDir(path.join(root(), e.rel)) === e.dir)) {
+        return cache.get(rel);
+      }
+    }
+    const t = mtime(rel);
+    stamps.set(rel, t !== null && Date.now() - t > 2000 ? t : null);
     let entries = [];
     try {
       entries = fs.readdirSync(path.join(root(), rel), { withFileTypes: true })
         .filter(e => e.name !== '.git')
         .map(e => {
-          let dir = e.isDirectory();
-          // A link to a network share stays a plain entry, never followed (see remoteLink).
-          const full = path.join(root(), rel, e.name);
-          if (e.isSymbolicLink() && !remoteLink(full, root())) try { dir = fs.statSync(full).isDirectory(); } catch { }
-          return { name: e.name, dir, rel: rel ? `${rel}/${e.name}` : e.name };
+          const full = path.join(root(), rel, e.name), link = e.isSymbolicLink();
+          return { name: e.name, dir: link ? isDir(full) : e.isDirectory(), rel: rel ? `${rel}/${e.name}` : e.name, ...(link ? { link } : {}) };
         })
         .sort(ENTRY_ORDER);
     } catch { }
@@ -110,8 +134,37 @@ function create(root, settings) {
     return [...list, ...[...gone].map(([name, dir]) => ({ name, dir, rel: pre + name, gone: true }))].sort(ENTRY_ORDER);
   }
 
-  // The rows of a view: { query } the filter's text in lower case, { changed } the changed files only, { expanded }
-  // the folders unfolded.
+  // Compact folders: a folder whose only entry (in list) is a folder shows on one row with it, src/main/java, as the
+  // last one (its rel, expanded or not), chain the names before it ('src/main/'), from the first one's rel. At most
+  // 32 folders, as a link to a folder above would make the chain endless. unfolded, for the tree as it is unfolded
+  // (see unfoldedOf): a folder folded (nothing of it unfolded) is chained only through folders already read, so that
+  // the rows never read a folder they do not show; it shows its chain once unfolded.
+  function compact(e, list, unfolded = null) {
+    if (!settings.compact || !e.dir) return e;
+    const lazy = unfolded && !unfolded.has(e.rel);
+    let last = e;
+    const names = [];
+    for (let n = 0; n < 32; n++) {
+      if (lazy && !cache.has(last.rel)) break;
+      const kids = list(last.rel);
+      if (kids.length !== 1 || !kids[0].dir) break;
+      names.push(last.name);
+      last = kids[0];
+    }
+    return last === e ? e : { ...last, from: e.rel, chain: `${names.join('/')}/` };
+  }
+
+  // The folders expanded and their parents: those with something unfolded.
+  function unfoldedOf(expanded) {
+    const out = new Set();
+    for (const rel of expanded) {
+      for (let r = rel; r && !out.has(r); r = r.slice(0, Math.max(0, r.lastIndexOf('/')))) out.add(r);
+    }
+    return out;
+  }
+
+  // The rows of a view: { query } the filter's text in lower case (no compact folders), { changed } the changed files
+  // only, { expanded } the folders unfolded.
   function rows({ query, changed, expanded }) {
     const rows = [];
     if (query) {
@@ -132,20 +185,26 @@ function create(root, settings) {
     } else if (changed) {
       // Only the changed entries, every folder unfolded, within the filter's budget.
       let budget = FILTER_BUDGET;
+      const list = rel => withGone(rel).filter(isChanged);
       const walk = (rel, depth) => {
-        for (const e of withGone(rel)) {
+        for (const entry of withGone(rel)) {
           if (--budget < 0) return;
-          if (!isChanged(e)) continue;
+          if (!isChanged(entry)) continue;
+          const e = compact(entry, list);
           rows.push({ ...e, depth, open: e.dir });
           if (e.dir) walk(e.rel, depth + 1);
         }
       };
       walk('', 0);
     } else {
+      const unfolded = settings.compact ? unfoldedOf(expanded) : null;
       const walk = (rel, depth) => {
-        for (const e of visible(rel)) {
-          rows.push({ ...e, depth, open: e.dir && expanded.has(e.rel) });
-          if (e.dir && expanded.has(e.rel)) walk(e.rel, depth + 1);
+        for (const entry of visible(rel)) {
+          const e = compact(entry, visible, unfolded);
+          // A chain is open when its last folder is, or its first one (unfolded while it showed alone).
+          const open = e.dir && (expanded.has(e.rel) || (!!e.from && expanded.has(e.from)));
+          rows.push({ ...e, depth, open });
+          if (open) walk(e.rel, depth + 1);
         }
       };
       walk('', 0);
@@ -192,7 +251,10 @@ function create(root, settings) {
     return out;
   }
 
-  return { git, cache, readDir, visible, isChanged, withGone, rows, applyStatus, decoration, hidden, changedFiles };
+  // A change on disk: the folders read are checked again before reuse.
+  function stale() { check = new Set(cache.keys()); }
+
+  return { git, cache, stale, readDir, visible, isChanged, withGone, rows, applyStatus, decoration, hidden, changedFiles };
 }
 
-module.exports = { FILTER_BUDGET, RANK, parentOf, ENTRY_ORDER, NAME_ORDER, code, parseStatus, treeBefore, create };
+module.exports = { FILTER_BUDGET, RANK, parentOf, holds, ENTRY_ORDER, NAME_ORDER, code, parseStatus, treeBefore, create };

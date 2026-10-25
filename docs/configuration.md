@@ -5,36 +5,45 @@ Change the settings from the explorer's settings (`,`, the gear icon or *Setting
 
 ## Settings
 
-The pane where a setting changes applies it at once; the last column says when the other open panes do.
+The pane where a setting changes applies it at once; the last column says when the other open panes do. The rows
+follow the groups of the settings view: Appearance, Tree, Opening, Preview, Review, New tabs, Advanced (see
+[usage.md](usage.md#settings--or-the-gear-icon)).
 
 | Key | Default | Setting | Effect | Other open panes |
 |---|---|---|---|---|
-| `hidden` | `true` | Hidden files; explorer `.` | show dot files in the tree | at their next opening |
-| `ignored` | `true` | Git-ignored files; explorer `i` | show git-ignored files, greyed out | at their next opening |
-| `open` | `"preview"` | Enter opens | what `Enter` and a double-click do on a text file: `"preview"` or `"editor"` | explorers within a second |
-| `editor` | `""` | Editor | external editor command, see below | at once (read at each use) |
-| `singleClick` | `false` | Preview follows selection | a file selected by a click or the arrow keys shows in the preview; the arrow keys only update a preview already open | explorers within a second |
-| `follow` | `false` | Follow terminal | reveal the folder of the terminal next to the explorer, moving the root when it leaves the tree | within 2 s |
-| `side` | `"left"` | Dock side | `"left"` or `"right"`: where new explorers dock; an open explorer keeps its side | new tabs only |
-| `autoOpen` | `true` | Open automatically | open the explorer in every new tab that has a single pane; off: only with `prefix+f` | new tabs only |
+| `theme` | `"auto"` | Theme | `"dark"` (VS Code Dark+ colours), `"light"` (Light+), or `"auto"`: by the terminal's background, as last read (the `background` file), dark until a pane has read it | the explorer at once; a pane opened on auto turns at once when the terminal's background differs; other panes at their next opening |
 | `glyphs` | `"nerd"` | Icon set | `"nerd"` (Nerd Font glyphs), `"emoji"`, `"unicode"` or `"ascii"`: the file icons, chevrons and header icons for a terminal without a Nerd Font, see [Without a Nerd Font](#without-a-nerd-font) | explorers within a second; other panes at their next opening |
 | `icons` | `""` | Icon theme | `""` for the Nerd Font icons, or `{ "id", "label", "file" }` of a VS Code icon theme | explorers within a second; source control at its next opening |
-| `wrap` | `false` | Wrap lines; preview `w`, **View** menu | wrap long lines in the preview | other previews at their next opening |
+| `hidden` | `true` | Hidden files; explorer `.` | show dot files in the tree | at their next opening |
+| `ignored` | `true` | Git-ignored files; explorer `i` | show git-ignored files, greyed out | at their next opening |
+| `compact` | `true` | Compact folders | a folder whose only entry is a folder shows on one row with it (`src/main/java`), not while filtering | at their next opening |
+| `follow` | `true` | Follow terminal | reveal the folder of the terminal next to the explorer, moving the root when it leaves the tree | within 2 s |
+| `open` | `"preview"` | Enter opens | what `Enter` and a double-click do on a text file: `"preview"` or `"editor"` | explorers within a second |
+| `singleClick` | `false` | Preview follows selection | a file selected by a click or the arrow keys shows in the preview; the arrow keys only update a preview already open | explorers within a second |
+| `editor` | `""` | Editor | external editor command, see below | at once (read at each use) |
+| `wrap` | `false` | Wrap lines; `w`, **View** menu (`⚙`) | wrap long lines in the preview, its Diff view, the Changes pane and source control's diff | within 1 s in the open panes |
 | `lineNumbers` | `true` | Line numbers; preview `L`, **View** menu | line number gutter in the preview | other previews at their next opening |
+| `changes` | `true` | Changes; preview `c`, **View** menu | the lines added, changed or removed since HEAD, beside the lines of the preview's File view and on its scrollbar, see [Changes in the File view](usage.md#changes-in-the-file-view) | other previews at their next opening |
 | `images` | `"auto"` | Images; preview `p` (that pane only), the line under a pixelated image | `"blocks"` (pixelated), `"auto"` (sharp when the terminal has the Kitty graphics protocol) or `"pixels"` (always sharp), see [Sharp images](usage.md#sharp-images) | previews within a second |
-| `diffLayout` | `""` | Diff layout (auto, split, inline); `s` in every diff (source control, Changes pane, preview's Diff view), **Inline · Split** switch, **View** menu | `""`: inline under 120 columns (a preview beside the terminal), side by side from 120 (zoomed, full tab). `"inline"` or `"split"`, as the settings view sets it: every diff. `{ "narrow": …, "wide": … }`, as `s` and the switch write it: one layout per size (under 120 columns, from 120), a size left out laid out by width; `s` on a single value keeps it for the other size. The settings view shows both sizes when they differ, and a choice there holds for both | other diffs at their next redraw |
+| `diffLayout` | `""` | Diff layout (auto, split, inline); `v` in every diff (source control, Changes pane, preview's Diff view), **View** menu (`⚙`) | `""`: inline under 120 columns (a preview beside the terminal), side by side from 120 (zoomed, full tab). `"inline"` or `"split"`, as the settings view sets it: every diff. `{ "narrow": …, "wide": … }`, as `v` and the View menu write it: one layout per size (under 120 columns, from 120), a size left out laid out by width; `v` on a single value keeps it for the other size. The settings view shows both sizes when they differ, and a choice there holds for both | other diffs at their next redraw |
+| `reviewPrefix` | `""` | Notes prefix | text typed before the [review notes](usage.md#review-notes) sent to the agent (`A`), such as an instruction | at once (read at each use) |
+| `autoOpen` | `true` | Open automatically | open the explorer in every new tab that has a single pane; off: only with `prefix+f` | new tabs only |
+| `side` | `"left"` | Dock side | `"left"` or `"right"`: where new explorers dock; an open explorer keeps its side | new tabs only |
+| `updateCheck` | `true` | Check for updates | check GitHub once a day for a newer release | explorers within a second |
+| `reviewShare` | `0.35` | source control: `<` `>`, dragging the border | share of the review's width taken by source control beside its preview, from 0.15 to 0.8 | the next reviews |
+| `searchShare` | `0.35` | search: dragging the border | share of the search's tab taken by the search beside its preview, from 0.15 to 0.8 | the next searches |
 | `scmListShare` | `{}` | source control: drag the separator, `<` `>`, `shift+left` `shift+right` | share of the width taken by the list beside the diff, per view: `{ "changes": 0.3, "history": 0.6 }`; a view left out: 38 %, from 34 to 70 columns | other source control panes at their next opening |
 | `scmGraphAll` | `true` | source control History `a` | show every local and remote branch in History, or only the current one | other source control panes at their next opening |
 | `scmTree` | `false` | source control `t`, **List · Tree** switch | show the Changes view as a tree of folders | other source control panes at their next opening |
-| `updateCheck` | `true` | Check for updates | check GitHub once a day for a newer release | explorers within a second |
 
 A missing or unreadable `settings.json` means all defaults, and keys left out keep their default. `scmListShare`,
 `scmGraphAll` and `scmTree` are not in the settings view: only the source control pane changes them.
 
 ### Editor command
 
-The editor command is split at spaces, with quotes kept together (`"subl -w"`, `"code --wait"`). It
-runs without a shell, with the path as its last argument.
+The editor command is what `e` (**Open in editor**) runs, and `o` (**Open in app**) for the files it does not hand to
+the system. It is split at spaces, with quotes kept together (`"subl -w"`, `"code --wait"`), and runs without a
+shell, with the path as its last argument.
 
 - **Empty** (default): VS Code when the `code` command is found (on Windows, the plugin also looks
   in `%LOCALAPPDATA%\Programs\Microsoft VS Code\bin`). Otherwise the terminal editor in the Editor
@@ -89,18 +98,25 @@ saved, and the explorer's width falls back to 32 columns.
 | ---------------------- | -------------------------------------------------------------------------------------------- |
 | `settings.json`        | the settings above                                                                           |
 | `width`                | explorer width in columns (minimum 10, default 32)                                           |
+| `background`           | `dark` or `light`: the terminal's background, as the last pane opened on the auto theme read it |
 | `expanded.json`        | expanded folders, per tree root                                                              |
 | `search.json`          | last Go to file query, search query, include/exclude globs, case/word/regex options          |
-| `update.json`          | `checkedAt`, `latest` release found, and `finish` (an update the installer must finish)      |
+| `update.json`          | `checkedAt`, the repository checked (`repo`), the `latest` release found with its changes (`notes`) and page (`url`), the version skipped (`skip`), the last update done (`updated`: `{ from, to, t }`), and `finish` (an update the installer must finish) |
 | `resizing`             | the pane resizing itself, for half a second: the panes it moves let it put them back         |
 | `update.lock`          | present while an update runs; taken over after 2 minutes (a killed update)                   |
 | `panes/<pane id>.json` | per pane: the explorer's tab folder (`home`) and tree root (`root`), the preview's `file`, `root`, `line` and tabs (`tabs`) |
 | `preview-<tab id>.json`| the last file the explorer, the search or `peek.js` asked the tab's preview to show        |
-| `notes-<tab id>.json`  | the tab's review notes, removed once sent                                                    |
+| `notes-<tab id>.json`  | the tab's review notes, removed once sent, each with the text of its lines (`anchor`) and `stale` once they are gone |
+| `scope-<tab id>.json`  | the tab's [diff scope](usage.md#diff-scope), `{ kind, rev }`, absent for HEAD                |
+| `turn-<tab id>.json`   | the working tree when the tab's agent last started working: `{ pane, top, tree, t, ended }`  |
+| `search-<tab id>.json` | the search open for the tab: `{ pane }`, removed when it closes |
+| `review-<tab id>.json` | the review open for the tab: `{ pane }`, its source control, removed when the review ends |
+| `viewed-<tab id>.json` | the files marked viewed in the tab's Changes pane: `{ real path: hash of the content then }` |
 
-`settings.json`, `expanded.json`, `width`, `update.json`, `search.json`, `resizing`, `preview-*.json`, `notes-*.json`,
-`panes/*.json` and `keys.json` (in the config folder) are written to a temporary file and then renamed, so a pane never reads them half-written. At herdr startup, the state files of panes
-that no longer exist are deleted.
+`settings.json`, `expanded.json`, `width`, `update.json`, `search.json`, `resizing`, `preview-*.json`, `notes-*.json`, `review-*.json`, `search-*.json`, `scope-*.json`, `turn-*.json`, `viewed-*.json`,
+`panes/*.json` and `keys.json` (in the config folder) are written to a temporary file and then renamed, so a pane never reads them half-written. When a tab or a space closes, and again at herdr
+startup, the files of tabs and panes that no longer exist are deleted (`notes-*.json`, `preview-*.json`, `review-*.json`, `search-*.json`, `scope-*.json`, `turn-*.json`, `viewed-*.json`, `panes/*.json`),
+except those written in the last 10 seconds, which a tab opened meanwhile may already use.
 
 ### Config folder
 
@@ -178,7 +194,7 @@ folders. See [installation.md](installation.md#key-bindings).
 | `HERDR_CONFIG_PATH`, `XDG_CONFIG_HOME` | the herdr `config.toml` the install scripts add the key bindings to, see [Installation](installation.md) (`XDG_CONFIG_HOME`: `install.sh` only) |
 
 herdr sets `HERDR_PLUGIN_STATE_DIR`, `HERDR_PLUGIN_CONFIG_DIR`, `HERDR_PLUGIN_CONTEXT_JSON` and
-`HERDR_PLUGIN_EVENT_JSON` for the plugin's own processes, and `HERDR_PANE_ID` in every pane; the plugin only reads them.
+`HERDR_PLUGIN_EVENT_JSON` for the plugin's own processes (and `HERDR_PLUGIN_CLICKED_URL` for a clicked link), and `HERDR_PANE_ID` in every pane; the plugin only reads them.
 
 The `EXPLORER_*` variables only pass between the plugin's own panes (see
 [Pane environment](architecture.md#pane-environment)).
