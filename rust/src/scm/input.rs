@@ -2,8 +2,8 @@
 //! follows, is the pane's (pane.rs).
 
 use super::context::{PickItem, Row, VIEWS};
-use super::pane::{Act, Pane, Yes};
 use super::state;
+use super::{Act, Pane, Yes};
 use crate::core::actions;
 use crate::core::ui::{self, BarHit, Confirm, Mouse};
 use std::time::{Duration, Instant};

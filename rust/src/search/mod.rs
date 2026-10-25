@@ -9,16 +9,19 @@
 
 mod find;
 mod render;
+mod state;
 
 use crate::core::actions::{self, Sharer};
 use crate::core::exec;
-use crate::core::regex::Regex;
 use crate::core::screen::{self, Input, Screen};
-use crate::core::ui::{self, Event, Field, HelpState, Hints, Mouse, Scrollbar, Seg};
+use crate::core::ui::{self, Event, HelpState, Hints, Mouse, Scrollbar, Seg};
 use crate::core::{js, paths, worker};
 use crate::json::{self, Value};
 use crate::sys;
 use find::{Group, MAX_MATCHES};
+use state::{
+    Act, CONTENT, EXCLUDE, FILES, Files, Focus, INCLUDE, Mode, Opt, Row, SField, Scored, Shown, State, Target, Zone,
+};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex};
@@ -30,129 +33,6 @@ const MAX_HIGHLIGHT: usize = 1 << 20;
 
 type Then = worker::Then<Search>;
 type Worker = worker::Worker<Search>;
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Mode {
-    Files,
-    Content,
-}
-
-/// The field typed in, in Search in files.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Focus {
-    Query,
-    Include,
-    Exclude,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Opt {
-    Case,
-    Word,
-    Regex,
-    Hidden,
-}
-
-/// What a click on a part of the top lines does.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Act {
-    Mode(Mode),
-    Toggle(Opt),
-    Focus(Focus),
-}
-
-/// A clickable area of the last frame: its screen row (from 0), first and last columns (from 1).
-struct Zone {
-    y: i64,
-    x1: i64,
-    x2: i64,
-    act: Act,
-}
-
-/// A field, and whether its text was restored from the last search: shown selected, typing replaces it.
-struct SField {
-    field: Field,
-    restored: bool,
-}
-
-impl SField {
-    fn new(value: &str) -> SField {
-        SField { field: Field::new(value), restored: !value.is_empty() }
-    }
-}
-
-const FILES: usize = 0;
-const CONTENT: usize = 1;
-const INCLUDE: usize = 2;
-const EXCLUDE: usize = 3;
-
-/// The file list, sorted, with each path in UTF-16 units, in lower case, and where its name starts.
-struct Files {
-    list: Arc<Vec<String>>,
-    units: Vec<Vec<u16>>,
-    lower: Vec<Vec<u16>>,
-    base: Vec<usize>,
-}
-
-/// A Go to file result: the file's index, its score, and the matched positions once drawn.
-struct Scored {
-    i: usize,
-    score: i64,
-    pos: Option<Vec<usize>>,
-}
-
-/// A row of the results: a Go to file result; or a file of Search in files, then its matching lines.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Row {
-    File(usize),
-    Head(usize),
-    Line(usize, usize),
-}
-
-/// A file read for the preview on the right: its lines and their coloured segments, or why it cannot show.
-enum Shown {
-    Text { lines: Vec<String>, segs: Vec<Vec<Seg>> },
-    Error(String),
-}
-
-/// The file and line of a row.
-struct Target {
-    rel: String,
-    line: f64,
-}
-
-struct State {
-    mode: Mode,
-    fields: [SField; 4],
-    /// Search in files: query, include or exclude.
-    focus: Focus,
-    case: bool,
-    word: bool,
-    regex: bool,
-    hidden: bool,
-    files: Option<Files>,
-    capped: bool,
-    files_gen: u64,
-    // Go to file
-    results: Vec<Scored>,
-    line: f64,
-    /// The last query in lower case and the files it matched, to score only those when the query grows.
-    prev: Option<(Vec<u16>, Vec<usize>)>,
-    // Search in files
-    groups: Vec<Group>,
-    total: usize,
-    searching: bool,
-    error: Option<String>,
-    re: Option<Regex>,
-    search_key: Option<String>,
-    touched: bool,
-    cursor: i64,
-    top: i64,
-    flash: Option<String>,
-    last_click: Option<(i64, Instant)>,
-    help: Option<HelpState>,
-    hints: Hints,
-}
 
 pub struct Search {
     state: State,

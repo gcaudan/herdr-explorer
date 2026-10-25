@@ -2,9 +2,9 @@
 //! status line and key help, the diff or branch comparison beside the list, and the branch picker.
 
 use super::context::{self, CmpRow, DiffView, Row, RowRef, VIEWS, base, dir_of};
-use super::pane::{Act, Hit, Pane};
 use super::parse::{self, Commit, Item, Label};
 use super::state;
+use super::{Act, Hit, Pane};
 use crate::core::exec::{self, WIN};
 use crate::core::icons;
 use crate::core::ui::{self, Rgb, Seg, bg, c, fg, seg, shade};

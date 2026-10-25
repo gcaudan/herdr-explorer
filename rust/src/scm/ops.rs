@@ -4,9 +4,9 @@
 //! actions.
 
 use super::context::{Row, base, files};
-use super::pane::{Done, Inline, Op, Pane, Yes};
 use super::parse::{self, Branch, Commit, Item, Stash};
 use super::state::{self, FROM_FILE, GitOpts, Ongoing};
+use super::{Done, Inline, Op, Pane, Yes};
 use crate::core::exec::{self, Exec, Opts, WIN};
 use crate::core::ui::{Choice, Confirm, Field, Menu, MenuItem};
 use crate::core::{actions, js, paths, stage, which, worker};
