@@ -19,7 +19,7 @@ the release of its version (see [The binary](#the-binary)).
 | A terminal editor (optional): `$VISUAL`, `$EDITOR`, else the first of `nano`, `nvim`, `vim`, `vi` (`edit`, `nvim`, `vim`, `nano` on Windows) | the [Editor pane](usage.md#editor-pane) |
 | The [Claude Code](https://claude.com/claude-code) CLI, `claude` (optional) | commit messages written by Claude |
 | `dwebp`, from libwebp (optional) | WebP images in the preview (`webp` package on Linux, `brew install webp` on macOS) |
-| A terminal with the Kitty graphics protocol (optional) | sharp images in the preview, with **Settings → Images** (Kitty, Ghostty, WezTerm, Konsole…, with herdr's `terminal.kitty_graphics`, on by default); half blocks otherwise, see [Sharp images](usage.md#sharp-images) |
+| A terminal with the Kitty graphics protocol (optional) | sharp images in the preview, with **Settings → Images** (Kitty, Ghostty, WezTerm, Konsole…, with herdr's `terminal.kitty_graphics`, on by default); half blocks otherwise, see [Sharp images](usage/preview.md#sharp-images) |
 
 ### Platform tools
 
@@ -157,7 +157,8 @@ installs the toolchain of `rust-toolchain.toml`):
 scripts/dev-build.sh    # Windows (PowerShell): powershell -ExecutionPolicy Bypass -File .\scripts\dev-build.ps1
 ```
 
-It runs `cargo build --release`, copies the binary to `bin/` and writes `bin/.dev`: fetch-bin, the
+It runs `cargo build --release` (cargo from `PATH`, else `$CARGO_HOME/bin`, by default `~/.cargo/bin`, where rustup
+installs it without touching your shell's profile), copies the binary to `bin/` and writes `bin/.dev`: fetch-bin, the
 updates and the shims then never replace it. Run it again after each change; delete `bin/.dev` (and run
 `scripts/fetch-bin.sh`) to go back to the release binary.
 

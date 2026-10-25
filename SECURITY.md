@@ -26,7 +26,7 @@ It trusts your own settings, your global and system git configuration, the progr
 
 ## Running programs
 
-- **No shell**. Every program runs with an argument list (`execFile`, `spawn`), never through a shell command line.
+- **No shell**. Every program runs with an argument list, never through a shell command line.
   The one exception is an npm-installed `claude.cmd` on Windows, which can only run through `cmd`, with fixed
   arguments.
 - **Absolute paths**. `git`, `herdr`, `claude`, `dwebp`, a graphical editor command, and on Windows every program, run from
@@ -37,6 +37,12 @@ It trusts your own settings, your global and system git configuration, the progr
 - **Editor commands**: the editor setting and `$EXPLORER_EDITOR`, `$VISUAL` or `$EDITOR` are split into words (quotes
   group them), never interpreted by a shell; the file path is the last argument.
 - **Output limits**. Program output is read up to 64 MB.
+- **The shims** run `scripts/fetch-bin` with the system's own shell and PowerShell, by absolute path (`/bin/sh`, and
+  `powershell.exe` under `%SystemRoot%\System32\WindowsPowerShell`), never one found in a folder of `PATH`.
+- **Messages between processes**: the launcher of the explorer and preview panes and the binary it restarts exchange
+  their messages through a file in a new folder of their own (mode 0700 on Unix), created so that it fails if it
+  already exists. Another user of a shared temporary folder cannot write the messages first and give the next process
+  an environment.
 
 ## Git hardening
 
@@ -108,7 +114,7 @@ contains spaces or control characters is refused; the others pass after `--end-o
   leaves its folder through `..` is refused. The check is on the name only: it does not follow a symbolic link that
   the name goes through.
 - **Duplicate** copies symbolic links as links.
-- **Saving** an edited file writes a new temporary file beside its target, created exclusively (`wx`, never through a
+- **Saving** an edited file writes a new temporary file beside its target, created exclusively (never through a
   file or link already there) with the file's permissions and group, then renames it over the file. A file with hard
   links, owned by another user, or in a folder that cannot be written is written in place instead.
 - **Discard**: untracked files discarded go to the trash, from the explorer's *Discard changes*, source control's
@@ -117,7 +123,8 @@ contains spaces or control characters is refused; the others pass after `--end-o
 - **Opening files**: a double-click opens with the system application only documents and media (images, PDF,
   Office, archives, audio, video); everything else goes to the preview or an editor, so it never starts an
   executable, a script or a shortcut. *Open in app* adds only `txt`, `md`, `csv`, `log`, `json`, `xml`, `html` and
-  `htm`. The extension decides, not the execute bit (set on every file of FAT and NTFS drives).
+  `htm`. The extension decides, not the execute bit (set on every file of FAT and NTFS drives). On macOS, a folder
+  that is an application (`x.app`, or a link to one) opens in a Finder window rather than being launched.
 
 ## Terminal output
 
@@ -178,7 +185,6 @@ Files are untrusted input:
 - Diffs are cut at 200,000 rows, and show at most 200 untracked files.
 - Search skips files that are not regular, binary files and files over 2 MB, stops at 5,000 matches and walks at most
   50,000 files; symbolic link loops are cut.
-- Lookup tables have no prototype, so a file named `constructor` is just a name.
 
 ## Updates
 

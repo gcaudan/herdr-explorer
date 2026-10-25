@@ -20,7 +20,7 @@
 | Changes pane      | 200 untracked files shown in full, then a count. 200,000 diff rows, then *diff too long, truncated* |
 | Source control    | History: last 500 commits. Comparison: 300 commits per side. Fetch, pull and push time out after 120 s |
 | Claude message    | 60,000 characters of diff sent (then *[diff truncated]*), at most 20 untracked files, 90 s timeout, 200-character message |
-| Update            | check once a day, 3 s timeout. Pull timeout 60 s. Lock taken over after 2 min                 |
+| Update            | check once a day, 3 s timeout. Pull timeout 60 s. `update.lock` taken over after 15 min, `bin/.fetch.lock` after 2 min |
 | Program output    | 64 MB read from any git command                                                               |
 
 ## Limitations
@@ -85,7 +85,7 @@
   Font](configuration.md#without-a-nerd-font)). Emoji that overlap the names: the terminal draws them one column
   wide, choose Unicode or ASCII.
 - **Images are blocky**: the terminal lacks the Kitty graphics protocol, or did not answer its query in time (see
-  [Sharp images](usage.md#sharp-images)). For a terminal that has the protocol but does not answer, set **Images** to
+  [Sharp images](usage/preview.md#sharp-images)). For a terminal that has the protocol but does not answer, set **Images** to
   *always sharp* in the settings.
 - **The explorer does not refresh**: press `r`. With your home folder (or above it) as the root, or when a folder
   of the tree cannot be read, deeper changes show within 30 s (see [Limits](#limits)).
@@ -100,6 +100,9 @@
 - **Cannot rename or delete the project folder on Windows** (*access denied* or *in use*): the plugin's panes work
   in that folder, so that new spaces, tabs and panes made from them start there, and Windows keeps a folder in use
   from being renamed or deleted. Close the explorer (and the other plugin panes of the tab) first.
+- **The explorer closes as soon as it opens, or ignores `keys.json`**: the `"explorer"` entry of `keys.json` (config
+  folder) is a string, a number or `true` instead of an object, which ends the pane; a file that is not valid JSON is
+  ignored. Fix the file, or delete it to go back to the default keys.
 - **A setting edited by hand has no effect**: some are read only when a pane starts (see
   [Settings](configuration.md#settings)): close and reopen the explorer.
 
@@ -158,7 +161,7 @@
 | `Link to a network share: not opened` | (Preview) the file is a symbolic link (or sits behind one) to `\\host\share`, never followed, see [Security](../SECURITY.md#windows) |
 | `No preview`, `<format> W×H (… no preview)`, `(too large for preview)`, `Unknown image format (…)`, `Empty file` | (Preview) image over a limit, in an unsupported format or encoding (for example `arithmetic, no preview`), or empty. `o` opens it |
 | `install dwebp (libwebp) to see WebP images`     | (Preview) WebP needs `dwebp` on `PATH`                                             |
-| `The terminal did not answer the Kitty graphics query: the image may not show` | (Preview) pixels were asked for in a terminal that did not answer. See [Sharp images](usage.md#sharp-images) |
+| `The terminal did not answer the Kitty graphics query: the image may not show` | (Preview) pixels were asked for in a terminal that did not answer. See [Sharp images](usage/preview.md#sharp-images) |
 | `Find works in the file: d`                      | (Preview) `/` in the Diff view. `d` goes back to the file                          |
 | `No default branch: compared with HEAD`          | (Diff view, Changes pane) no `origin/HEAD`, `main` or `master`, or no common commit with it |
 | `No agent turn recorded in this repository`      | (Diff view, Changes pane) scope **Last agent turn**, but the tab's agent has not started working in this repository since the plugin was installed. `b` picks another scope |
@@ -226,9 +229,11 @@
 
 | Message                                                                 | Meaning and fix                                                    |
 | ----------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `herdr not found in PATH`                                               | `herdr` is not in an absolute folder of `PATH`                     |
 | `cannot find the plugin's state folder: open a new tab once so that the explorer saves it` | the hook has not saved the state folder yet. Open a tab |
 | `run it from a herdr pane` (code 2)                                     | `HERDR_PANE_ID` is not set                                          |
 | `not in a git repository`, `git status failed`, `no changed file`       | `--last` outside a repository, or with no modified, added or untracked file |
 | `no such file: <path>`, `not a file: <path>`                            | the path does not exist (allowed with `--diff`), or is a folder    |
+| `link to a network share, not shown: <path>`                            | the file is a link (or sits behind one) to `\\host\share`, never followed, see [Security](../SECURITY.md#windows) |
 | `wrong place: <place>`, `usage: …` (code 2)                             | a place such as `14-12`, `0` or `12:18-5`, or wrong arguments       |
 | `Cannot preview`, `Cannot open the preview`                             | see [Explorer and preview](#explorer-and-preview)                  |

@@ -29,7 +29,8 @@ Plugin id `gcaudan.explorer` · herdr 0.9.4 or later · Linux, macOS and Windows
   the preview or the diff, typed together into the agent's prompt (`src/app.js:12-14 (fix): …`) without submitting
   it.
 - **Show a file from an agent**: `src/peek.js file:line`, and a Claude Code skill that calls it, show a file at a
-  line in the tab's preview, so that an agent points you at the code it talks about.
+  line in the tab's preview, so that an agent points you at the code it talks about. `ctrl`+click on a `file://`
+  link in the terminal shows that file the same way.
 - **Insert into terminal**: types a file's path, relative and quoted, into the terminal next to the explorer;
   prefixed with `@` when an agent such as Claude Code runs there.
 - **Preview**: one pane per tab, with VS Code-style tabs (temporary or kept): syntax highlighting for 27 languages and formats, rendered
@@ -128,7 +129,7 @@ See [docs/usage.md](docs/usage.md) for every pane, key, mouse action and menu it
 ## Contributing
 
 Install Rust, clone, run the install script, then `scripts/dev-build.sh` after each change and reopen the pane; the
-checks are `bash scripts/check.sh`. Commits follow
+checks are `sh scripts/check.sh`. Commits follow
 [Conventional Commits](https://www.conventionalcommits.org/), and releases are cut by release-please. See
 [CONTRIBUTING.md](CONTRIBUTING.md).
 

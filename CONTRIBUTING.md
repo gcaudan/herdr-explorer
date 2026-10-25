@@ -22,7 +22,8 @@ files herdr runs are shims that start it (Node 20 or later).
    scripts/dev-build.sh    # Windows: powershell -ExecutionPolicy Bypass -File .\scripts\dev-build.ps1
    ```
 
-   It runs `cargo build --release`, copies the result to `bin/herdr-explorer` and writes `bin/.dev`:
+   It runs `cargo build --release` (cargo from `PATH`, else `$CARGO_HOME/bin`, by default `~/.cargo/bin`), copies
+   the result to `bin/herdr-explorer` and writes `bin/.dev`:
    `scripts/fetch-bin.sh`, the updater and the shims then leave your binary alone. Delete `bin/.dev`, then run
    `scripts/fetch-bin.sh`, to go back to the release binary.
 4. Edit the code under `src/`, run `scripts/dev-build.sh` again, then reload what you changed:
@@ -76,14 +77,14 @@ works](docs/architecture.md#how-it-works).
 
 | Path                  | Role                                                                                         |
 | --------------------- | -------------------------------------------------------------------------------------------- |
-| `herdr-plugin.toml`   | manifest: id, version, min herdr version, build step (fetch-bin), startup hook, `tab.created` event, panes, actions |
+| `herdr-plugin.toml`   | manifest: id, version, min herdr version, build step (fetch-bin), startup hook, events (`tab.created`, `tab.closed`, `workspace.closed`, `pane.agent_status_changed`, `tab.focused`), panes, actions, `file://` link handler |
 | `install.sh`, `install.ps1` | link the clone to herdr, fetch the binary, add the three key bindings and, with Claude Code, link the skill |
 | `scripts/fetch-bin.sh`, `.ps1` | download the release binary of the manifest's version, checked against `SHA256SUMS`, into `bin/` |
 | `scripts/dev-build.sh`, `.ps1` | build the binary into `bin/`, marked as a development one (`bin/.dev`) |
 | `scripts/check.sh`    | every check, see [Tests](#tests)                                                             |
 | `src/*.js`            | shims: start the binary (fetching it if missing), relaunch it on exit code 75, relay its messages |
 | `src/cli.rs`, `main.rs` | the command line: subcommands, `--version`                                                 |
-| `src/hook.rs`         | startup restore, `tab.created`, and the toggle, search and source control actions. Opens and places the explorer |
+| `src/hook.rs`         | startup restore, herdr's events (new, closed and focused tabs, agent turns) and the toggle, search and source control actions. Opens and places the explorer |
 | `src/launch.rs`       | launcher that keeps the explorer and preview panes alive across self-restarts (exit code 75) |
 | `src/peek.rs`         | shows a file in the tab's preview from outside the plugin (an agent's pane) and the peek action |
 | `src/explorer/`       | explorer pane: tree (pure), drawing, settings view, keys and mouse, update UI                |
@@ -116,20 +117,22 @@ scripts/check.sh
 ```
 
 It runs, stopping at the first failure: `cargo fmt --check`, `cargo clippy` for the host and for the 5 release
-targets (compiled without linking), then `cargo test`. The tests need
+targets (compiled without linking), then `cargo test`. It runs `$CARGO`, by default `~/.cargo/bin/cargo`, and does
+not look in `PATH`. The tests need
 neither herdr nor a terminal: those that run a pane, the hook or peek remove herdr's variables and put a fake herdr
 (`tools/fake-herdr/`) first on `PATH`. `.github/workflows/ci.yml` runs the same checks on every pull request and
-every push to `main`, on Linux (x86_64 and arm64), macOS and Windows, and checks that the shims parse on Node 20 and
-24.
+every push to `main`, on Linux (x86_64 and arm64), macOS and Windows. It also checks that the shims parse on Node 20
+and 24, and that the shell scripts (`sh -n`, `bash -n install.sh`) and the PowerShell scripts (Windows PowerShell 5.1's
+parser) parse.
 
 | File (`tests/`     ) | Covers |
 | --- | --- |
 | `modules.rs` | the module fixtures recorded from the JS of 0.8.0 (`tests/fixtures/modules/`     ), replayed against the port |
-| `screens.rs` | screen captures of the panes in a terminal, started directly and through their shim, against those recorded from the JS (Linux) |
-| `shims.rs` | every script of `src/` passes `node --check` |
+| `screens.rs` | screen captures of the panes in a terminal, started directly and through their shim, against those recorded from the JS (Linux). Each scenario is a `tests/fixtures/screens/<pane>/<name>.keys` file, whose directives `tests/support/pty.rs` documents; `HX_ONLY=<prefix>` runs only the scenarios whose name starts with it |
+| `shims.rs` | every script of `src/` passes `node --check`; skipped without `node`, except in CI (`CI` set), where it fails |
 | `smoke.rs` | the shims as herdr runs them (Linux): each pane started and quit, the hook and peek, the restart on code 75 and the folder announced through `EXPLORER_IPC_FILE` |
-| `docs.rs` | relative links and `#anchors` of `README.md`, `SECURITY.md`, `CONTRIBUTING.md` and `docs/*.md` |
-| `layers.rs` | imports follow the layers of [How it works](docs/architecture.md#how-it-works): never up a layer, never from one pane to another |
+| `docs.rs` | relative links and `#anchors` of `README.md`, `SECURITY.md`, `CONTRIBUTING.md` and the `.md` files under `docs/` |
+| `layers.rs` | imports follow the layers of [How it works](docs/architecture.md#how-it-works): never up a layer, never from one pane to another. A new top-level module must be added to a layer there |
 | `show.rs` | a commit, stash or tag shown by the preview's Diff view |
 | `ui.rs` | terminal width of text (emoji, flags, wide characters), the segment helpers and the menus |
 | `editor.rs` | in-place editing (`core::buffer`) |
@@ -150,11 +153,15 @@ every push to `main`, on Linux (x86_64 and arm64), macOS and Windows, and checks
 | `fetch_bin.rs` | `scripts/fetch-bin.sh` against a local release, without the network |
 
 The module fixtures and the screen captures were recorded from the JS before the switch to Rust and are not
-recorded again: a change of behaviour on purpose updates them by hand, with its reason in the commit. Unit tests sit
+recorded again: a change of behaviour on purpose updates them by hand, with its reason in the commit. They are
+compared byte for byte, so `.gitattributes` keeps LF everywhere and never converts `tests/fixtures/`. The fake herdr
+logs each call to `$FAKE_HERDR_DIR/calls.log` and answers with the file `$FAKE_HERDR_DIR/<arg1>-<arg2>`, else
+`{"result":null}`. Unit tests sit
 next to the code they test (the updater, the codecs, the viewed files…). The links of the docs are
 checked with GitHub's anchors: the heading in lower case, punctuation other than `-` and `_` dropped, spaces turned
 into dashes. When you rename a heading, update the links to it, including the one the preview opens from itself
-(`docs/usage.md#sharp-images`).
+(`docs/usage/preview.md#sharp-images`; `docs/usage.md` keeps a *Sharp images* heading for the binaries already
+released, which open that page).
 
 ## Commits
 
@@ -187,7 +194,7 @@ request:
    only the version and the changelog differ. The run of that merge tags `vX.Y.Z` (no
    component in the tag) and creates the GitHub release as a draft, then checks that the version has only digits
    and dots and that `herdr-plugin.toml` at the tag carries it, as the update check requires. The `build` job
-   compiles the binary of the tag for the 5 targets and attaches each one; `publish` then attaches `SHA256SUMS` and
+   compiles the binary of the tag for the 5 targets (`cargo build --release --locked`) and attaches each one; `publish` then attaches `SHA256SUMS` and
    publishes the release, once all 5 binaries are there.
 4. Installed explorers find the release within a day through the update check (`releases/latest`)
    and offer the update: they download its binary, check it against `SHA256SUMS`, move the clone to the tag and

@@ -6,6 +6,11 @@ that starts the binary with the matching subcommand (`pane <id>`, `hook`, `peek`
 missing or of another version ([The binary](installation.md#the-binary)). The manifest's `[[build]]` steps run
 `scripts/fetch-bin` for `herdr plugin install` and `update`.
 
+`herdr-explorer --version` (or `-V`) prints the version that `build.rs` embeds from the manifest; a command line it
+does not know prints the usage and exits with code 2. Each start of `hook`, `peek` or `pane` deletes the binaries
+set aside next to it (`herdr-explorer.old-*`) by fetch-bin, dev-build and the updater; Windows keeps one that still
+runs until a later start.
+
 | Kind      | Id         | Command                       | Placement                 |
 | --------- | ---------- | ----------------------------- | ------------------------- |
 | startup   |            | `node src/hook.js --restore` |                           |
@@ -119,6 +124,9 @@ Inputs reach a pane through `--env` variables of `herdr plugin pane open`:
 | `EXPLORER_TABS` | preview | the tabs to restore, `{ list, current }` (JSON), after a herdr restart or a self-restart |
 | `EXPLORER_TAB` | preview | the tab id, which names its request file |
 | `EXPLORER_SEEN` | preview | the last request handled, across a restart; on opening, the request file as it was, to take the requests made while the preview starts |
+| `EXPLORER_SHOW` | preview | a commit, stash or tag of source control to show (JSON), also across a self-restart |
+| `EXPLORER_REVIEW` | scm, preview | for source control, the tab reviewed; for a preview, `1` when it sits beside source control |
+| `EXPLORER_ORIGIN` | search | the tab the search was opened from, whose preview gets the result opened |
 | `EXPLORER_PANE` | search, scm, diff | the pane to act from (the diff's notes go to the terminal next to it) |
 | `EXPLORER_HISTORY` | scm | a file whose history to show, in place of `EXPLORER_FILE` |
 | `EXPLORER_MODE`, `EXPLORER_QUERY` | search | `files` or `content`, and the first query |
@@ -216,7 +224,7 @@ current one. The other plugin panes are not reopened. It then deletes the state 
 `tab.closed` and `workspace.closed` events.
 herdr keeps pane ids across a restart, which is what lets each pane find its saved state.
 
-`hook.js --agent` follows the agents' turns for the [Last agent turn](usage.md#diff-scope) scope
+`hook.js --agent` follows the agents' turns for the [Last agent turn](usage/changes.md#diff-scope) scope
 (`core/scope.rs`): when an agent starts working after having been idle or done, or another agent of the tab does, it
 writes the tree of the repository's working tree to `turn-<tab id>.json`. The tree is made from a copy of the index
 (`GIT_INDEX_FILE`, `git add -A`, `git write-tree`), so the real index is left alone and git rehashes only the files
@@ -273,7 +281,9 @@ put back by the same pane, so that they are not moved twice (herdr resizes by a 
 
 The explorer and preview panes run through a small launcher. The pane's first process, the shim `src/explorer.js`
 or `src/preview.js` (or the binary itself, started without one), stays as the launcher and runs the binary as a
-child process, with `EXPLORER_IPC_FILE` naming the file where the child writes its messages, a line of JSON each.
+child process, with `EXPLORER_IPC_FILE` naming the file where the child writes its messages, a line of JSON each,
+and `EXPLORER_LAUNCHER` giving the launcher's pid. The file sits in a new folder of its own (mode 0700 on Unix), so
+that another user cannot write the messages first.
 
 - The launcher keeps the terminal in raw mode between children, so a `ctrl+c` typed during a restart
   cannot kill the pane, and forwards `SIGTERM`, `SIGHUP` and `SIGINT` to the child. If it is killed, the child
