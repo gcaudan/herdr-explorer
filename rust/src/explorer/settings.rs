@@ -603,14 +603,15 @@ impl Explorer {
         if self.updating || !self.settings.get("updateCheck").is_some_and(Value::truthy) {
             return None;
         }
-        // TODO(case 20): the release skipped, still installable ("update anyway").
-        self.latest.as_ref().map(|v| (format!("↑ {v} available"), c().green, "update", false))
+        if let Some(v) = &self.latest {
+            return Some((format!("↑ {v} available"), c().green, "update", false));
+        }
+        self.skipped.as_ref().map(|v| (format!("{v} skipped"), c().dim, "update anyway", false))
     }
 
     /// The update installed, or finished (askUpdate, finishUpdate).
-    fn update_action(&mut self, _finish: bool) -> Act {
-        // TODO(case 20): the update asked for, then installed.
-        Act::Now(None)
+    fn update_action(&mut self, finish: bool) -> Act {
+        if finish { self.finish_update() } else { self.ask_update() }
     }
 
     /// The settings view: the find when open and the update when there is one under the title, the settings, the

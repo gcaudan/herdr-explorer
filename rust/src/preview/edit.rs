@@ -164,7 +164,7 @@ impl Preview {
     }
 
     /// Every tab's edit, with its file.
-    fn edits(&self) -> Vec<(Shared, String)> {
+    pub(super) fn edits(&self) -> Vec<(Shared, String)> {
         (0..self.tabs.list.len()).filter_map(|i| self.edit_at(i).map(|e| (e, self.tabs.list[i].file.clone()))).collect()
     }
 

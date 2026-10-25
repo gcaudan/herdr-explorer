@@ -10,6 +10,7 @@ mod input;
 mod render;
 mod settings;
 pub mod tree;
+mod update_ui;
 
 use crate::core::actions::{self, Kept};
 use crate::core::exec::{self, Bindings, KeyMap, Opts};
@@ -17,7 +18,7 @@ use crate::core::icons::{self, Loaded};
 use crate::core::screen::{self, Input, Screen};
 use crate::core::ui::{self, Ask, Confirm, Field, HelpState, Menu, Scrollbar};
 use crate::core::watch::Watch;
-use crate::core::{js, paths, worker};
+use crate::core::{js, paths, update, worker};
 use crate::json::{self, Value};
 use crate::sys::{self, Watcher};
 use std::panic::AssertUnwindSafe;
@@ -311,12 +312,22 @@ pub struct Explorer {
     defaults: Bindings,
     keys: KeyMap,
     theme: Option<Loaded>,
-    // TODO(case 20): the update: a newer release, the one skipped, the update to finish, the one just done.
+    /// A newer release, found by the hook's daily check: ↑ and its version in the header; skipped: the one the user
+    /// skipped, only in the settings.
     latest: Option<String>,
+    skipped: Option<String>,
+    /// An update that changed the manifest or the installer, which the installer must finish: ! finish in the header.
     finish: Option<String>,
+    /// Restarted on the code of an update done here: the version in a message, and the release's notes in the
+    /// header's pill for half a minute (until notice_at).
     notice: Option<String>,
+    notice_at: Option<Instant>,
+    /// An update running: no second one, ↑ hidden.
     updating: bool,
-    /// Restarted on new code: this process only waits for the new one (case 20).
+    /// update.json, read again when it changes; the version on disk, watched once started.
+    update_watch: Option<Watch>,
+    version_watch: Option<update::VersionWatch>,
+    /// Restarted on new code: this process only waits for the new one, its work still running stops there.
     stopped: bool,
     state: State,
     scrollbar: Scrollbar,
@@ -454,6 +465,8 @@ impl Explorer {
         let keeper = Arc::new(Mutex::new(actions::WidthKeeper::new(&pane, side.as_deref())));
         let tree = Tree::new(&root, tree_settings(&settings));
         let now = Instant::now();
+        update::init();
+        let notice = update::just_updated();
         Ok(Explorer {
             home,
             root,
@@ -463,10 +476,14 @@ impl Explorer {
             defaults,
             keys,
             theme,
-            latest: None,
-            finish: None,
-            notice: None,
+            latest: update::available(),
+            skipped: update::skipped(),
+            finish: update::finishing(),
+            notice_at: notice.as_ref().map(|_| now + Duration::from_secs(30)),
+            notice,
             updating: false,
+            update_watch: update::file().map(|f| Watch::new(&f, Duration::from_millis(1000))),
+            version_watch: None,
             stopped: false,
             state: State {
                 expanded: vec![String::new()],
@@ -550,12 +567,16 @@ impl Explorer {
         }));
         // The Kitty graphics query, as the preview sends it.
         let _ = sys::write_stdout(ui::KITTY_QUERY.as_bytes());
+        if let Some(to) = self.notice.clone() {
+            self.flash(Some(format!("Updated to {to}")));
+        }
         self.graphics_at = Some(Instant::now() + Duration::from_millis(500));
         self.watch_root();
         if self.root != self.home {
             self.announce();
         }
-        // TODO(case 20): the update watched, this explorer restarted on the new code.
+        // Updated plugin: this explorer starts again on the new code once nothing is being typed or chosen.
+        self.version_watch = Some(update::VersionWatch::new());
         // Right-clicks in this pane go to the explorer (its menu) instead of herdr's menu; the frame keeps herdr's.
         if !self.pane.is_empty() {
             let pane = self.pane.clone();
@@ -615,8 +636,11 @@ impl Explorer {
             self.flash_at,
             self.graphics_at,
             self.following_at,
+            self.notice_at,
             self.scrollbar.due(),
         ]);
+        all.extend(self.update_watch.iter().map(|w| Some(w.due())));
+        all.extend(self.version_watch.iter().map(update::VersionWatch::due));
         all.extend(self.width_at.iter().map(|&t| Some(t)));
         all.extend([&self.keys_watch, &self.settings_watch].into_iter().flatten().map(|w| Some(w.due())));
         all.extend(self.requests.iter().map(|(w, _)| Some(w.due())));
@@ -685,6 +709,17 @@ impl Explorer {
         }
         if self.requests.as_mut().is_some_and(|(w, _)| w.poll()) {
             self.request();
+        }
+        if due(&mut self.notice_at) {
+            self.notice = None;
+            self.render();
+        }
+        if self.update_watch.as_mut().is_some_and(Watch::poll) {
+            self.update_changed();
+        }
+        let idle = self.idle_for_update();
+        if self.version_watch.as_mut().is_some_and(|v| v.poll(|| idle)) {
+            self.restart_on_update();
         }
     }
 

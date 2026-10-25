@@ -474,8 +474,7 @@ impl Explorer {
                 return self.open_settings();
             }
             if x >= w as i64 - 2 - self.pill_width(w) as i64 && self.show_update() {
-                // TODO(case 20): what the pill does (finish, update, or the notes of the update just done).
-                return self.render();
+                return self.run_action(|ex| ex.pill_action());
             }
             return self.render();
         }

@@ -1,0 +1,21 @@
+size 60x20
+⟪fg=#8c8c8c⟫ ‹ ⟪b⟫Settings⟪⟫
+⟪fg=#8c8c8c⟫ 99.0.0 skipped                            ⟪fg=#d4d4d4 b⟫ u⟪fg=#8c8c8c⟫ update anyway⟪⟫
+⟪fg=#8c8c8c b⟫ APPEARANCE⟪⟫
+     ⟪fg=#8c8c8c⟫╭────────────────────────────────────────────────╮⟪⟫
+     ⟪fg=#8c8c8c⟫│⟪b⟫ Update herdr-explorer⟪⟫                          ⟪fg=#8c8c8c⟫│⟪⟫
+     ⟪fg=#8c8c8c⟫│⟪⟫                                                ⟪fg=#8c8c8c⟫│⟪⟫
+     ⟪fg=#8c8c8c⟫│⟪⟫ $VERSION → 99.0.0                                 ⟪fg=#8c8c8c⟫│⟪⟫
+     ⟪fg=#8c8c8c⟫│ • ⟪⟫diff: stage hunks                            ⟪fg=#8c8c8c⟫│⟪⟫
+     ⟪fg=#8c8c8c⟫│ The panes restart on the new code.⟪⟫             ⟪fg=#8c8c8c⟫│⟪⟫
+     ⟪fg=#8c8c8c⟫│⟪⟫                                                ⟪fg=#8c8c8c⟫│⟪⟫
+     ⟪fg=#8c8c8c⟫│⟪⟫  ⟪fg=#6fbf8e bg=#2d2d2d⟫ y Update ⟪⟫  ⟪fg=#8c8c8c bg=#2d2d2d⟫ r Notes ⟪⟫  ⟪fg=#ffffff bg=#606060 b⟫ n Later ⟪⟫              ⟪fg=#8c8c8c⟫│⟪⟫
+     ⟪fg=#8c8c8c⟫╰────────────────────────────────────────────────╯⟪⟫
+  Enter opens                                       ⟪fg=#519aba⟫preview⟪⟫
+  Preview follows selection                           ⟪fg=#8c8c8c⟫○ off⟪⟫
+⟪fg=#8c8c8c⟫──────────────────────────────────────────────────────────▾⟪⟫
+⟪fg=#8c8c8c⟫ Colours for a dark or a light terminal background. Auto:⟪⟫
+⟪fg=#8c8c8c⟫ by the terminal's background, as each pane reads it.⟪⟫
+⟪fg=#8c8c8c⟫ Other panes at their next opening.⟪⟫
+⟪fg=#8c8c8c⟫ ⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ←→⟪fg=#8c8c8c bg=#252526⟫ change⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ back⟪bg=#252526⟫                              ⟪⟫

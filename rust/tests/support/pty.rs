@@ -23,6 +23,9 @@
 //!                               (its width checked at 300, 1000 and 2500 ms) have run, whatever the keys took
 //!   resize <cols> <rows>        the terminal resized, then a settle
 //!
+//! In the captures, the scenario's folder is `$ROOT`, and the plugin's version before an arrow (the update's
+//! question, "0.7.1 → 9.9.9") is `$VERSION`: they stay the same from one machine and one release to the next.
+//!
 //! The pane runs with a cleaned environment: no HERDR_* of the session,
 //! the fake herdr first in PATH, fixed HOME, TERM and locale, the state and config folders under the scenario's.
 
@@ -322,7 +325,18 @@ pub fn run(scenario: &Path, command: &[OsString], root: &Path) -> Capture {
     s.feed(&std::mem::take(&mut r.output.lock().unwrap().0));
     drop(r);
     let calls = std::fs::read_to_string(fake.join("calls.log")).unwrap_or_default();
-    Capture { screen: s.text().replace(rootstr, "$ROOT"), calls: calls.replace(rootstr, "$ROOT") }
+    let mut screen = s.text().replace(rootstr, "$ROOT");
+    if let Some(v) = version() {
+        screen = screen.replace(&format!(" {v} → "), " $VERSION → ");
+    }
+    Capture { screen, calls: calls.replace(rootstr, "$ROOT") }
+}
+
+/// The version in the repository's manifest.
+fn version() -> Option<String> {
+    let toml = std::fs::read_to_string(repo().join("herdr-plugin.toml")).ok()?;
+    let line = toml.lines().find(|l| l.starts_with("version"))?;
+    Some(line.split('"').nth(1)?.to_string())
 }
 
 unsafe extern "C" {

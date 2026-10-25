@@ -7,7 +7,7 @@
 //! As in the explorer, the herdr and clipboard calls run on a worker thread and their results come back to the
 //! pane's loop; the JS's timers are deadlines of that loop.
 //!
-//! TODO(case 20): the update watched, the preview restarted on the new code.
+//! Updated plugin (core::update): the preview starts again on the new code, on the same file and line.
 
 mod diff;
 mod edit;
@@ -23,7 +23,7 @@ use crate::core::screen::{self, Input, Screen};
 use crate::core::tabs::{self, Tabs};
 use crate::core::ui::{self, Field, HelpState, Menu, Scrollbar, Seg, c, fg};
 use crate::core::watch::Watch;
-use crate::core::{js, paths, worker};
+use crate::core::{js, paths, update, worker};
 use crate::json::{self, Value};
 use crate::sys::{self, Watcher};
 use std::rc::Rc;
@@ -310,6 +310,8 @@ pub struct Preview {
     requests: Option<Watch>,
     seen: f64,
     settings_watch: Option<Watch>,
+    /// The version on disk, watched once started.
+    version_watch: Option<update::VersionWatch>,
     layout_seen: String,
     // clicks
     last_click: (Option<Instant>, i64, i64, u32),
@@ -417,6 +419,7 @@ pub fn run(_args: &[String]) -> i32 {
 impl Preview {
     fn new() -> std::io::Result<Preview> {
         let env = |k: &str| exec::env_var(k);
+        update::init();
         let pane = env("HERDR_PANE_ID").unwrap_or_default();
         let tab = env("EXPLORER_TAB").unwrap_or_default();
         ui::init_theme();
@@ -484,6 +487,7 @@ impl Preview {
                 note: None,
             },
             settings_watch: exec::settings_file().map(|f| Watch::new(&f, Duration::from_millis(1000))),
+            version_watch: None,
             layout_seen: json::stringify(exec::read_settings().get("diffLayout").unwrap_or(&Value::Null)),
             settings,
             tabs,
@@ -591,6 +595,53 @@ impl Preview {
         if handed.is_some() && request.as_deref().is_some_and(|f| std::fs::metadata(f).is_ok()) {
             self.take();
         }
+        // Updated plugin: restarted on the new code once no search is typed nor selection dragged; never while a tab
+        // is edited, its text would be lost.
+        self.version_watch = Some(update::VersionWatch::new());
+    }
+
+    fn idle_for_update(&self) -> bool {
+        let s = &self.state;
+        !s.find.as_ref().is_some_and(|f| f.active)
+            && s.note.is_none()
+            && !s.select.as_ref().is_some_and(|x| !x.done)
+            && self.edits().is_empty()
+    }
+
+    /// This process stops watching, the new one taking over the pane, at the same file, line, marks, view, tabs and
+    /// commit shown; its images deleted first, the new one sending its own.
+    fn restart_on_update(&mut self) {
+        self.save_file();
+        self.reload_at = None;
+        let images = std::mem::take(&mut *self.kitty.exit.lock().unwrap_or_else(|e| e.into_inner()));
+        if !images.is_empty() {
+            let _ = sys::write_stdout(images.as_bytes());
+        }
+        self.watcher = None;
+        self.requests = None;
+        self.settings_watch = None;
+        let tabs = json::stringify(&self.saved_tabs());
+        let s = &self.state;
+        let marks = s
+            .marks
+            .iter()
+            .map(|m| crate::obj! { "from" => m.from as f64, "to" => m.to as f64, "a" => m.a as f64, "b" => m.b as f64 })
+            .collect();
+        let show = s.show.as_ref().map_or(String::new(), |x| json::stringify(&x.what));
+        let env: Vec<(String, String)> = [
+            ("EXPLORER_FILE", s.file.clone()),
+            ("EXPLORER_ROOT", s.root.clone()),
+            ("EXPLORER_LINE", json::number(s.line)),
+            ("EXPLORER_SEEN", json::number(self.seen)),
+            ("EXPLORER_MARKS", json::stringify(&Value::Arr(marks))),
+            ("EXPLORER_VIEW", if s.diff { "diff" } else { "file" }.into()),
+            ("EXPLORER_TABS", tabs),
+            ("EXPLORER_SHOW", show),
+        ]
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v))
+        .collect();
+        self.screen.restart(&env);
     }
 
     /// The loop: the screen's events, the worker's results and the timers, until the pane is closed.
@@ -642,6 +693,7 @@ impl Preview {
                 .flatten()
                 .map(|w| Some(w.due())),
         );
+        all.extend(self.version_watch.iter().map(update::VersionWatch::due));
         if !self.keeper_busy {
             all.push(self.keeper.try_lock().ok().and_then(|k| k.due()));
         }
@@ -687,6 +739,10 @@ impl Preview {
         }
         if self.notes_watch.as_mut().is_some_and(Watch::poll) {
             self.load_notes();
+        }
+        let idle = self.idle_for_update();
+        if self.version_watch.as_mut().is_some_and(|v| v.poll(|| idle)) {
+            self.restart_on_update();
         }
     }
 

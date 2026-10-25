@@ -15,7 +15,7 @@
 
 use crate::core::actions::{self, Shown};
 use crate::core::exec::{self, OWN_PANES};
-use crate::core::{js, paths, scope};
+use crate::core::{js, paths, scope, update};
 use crate::json::{self, Value};
 
 const LABEL: &str = "Explorer";
@@ -267,10 +267,13 @@ fn hook(args: &[String]) -> R<()> {
             println!("{}", scope::agent_status(&tab, &id, &status, &cwd));
         }
     } else if has("--restore") {
-        // TODO(case 20): a newer release, looked for alongside (update.check, at most once a day).
+        // A newer release, looked for alongside (at most once a day).
+        let check = std::thread::spawn(update::check);
         restore()?;
+        let _ = check.join();
     } else {
-        // TODO(case 20): the update check also goes here, for a herdr session running for days.
+        // Also here, for a herdr session running for days: the check itself happens once a day at most.
+        let check = std::thread::spawn(update::check);
         let ev = env_json("HERDR_PLUGIN_EVENT_JSON")?;
         let tab = ev.get("data").and_then(|d| d.get("tab")).filter(|t| t.truthy());
         if let Some(tab) = tab
@@ -284,6 +287,7 @@ fn hook(args: &[String]) -> R<()> {
                 open(&panes, tab.get("tab_id").unwrap_or(&Value::Null), root, None)?;
             }
         }
+        let _ = check.join();
     }
     Ok(())
 }

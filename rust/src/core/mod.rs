@@ -15,6 +15,7 @@ pub mod screen;
 pub mod stage;
 pub mod tabs;
 pub mod ui;
+pub mod update;
 pub mod viewed;
 pub mod watch;
 pub mod which;

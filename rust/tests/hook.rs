@@ -1,7 +1,8 @@
 //! The hook and peek subcommands, run as the binary: in an environment of their own (herdr's variables removed, a fake
 //! herdr first on PATH, HERDR_BIN_PATH pointed at it, dummy values). The fake logs each call, its arguments separated
 //! by tabs, and answers with the line of answers.tsv given for its arguments joined by spaces (the n-th one at the n-th
-//! call, the last one after), else `{"result":null}`; FAIL makes it fail.
+//! call, the last one after), else `{"result":null}`; FAIL makes it fail. A fake curl, for the update check, logs its
+//! arguments and gives release.json when there is one, else fails as offline: no test reaches the network.
 #![cfg(unix)]
 
 mod support;
@@ -19,6 +20,12 @@ out=$(awk -F '\t' -v k="$*" -v n="$n" '$1 == k { c++; o = $2; if (c == n) { f = 
   "$FAKE_HERDR_DIR/answers.tsv" 2>/dev/null)
 if [ "$out" = FAIL ]; then exit 1; fi
 if [ -n "$out" ]; then printf '%s\n' "$out"; else printf '%s\n' '{"result":null}'; fi
+"#;
+
+const CURL: &str = r#"#!/bin/sh
+printf '%s\n' "$*" >>"$FAKE_HERDR_DIR/curl.log"
+[ -f "$FAKE_HERDR_DIR/release.json" ] || exit 7
+cat "$FAKE_HERDR_DIR/release.json"
 "#;
 
 struct Fake {
@@ -44,6 +51,9 @@ impl Fake {
         let herdr = bin.join("herdr");
         std::fs::write(&herdr, SCRIPT).unwrap();
         std::fs::set_permissions(&herdr, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let curl = bin.join("curl");
+        std::fs::write(&curl, CURL).unwrap();
+        std::fs::set_permissions(&curl, std::fs::Permissions::from_mode(0o755)).unwrap();
         let env = vec![
             ("PATH".into(), format!("{}:/usr/bin:/bin", bin.display())),
             ("HOME".into(), tmp.path.join("home").display().to_string()),
@@ -230,6 +240,42 @@ fn toggle_closes_the_explorer_and_its_preview() {
     f.set("HERDR_PLUGIN_CONTEXT_JSON", "{}");
     assert_eq!(f.run("hook", &["--toggle"]).status.code(), Some(0));
     assert_eq!(f.calls().len(), 1);
+}
+
+#[test]
+fn a_new_release_is_looked_for_once_a_day_unless_the_check_is_off() {
+    let mut f = Fake::new("hook-update");
+    f.set("HERDR_PLUGIN_EVENT_JSON", r#"{"data":{"tab":{"tab_id":"w1:t1","workspace_id":"w1"}}}"#);
+    std::fs::write(f.state.join("settings.json"), r#"{"autoOpen":false}"#).unwrap();
+    let release = r#"{"tag_name":"v9.10.0","html_url":"https://github.com/gcaudan/herdr-explorer/releases/tag/v9.10.0","body":"* **diff:** stage hunks ([abc1234](https://g/c))"}"#;
+    std::fs::write(f.dir.join("release.json"), release).unwrap();
+    assert_eq!(f.run("hook", &[]).status.code(), Some(0));
+    let curl = std::fs::read_to_string(f.dir.join("curl.log")).unwrap();
+    assert!(curl.ends_with("https://api.github.com/repos/gcaudan/herdr-explorer/releases/latest\n"), "{curl}");
+    let saved = json::parse(&std::fs::read_to_string(f.state.join("update.json")).unwrap()).unwrap();
+    assert_eq!(saved.get("latest"), Some(&Value::from("9.10.0")));
+    assert_eq!(saved.get("repo"), Some(&Value::from("gcaudan/herdr-explorer")));
+    assert_eq!(saved.get("notes"), Some(&Value::from(vec!["diff: stage hunks"])));
+    assert!(saved.get("checkedAt").and_then(Value::as_f64).is_some());
+    // Within the day: not asked again, from the hook nor from --restore.
+    assert_eq!(f.run("hook", &[]).status.code(), Some(0));
+    f.answer("workspace list", r#"{"workspaces":[]}"#);
+    assert_eq!(f.run("hook", &["--restore"]).status.code(), Some(0));
+    assert_eq!(std::fs::read_to_string(f.dir.join("curl.log")).unwrap(), curl);
+    // A day later, offline: checked, the release found before kept, not asked again that day.
+    std::fs::write(f.state.join("update.json"), r#"{"checkedAt":1,"latest":"9.10.0","skip":"9.10.0"}"#).unwrap();
+    std::fs::remove_file(f.dir.join("release.json")).unwrap();
+    assert_eq!(f.run("hook", &["--restore"]).status.code(), Some(0));
+    let saved = json::parse(&std::fs::read_to_string(f.state.join("update.json")).unwrap()).unwrap();
+    assert_eq!(saved.get("latest"), Some(&Value::from("9.10.0")));
+    assert_eq!(saved.get("skip"), Some(&Value::from("9.10.0")));
+    assert!(saved.get("checkedAt").and_then(Value::as_f64).is_some_and(|t| t > 1.0));
+    // The check off: nothing asked.
+    std::fs::write(f.state.join("update.json"), "{}").unwrap();
+    std::fs::write(f.state.join("settings.json"), r#"{"autoOpen":false,"updateCheck":false}"#).unwrap();
+    std::fs::remove_file(f.dir.join("curl.log")).unwrap();
+    assert_eq!(f.run("hook", &[]).status.code(), Some(0));
+    assert!(!f.dir.join("curl.log").exists());
 }
 
 #[test]
