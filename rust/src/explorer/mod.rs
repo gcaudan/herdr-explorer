@@ -17,7 +17,7 @@ use crate::core::icons::{self, Loaded};
 use crate::core::screen::{self, Input, Screen};
 use crate::core::ui::{self, Ask, Confirm, Field, HelpState, Menu, Scrollbar};
 use crate::core::watch::Watch;
-use crate::core::{js, paths};
+use crate::core::{js, paths, worker};
 use crate::json::{self, Value};
 use crate::sys::{self, Watcher};
 use std::panic::AssertUnwindSafe;
@@ -29,8 +29,6 @@ use tree::{Entry, Settings, Tree, holds, parent_of, tree_before};
 
 /// Columns when the terminal size is unknown.
 const WIDTH: usize = exec::DEFAULT_WIDTH as usize;
-/// The name of the worker threads, whose panics are caught (an action failed) and not printed over the pane.
-const WORKER: &str = "explorer-worker";
 
 /// The key help (help action), by group, with the keys bound now: (group, [(action, description)]).
 const HELP: [(&str, &[(&str, &str)]); 5] = [
@@ -154,9 +152,10 @@ fn default_keys(inner: &str) -> Bindings {
 }
 
 /// What the loop runs once a job of a worker is done: the result applied to the pane.
-pub type Then = Box<dyn FnOnce(&mut Explorer) + Send>;
+pub type Then = worker::Then<Explorer>;
 /// A job of a worker.
-type Job = Box<dyn FnOnce() -> Then + Send>;
+type Job = worker::Job<Explorer>;
+type Worker = worker::Worker<Explorer>;
 
 /// What an action gives: its message at once, or a job whose message comes later (the JS's promise).
 pub enum Act {
@@ -220,31 +219,6 @@ type Named = Rc<dyn Fn(&mut Explorer, String) -> Act>;
 pub struct Item {
     action: Option<&'static str>,
     run: Run,
-}
-
-/// A thread running jobs one at a time, their results sent to the loop.
-struct Worker(Sender<Job>);
-
-impl Worker {
-    fn new(tx: Sender<Then>, waker: sys::Waker) -> Worker {
-        let (jobs, rx) = channel::<Job>();
-        let _ = std::thread::Builder::new().name(WORKER.into()).spawn(move || {
-            for job in rx {
-                // A job that panicked gives nothing, as a promise whose rejection is ignored.
-                if let Ok(then) = std::panic::catch_unwind(AssertUnwindSafe(job)) {
-                    if tx.send(then).is_err() {
-                        break;
-                    }
-                    waker.wake();
-                }
-            }
-        });
-        Worker(jobs)
-    }
-
-    fn send(&self, job: Job) {
-        let _ = self.0.send(job);
-    }
 }
 
 /// A name typed: label, field, what it does (done), whether an empty answer is accepted, and where it shows.
@@ -421,13 +395,7 @@ fn mtime_ms(file: &str) -> f64 {
 
 /// Runs the pane: the process's exit code.
 pub fn run(args: &[String]) -> i32 {
-    // A job that panicked is an action that failed: not printed over the pane.
-    let default = std::panic::take_hook();
-    std::panic::set_hook(Box::new(move |info| {
-        if std::thread::current().name() != Some(WORKER) {
-            default(info)
-        }
-    }));
+    worker::quiet_panics();
     let mut ex = match Explorer::new(args) {
         Ok(ex) => ex,
         Err(e) => {

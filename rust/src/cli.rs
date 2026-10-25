@@ -64,8 +64,10 @@ pub fn run(args: Vec<OsString>) -> ExitCode {
             if let Some(code) = crate::launch::launch() {
                 return ExitCode::from(u8::try_from(code).unwrap_or(1));
             }
-            if let Command::Pane("tree", args) = cmd {
-                return done(crate::explorer::run(&strings(args)));
+            match cmd {
+                Command::Pane("tree", args) => return done(crate::explorer::run(&strings(args))),
+                Command::Pane("preview", args) => return done(crate::preview::run(&strings(args))),
+                _ => {}
             }
             eprintln!("herdr-explorer: not implemented yet: {cmd:?}");
             done(1)

@@ -1,0 +1,8 @@
+# Parts highlighted by the caller: whole lines and columns; n to the next mark, esc clears them.
+size 50 10
+file notes.txt one\ntwo three\nfour\nfive six\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/notes.txt
+env EXPLORER_MARKS=[{"from":1,"to":1,"a":0,"b":0},{"from":2,"to":2,"a":5,"b":9},{"from":4,"to":4,"a":1,"b":4}]
+start
+keys n

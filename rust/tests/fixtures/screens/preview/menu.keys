@@ -1,0 +1,8 @@
+# The view's options: wrap switched from the menu, which stays open.
+size 60 12
+file notes.txt one\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/notes.txt
+start
+keys ,
+keys enter

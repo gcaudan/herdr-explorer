@@ -114,9 +114,9 @@ macro_rules! panes {
 panes! {
     ready {
         tree: "tree";
+        preview: "preview";
     }
     pending {
-        preview: "preview", "case 12";
         search: "search", "case 14";
         scm: "scm", "case 17";
         diff: "diff", "case 15";

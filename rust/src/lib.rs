@@ -9,6 +9,7 @@ pub mod hook;
 pub mod json;
 pub mod launch;
 pub mod peek;
+pub mod preview;
 pub mod render;
 pub mod sys;
 pub mod unicode;

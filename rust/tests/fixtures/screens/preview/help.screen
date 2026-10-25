@@ -1,0 +1,17 @@
+size 60x16
+⟪fg=#8c8c8c⟫ ‹ ⟪b⟫Keys⟪fg=#8c8c8c⟫ · notes.txt⟪⟫
+⟪fg=#519aba b⟫ Scroll⟪⟫
+⟪fg=#d4d4d4 b⟫  ↑↓ j k     ⟪fg=#8c8c8c⟫line⟪⟫
+⟪fg=#d4d4d4 b⟫  pgup pgdn  ⟪fg=#8c8c8c⟫page⟪⟫
+⟪fg=#d4d4d4 b⟫  space      ⟪fg=#8c8c8c⟫page down⟪⟫
+⟪fg=#d4d4d4 b⟫  ctrl+u/d   ⟪fg=#8c8c8c⟫half page⟪⟫
+⟪fg=#d4d4d4 b⟫  g G        ⟪fg=#8c8c8c⟫top, bottom⟪⟫
+⟪fg=#d4d4d4 b⟫  ← → h l    ⟪fg=#8c8c8c⟫left, right⟪⟫
+⟪fg=#519aba b⟫ Find⟪⟫
+⟪fg=#d4d4d4 b⟫  /          ⟪fg=#8c8c8c⟫find in the file⟪⟫
+⟪fg=#d4d4d4 b⟫  n N        ⟪fg=#8c8c8c⟫next, previous match (else mark)⟪⟫
+⟪fg=#d4d4d4 b⟫  esc        ⟪fg=#8c8c8c⟫stop finding, clear the marks⟪⟫
+⟪fg=#519aba b⟫ Diff⟪⟫
+⟪fg=#d4d4d4 b⟫  ,          ⟪fg=#8c8c8c⟫the view's options (or ⚙)⟪⟫
+⟪fg=#8c8c8c⟫──────────────────────────────────────────────────────────▾⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ↑↓⟪fg=#8c8c8c bg=#252526⟫ scroll⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ close⟪bg=#252526⟫                             ⟪⟫

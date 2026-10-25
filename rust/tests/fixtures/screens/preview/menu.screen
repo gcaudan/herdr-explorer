@@ -1,0 +1,13 @@
+size 60x12
+⟪bg=#252526 b i⟫ notes.txt⟪fg=#8c8c8c bg=#252526⟫  1 line · 4 B⟪bg=#252526⟫                    ⟪fg=#d4d4d4 bg=#04395e b⟫ File ⟪fg=#8c8c8c bg=#3a3a3e⟫ Diff ⟪bg=#252526⟫ ⟪fg=#d4d4d4 bg=#252526⟫ ⚙ ⟪⟫
+⟪fg=#8c8c8c⟫ 1 ⟪⟫one                            ⟪fg=#8c8c8c⟫╭ View ─────────────────╮⟪⟫
+                                  ⟪fg=#8c8c8c⟫│⟪bg=#04395e⟫ Wrap lines⟪fg=#8c8c8c bg=#04395e⟫  w⟪bg=#04395e⟫    ⟪fg=#8dc149 bg=#04395e⟫● on ⟪fg=#8c8c8c⟫│⟪⟫
+                                  ⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ Line numbers⟪fg=#8c8c8c bg=#37373d⟫  L⟪bg=#37373d⟫  ⟪fg=#8dc149 bg=#37373d⟫● on ⟪fg=#8c8c8c⟫│⟪⟫
+                                  ⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ Changes⟪fg=#8c8c8c bg=#37373d⟫  c⟪bg=#37373d⟫       ⟪fg=#8dc149 bg=#37373d⟫● on ⟪fg=#8c8c8c⟫│⟪⟫
+                                  ⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ Edit here⟪fg=#8c8c8c bg=#37373d⟫  i⟪bg=#37373d⟫    ⟪fg=#8c8c8c bg=#37373d⟫○ off ⟪fg=#8c8c8c⟫│⟪⟫
+                                  ⟪fg=#8c8c8c⟫╰───────────────────────╯⟪⟫
+
+
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   a⟪fg=#8c8c8c bg=#252526⟫ note⟪fg=#d4d4d4 bg=#252526 b⟫   e⟪fg=#8c8c8c bg=#252526⟫ editor⟪fg=#d4d4d4 bg=#252526 b⟫   o⟪fg=#8c8c8c bg=#252526⟫ app⟪fg=#d4d4d4 bg=#252526 b⟫   z⟪fg=#8c8c8c bg=#252526⟫ zoom⟪fg=#d4d4d4 bg=#252526 b⟫   q⟪fg=#8c8c8c bg=#252526⟫ close      ⟪⟫

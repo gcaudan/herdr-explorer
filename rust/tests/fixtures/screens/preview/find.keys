@@ -1,0 +1,10 @@
+# Find in the file: matches marked, the current one brighter, n to the next, enter to leave the field.
+size 60 10
+file notes.txt one apple\ntwo\nApple three\nfour apples\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/notes.txt
+env EXPLORER_ROOT=$ROOT/work
+start
+keys / a p p
+keys down
+keys enter n

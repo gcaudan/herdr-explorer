@@ -63,6 +63,11 @@ fn unescape(s: &str) -> String {
             Some('t') => out.push('\t'),
             Some('e') => out.push('\x1b'),
             Some('r') => out.push('\r'),
+            // \xNN: a character below 0x80 (a NUL in a binary file).
+            Some('x') => {
+                let hex: String = chars.by_ref().take(2).collect();
+                out.push(char::from(u8::from_str_radix(&hex, 16).unwrap()));
+            }
             Some(c) => out.push(c),
             None => out.push('\\'),
         }

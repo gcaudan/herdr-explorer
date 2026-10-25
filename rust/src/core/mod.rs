@@ -18,3 +18,4 @@ pub mod ui;
 pub mod viewed;
 pub mod watch;
 pub mod which;
+pub mod worker;

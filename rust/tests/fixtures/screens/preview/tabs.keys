@@ -1,0 +1,13 @@
+# Tabs restored after a restart: the strip, the next tab, a tab kept, a tab closed.
+size 60 10
+file a.txt alpha\n
+file b.txt beta\n
+file sub/a.txt other alpha\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/b.txt
+env EXPLORER_ROOT=$ROOT/work
+env EXPLORER_TABS={"current":1,"list":[{"file":"$ROOT/work/a.txt","kept":true},{"file":"$ROOT/work/b.txt","kept":false,"top":0},{"file":"$ROOT/work/sub/a.txt","kept":true}]}
+start
+keys tab
+keys t
+keys shift+tab shift+tab x

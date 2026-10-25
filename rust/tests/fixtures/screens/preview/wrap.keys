@@ -1,0 +1,9 @@
+# Long lines: scrolled sideways, then wrapped (w), then without line numbers (L).
+size 40 10
+file long.txt short\nthe quick brown fox jumps over the lazy dog and runs far away\nend\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/long.txt
+start
+keys right right
+keys w
+keys L
