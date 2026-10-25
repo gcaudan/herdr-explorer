@@ -1,0 +1,8 @@
+# No editor on PATH (an empty folder) nor in the settings: the message.
+size 50 8
+file a.txt hello\n
+dir empty
+env PATH=$ROOT/work/empty
+env EXPLORER_FILE=$ROOT/work/a.txt
+start
+wait 500

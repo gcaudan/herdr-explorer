@@ -124,8 +124,8 @@ panes! {
         search: "search";
         diff: "diff";
         scm: "scm";
+        edit: "edit";
     }
     pending {
-        edit: "edit", "case 18";
     }
 }

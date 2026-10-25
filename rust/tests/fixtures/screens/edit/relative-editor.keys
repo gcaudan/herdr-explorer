@@ -1,0 +1,8 @@
+# An editor given with a relative folder is skipped: $VISUAL is taken.
+size 40 8
+file a.txt hello\n
+env EXPLORER_FILE=$ROOT/work/a.txt
+env EXPLORER_EDITOR=bin/cat
+env VISUAL=cat -n
+start
+wait 500
