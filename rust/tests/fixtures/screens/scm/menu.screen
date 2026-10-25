@@ -1,0 +1,21 @@
+size 120x20
+⟪bg=#252526 b⟫ work ⟪bg=#252526⟫ ⟪fg=#519aba bg=#2b3d45⟫ ⎇ main ⟪fg=#8c8c8c bg=#252526⟫  not published⟪bg=#252526⟫                                                    ⟪fg=#ffffff bg=#0e639c b⟫ ↑ Publish branch ⟪fg=#d4d4d4 bg=#252526 b⟫ ⇣ Fetch  Actions ▾ ⟪⟫
+ ⟪fg=#d4d4d4 b u⟫Changes⟪fg=#8c8c8c⟫ 2⟪⟫   ⟪fg=#8c8c8c⟫History⟪⟫   ⟪fg=#8c8c8c⟫Stashes⟪⟫   ⟪fg=#8c8c8c⟫…⟪fg=#d4d4d4 bg=#04395e b⟫ List ⟪fg=#8c8c8c bg=#3a3a3e⟫ Tree ⟪fg=#8c8c8c⟫│⟪bg=#252526⟫                                                                         ⟪⟫
+ ⟪bg=#313131⟫ ⟪fg=#8c8c8c bg=#313131⟫Message  (c)⟪bg=#313131⟫                               ⟪⟫ ⟪fg=#8c8c8c⟫│⟪⟫
+ ⟪fg=#ffffff bg=#0e639c b⟫ ✓ Commit all 2 ⟪fg=#a074c4⟫ ✧ Claude ⟪fg=#8c8c8c⟫ ☐ Amend ⟪⟫          ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#8c8c8c bg=#04395e⟫ ▾ ⟪bg=#04395e b⟫CHANGES⟪fg=#8c8c8c bg=#04395e⟫  2⟪bg=#04395e⟫                          ⟪fg=#d4d4d4 bg=#04395e b⟫ ↶  + ⟪bg=#04395e⟫ ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#8c8c8c⟫╭ work ─────────────────────╮⟪⟫              ⟪fg=#e2c08d⟫ M ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#8c8c8c⟫│⟪bg=#04395e⟫ Merge a branch…           ⟪fg=#8c8c8c⟫│⟪⟫              ⟪fg=#73c991⟫ U ⟪fg=#8c8c8c⟫│⟪⟫                    ⟪fg=#8c8c8c⟫Select a file to see its changes⟪⟫
+⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ Rebase onto a branch…     ⟪fg=#8c8c8c⟫│⟪⟫                 ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ Create tag on HEAD…⟪fg=#8c8c8c bg=#37373d⟫  T⟪bg=#37373d⟫    ⟪fg=#8c8c8c⟫│⟪⟫                 ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#8c8c8c⟫├───────────────────────────┤⟪⟫                 ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ Fetch⟪fg=#8c8c8c bg=#37373d⟫  f⟪bg=#37373d⟫                  ⟪fg=#8c8c8c⟫│⟪⟫                 ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ Pull⟪fg=#8c8c8c bg=#37373d⟫  L⟪bg=#37373d⟫                   ⟪fg=#8c8c8c⟫│⟪⟫                 ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ Push⟪fg=#8c8c8c bg=#37373d⟫  P⟪bg=#37373d⟫                   ⟪fg=#8c8c8c⟫│⟪⟫                 ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#8c8c8c⟫│⟪fg=#cc3e44 bg=#37373d⟫ Force push (with lease)…⟪bg=#37373d⟫  ⟪fg=#8c8c8c⟫│⟪⟫                 ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#8c8c8c⟫├───────────────────────────┤⟪⟫                 ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ Undo last commit…         ⟪fg=#8c8c8c⟫│⟪⟫                 ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#8c8c8c⟫│⟪fg=#cc3e44 bg=#37373d⟫ Reset --hard to HEAD…⟪bg=#37373d⟫     ⟪fg=#8c8c8c⟫│⟪⟫                 ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#8c8c8c⟫╰───────────────────────────╯⟪⟫                 ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ↑↓⟪fg=#8c8c8c bg=#252526⟫ move⟪fg=#d4d4d4 bg=#252526 b⟫   ⏎⟪fg=#8c8c8c bg=#252526⟫ run⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ close⟪bg=#252526⟫                                                                                            ⟪⟫

@@ -250,14 +250,20 @@ pub fn run(scenario: &Path, command: &[OsString], root: &Path) -> Capture {
                     .current_dir(&work)
                     .env_clear()
                     .envs(env.iter().cloned())
-                    .envs([
-                        ("GIT_AUTHOR_NAME", "Ada"),
-                        ("GIT_AUTHOR_EMAIL", "ada@example.com"),
-                        ("GIT_COMMITTER_NAME", "Ada"),
-                        ("GIT_COMMITTER_EMAIL", "ada@example.com"),
-                        ("GIT_AUTHOR_DATE", "2026-01-02T03:04:05Z"),
-                        ("GIT_COMMITTER_DATE", "2026-01-02T03:04:05Z"),
-                    ])
+                    // Unless the scenario sets them (env, before): a date in the future keeps relative ages
+                    // ("in the future") from changing with the day the captures are taken.
+                    .envs(
+                        [
+                            ("GIT_AUTHOR_NAME", "Ada"),
+                            ("GIT_AUTHOR_EMAIL", "ada@example.com"),
+                            ("GIT_COMMITTER_NAME", "Ada"),
+                            ("GIT_COMMITTER_EMAIL", "ada@example.com"),
+                            ("GIT_AUTHOR_DATE", "2026-01-02T03:04:05Z"),
+                            ("GIT_COMMITTER_DATE", "2026-01-02T03:04:05Z"),
+                        ]
+                        .into_iter()
+                        .filter(|(k, _)| !env.iter().any(|(e, _)| e == k)),
+                    )
                     .stdout(Stdio::null())
                     .status()
                     .unwrap()

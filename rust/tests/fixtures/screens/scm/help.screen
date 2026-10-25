@@ -1,0 +1,21 @@
+size 120x20
+⟪fg=#8c8c8c⟫ ‹ ⟪b⟫Keys⟪fg=#8c8c8c⟫ · Changes⟪⟫
+⟪fg=#519aba b⟫ Files⟪⟫
+⟪fg=#d4d4d4 b⟫  space s    ⟪fg=#8c8c8c⟫stage⟪⟫
+⟪fg=#d4d4d4 b⟫  u          ⟪fg=#8c8c8c⟫unstage⟪⟫
+⟪fg=#d4d4d4 b⟫  a A        ⟪fg=#8c8c8c⟫stage, unstage all⟪⟫
+⟪fg=#d4d4d4 b⟫  d          ⟪fg=#8c8c8c⟫discard⟪⟫
+⟪fg=#d4d4d4 b⟫  t          ⟪fg=#8c8c8c⟫list or tree⟪⟫
+⟪fg=#d4d4d4 b⟫  y          ⟪fg=#8c8c8c⟫copy path⟪⟫
+⟪fg=#d4d4d4 b⟫  Y          ⟪fg=#8c8c8c⟫copy relative path⟪⟫
+⟪fg=#d4d4d4 b⟫  e          ⟪fg=#8c8c8c⟫open in the editor⟪⟫
+⟪fg=#d4d4d4 b⟫  E          ⟪fg=#8c8c8c⟫edit in the terminal⟪⟫
+⟪fg=#d4d4d4 b⟫  o          ⟪fg=#8c8c8c⟫open in its app⟪⟫
+⟪fg=#519aba b⟫ Commit⟪⟫
+⟪fg=#d4d4d4 b⟫  c          ⟪fg=#8c8c8c⟫type the message⟪⟫
+⟪fg=#d4d4d4 b⟫  ⏎          ⟪fg=#8c8c8c⟫commit, when typing⟪⟫
+⟪fg=#d4d4d4 b⟫  ctrl+g     ⟪fg=#8c8c8c⟫✧ write with Claude⟪⟫
+⟪fg=#d4d4d4 b⟫  alt+a      ⟪fg=#8c8c8c⟫amend⟪⟫
+⟪fg=#d4d4d4 b⟫  X          ⟪fg=#8c8c8c⟫abort the operation⟪⟫
+⟪fg=#8c8c8c⟫──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────▾⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ↑↓⟪fg=#8c8c8c bg=#252526⟫ scroll⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ close⟪bg=#252526⟫                                                                                         ⟪⟫

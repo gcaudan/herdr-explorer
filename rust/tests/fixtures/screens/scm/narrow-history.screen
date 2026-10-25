@@ -1,0 +1,17 @@
+size 80x16
+⟪bg=#252526 b⟫ work ⟪bg=#252526⟫ ⟪fg=#519aba bg=#2b3d45⟫ ⎇ main ⟪fg=#8c8c8c bg=#252526⟫  not published⟪bg=#252526⟫            ⟪fg=#ffffff bg=#0e639c b⟫ ↑ Publish branch ⟪fg=#d4d4d4 bg=#252526 b⟫ ⇣ Fetch  Actions ▾ ⟪⟫
+ ⟪fg=#8c8c8c⟫Changes 2⟪⟫   ⟪fg=#d4d4d4 b u⟫History⟪⟫   ⟪fg=#8c8c8c⟫Stashes⟪⟫   ⟪fg=#8c8c8c⟫Refs⟪⟫
+ ⟪fg=#519aba b⟫┯⟪⟫    ⟪fg=#519aba bg=#2b3d45 b⟫ main ⟪⟫ ⟪fg=#cbcb41 bg=#494927⟫ v1 ⟪⟫  ⟪b⟫second⟪⟫                                       ⟪fg=#8c8c8c⟫ 1 min  ⟪fg=#cbcb41⟫547485f ⟪⟫
+⟪bg=#04395e⟫ ⟪fg=#519aba bg=#04395e⟫│⟪bg=#04395e⟫ ⟪fg=#8dc149 bg=#04395e⟫┯⟪bg=#04395e⟫  ⟪fg=#8dc149 bg=#3a4729⟫ feat ⟪bg=#04395e⟫  feature                                           ⟪fg=#8c8c8c bg=#04395e⟫ 1 min  ⟪fg=#cbcb41 bg=#04395e⟫ccbc1e9 ⟪⟫
+ ⟪fg=#519aba⟫┷⟪fg=#8dc149⟫─╯⟪⟫  first                                                     ⟪fg=#8c8c8c⟫ 1 min  ⟪fg=#cbcb41⟫77650cf ⟪⟫
+
+
+
+
+
+
+
+
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ ⏎⟪fg=#8c8c8c bg=#252526⟫ show commit⟪fg=#d4d4d4 bg=#252526 b⟫   a⟪fg=#8c8c8c bg=#252526⟫ current branch⟪fg=#d4d4d4 bg=#252526 b⟫   t⟪fg=#8c8c8c bg=#252526⟫ tag⟪fg=#d4d4d4 bg=#252526 b⟫   C⟪fg=#8c8c8c bg=#252526⟫ cherry-pick⟪bg=#252526⟫            ⟪fg=#d4d4d4 bg=#252526 b⟫?⟪fg=#8c8c8c bg=#252526⟫ all keys ⟪⟫

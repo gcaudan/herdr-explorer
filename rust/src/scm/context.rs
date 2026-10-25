@@ -112,8 +112,11 @@ pub enum RowRef {
     Worktree(Worktree),
 }
 
-/// A row of the current view (render.js builds them): its type ("section", "folder", "file", "note", "branch", "tag",
+/// A row of the current view (render.rs builds them): its type ("section", "folder", "file", "note", "branch", "tag",
 /// "remote", "worktree", "commit", "stash", "action"), key, what it stands for, and whether it is open or current.
+/// sec: the section of a Changes row; title and count: a section's; items: the files of a Changes section, folder or
+/// file (item: a file's own); depth: its indent; label: a folder's name; text: a note's or an action's; commit, with
+/// the widths of the authors and the graph, a History row's; stash, a Stashes row's.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Row {
     pub kind: &'static str,
@@ -121,9 +124,31 @@ pub struct Row {
     pub r#ref: Option<RowRef>,
     pub current: bool,
     pub open: bool,
+    pub sec: &'static str,
+    pub title: String,
+    pub count: usize,
+    pub items: Vec<Item>,
+    pub item: Option<Item>,
+    pub depth: usize,
+    pub label: String,
+    pub text: String,
+    pub commit: Option<Box<Hist>>,
+    pub author_w: usize,
+    pub graph_w: usize,
+    pub stash: Option<Stash>,
 }
 
 impl Row {
+    /// A section or a folder: it folds (`row.open !== undefined`).
+    pub fn foldable(&self) -> bool {
+        self.kind == "section" || self.kind == "folder"
+    }
+
+    /// A row of Changes that stands for files (`row.items`): a section, a folder or a file.
+    pub fn has_items(&self) -> bool {
+        self.foldable() || self.kind == "file"
+    }
+
     pub fn branch(&self) -> Option<&Branch> {
         match &self.r#ref {
             Some(RowRef::Branch(b)) => Some(b),
@@ -143,9 +168,18 @@ pub struct Cmp {
     pub failed: Option<String>,
 }
 
+/// A row of a branch comparison: its segments and background, and the commit it shows, which Enter opens.
+#[derive(Debug, Clone, Default)]
+pub struct CmpRow {
+    pub segs: Vec<crate::core::ui::Seg>,
+    pub back: Option<crate::core::ui::Rgb>,
+    pub commit: Option<super::parse::Compared>,
+}
+
 /// The diff open beside or over the list: a file's, a commit's, a stash's (parsed), or a branch comparison
 /// (compare). item: the file it follows; tag: "staged", "untracked", "conflict" or ""; back: the comparison a commit
-/// was opened from; auto: opened by the selection itself.
+/// was opened from; auto: opened by the selection itself. rows: its rows as laid out last (cmp_rows for a
+/// comparison), for the key cache; switch_at and width: the column of its ⚙ and its width, from the last draw.
 #[derive(Debug, Clone, Default)]
 pub struct DiffView {
     pub key: String,
@@ -163,6 +197,10 @@ pub struct DiffView {
     pub base: String,
     pub sel: i64,
     pub cmp: Option<Cmp>,
+    pub rows: Vec<crate::diff::Row>,
+    pub cmp_rows: Vec<CmpRow>,
+    pub switch_at: Option<i64>,
+    pub width: usize,
 }
 
 /// A branch of the picker: a local one (current: checked out) or a remote one.
@@ -184,6 +222,8 @@ pub enum PickItem {
 #[derive(Debug, Clone, Default)]
 pub struct Picker {
     pub mode: Option<&'static str>,
+    /// Its frame from the last draw: column, line, width, height and rows of branches (from 0).
+    pub r#box: (i64, i64, i64, i64, i64),
     pub anchor: Option<(i64, i64)>,
     pub field: Field,
     pub typing: bool,
@@ -193,7 +233,7 @@ pub struct Picker {
     pub items: Vec<PickItem>,
 }
 
-/// The state S of the pane. The JS's confirm, inline, menu, lastClick and pulse are the pane's (render and input).
+/// The state S of the pane. The JS's confirm, inline, menu, lastClick and pulse are the pane's (pane.rs).
 #[derive(Debug, Clone, Default)]
 pub struct State {
     pub view: &'static str,

@@ -123,9 +123,9 @@ panes! {
         preview: "preview";
         search: "search";
         diff: "diff";
+        scm: "scm";
     }
     pending {
-        scm: "scm", "case 17";
         edit: "edit", "case 18";
     }
 }
