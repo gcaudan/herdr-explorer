@@ -12,7 +12,7 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 /// Where the documentation tells which terminals show images in pixels.
-const DOCS: &str = "https://github.com/gcaudan/herdr-explorer/blob/main/docs/usage.md#sharp-images";
+const DOCS: &str = "https://github.com/gcaudan/herdr-explorer/blob/main/docs/usage/preview.md#sharp-images";
 /// The id of an image file sent in pixels; those of rendered Markdown follow it.
 const ID: u32 = 0x4846;
 
