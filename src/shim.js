@@ -1,5 +1,6 @@
-// What every entry of the manifest runs (`node src/<entry>.js`): the plugin's binary, bin/herdr-explorer, with the
-// entry's subcommand. The binary is fetched first (scripts/fetch-bin) when it is missing or of another version than
+// What the entries of the manifest run as `node src/<entry>.js` (all but the explorer and preview panes, which run
+// the binary itself), and those two panes opened under an earlier manifest: the plugin's binary, bin/herdr-explorer,
+// with the entry's subcommand. The binary is fetched first (scripts/fetch-bin) when it is missing or of another version than
 // the manifest's, never over one of bin/.dev (scripts/dev-build).
 // A pane's shim is its first process, the one herdr reads the pane's folder from (home). The explorer's and the
 // preview's stays as the launcher of their binary: started again on exit code 75 (a restart on new code, the binary

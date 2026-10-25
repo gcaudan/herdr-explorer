@@ -442,6 +442,35 @@ fn the_binary_started_by_the_manifest_starts_the_preview_again_on_new_code() {
 }
 
 #[test]
+fn the_binary_started_by_the_manifest_fetches_the_new_binary_before_it_restarts() {
+    let Some(s) = Setup::new("restart-fetch") else { return };
+    // No development binary: the launcher makes the binary the manifest's version before the restart, by fetch-bin,
+    // here a fake that logs its run.
+    std::fs::remove_file(s.plugin.join("bin/.dev")).unwrap();
+    std::fs::create_dir_all(s.plugin.join("scripts")).unwrap();
+    let log = s.root.join("starts.log");
+    std::fs::write(s.plugin.join("scripts/fetch-bin.sh"), format!("echo \"fetch-bin $1\" >>'{}'\n", log.display()))
+        .unwrap();
+    let file = s.work.join("a.txt").display().to_string();
+    let root = s.work.display().to_string();
+    let bin = vec![s.plugin.join("bin/herdr-explorer").into(), "pane".into(), "preview".into()];
+    let mut p = s.start(&bin, &[("EXPLORER_FILE", &file), ("EXPLORER_ROOT", &root)]);
+    p.until("hello smoke");
+    let mark = p.quiet();
+    let toml = s.plugin.join("herdr-plugin.toml");
+    let text = std::fs::read_to_string(&toml).unwrap();
+    std::fs::write(&toml, text.replacen("version = \"", "version = \"9.9.9-", 1)).unwrap();
+    p.until_after(mark, "hello smoke");
+    assert_eq!(
+        s.starts(),
+        [format!("pane preview file={file} view= ipc="), format!("fetch-bin {}", s.plugin.display())]
+    );
+    p.send(b"q");
+    assert_eq!(p.code(), Some(0), "{}", p.screen());
+    p.none_left();
+}
+
+#[test]
 fn the_explorers_shim_takes_the_folder_the_binary_announces() {
     let Some(s) = Setup::new("cwd") else { return };
     std::fs::create_dir_all(s.work.join("sub/deep")).unwrap();

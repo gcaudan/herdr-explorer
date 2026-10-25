@@ -1,15 +1,17 @@
 //! The launcher (src/launch.js): the first process of an explorer or preview pane stays as a small launcher of the
 //! real one, which runs as its child. Restarting on new code (`Screen::restart`), the child exits with code 75 and
 //! the launcher starts it again in the same terminal, the same program: the path of this binary resolved once, at the
-//! start, before an update renames it.
+//! start, before an update renames it. Before each restart, the binary there is made the manifest's version, as the
+//! shim did (`ready`): herdr's update and the plugin's change the manifest before they put the new binary.
 //!
 //! The child is told by `EXPLORER_IPC_FILE`, the file where it writes its messages (`screen::send`), a line of JSON
 //! each: `{restart}`, what the next child must show, added to its environment; `{cwd}`, the folder to announce after
 //! Set as root. Started with that variable by another launcher (the node shim, or the old launch.js), this binary is
 //! the child; started without, it is the launcher and the pane's first process.
 
-use crate::core::exec;
+use crate::core::exec::{self, Opts, WIN};
 use crate::core::screen::RESTART;
+use crate::core::{paths, update};
 use crate::json::{self, Value};
 use crate::sys;
 use std::ffi::OsString;
@@ -80,15 +82,32 @@ pub fn launcher(exe: &Path, args: &[OsString]) -> i32 {
     let Some(folder) = private_dir() else { return 1 };
     let ipc = folder.join("ipc");
     let mut env: Vec<(String, String)> = Vec::new();
+    let mut restart = false;
     let code = loop {
-        let _ = std::fs::write(&ipc, "");
+        if restart {
+            ready(exe);
+        }
         let mut seen = 0;
-        let started = Command::new(exe)
-            .args(args)
-            .envs(env.iter().cloned())
-            .env("EXPLORER_IPC_FILE", &ipc)
-            .env("EXPLORER_LAUNCHER", std::process::id().to_string())
-            .spawn();
+        let mut tries = 0;
+        let started = loop {
+            let _ = std::fs::write(&ipc, "");
+            let started = Command::new(exe)
+                .args(args)
+                .envs(env.iter().cloned())
+                .env("EXPLORER_IPC_FILE", &ipc)
+                .env("EXPLORER_LAUNCHER", std::process::id().to_string())
+                .spawn();
+            match started {
+                // A restart can fall while the binary is being put (renamed into place, the old one moved away on
+                // Windows): tried again a few times rather than closing the pane.
+                Err(_) if restart && tries < 5 => {
+                    tries += 1;
+                    std::thread::sleep(Duration::from_secs(1));
+                    ready(exe);
+                }
+                started => break started,
+            }
+        };
         let Ok(mut child) = started else { break 1 };
         let status = loop {
             messages(&ipc, &mut seen, &mut env);
@@ -110,13 +129,42 @@ pub fn launcher(exe: &Path, args: &[OsString]) -> i32 {
         };
         messages(&ipc, &mut seen, &mut env);
         match status.and_then(|s| s.code()) {
-            Some(RESTART) => continue,
+            Some(RESTART) => restart = true,
             Some(code) => break code,
             None => break 1,
         }
     };
     let _ = std::fs::remove_dir_all(&folder);
     code
+}
+
+/// The binary at exe of the manifest's version, else fetched (scripts/fetch-bin), as the shim's ready(): fetch-bin
+/// waits for bin/.fetch.lock, held by `herdr plugin update`'s build or the plugin's update until the binary is put,
+/// then fetches it only when still missing. Never over a development binary (bin/.dev). On failure (no network), the
+/// binary there starts all the same: a pane on the old code rather than a closed one.
+fn ready(exe: &Path) {
+    let Some(dir) = update::dir() else { return };
+    if std::fs::metadata(paths::join(&[dir, "bin", ".dev"])).is_ok() {
+        return;
+    }
+    let want = update::read_version();
+    let opts = |secs| Opts { timeout: Some(Duration::from_secs(secs)), ..Opts::default() };
+    let has = exec::run(Some(&exe.to_string_lossy()), &["--version"], &opts(10));
+    if want.is_none() || has.as_deref().map(str::trim) == want.as_deref() {
+        return;
+    }
+    // By absolute paths: the shell and PowerShell of the system, never one found in a folder of PATH. Longer than a
+    // fetch takes: the wait for another one's lock, then the download.
+    if WIN {
+        let root = exec::env_var("SystemRoot").unwrap_or_else(|| "C:\\Windows".into());
+        let ps = paths::join(&[&root, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"]);
+        let script = paths::join(&[dir, "scripts", "fetch-bin.ps1"]);
+        let args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", &script, dir];
+        let _ = exec::run(Some(&ps), &args, &opts(600));
+    } else {
+        let script = paths::join(&[dir, "scripts", "fetch-bin.sh"]);
+        let _ = exec::run(Some("/bin/sh"), &[&script, dir], &opts(600));
+    }
 }
 
 /// A new folder in the temporary one, mode 0700 on Unix; None when it cannot be made.

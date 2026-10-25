@@ -5,8 +5,9 @@ min_herdr_version = "0.9.4"
 description = "VS Code-style file explorer, preview, search and source control for every tab"
 platforms = ["linux", "macos", "windows"]
 
-# The binary, bin/herdr-explorer, fetched for herdr plugin install and update (the shims fetch it too when missing).
-# The explorer and the preview run it directly, as their own launcher: no Node process stays in those panes.
+# The binary, bin/herdr-explorer, fetched for herdr plugin install and update; the shims fetch it too when missing
+# or of another version. The explorer and the preview run it directly, as their own launcher (no Node process stays
+# in those panes), which fetches it as well before a restart on new code.
 [[build]]
 platforms = ["linux", "macos"]
 command = ["sh", "scripts/fetch-bin.sh"]
