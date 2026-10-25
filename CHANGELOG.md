@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.8.0](https://github.com/gcaudan/herdr-explorer/compare/v0.7.1...v0.8.0) (2026-10-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* partial staging, diff scopes, notes and source control in tabs for 0.8.0 ([#27](https://github.com/gcaudan/herdr-explorer/issues/27))
+
+### Features
+
+* partial staging, diff scopes, notes and source control in tabs for 0.8.0 ([#27](https://github.com/gcaudan/herdr-explorer/issues/27)) ([1962de8](https://github.com/gcaudan/herdr-explorer/commit/1962de8a3874d8ed703c67caede89d7d70af7605))
+
+
+### Fixes
+
+* **viewed:** hash a file again when it changed within 2 s of its last hash ([#28](https://github.com/gcaudan/herdr-explorer/issues/28)) ([d3a873e](https://github.com/gcaudan/herdr-explorer/commit/d3a873ecb1a4237f2535e3392707fcc8dcb7a189))
+
 ## [0.7.1](https://github.com/gcaudan/herdr-explorer/compare/v0.7.0...v0.7.1) (2026-10-21)
 
 
