@@ -137,6 +137,8 @@ unsafe extern "C" {
     #[link_name = "setsid"]
     fn setsid_raw() -> c_int;
     fn kill(pid: c_int, sig: c_int) -> c_int;
+    #[link_name = "getppid"]
+    fn getppid_raw() -> c_int;
     fn gethostname(name: *mut std::os::raw::c_char, len: usize) -> c_int;
     #[link_name = "getuid"]
     fn getuid_raw() -> u32;
@@ -182,6 +184,23 @@ pub fn kill_group(pid: u32) {
 pub fn terminate(pid: u32) {
     // SAFETY: plain system call.
     unsafe { kill(pid as c_int, SIGTERM) };
+}
+
+/// A signal to a process, as Node's `child.kill(sig)`.
+pub fn send_signal(pid: u32, sig: super::Signal) {
+    let sig = match sig {
+        super::Signal::Term => SIGTERM,
+        super::Signal::Hup => SIGHUP,
+        super::Signal::Int => SIGINT,
+    };
+    // SAFETY: plain system call.
+    unsafe { kill(pid as c_int, sig) };
+}
+
+/// The parent process's id: 1, or a subreaper's, once the parent is gone.
+pub fn getppid() -> u32 {
+    // SAFETY: getppid has no preconditions.
+    unsafe { getppid_raw() as u32 }
 }
 
 fn errno() -> i32 {

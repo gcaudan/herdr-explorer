@@ -57,15 +57,32 @@ pub fn run(args: Vec<OsString>) -> ExitCode {
             println!("{}", crate::VERSION);
             ExitCode::SUCCESS
         }
-        Ok(cmd) => {
+        Ok(Command::Hook(args)) => done(crate::hook::run(&strings(args))),
+        Ok(Command::Peek(args)) => done(crate::peek::run(strings(args))),
+        Ok(cmd @ Command::Pane(..)) => {
+            // The pane's first process stays as its launcher; the child runs the pane.
+            if let Some(code) = crate::launch::launch() {
+                return ExitCode::from(u8::try_from(code).unwrap_or(1));
+            }
             eprintln!("herdr-explorer: not implemented yet: {cmd:?}");
-            ExitCode::from(1)
+            done(1)
         }
         Err(usage) => {
             eprintln!("{usage}");
             ExitCode::from(2)
         }
     }
+}
+
+/// The arguments as the JS read them from process.argv: what is not Unicode replaced.
+fn strings(args: Vec<OsString>) -> Vec<String> {
+    args.into_iter().map(|a| a.to_string_lossy().into_owned()).collect()
+}
+
+/// The exit code, once the work given to `exec::at_exit` is done (the JS's process.on('exit')).
+fn done(code: i32) -> ExitCode {
+    crate::core::exec::exit_hooks();
+    ExitCode::from(u8::try_from(code).unwrap_or(1))
 }
 
 #[cfg(test)]

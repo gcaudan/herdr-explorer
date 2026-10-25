@@ -321,11 +321,15 @@ impl Drop for Screen {
     }
 }
 
+/// The file EXPLORER_IPC_FILE named, taken out of the environment at the start (launch::launch) so that the processes
+/// this one starts do not take themselves for the launcher's child.
+pub static IPC_FILE: std::sync::OnceLock<std::ffi::OsString> = std::sync::OnceLock::new();
+
 /// A message to the launcher (the JS's process.send): a line of JSON appended to the file EXPLORER_IPC_FILE names;
 /// dropped without one.
 pub fn send(message: &Value) {
     use std::io::Write;
-    let Some(file) = std::env::var_os("EXPLORER_IPC_FILE") else { return };
+    let Some(file) = IPC_FILE.get().cloned().or_else(|| std::env::var_os("EXPLORER_IPC_FILE")) else { return };
     if let Ok(mut f) = std::fs::OpenOptions::new().append(true).create(true).open(file) {
         let _ = f.write_all(format!("{}\n", crate::json::stringify(message)).as_bytes());
     }

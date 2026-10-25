@@ -7,7 +7,9 @@ mod unix;
 #[cfg(unix)]
 use unix as imp;
 #[cfg(unix)]
-pub use unix::{SIGHUP, SIGINT, SIGTERM, executable, getuid, hostname, kill_group, setsid, terminate};
+pub use unix::{
+    SIGHUP, SIGINT, SIGTERM, executable, getppid, getuid, hostname, kill_group, send_signal, setsid, terminate,
+};
 
 #[cfg(windows)]
 mod windows;
@@ -111,6 +113,12 @@ impl Events {
     /// Starts catching resizes and the ending signals, and reading stdin.
     pub fn new() -> io::Result<Events> {
         imp::Events::new().map(Events)
+    }
+
+    /// Catches the ending signals and resizes only, stdin left alone (the launcher's: its child reads the terminal).
+    #[cfg(unix)]
+    pub fn signals() -> io::Result<Events> {
+        imp::Events::on(-1).map(Events)
     }
 
     /// The events seen, waiting up to `timeout` (forever with `None`) for the first; an empty list once it elapsed.
