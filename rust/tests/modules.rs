@@ -1027,3 +1027,173 @@ fn core_ui() {
     }
     support::replay("core/ui", |name, args| caught(|| call(name, args)));
 }
+
+#[test]
+fn core_buffer() {
+    use herdr_explorer::core::buffer::{self, Editor, LineDiff, Match, Pos};
+    use herdr_explorer::obj;
+
+    fn n(v: &Value) -> usize {
+        v.as_f64().unwrap_or(0.0) as usize
+    }
+    fn i(v: &Value) -> i64 {
+        v.as_f64().unwrap_or(0.0) as i64
+    }
+    fn s(v: &Value) -> String {
+        v.as_str().unwrap_or("").to_string()
+    }
+    fn num(x: usize) -> Value {
+        Value::Num(x as f64)
+    }
+    fn doc(d: Result<buffer::Doc, String>) -> Value {
+        match d {
+            Ok(d) => {
+                obj! { "lines" => d.lines, "eol" => d.eol, "final" => d.final_, "bom" => d.bom, "mixed" => d.mixed }
+            }
+            Err(e) => obj! { "error" => e },
+        }
+    }
+    fn diff(d: &LineDiff) -> Value {
+        let kinds: Vec<&str> = d.kinds.iter().map(|k| k.name()).collect();
+        obj! { "kinds" => kinds, "deleted" => Value::Arr(d.deleted.iter().map(|&x| num(x)).collect()) }
+    }
+    fn found(m: Match) -> Value {
+        obj! { "line" => num(m.line), "a" => num(m.a), "b" => num(m.b) }
+    }
+    fn pos(v: &Value) -> Pos {
+        Pos::new(n(v.get("line").unwrap()), n(v.get("at").unwrap()))
+    }
+    fn place(p: Option<Pos>) -> Value {
+        p.map_or(Value::Null, |p| obj! { "line" => num(p.line), "at" => num(p.at) })
+    }
+    // Each code point's start, and the end.
+    fn starts(text: &str) -> Vec<usize> {
+        text.char_indices().map(|(i, _)| i).chain([text.len()]).collect()
+    }
+    fn input(v: &Value) -> Vec<u8> {
+        match v {
+            Value::Arr(a) => a.iter().map(|b| n(b) as u8).collect(),
+            v => s(v).into_bytes(),
+        }
+    }
+
+    support::replay("core/buffer", |name, args| {
+        let a = |k: usize| s(&args[k]);
+        Ok(match name {
+            "parse" => doc(buffer::parse(&input(&args[0]))),
+            "roundOf" => match buffer::parse(&input(&args[0])) {
+                Ok(d) => Value::Str(d.serialize()),
+                Err(e) => obj! { "error" => e },
+            },
+            "readOf" => doc(buffer::read(&a(0)).map(|(d, _)| d)),
+            "saveOf" => {
+                buffer::save(&a(1), &a(2)).map_err(|e| e.to_string())?;
+                let mut files: Vec<String> =
+                    std::fs::read_dir(a(0)).unwrap().map(|e| e.unwrap().file_name().into_string().unwrap()).collect();
+                files.sort();
+                obj! { "files" => files, "text" => std::fs::read_to_string(a(1)).unwrap() }
+            }
+            "stops" => {
+                let t = a(0);
+                let mut out = Vec::new();
+                let mut k = 0;
+                while k < t.len() {
+                    out.push(num(k));
+                    k = buffer::next_at(&t, k);
+                }
+                Value::Arr(out)
+            }
+            "around" => {
+                let t = a(0);
+                let at = |k: usize| {
+                    vec![k, buffer::prev_at(&t, k), buffer::snap(&t, k), buffer::next_at(&t, k)].into_iter().map(num)
+                };
+                Value::Arr(starts(&t).into_iter().map(|k| Value::Arr(at(k).collect())).collect())
+            }
+            "shown" => {
+                let t = a(0);
+                let sh = buffer::shown(&t);
+                let at = starts(&t).into_iter().map(|k| Value::Arr(vec![num(k), num(sh.col[k]), num(sh.map[k])]));
+                obj! { "text" => sh.text, "width" => num(sh.width), "at" => Value::Arr(at.collect()) }
+            }
+            "atCol" => num(buffer::at_col(&a(0), n(&args[1]))),
+            "colOf" => num(buffer::col_of(&a(0), n(&args[1]))),
+            "words" => {
+                let t = a(0);
+                let at = |k| Value::Arr(vec![num(k), num(buffer::word_start(&t, k)), num(buffer::word_end(&t, k))]);
+                Value::Arr(starts(&t).into_iter().map(at).collect())
+            }
+            "indentOf" => Value::Str(buffer::indent_of(&strs(&args[0]))),
+            "lineDiff" => diff(&buffer::line_diff(&strs(&args[0]), &strs(&args[1]), n(&args[2]))),
+            "matches" => Value::Arr(buffer::matches(&strs(&args[0]), &a(1)).into_iter().map(found).collect()),
+            "edit" => {
+                let mut ed = Editor::new(&buffer::parse(a(0).as_bytes()).unwrap());
+                let steps = args[1].as_array().unwrap();
+                let out = steps.iter().map(|step| {
+                    let st = step.as_array().unwrap();
+                    let arg = |k: usize| st.get(k + 1).cloned().unwrap_or_default();
+                    let ret = match s(&st[0]).as_str() {
+                        "place" => {
+                            ed.place(pos(&arg(0)), arg(1).truthy());
+                            Value::Null
+                        }
+                        "move" => {
+                            ed.move_(&s(&arg(0)), arg(1).truthy(), n(&arg(2)));
+                            Value::Null
+                        }
+                        "goto" => {
+                            ed.goto(n(&arg(0)));
+                            Value::Null
+                        }
+                        "selectWord" => {
+                            ed.select_word(pos(&arg(0)));
+                            Value::Null
+                        }
+                        "selectLine" => {
+                            ed.select_line(pos(&arg(0)));
+                            Value::Null
+                        }
+                        "selectAll" => {
+                            ed.select_all();
+                            Value::Null
+                        }
+                        "markSaved" => {
+                            ed.mark_saved();
+                            Value::Null
+                        }
+                        "reset" => {
+                            ed.reset(&buffer::parse(s(&arg(0)).as_bytes()).unwrap());
+                            Value::Null
+                        }
+                        "type" => {
+                            let kind = if s(&arg(1)) == "type" { "type" } else { "" };
+                            Value::Bool(ed.type_(&s(&arg(0)), kind))
+                        }
+                        "newline" => Value::Bool(ed.newline()),
+                        "erase" => Value::Bool(ed.erase(i(&arg(0)), arg(1).truthy())),
+                        "indentLines" => Value::Bool(ed.indent_lines(i(&arg(0)))),
+                        "undo" => Value::Bool(ed.undo()),
+                        "redo" => Value::Bool(ed.redo()),
+                        "find" => ed.find(&s(&arg(0)), i(&arg(1)), arg(2).truthy()).map_or(Value::Null, found),
+                        "replaceOne" => Value::Bool(ed.replace_one(&s(&arg(0)), &s(&arg(1)))),
+                        "replaceAll" => num(ed.replace_all(&s(&arg(0)), &s(&arg(1)))),
+                        "changed" => diff(ed.changed()),
+                        "serialize" => Value::Str(ed.serialize()),
+                        other => panic!("edit step {other}"),
+                    };
+                    let state = vec![
+                        Value::from(ed.lines.clone()),
+                        place(Some(ed.cur)),
+                        place(ed.anchor),
+                        Value::Bool(ed.dirty()),
+                        Value::Str(ed.selected()),
+                        Value::Str(ed.indent.clone()),
+                    ];
+                    Value::Arr([vec![ret], state].concat())
+                });
+                Value::Arr(out.collect())
+            }
+            other => panic!("core/buffer: {other}"),
+        })
+    });
+}

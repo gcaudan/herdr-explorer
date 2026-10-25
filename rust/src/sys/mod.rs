@@ -7,14 +7,14 @@ mod unix;
 #[cfg(unix)]
 use unix as imp;
 #[cfg(unix)]
-pub use unix::{SIGHUP, SIGINT, SIGTERM, executable, hostname, kill_group, setsid, terminate};
+pub use unix::{SIGHUP, SIGINT, SIGTERM, executable, getuid, hostname, kill_group, setsid, terminate};
 
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
 use windows as imp;
 #[cfg(windows)]
-pub use windows::hostname;
+pub use windows::{hostname, links};
 
 #[cfg(target_os = "linux")]
 pub use unix::pty;

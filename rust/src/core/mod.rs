@@ -2,6 +2,7 @@
 //! staging.
 
 pub mod actions;
+pub mod buffer;
 pub mod exec;
 pub mod js;
 pub mod notes;

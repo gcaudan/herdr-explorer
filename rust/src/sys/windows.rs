@@ -73,6 +73,34 @@ unsafe extern "system" {
     fn WaitForSingleObject(h: Handle, ms: u32) -> u32;
     fn SetConsoleCtrlHandler(handler: Option<unsafe extern "system" fn(u32) -> Bool>, add: Bool) -> Bool;
     fn GetComputerNameExW(kind: u32, buf: *mut u16, len: *mut u32) -> Bool;
+    fn GetFileInformationByHandle(h: Handle, info: *mut FileInfo) -> Bool;
+}
+
+/// BY_HANDLE_FILE_INFORMATION: attributes, three times, the volume, the size, the link count, the file's index.
+#[repr(C)]
+#[derive(Default)]
+struct FileInfo {
+    attributes: u32,
+    times: [u32; 6],
+    volume: u32,
+    size: [u32; 2],
+    links: u32,
+    index: [u32; 2],
+}
+
+/// A file's number of names (hard links), as fs.statSync's nlink: 1 when it cannot be read.
+pub fn links(path: &str) -> u64 {
+    use std::os::windows::fs::OpenOptionsExt;
+    use std::os::windows::io::AsRawHandle;
+    // No access asked, every sharing allowed, a folder too (FILE_FLAG_BACKUP_SEMANTICS): as libuv's stat opens it.
+    let opened = std::fs::OpenOptions::new().access_mode(0).share_mode(7).custom_flags(0x0200_0000).open(path);
+    let Ok(f) = opened else { return 1 };
+    let mut info = FileInfo::default();
+    // SAFETY: an open handle, and a struct of the size the call writes.
+    if unsafe { GetFileInformationByHandle(f.as_raw_handle() as Handle, &mut info) } == 0 {
+        return 1;
+    }
+    info.links as u64
 }
 
 /// The machine's name, as os.hostname() (libuv's GetHostNameW gives the DNS host name).

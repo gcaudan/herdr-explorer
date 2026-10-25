@@ -138,6 +138,8 @@ unsafe extern "C" {
     fn setsid_raw() -> c_int;
     fn kill(pid: c_int, sig: c_int) -> c_int;
     fn gethostname(name: *mut std::os::raw::c_char, len: usize) -> c_int;
+    #[link_name = "getuid"]
+    fn getuid_raw() -> u32;
 }
 
 /// The machine's name, as os.hostname().
@@ -149,6 +151,12 @@ pub fn hostname() -> String {
     }
     let end = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
     String::from_utf8_lossy(&buf[..end]).into_owned()
+}
+
+/// The process's user id (process.getuid()).
+pub fn getuid() -> u32 {
+    // SAFETY: getuid has no preconditions.
+    unsafe { getuid_raw() }
 }
 
 /// Whether the process may run the file (access X_OK, as fs.accessSync checks it).

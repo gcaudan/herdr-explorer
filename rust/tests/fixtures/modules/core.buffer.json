@@ -1,0 +1,6290 @@
+{
+ "module": "core/buffer",
+ "cases": [
+  {
+   "fn": "parse",
+   "args": [
+    ""
+   ],
+   "out": {
+    "lines": [
+     ""
+    ],
+    "eol": "\n",
+    "final": false,
+    "bom": false,
+    "mixed": false
+   }
+  },
+  {
+   "fn": "roundOf",
+   "args": [
+    ""
+   ],
+   "out": ""
+  },
+  {
+   "fn": "parse",
+   "args": [
+    "a"
+   ],
+   "out": {
+    "lines": [
+     "a"
+    ],
+    "eol": "\n",
+    "final": false,
+    "bom": false,
+    "mixed": false
+   }
+  },
+  {
+   "fn": "roundOf",
+   "args": [
+    "a"
+   ],
+   "out": "a"
+  },
+  {
+   "fn": "parse",
+   "args": [
+    "a\n"
+   ],
+   "out": {
+    "lines": [
+     "a"
+    ],
+    "eol": "\n",
+    "final": true,
+    "bom": false,
+    "mixed": false
+   }
+  },
+  {
+   "fn": "roundOf",
+   "args": [
+    "a\n"
+   ],
+   "out": "a\n"
+  },
+  {
+   "fn": "parse",
+   "args": [
+    "a\nb"
+   ],
+   "out": {
+    "lines": [
+     "a",
+     "b"
+    ],
+    "eol": "\n",
+    "final": false,
+    "bom": false,
+    "mixed": false
+   }
+  },
+  {
+   "fn": "roundOf",
+   "args": [
+    "a\nb"
+   ],
+   "out": "a\nb"
+  },
+  {
+   "fn": "parse",
+   "args": [
+    "a\r\nb\r\n"
+   ],
+   "out": {
+    "lines": [
+     "a",
+     "b"
+    ],
+    "eol": "\r\n",
+    "final": true,
+    "bom": false,
+    "mixed": false
+   }
+  },
+  {
+   "fn": "roundOf",
+   "args": [
+    "a\r\nb\r\n"
+   ],
+   "out": "a\r\nb\r\n"
+  },
+  {
+   "fn": "parse",
+   "args": [
+    "a\r\nb"
+   ],
+   "out": {
+    "lines": [
+     "a",
+     "b"
+    ],
+    "eol": "\r\n",
+    "final": false,
+    "bom": false,
+    "mixed": false
+   }
+  },
+  {
+   "fn": "roundOf",
+   "args": [
+    "a\r\nb"
+   ],
+   "out": "a\r\nb"
+  },
+  {
+   "fn": "parse",
+   "args": [
+    "\n"
+   ],
+   "out": {
+    "lines": [
+     ""
+    ],
+    "eol": "\n",
+    "final": true,
+    "bom": false,
+    "mixed": false
+   }
+  },
+  {
+   "fn": "roundOf",
+   "args": [
+    "\n"
+   ],
+   "out": "\n"
+  },
+  {
+   "fn": "parse",
+   "args": [
+    "\n\n"
+   ],
+   "out": {
+    "lines": [
+     "",
+     ""
+    ],
+    "eol": "\n",
+    "final": true,
+    "bom": false,
+    "mixed": false
+   }
+  },
+  {
+   "fn": "roundOf",
+   "args": [
+    "\n\n"
+   ],
+   "out": "\n\n"
+  },
+  {
+   "fn": "parse",
+   "args": [
+    "﻿x\r\n"
+   ],
+   "out": {
+    "lines": [
+     "x"
+    ],
+    "eol": "\r\n",
+    "final": true,
+    "bom": true,
+    "mixed": false
+   }
+  },
+  {
+   "fn": "roundOf",
+   "args": [
+    "﻿x\r\n"
+   ],
+   "out": "﻿x\r\n"
+  },
+  {
+   "fn": "parse",
+   "args": [
+    "a\rb\n"
+   ],
+   "out": {
+    "lines": [
+     "a\rb"
+    ],
+    "eol": "\n",
+    "final": true,
+    "bom": false,
+    "mixed": false
+   }
+  },
+  {
+   "fn": "roundOf",
+   "args": [
+    "a\rb\n"
+   ],
+   "out": "a\rb\n"
+  },
+  {
+   "fn": "parse",
+   "args": [
+    "a\r"
+   ],
+   "out": {
+    "lines": [
+     "a\r"
+    ],
+    "eol": "\n",
+    "final": false,
+    "bom": false,
+    "mixed": false
+   }
+  },
+  {
+   "fn": "roundOf",
+   "args": [
+    "a\r"
+   ],
+   "out": "a\r"
+  },
+  {
+   "fn": "parse",
+   "args": [
+    "\r\n"
+   ],
+   "out": {
+    "lines": [
+     ""
+    ],
+    "eol": "\r\n",
+    "final": true,
+    "bom": false,
+    "mixed": false
+   }
+  },
+  {
+   "fn": "roundOf",
+   "args": [
+    "\r\n"
+   ],
+   "out": "\r\n"
+  },
+  {
+   "fn": "parse",
+   "args": [
+    "a\r\nb\r\nc\n"
+   ],
+   "out": {
+    "lines": [
+     "a",
+     "b",
+     "c"
+    ],
+    "eol": "\r\n",
+    "final": true,
+    "bom": false,
+    "mixed": true
+   }
+  },
+  {
+   "fn": "roundOf",
+   "args": [
+    "a\r\nb\r\nc\n"
+   ],
+   "out": "a\r\nb\r\nc\r\n"
+  },
+  {
+   "fn": "parse",
+   "args": [
+    "a\nb\r\n"
+   ],
+   "out": {
+    "lines": [
+     "a",
+     "b"
+    ],
+    "eol": "\n",
+    "final": true,
+    "bom": false,
+    "mixed": true
+   }
+  },
+  {
+   "fn": "roundOf",
+   "args": [
+    "a\nb\r\n"
+   ],
+   "out": "a\nb\n"
+  },
+  {
+   "fn": "parse",
+   "args": [
+    "﻿"
+   ],
+   "out": {
+    "lines": [
+     ""
+    ],
+    "eol": "\n",
+    "final": false,
+    "bom": true,
+    "mixed": false
+   }
+  },
+  {
+   "fn": "roundOf",
+   "args": [
+    "﻿"
+   ],
+   "out": "﻿"
+  },
+  {
+   "fn": "parse",
+   "args": [
+    "a\u0000b"
+   ],
+   "out": {
+    "error": "binary file"
+   }
+  },
+  {
+   "fn": "parse",
+   "args": [
+    [
+     97,
+     233,
+     98
+    ]
+   ],
+   "out": {
+    "error": "not UTF-8"
+   }
+  },
+  {
+   "fn": "parse",
+   "args": [
+    [
+     239,
+     187,
+     191,
+     97
+    ]
+   ],
+   "out": {
+    "lines": [
+     "a"
+    ],
+    "eol": "\n",
+    "final": false,
+    "bom": true,
+    "mixed": false
+   }
+  },
+  {
+   "fn": "parse",
+   "args": [
+    [
+     237,
+     160,
+     128
+    ]
+   ],
+   "out": {
+    "error": "not UTF-8"
+   }
+  },
+  {
+   "fn": "parse",
+   "args": [
+    "héllo ✓ 中文"
+   ],
+   "out": {
+    "lines": [
+     "héllo ✓ 中文"
+    ],
+    "eol": "\n",
+    "final": false,
+    "bom": false,
+    "mixed": false
+   }
+  },
+  {
+   "fn": "readOf",
+   "args": [
+    "$ROOT/a.txt"
+   ],
+   "files": {
+    "a.txt": "x\r\ny"
+   },
+   "out": {
+    "lines": [
+     "x",
+     "y"
+    ],
+    "eol": "\r\n",
+    "final": false,
+    "bom": false,
+    "mixed": false
+   }
+  },
+  {
+   "fn": "readOf",
+   "args": [
+    "$ROOT/missing"
+   ],
+   "out": {
+    "error": "ENOENT"
+   }
+  },
+  {
+   "fn": "readOf",
+   "args": [
+    "$ROOT/d"
+   ],
+   "files": {
+    "d": null
+   },
+   "out": {
+    "error": "not a regular file"
+   }
+  },
+  {
+   "fn": "readOf",
+   "args": [
+    "$ROOT/bin"
+   ],
+   "files": {
+    "bin": "a\u0000"
+   },
+   "out": {
+    "error": "binary file"
+   }
+  },
+  {
+   "fn": "readOf",
+   "args": [
+    "$ROOT/link"
+   ],
+   "files": {
+    "a.txt": "via link\n",
+    "link": {
+     "link": "$ROOT/a.txt"
+    }
+   },
+   "out": {
+    "lines": [
+     "via link"
+    ],
+    "eol": "\n",
+    "final": true,
+    "bom": false,
+    "mixed": false
+   }
+  },
+  {
+   "fn": "saveOf",
+   "args": [
+    "$ROOT",
+    "$ROOT/a.sh",
+    "new\n"
+   ],
+   "files": {
+    "a.sh": "old"
+   },
+   "out": {
+    "files": [
+     "a.sh"
+    ],
+    "text": "new\n"
+   }
+  },
+  {
+   "fn": "saveOf",
+   "args": [
+    "$ROOT",
+    "$ROOT/new.txt",
+    "made"
+   ],
+   "out": {
+    "files": [
+     "new.txt"
+    ],
+    "text": "made"
+   }
+  },
+  {
+   "fn": "saveOf",
+   "args": [
+    "$ROOT",
+    "$ROOT/link",
+    "through"
+   ],
+   "files": {
+    "a.sh": "old",
+    "link": {
+     "link": "a.sh"
+    }
+   },
+   "out": {
+    "files": [
+     "a.sh",
+     "link"
+    ],
+    "text": "through"
+   }
+  },
+  {
+   "fn": "stops",
+   "args": [
+    ""
+   ],
+   "out": []
+  },
+  {
+   "fn": "around",
+   "args": [
+    ""
+   ],
+   "out": [
+    [
+     0,
+     0,
+     0,
+     0
+    ]
+   ]
+  },
+  {
+   "fn": "shown",
+   "args": [
+    ""
+   ],
+   "out": {
+    "text": "",
+    "width": 0,
+    "at": [
+     [
+      0,
+      0,
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "stops",
+   "args": [
+    "a"
+   ],
+   "out": [
+    0
+   ]
+  },
+  {
+   "fn": "around",
+   "args": [
+    "a"
+   ],
+   "out": [
+    [
+     0,
+     0,
+     0,
+     1
+    ],
+    [
+     1,
+     0,
+     1,
+     1
+    ]
+   ]
+  },
+  {
+   "fn": "shown",
+   "args": [
+    "a"
+   ],
+   "out": {
+    "text": "a",
+    "width": 1,
+    "at": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      1
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "stops",
+   "args": [
+    "a\tb中éx"
+   ],
+   "out": [
+    0,
+    1,
+    2,
+    3,
+    6,
+    9
+   ]
+  },
+  {
+   "fn": "around",
+   "args": [
+    "a\tb中éx"
+   ],
+   "out": [
+    [
+     0,
+     0,
+     0,
+     1
+    ],
+    [
+     1,
+     0,
+     1,
+     2
+    ],
+    [
+     2,
+     1,
+     2,
+     3
+    ],
+    [
+     3,
+     2,
+     3,
+     6
+    ],
+    [
+     6,
+     3,
+     6,
+     9
+    ],
+    [
+     7,
+     6,
+     6,
+     9
+    ],
+    [
+     9,
+     6,
+     9,
+     10
+    ],
+    [
+     10,
+     9,
+     10,
+     10
+    ]
+   ]
+  },
+  {
+   "fn": "shown",
+   "args": [
+    "a\tb中éx"
+   ],
+   "out": {
+    "text": "a   b中éx",
+    "width": 9,
+    "at": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      1
+     ],
+     [
+      2,
+      4,
+      4
+     ],
+     [
+      3,
+      5,
+      5
+     ],
+     [
+      6,
+      7,
+      8
+     ],
+     [
+      7,
+      8,
+      9
+     ],
+     [
+      9,
+      8,
+      11
+     ],
+     [
+      10,
+      9,
+      12
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "stops",
+   "args": [
+    "é🇫🇷👩‍💻z"
+   ],
+   "out": [
+    0,
+    3,
+    11,
+    22
+   ]
+  },
+  {
+   "fn": "around",
+   "args": [
+    "é🇫🇷👩‍💻z"
+   ],
+   "out": [
+    [
+     0,
+     0,
+     0,
+     3
+    ],
+    [
+     1,
+     0,
+     0,
+     3
+    ],
+    [
+     3,
+     0,
+     3,
+     11
+    ],
+    [
+     7,
+     3,
+     3,
+     11
+    ],
+    [
+     11,
+     3,
+     11,
+     22
+    ],
+    [
+     15,
+     11,
+     11,
+     22
+    ],
+    [
+     18,
+     11,
+     11,
+     22
+    ],
+    [
+     22,
+     11,
+     22,
+     23
+    ],
+    [
+     23,
+     22,
+     23,
+     23
+    ]
+   ]
+  },
+  {
+   "fn": "shown",
+   "args": [
+    "é🇫🇷👩‍💻z"
+   ],
+   "out": {
+    "text": "é🇫🇷👩‍💻z",
+    "width": 8,
+    "at": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      1
+     ],
+     [
+      3,
+      1,
+      3
+     ],
+     [
+      7,
+      2,
+      7
+     ],
+     [
+      11,
+      3,
+      11
+     ],
+     [
+      15,
+      5,
+      15
+     ],
+     [
+      18,
+      5,
+      18
+     ],
+     [
+      22,
+      7,
+      22
+     ],
+     [
+      23,
+      8,
+      23
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "stops",
+   "args": [
+    "🇫🇷🇩🇪🇮"
+   ],
+   "out": [
+    0,
+    8,
+    16
+   ]
+  },
+  {
+   "fn": "around",
+   "args": [
+    "🇫🇷🇩🇪🇮"
+   ],
+   "out": [
+    [
+     0,
+     0,
+     0,
+     8
+    ],
+    [
+     4,
+     0,
+     0,
+     12
+    ],
+    [
+     8,
+     0,
+     8,
+     16
+    ],
+    [
+     12,
+     8,
+     8,
+     20
+    ],
+    [
+     16,
+     8,
+     16,
+     20
+    ],
+    [
+     20,
+     16,
+     20,
+     20
+    ]
+   ]
+  },
+  {
+   "fn": "shown",
+   "args": [
+    "🇫🇷🇩🇪🇮"
+   ],
+   "out": {
+    "text": "🇫🇷🇩🇪🇮",
+    "width": 5,
+    "at": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      4,
+      1,
+      4
+     ],
+     [
+      8,
+      2,
+      8
+     ],
+     [
+      12,
+      3,
+      12
+     ],
+     [
+      16,
+      4,
+      16
+     ],
+     [
+      20,
+      5,
+      20
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "stops",
+   "args": [
+    "\u0001a"
+   ],
+   "out": [
+    0,
+    1,
+    2,
+    4
+   ]
+  },
+  {
+   "fn": "around",
+   "args": [
+    "\u0001a"
+   ],
+   "out": [
+    [
+     0,
+     0,
+     0,
+     1
+    ],
+    [
+     1,
+     0,
+     1,
+     2
+    ],
+    [
+     2,
+     1,
+     2,
+     4
+    ],
+    [
+     4,
+     2,
+     4,
+     5
+    ],
+    [
+     5,
+     4,
+     5,
+     5
+    ]
+   ]
+  },
+  {
+   "fn": "shown",
+   "args": [
+    "\u0001a"
+   ],
+   "out": {
+    "text": "???a",
+    "width": 4,
+    "at": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      1
+     ],
+     [
+      2,
+      2,
+      2
+     ],
+     [
+      4,
+      3,
+      3
+     ],
+     [
+      5,
+      4,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "stops",
+   "args": [
+    "\t\t x\t"
+   ],
+   "out": [
+    0,
+    1,
+    2,
+    3,
+    4
+   ]
+  },
+  {
+   "fn": "around",
+   "args": [
+    "\t\t x\t"
+   ],
+   "out": [
+    [
+     0,
+     0,
+     0,
+     1
+    ],
+    [
+     1,
+     0,
+     1,
+     2
+    ],
+    [
+     2,
+     1,
+     2,
+     3
+    ],
+    [
+     3,
+     2,
+     3,
+     4
+    ],
+    [
+     4,
+     3,
+     4,
+     5
+    ],
+    [
+     5,
+     4,
+     5,
+     5
+    ]
+   ]
+  },
+  {
+   "fn": "shown",
+   "args": [
+    "\t\t x\t"
+   ],
+   "out": {
+    "text": "         x  ",
+    "width": 12,
+    "at": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      4,
+      4
+     ],
+     [
+      2,
+      8,
+      8
+     ],
+     [
+      3,
+      9,
+      9
+     ],
+     [
+      4,
+      10,
+      10
+     ],
+     [
+      5,
+      12,
+      12
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "stops",
+   "args": [
+    "a⚠️b"
+   ],
+   "out": [
+    0,
+    1,
+    7
+   ]
+  },
+  {
+   "fn": "around",
+   "args": [
+    "a⚠️b"
+   ],
+   "out": [
+    [
+     0,
+     0,
+     0,
+     1
+    ],
+    [
+     1,
+     0,
+     1,
+     7
+    ],
+    [
+     4,
+     1,
+     1,
+     7
+    ],
+    [
+     7,
+     1,
+     7,
+     8
+    ],
+    [
+     8,
+     7,
+     8,
+     8
+    ]
+   ]
+  },
+  {
+   "fn": "shown",
+   "args": [
+    "a⚠️b"
+   ],
+   "out": {
+    "text": "a⚠️b",
+    "width": 4,
+    "at": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      1
+     ],
+     [
+      4,
+      2,
+      4
+     ],
+     [
+      7,
+      3,
+      7
+     ],
+     [
+      8,
+      4,
+      8
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "stops",
+   "args": [
+    "👍🏽!"
+   ],
+   "out": [
+    0,
+    8
+   ]
+  },
+  {
+   "fn": "around",
+   "args": [
+    "👍🏽!"
+   ],
+   "out": [
+    [
+     0,
+     0,
+     0,
+     8
+    ],
+    [
+     4,
+     0,
+     0,
+     8
+    ],
+    [
+     8,
+     0,
+     8,
+     9
+    ],
+    [
+     9,
+     8,
+     9,
+     9
+    ]
+   ]
+  },
+  {
+   "fn": "shown",
+   "args": [
+    "👍🏽!"
+   ],
+   "out": {
+    "text": "👍🏽!",
+    "width": 5,
+    "at": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      4,
+      2,
+      4
+     ],
+     [
+      8,
+      4,
+      8
+     ],
+     [
+      9,
+      5,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "stops",
+   "args": [
+    "x​y"
+   ],
+   "out": [
+    0,
+    4
+   ]
+  },
+  {
+   "fn": "around",
+   "args": [
+    "x​y"
+   ],
+   "out": [
+    [
+     0,
+     0,
+     0,
+     4
+    ],
+    [
+     1,
+     0,
+     0,
+     4
+    ],
+    [
+     4,
+     0,
+     4,
+     5
+    ],
+    [
+     5,
+     4,
+     5,
+     5
+    ]
+   ]
+  },
+  {
+   "fn": "shown",
+   "args": [
+    "x​y"
+   ],
+   "out": {
+    "text": "x​y",
+    "width": 2,
+    "at": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      1
+     ],
+     [
+      4,
+      1,
+      4
+     ],
+     [
+      5,
+      2,
+      5
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "stops",
+   "args": [
+    "‍"
+   ],
+   "out": [
+    0
+   ]
+  },
+  {
+   "fn": "around",
+   "args": [
+    "‍"
+   ],
+   "out": [
+    [
+     0,
+     0,
+     0,
+     3
+    ],
+    [
+     3,
+     0,
+     3,
+     3
+    ]
+   ]
+  },
+  {
+   "fn": "shown",
+   "args": [
+    "‍"
+   ],
+   "out": {
+    "text": "‍",
+    "width": 0,
+    "at": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      3,
+      0,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "stops",
+   "args": [
+    "́a"
+   ],
+   "out": [
+    0,
+    2
+   ]
+  },
+  {
+   "fn": "around",
+   "args": [
+    "́a"
+   ],
+   "out": [
+    [
+     0,
+     0,
+     0,
+     2
+    ],
+    [
+     2,
+     0,
+     2,
+     3
+    ],
+    [
+     3,
+     2,
+     3,
+     3
+    ]
+   ]
+  },
+  {
+   "fn": "shown",
+   "args": [
+    "́a"
+   ],
+   "out": {
+    "text": "́a",
+    "width": 1,
+    "at": [
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      2,
+      0,
+      2
+     ],
+     [
+      3,
+      1,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "atCol",
+   "args": [
+    "中文x",
+    0
+   ],
+   "out": 0
+  },
+  {
+   "fn": "atCol",
+   "args": [
+    "中文x",
+    1
+   ],
+   "out": 0
+  },
+  {
+   "fn": "atCol",
+   "args": [
+    "中文x",
+    2
+   ],
+   "out": 3
+  },
+  {
+   "fn": "atCol",
+   "args": [
+    "中文x",
+    3
+   ],
+   "out": 3
+  },
+  {
+   "fn": "atCol",
+   "args": [
+    "中文x",
+    4
+   ],
+   "out": 6
+  },
+  {
+   "fn": "atCol",
+   "args": [
+    "中文x",
+    5
+   ],
+   "out": 7
+  },
+  {
+   "fn": "atCol",
+   "args": [
+    "中文x",
+    9
+   ],
+   "out": 7
+  },
+  {
+   "fn": "atCol",
+   "args": [
+    "\tx\ty",
+    0
+   ],
+   "out": 0
+  },
+  {
+   "fn": "atCol",
+   "args": [
+    "\tx\ty",
+    1
+   ],
+   "out": 0
+  },
+  {
+   "fn": "atCol",
+   "args": [
+    "\tx\ty",
+    2
+   ],
+   "out": 0
+  },
+  {
+   "fn": "atCol",
+   "args": [
+    "\tx\ty",
+    3
+   ],
+   "out": 0
+  },
+  {
+   "fn": "atCol",
+   "args": [
+    "\tx\ty",
+    4
+   ],
+   "out": 1
+  },
+  {
+   "fn": "atCol",
+   "args": [
+    "\tx\ty",
+    5
+   ],
+   "out": 2
+  },
+  {
+   "fn": "colOf",
+   "args": [
+    "é🇫🇷👩‍💻z",
+    0
+   ],
+   "out": 0
+  },
+  {
+   "fn": "colOf",
+   "args": [
+    "é🇫🇷👩‍💻z",
+    1
+   ],
+   "out": 1
+  },
+  {
+   "fn": "colOf",
+   "args": [
+    "é🇫🇷👩‍💻z",
+    3
+   ],
+   "out": 1
+  },
+  {
+   "fn": "colOf",
+   "args": [
+    "é🇫🇷👩‍💻z",
+    7
+   ],
+   "out": 2
+  },
+  {
+   "fn": "colOf",
+   "args": [
+    "é🇫🇷👩‍💻z",
+    11
+   ],
+   "out": 3
+  },
+  {
+   "fn": "colOf",
+   "args": [
+    "é🇫🇷👩‍💻z",
+    22
+   ],
+   "out": 7
+  },
+  {
+   "fn": "colOf",
+   "args": [
+    "é🇫🇷👩‍💻z",
+    23
+   ],
+   "out": 8
+  },
+  {
+   "fn": "colOf",
+   "args": [
+    "ab",
+    9
+   ],
+   "out": 2
+  },
+  {
+   "fn": "words",
+   "args": [
+    "  hello world"
+   ],
+   "out": [
+    [
+     0,
+     0,
+     7
+    ],
+    [
+     1,
+     0,
+     7
+    ],
+    [
+     2,
+     0,
+     7
+    ],
+    [
+     3,
+     2,
+     7
+    ],
+    [
+     4,
+     2,
+     7
+    ],
+    [
+     5,
+     2,
+     7
+    ],
+    [
+     6,
+     2,
+     7
+    ],
+    [
+     7,
+     2,
+     13
+    ],
+    [
+     8,
+     2,
+     13
+    ],
+    [
+     9,
+     8,
+     13
+    ],
+    [
+     10,
+     8,
+     13
+    ],
+    [
+     11,
+     8,
+     13
+    ],
+    [
+     12,
+     8,
+     13
+    ],
+    [
+     13,
+     8,
+     13
+    ]
+   ]
+  },
+  {
+   "fn": "words",
+   "args": [
+    "foo_bar$baz+=  qux"
+   ],
+   "out": [
+    [
+     0,
+     0,
+     11
+    ],
+    [
+     1,
+     0,
+     11
+    ],
+    [
+     2,
+     0,
+     11
+    ],
+    [
+     3,
+     0,
+     11
+    ],
+    [
+     4,
+     0,
+     11
+    ],
+    [
+     5,
+     0,
+     11
+    ],
+    [
+     6,
+     0,
+     11
+    ],
+    [
+     7,
+     0,
+     11
+    ],
+    [
+     8,
+     0,
+     11
+    ],
+    [
+     9,
+     0,
+     11
+    ],
+    [
+     10,
+     0,
+     11
+    ],
+    [
+     11,
+     0,
+     13
+    ],
+    [
+     12,
+     11,
+     13
+    ],
+    [
+     13,
+     11,
+     18
+    ],
+    [
+     14,
+     11,
+     18
+    ],
+    [
+     15,
+     11,
+     18
+    ],
+    [
+     16,
+     15,
+     18
+    ],
+    [
+     17,
+     15,
+     18
+    ],
+    [
+     18,
+     15,
+     18
+    ]
+   ]
+  },
+  {
+   "fn": "words",
+   "args": [
+    "été 中文 x"
+   ],
+   "out": [
+    [
+     0,
+     0,
+     5
+    ],
+    [
+     2,
+     0,
+     5
+    ],
+    [
+     3,
+     0,
+     5
+    ],
+    [
+     5,
+     0,
+     12
+    ],
+    [
+     6,
+     0,
+     12
+    ],
+    [
+     9,
+     6,
+     12
+    ],
+    [
+     12,
+     6,
+     14
+    ],
+    [
+     13,
+     6,
+     14
+    ],
+    [
+     14,
+     13,
+     14
+    ]
+   ]
+  },
+  {
+   "fn": "words",
+   "args": [
+    "áb c"
+   ],
+   "out": [
+    [
+     0,
+     0,
+     4
+    ],
+    [
+     1,
+     0,
+     4
+    ],
+    [
+     3,
+     0,
+     4
+    ],
+    [
+     4,
+     0,
+     6
+    ],
+    [
+     5,
+     0,
+     6
+    ],
+    [
+     6,
+     5,
+     6
+    ]
+   ]
+  },
+  {
+   "fn": "words",
+   "args": [
+    ""
+   ],
+   "out": [
+    [
+     0,
+     0,
+     0
+    ]
+   ]
+  },
+  {
+   "fn": "words",
+   "args": [
+    "   "
+   ],
+   "out": [
+    [
+     0,
+     0,
+     3
+    ],
+    [
+     1,
+     0,
+     3
+    ],
+    [
+     2,
+     0,
+     3
+    ],
+    [
+     3,
+     0,
+     3
+    ]
+   ]
+  },
+  {
+   "fn": "words",
+   "args": [
+    "1.5e3"
+   ],
+   "out": [
+    [
+     0,
+     0,
+     1
+    ],
+    [
+     1,
+     0,
+     2
+    ],
+    [
+     2,
+     1,
+     5
+    ],
+    [
+     3,
+     2,
+     5
+    ],
+    [
+     4,
+     2,
+     5
+    ],
+    [
+     5,
+     2,
+     5
+    ]
+   ]
+  },
+  {
+   "fn": "words",
+   "args": [
+    "((x))"
+   ],
+   "out": [
+    [
+     0,
+     0,
+     2
+    ],
+    [
+     1,
+     0,
+     2
+    ],
+    [
+     2,
+     0,
+     3
+    ],
+    [
+     3,
+     2,
+     5
+    ],
+    [
+     4,
+     3,
+     5
+    ],
+    [
+     5,
+     3,
+     5
+    ]
+   ]
+  },
+  {
+   "fn": "indentOf",
+   "args": [
+    [
+     "a",
+     "\tb",
+     "\tc"
+    ]
+   ],
+   "out": "\t"
+  },
+  {
+   "fn": "indentOf",
+   "args": [
+    [
+     "a",
+     "  b",
+     "    c",
+     "\td"
+    ]
+   ],
+   "out": "  "
+  },
+  {
+   "fn": "indentOf",
+   "args": [
+    [
+     "a",
+     " b",
+     "   "
+    ]
+   ],
+   "out": "    "
+  },
+  {
+   "fn": "indentOf",
+   "args": [
+    [
+     "          ten"
+    ]
+   ],
+   "out": "    "
+  },
+  {
+   "fn": "indentOf",
+   "args": [
+    []
+   ],
+   "out": "    "
+  },
+  {
+   "fn": "indentOf",
+   "args": [
+    [
+     "   three",
+     "      six",
+     "\tt"
+    ]
+   ],
+   "out": "   "
+  },
+  {
+   "fn": "lineDiff",
+   "args": [
+    [
+     "a",
+     "b",
+     "c"
+    ],
+    [
+     "a",
+     "b",
+     "c"
+    ],
+    1000
+   ],
+   "out": {
+    "kinds": [
+     "",
+     "",
+     ""
+    ],
+    "deleted": []
+   }
+  },
+  {
+   "fn": "lineDiff",
+   "args": [
+    [
+     "a",
+     "b",
+     "c"
+    ],
+    [
+     "a",
+     "x",
+     "b",
+     "c"
+    ],
+    1000
+   ],
+   "out": {
+    "kinds": [
+     "",
+     "add",
+     "",
+     ""
+    ],
+    "deleted": []
+   }
+  },
+  {
+   "fn": "lineDiff",
+   "args": [
+    [
+     "a",
+     "b",
+     "c",
+     "d"
+    ],
+    [
+     "a",
+     "d"
+    ],
+    1000
+   ],
+   "out": {
+    "kinds": [
+     "",
+     ""
+    ],
+    "deleted": [
+     1
+    ]
+   }
+  },
+  {
+   "fn": "lineDiff",
+   "args": [
+    [
+     "a",
+     "b",
+     "c",
+     "d",
+     "e",
+     "f"
+    ],
+    [
+     "b",
+     "c",
+     "X",
+     "e",
+     "f",
+     "g"
+    ],
+    1000
+   ],
+   "out": {
+    "kinds": [
+     "",
+     "",
+     "mod",
+     "",
+     "",
+     "add"
+    ],
+    "deleted": [
+     0
+    ]
+   }
+  },
+  {
+   "fn": "lineDiff",
+   "args": [
+    [
+     "a",
+     "1",
+     "2",
+     "z"
+    ],
+    [
+     "a",
+     "2",
+     "1",
+     "z"
+    ],
+    0
+   ],
+   "out": {
+    "kinds": [
+     "",
+     "mod",
+     "mod",
+     ""
+    ],
+    "deleted": []
+   }
+  },
+  {
+   "fn": "lineDiff",
+   "args": [
+    [
+     "a",
+     "1",
+     "2",
+     "z"
+    ],
+    [
+     "a",
+     "2",
+     "1",
+     "z"
+    ],
+    1
+   ],
+   "out": {
+    "kinds": [
+     "",
+     "mod",
+     "mod",
+     ""
+    ],
+    "deleted": []
+   }
+  },
+  {
+   "fn": "lineDiff",
+   "args": [
+    [],
+    [
+     "a",
+     "b"
+    ],
+    1000
+   ],
+   "out": {
+    "kinds": [
+     "add",
+     "add"
+    ],
+    "deleted": []
+   }
+  },
+  {
+   "fn": "lineDiff",
+   "args": [
+    [
+     "a",
+     "b"
+    ],
+    [],
+    1000
+   ],
+   "out": {
+    "kinds": [],
+    "deleted": [
+     0
+    ]
+   }
+  },
+  {
+   "fn": "lineDiff",
+   "args": [
+    [
+     "x",
+     "a",
+     "x",
+     "b",
+     "x"
+    ],
+    [
+     "a",
+     "x",
+     "x",
+     "b",
+     "y",
+     "x"
+    ],
+    1000
+   ],
+   "out": {
+    "kinds": [
+     "",
+     "",
+     "add",
+     "",
+     "add",
+     ""
+    ],
+    "deleted": [
+     0
+    ]
+   }
+  },
+  {
+   "fn": "lineDiff",
+   "args": [
+    [
+     "l0",
+     "l1",
+     "l2",
+     "l3",
+     "l4",
+     "l5",
+     "l6",
+     "l7",
+     "l8",
+     "l9",
+     "l10",
+     "l11",
+     "l12",
+     "l13",
+     "l14",
+     "l15",
+     "l16",
+     "l17",
+     "l18",
+     "l19",
+     "l20",
+     "l21",
+     "l22",
+     "l23",
+     "l24",
+     "l25",
+     "l26",
+     "l27",
+     "l28",
+     "l29"
+    ],
+    [
+     "l0",
+     "l1",
+     "l2",
+     "l3",
+     "l4",
+     "n",
+     "l7",
+     "l8",
+     "l9",
+     "l10",
+     "l11",
+     "l12",
+     "l13",
+     "l14",
+     "l15",
+     "l16",
+     "l17",
+     "l18",
+     "l19",
+     "l22",
+     "l23",
+     "l24",
+     "l25",
+     "l26",
+     "l27",
+     "l28",
+     "l29",
+     "end"
+    ],
+    1000
+   ],
+   "out": {
+    "kinds": [
+     "",
+     "",
+     "",
+     "",
+     "",
+     "mod",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "add"
+    ],
+    "deleted": [
+     6,
+     19
+    ]
+   }
+  },
+  {
+   "fn": "matches",
+   "args": [
+    [
+     "foo Foo",
+     "bar foo",
+     "FOOfoo"
+    ],
+    "foo"
+   ],
+   "out": [
+    {
+     "line": 0,
+     "a": 0,
+     "b": 3
+    },
+    {
+     "line": 0,
+     "a": 4,
+     "b": 7
+    },
+    {
+     "line": 1,
+     "a": 4,
+     "b": 7
+    },
+    {
+     "line": 2,
+     "a": 0,
+     "b": 3
+    },
+    {
+     "line": 2,
+     "a": 3,
+     "b": 6
+    }
+   ]
+  },
+  {
+   "fn": "matches",
+   "args": [
+    [
+     "foo Foo",
+     "bar foo"
+    ],
+    "Foo"
+   ],
+   "out": [
+    {
+     "line": 0,
+     "a": 4,
+     "b": 7
+    }
+   ]
+  },
+  {
+   "fn": "matches",
+   "args": [
+    [
+     "aaaa"
+    ],
+    "aa"
+   ],
+   "out": [
+    {
+     "line": 0,
+     "a": 0,
+     "b": 2
+    },
+    {
+     "line": 0,
+     "a": 2,
+     "b": 4
+    }
+   ]
+  },
+  {
+   "fn": "matches",
+   "args": [
+    [
+     "été ÉTÉ Été"
+    ],
+    "été"
+   ],
+   "out": [
+    {
+     "line": 0,
+     "a": 0,
+     "b": 5
+    },
+    {
+     "line": 0,
+     "a": 6,
+     "b": 11
+    },
+    {
+     "line": 0,
+     "a": 12,
+     "b": 17
+    }
+   ]
+  },
+  {
+   "fn": "matches",
+   "args": [
+    [
+     "straße STRASSE"
+    ],
+    "ß"
+   ],
+   "out": [
+    {
+     "line": 0,
+     "a": 4,
+     "b": 6
+    }
+   ]
+  },
+  {
+   "fn": "matches",
+   "args": [
+    [
+     "ǅ ǆ Ǆ"
+    ],
+    "ǆ"
+   ],
+   "out": [
+    {
+     "line": 0,
+     "a": 0,
+     "b": 2
+    },
+    {
+     "line": 0,
+     "a": 3,
+     "b": 5
+    },
+    {
+     "line": 0,
+     "a": 6,
+     "b": 8
+    }
+   ]
+  },
+  {
+   "fn": "matches",
+   "args": [
+    [
+     "K k K"
+    ],
+    "k"
+   ],
+   "out": [
+    {
+     "line": 0,
+     "a": 0,
+     "b": 1
+    },
+    {
+     "line": 0,
+     "a": 2,
+     "b": 3
+    }
+   ]
+  },
+  {
+   "fn": "matches",
+   "args": [
+    [
+     "ſ s S"
+    ],
+    "s"
+   ],
+   "out": [
+    {
+     "line": 0,
+     "a": 3,
+     "b": 4
+    },
+    {
+     "line": 0,
+     "a": 5,
+     "b": 6
+    }
+   ]
+  },
+  {
+   "fn": "matches",
+   "args": [
+    [
+     "ΣΑΣ σας"
+    ],
+    "σ"
+   ],
+   "out": [
+    {
+     "line": 0,
+     "a": 0,
+     "b": 2
+    },
+    {
+     "line": 0,
+     "a": 4,
+     "b": 6
+    },
+    {
+     "line": 0,
+     "a": 7,
+     "b": 9
+    },
+    {
+     "line": 0,
+     "a": 11,
+     "b": 13
+    }
+   ]
+  },
+  {
+   "fn": "matches",
+   "args": [
+    [
+     "a.b a*b (x)"
+    ],
+    "."
+   ],
+   "out": [
+    {
+     "line": 0,
+     "a": 1,
+     "b": 2
+    }
+   ]
+  },
+  {
+   "fn": "matches",
+   "args": [
+    [
+     "😀a😀"
+    ],
+    "😀"
+   ],
+   "out": [
+    {
+     "line": 0,
+     "a": 0,
+     "b": 4
+    },
+    {
+     "line": 0,
+     "a": 5,
+     "b": 9
+    }
+   ]
+  },
+  {
+   "fn": "matches",
+   "args": [
+    [
+     "x"
+    ],
+    ""
+   ],
+   "out": []
+  },
+  {
+   "fn": "edit",
+   "args": [
+    "one\r\ntwo",
+    [
+     [
+      "place",
+      {
+       "line": 1,
+       "at": 3
+      },
+      false
+     ],
+     [
+      "newline"
+     ],
+     [
+      "type",
+      "three",
+      ""
+     ],
+     [
+      "serialize"
+     ]
+    ]
+   ],
+   "out": [
+    [
+     null,
+     [
+      "one",
+      "two"
+     ],
+     {
+      "line": 1,
+      "at": 3
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "one",
+      "two",
+      ""
+     ],
+     {
+      "line": 2,
+      "at": 0
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "one",
+      "two",
+      "three"
+     ],
+     {
+      "line": 2,
+      "at": 5
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     "one\r\ntwo\r\nthree",
+     [
+      "one",
+      "two",
+      "three"
+     ],
+     {
+      "line": 2,
+      "at": 5
+     },
+     null,
+     true,
+     "",
+     "    "
+    ]
+   ]
+  },
+  {
+   "fn": "edit",
+   "args": [
+    "  hello world\n中文\nabcdefgh",
+    [
+     [
+      "place",
+      {
+       "line": 0,
+       "at": 6
+      },
+      false
+     ],
+     [
+      "move",
+      "down",
+      false,
+      10
+     ],
+     [
+      "move",
+      "down",
+      false,
+      10
+     ],
+     [
+      "move",
+      "up",
+      true,
+      10
+     ],
+     [
+      "move",
+      "pageup",
+      true,
+      10
+     ],
+     [
+      "move",
+      "pagedown",
+      false,
+      10
+     ],
+     [
+      "move",
+      "pagedown",
+      false,
+      1
+     ],
+     [
+      "place",
+      {
+       "line": 0,
+       "at": 13
+      },
+      false
+     ],
+     [
+      "move",
+      "wordleft",
+      false,
+      10
+     ],
+     [
+      "move",
+      "wordleft",
+      false,
+      10
+     ],
+     [
+      "move",
+      "wordright",
+      false,
+      10
+     ],
+     [
+      "move",
+      "home",
+      false,
+      10
+     ],
+     [
+      "move",
+      "home",
+      false,
+      10
+     ],
+     [
+      "move",
+      "end",
+      true,
+      10
+     ],
+     [
+      "move",
+      "left",
+      false,
+      10
+     ],
+     [
+      "move",
+      "end",
+      true,
+      10
+     ],
+     [
+      "move",
+      "right",
+      false,
+      10
+     ],
+     [
+      "move",
+      "right",
+      false,
+      10
+     ],
+     [
+      "move",
+      "left",
+      true,
+      10
+     ],
+     [
+      "move",
+      "wordleft",
+      false,
+      10
+     ],
+     [
+      "move",
+      "wordright",
+      false,
+      10
+     ],
+     [
+      "move",
+      "top",
+      false,
+      10
+     ],
+     [
+      "move",
+      "left",
+      false,
+      10
+     ],
+     [
+      "move",
+      "bottom",
+      true,
+      10
+     ],
+     [
+      "move",
+      "right",
+      false,
+      10
+     ],
+     [
+      "move",
+      "nope",
+      false,
+      10
+     ],
+     [
+      "place",
+      {
+       "line": 1,
+       "at": 3
+      },
+      false
+     ],
+     [
+      "place",
+      {
+       "line": 9,
+       "at": 99
+      },
+      false
+     ],
+     [
+      "goto",
+      2
+     ],
+     [
+      "goto",
+      0
+     ],
+     [
+      "goto",
+      99
+     ]
+    ]
+   ],
+   "out": [
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 6
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 1,
+      "at": 6
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 2,
+      "at": 6
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 1,
+      "at": 6
+     },
+     {
+      "line": 2,
+      "at": 6
+     },
+     false,
+     "\nabcdef",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     {
+      "line": 2,
+      "at": 6
+     },
+     false,
+     "  hello world\n中文\nabcdef",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 2,
+      "at": 8
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 2,
+      "at": 8
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 13
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 8
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 2
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 7
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 2
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 13
+     },
+     {
+      "line": 0,
+      "at": 0
+     },
+     false,
+     "  hello world",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 13
+     },
+     {
+      "line": 0,
+      "at": 0
+     },
+     false,
+     "  hello world",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 13
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 1,
+      "at": 0
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 13
+     },
+     {
+      "line": 1,
+      "at": 0
+     },
+     false,
+     "\n",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 8
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 13
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 2,
+      "at": 8
+     },
+     {
+      "line": 0,
+      "at": 0
+     },
+     false,
+     "  hello world\n中文\nabcdefgh",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 2,
+      "at": 8
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 2,
+      "at": 8
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 1,
+      "at": 3
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 2,
+      "at": 8
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 1,
+      "at": 0
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     false,
+     "",
+     "  "
+    ],
+    [
+     null,
+     [
+      "  hello world",
+      "中文",
+      "abcdefgh"
+     ],
+     {
+      "line": 2,
+      "at": 0
+     },
+     null,
+     false,
+     "",
+     "  "
+    ]
+   ]
+  },
+  {
+   "fn": "edit",
+   "args": [
+    "    if (x) {\n}\n",
+    [
+     [
+      "place",
+      {
+       "line": 0,
+       "at": 12
+      },
+      false
+     ],
+     [
+      "newline"
+     ],
+     [
+      "indentLines",
+      1
+     ],
+     [
+      "type",
+      "y",
+      ""
+     ],
+     [
+      "selectAll"
+     ],
+     [
+      "indentLines",
+      -1
+     ],
+     [
+      "place",
+      {
+       "line": 1,
+       "at": 0
+      },
+      false
+     ],
+     [
+      "erase",
+      -1,
+      false
+     ],
+     [
+      "place",
+      {
+       "line": 0,
+       "at": 13
+      },
+      false
+     ],
+     [
+      "erase",
+      -1,
+      true
+     ],
+     [
+      "indentLines",
+      1
+     ],
+     [
+      "place",
+      {
+       "line": 0,
+       "at": 2
+      },
+      false
+     ],
+     [
+      "indentLines",
+      1
+     ],
+     [
+      "selectAll"
+     ],
+     [
+      "indentLines",
+      1
+     ],
+     [
+      "indentLines",
+      -1
+     ],
+     [
+      "indentLines",
+      -1
+     ],
+     [
+      "undo"
+     ],
+     [
+      "undo"
+     ],
+     [
+      "redo"
+     ],
+     [
+      "changed"
+     ]
+    ]
+   ],
+   "out": [
+    [
+     null,
+     [
+      "    if (x) {",
+      "}"
+     ],
+     {
+      "line": 0,
+      "at": 12
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "    if (x) {",
+      "    ",
+      "}"
+     ],
+     {
+      "line": 1,
+      "at": 4
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "    if (x) {",
+      "        ",
+      "}"
+     ],
+     {
+      "line": 1,
+      "at": 8
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "    if (x) {",
+      "        y",
+      "}"
+     ],
+     {
+      "line": 1,
+      "at": 9
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     null,
+     [
+      "    if (x) {",
+      "        y",
+      "}"
+     ],
+     {
+      "line": 2,
+      "at": 1
+     },
+     {
+      "line": 0,
+      "at": 0
+     },
+     true,
+     "    if (x) {\n        y\n}",
+     "    "
+    ],
+    [
+     true,
+     [
+      "if (x) {",
+      "    y",
+      "}"
+     ],
+     {
+      "line": 2,
+      "at": 1
+     },
+     {
+      "line": 0,
+      "at": 0
+     },
+     true,
+     "if (x) {\n    y\n}",
+     "    "
+    ],
+    [
+     null,
+     [
+      "if (x) {",
+      "    y",
+      "}"
+     ],
+     {
+      "line": 1,
+      "at": 0
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "if (x) {    y",
+      "}"
+     ],
+     {
+      "line": 0,
+      "at": 8
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     null,
+     [
+      "if (x) {    y",
+      "}"
+     ],
+     {
+      "line": 0,
+      "at": 13
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "if (x) {    ",
+      "}"
+     ],
+     {
+      "line": 0,
+      "at": 12
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "if (x) {        ",
+      "}"
+     ],
+     {
+      "line": 0,
+      "at": 16
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     null,
+     [
+      "if (x) {        ",
+      "}"
+     ],
+     {
+      "line": 0,
+      "at": 2
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "if   (x) {        ",
+      "}"
+     ],
+     {
+      "line": 0,
+      "at": 4
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     null,
+     [
+      "if   (x) {        ",
+      "}"
+     ],
+     {
+      "line": 1,
+      "at": 1
+     },
+     {
+      "line": 0,
+      "at": 0
+     },
+     true,
+     "if   (x) {        \n}",
+     "    "
+    ],
+    [
+     true,
+     [
+      "    if   (x) {        ",
+      "    }"
+     ],
+     {
+      "line": 1,
+      "at": 5
+     },
+     {
+      "line": 0,
+      "at": 4
+     },
+     true,
+     "if   (x) {        \n    }",
+     "    "
+    ],
+    [
+     true,
+     [
+      "if   (x) {        ",
+      "}"
+     ],
+     {
+      "line": 1,
+      "at": 1
+     },
+     {
+      "line": 0,
+      "at": 0
+     },
+     true,
+     "if   (x) {        \n}",
+     "    "
+    ],
+    [
+     false,
+     [
+      "if   (x) {        ",
+      "}"
+     ],
+     {
+      "line": 1,
+      "at": 1
+     },
+     {
+      "line": 0,
+      "at": 0
+     },
+     true,
+     "if   (x) {        \n}",
+     "    "
+    ],
+    [
+     true,
+     [
+      "    if   (x) {        ",
+      "    }"
+     ],
+     {
+      "line": 1,
+      "at": 5
+     },
+     {
+      "line": 0,
+      "at": 4
+     },
+     true,
+     "if   (x) {        \n    }",
+     "    "
+    ],
+    [
+     true,
+     [
+      "if   (x) {        ",
+      "}"
+     ],
+     {
+      "line": 1,
+      "at": 1
+     },
+     {
+      "line": 0,
+      "at": 0
+     },
+     true,
+     "if   (x) {        \n}",
+     "    "
+    ],
+    [
+     true,
+     [
+      "    if   (x) {        ",
+      "    }"
+     ],
+     {
+      "line": 1,
+      "at": 5
+     },
+     {
+      "line": 0,
+      "at": 4
+     },
+     true,
+     "if   (x) {        \n    }",
+     "    "
+    ],
+    [
+     {
+      "kinds": [
+       "mod",
+       "mod"
+      ],
+      "deleted": []
+     },
+     [
+      "    if   (x) {        ",
+      "    }"
+     ],
+     {
+      "line": 1,
+      "at": 5
+     },
+     {
+      "line": 0,
+      "at": 4
+     },
+     true,
+     "if   (x) {        \n    }",
+     "    "
+    ]
+   ]
+  },
+  {
+   "fn": "edit",
+   "args": [
+    "a\n\tb\n\tc\n",
+    [
+     [
+      "place",
+      {
+       "line": 1,
+       "at": 1
+      },
+      false
+     ],
+     [
+      "indentLines",
+      1
+     ],
+     [
+      "newline"
+     ],
+     [
+      "place",
+      {
+       "line": 0,
+       "at": 0
+      },
+      false
+     ],
+     [
+      "place",
+      {
+       "line": 2,
+       "at": 0
+      },
+      true
+     ],
+     [
+      "indentLines",
+      1
+     ],
+     [
+      "indentLines",
+      -1
+     ],
+     [
+      "indentLines",
+      -1
+     ]
+    ]
+   ],
+   "out": [
+    [
+     null,
+     [
+      "a",
+      "\tb",
+      "\tc"
+     ],
+     {
+      "line": 1,
+      "at": 1
+     },
+     null,
+     false,
+     "",
+     "\t"
+    ],
+    [
+     true,
+     [
+      "a",
+      "\t\tb",
+      "\tc"
+     ],
+     {
+      "line": 1,
+      "at": 2
+     },
+     null,
+     true,
+     "",
+     "\t"
+    ],
+    [
+     true,
+     [
+      "a",
+      "\t\t",
+      "\t\tb",
+      "\tc"
+     ],
+     {
+      "line": 2,
+      "at": 2
+     },
+     null,
+     true,
+     "",
+     "\t"
+    ],
+    [
+     null,
+     [
+      "a",
+      "\t\t",
+      "\t\tb",
+      "\tc"
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     true,
+     "",
+     "\t"
+    ],
+    [
+     null,
+     [
+      "a",
+      "\t\t",
+      "\t\tb",
+      "\tc"
+     ],
+     {
+      "line": 2,
+      "at": 0
+     },
+     {
+      "line": 0,
+      "at": 0
+     },
+     true,
+     "a\n\t\t\n",
+     "\t"
+    ],
+    [
+     true,
+     [
+      "\ta",
+      "\t\t\t",
+      "\t\tb",
+      "\tc"
+     ],
+     {
+      "line": 2,
+      "at": 0
+     },
+     {
+      "line": 0,
+      "at": 1
+     },
+     true,
+     "a\n\t\t\t\n",
+     "\t"
+    ],
+    [
+     true,
+     [
+      "a",
+      "\t\t",
+      "\t\tb",
+      "\tc"
+     ],
+     {
+      "line": 2,
+      "at": 0
+     },
+     {
+      "line": 0,
+      "at": 0
+     },
+     true,
+     "a\n\t\t\n",
+     "\t"
+    ],
+    [
+     true,
+     [
+      "a",
+      "\t",
+      "\t\tb",
+      "\tc"
+     ],
+     {
+      "line": 2,
+      "at": 0
+     },
+     {
+      "line": 0,
+      "at": 0
+     },
+     true,
+     "a\n\t\n",
+     "\t"
+    ]
+   ]
+  },
+  {
+   "fn": "edit",
+   "args": [
+    "abcdef",
+    [
+     [
+      "place",
+      {
+       "line": 0,
+       "at": 3
+      },
+      false
+     ],
+     [
+      "place",
+      {
+       "line": 0,
+       "at": 4
+      },
+      true
+     ],
+     [
+      "place",
+      {
+       "line": 0,
+       "at": 3
+      },
+      true
+     ],
+     [
+      "erase",
+      -1,
+      false
+     ],
+     [
+      "erase",
+      -1,
+      false
+     ],
+     [
+      "erase",
+      1,
+      false
+     ],
+     [
+      "erase",
+      1,
+      true
+     ],
+     [
+      "erase",
+      1,
+      false
+     ],
+     [
+      "erase",
+      -1,
+      true
+     ],
+     [
+      "erase",
+      -1,
+      false
+     ]
+    ]
+   ],
+   "out": [
+    [
+     null,
+     [
+      "abcdef"
+     ],
+     {
+      "line": 0,
+      "at": 3
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     null,
+     [
+      "abcdef"
+     ],
+     {
+      "line": 0,
+      "at": 4
+     },
+     {
+      "line": 0,
+      "at": 3
+     },
+     false,
+     "d",
+     "    "
+    ],
+    [
+     null,
+     [
+      "abcdef"
+     ],
+     {
+      "line": 0,
+      "at": 3
+     },
+     {
+      "line": 0,
+      "at": 3
+     },
+     false,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "abdef"
+     ],
+     {
+      "line": 0,
+      "at": 2
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "adef"
+     ],
+     {
+      "line": 0,
+      "at": 1
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "aef"
+     ],
+     {
+      "line": 0,
+      "at": 1
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "a"
+     ],
+     {
+      "line": 0,
+      "at": 1
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     false,
+     [
+      "a"
+     ],
+     {
+      "line": 0,
+      "at": 1
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ""
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     false,
+     [
+      ""
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     true,
+     "",
+     "    "
+    ]
+   ]
+  },
+  {
+   "fn": "edit",
+   "args": [
+    "a\nb",
+    [
+     [
+      "place",
+      {
+       "line": 1,
+       "at": 0
+      },
+      false
+     ],
+     [
+      "place",
+      {
+       "line": 1,
+       "at": 0
+      },
+      true
+     ],
+     [
+      "erase",
+      -1,
+      false
+     ],
+     [
+      "erase",
+      -1,
+      false
+     ]
+    ]
+   ],
+   "out": [
+    [
+     null,
+     [
+      "a",
+      "b"
+     ],
+     {
+      "line": 1,
+      "at": 0
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     null,
+     [
+      "a",
+      "b"
+     ],
+     {
+      "line": 1,
+      "at": 0
+     },
+     {
+      "line": 1,
+      "at": 0
+     },
+     false,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "ab"
+     ],
+     {
+      "line": 0,
+      "at": 1
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "b"
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     true,
+     "",
+     "    "
+    ]
+   ]
+  },
+  {
+   "fn": "edit",
+   "args": [
+    "",
+    [
+     [
+      "type",
+      "h",
+      "type"
+     ],
+     [
+      "type",
+      "e",
+      "type"
+     ],
+     [
+      "type",
+      "l",
+      "type"
+     ],
+     [
+      "type",
+      "l",
+      "type"
+     ],
+     [
+      "type",
+      "o",
+      "type"
+     ],
+     [
+      "type",
+      " ",
+      "type"
+     ],
+     [
+      "type",
+      "w",
+      "type"
+     ],
+     [
+      "type",
+      "o",
+      "type"
+     ],
+     [
+      "type",
+      "r",
+      "type"
+     ],
+     [
+      "type",
+      "l",
+      "type"
+     ],
+     [
+      "type",
+      "d",
+      "type"
+     ],
+     [
+      "undo"
+     ],
+     [
+      "undo"
+     ],
+     [
+      "undo"
+     ],
+     [
+      "redo"
+     ],
+     [
+      "redo"
+     ],
+     [
+      "redo"
+     ],
+     [
+      "move",
+      "home",
+      false,
+      10
+     ],
+     [
+      "type",
+      ">",
+      "type"
+     ],
+     [
+      "move",
+      "end",
+      false,
+      10
+     ],
+     [
+      "type",
+      "!",
+      "type"
+     ],
+     [
+      "undo"
+     ],
+     [
+      "markSaved"
+     ],
+     [
+      "type",
+      "?",
+      "type"
+     ],
+     [
+      "undo"
+     ],
+     [
+      "erase",
+      -1,
+      false
+     ],
+     [
+      "erase",
+      -1,
+      false
+     ],
+     [
+      "undo"
+     ],
+     [
+      "redo"
+     ],
+     [
+      "undo"
+     ],
+     [
+      "type",
+      "a",
+      "type"
+     ],
+     [
+      "type",
+      " ",
+      "type"
+     ],
+     [
+      "type",
+      " ",
+      "type"
+     ],
+     [
+      "type",
+      "b",
+      "type"
+     ],
+     [
+      "undo"
+     ],
+     [
+      "undo"
+     ],
+     [
+      "undo"
+     ]
+    ]
+   ],
+   "out": [
+    [
+     true,
+     [
+      "h"
+     ],
+     {
+      "line": 0,
+      "at": 1
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "he"
+     ],
+     {
+      "line": 0,
+      "at": 2
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "hel"
+     ],
+     {
+      "line": 0,
+      "at": 3
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "hell"
+     ],
+     {
+      "line": 0,
+      "at": 4
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "hello"
+     ],
+     {
+      "line": 0,
+      "at": 5
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "hello "
+     ],
+     {
+      "line": 0,
+      "at": 6
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "hello w"
+     ],
+     {
+      "line": 0,
+      "at": 7
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "hello wo"
+     ],
+     {
+      "line": 0,
+      "at": 8
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "hello wor"
+     ],
+     {
+      "line": 0,
+      "at": 9
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "hello worl"
+     ],
+     {
+      "line": 0,
+      "at": 10
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "hello world"
+     ],
+     {
+      "line": 0,
+      "at": 11
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "hello"
+     ],
+     {
+      "line": 0,
+      "at": 5
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ""
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     false,
+     [
+      ""
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "hello"
+     ],
+     {
+      "line": 0,
+      "at": 5
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "hello world"
+     ],
+     {
+      "line": 0,
+      "at": 11
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     false,
+     [
+      "hello world"
+     ],
+     {
+      "line": 0,
+      "at": 11
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     null,
+     [
+      "hello world"
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ">hello world"
+     ],
+     {
+      "line": 0,
+      "at": 1
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     null,
+     [
+      ">hello world"
+     ],
+     {
+      "line": 0,
+      "at": 12
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ">hello world!"
+     ],
+     {
+      "line": 0,
+      "at": 13
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ">hello world"
+     ],
+     {
+      "line": 0,
+      "at": 12
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     null,
+     [
+      ">hello world"
+     ],
+     {
+      "line": 0,
+      "at": 12
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ">hello world?"
+     ],
+     {
+      "line": 0,
+      "at": 13
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ">hello world"
+     ],
+     {
+      "line": 0,
+      "at": 12
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ">hello worl"
+     ],
+     {
+      "line": 0,
+      "at": 11
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ">hello wor"
+     ],
+     {
+      "line": 0,
+      "at": 10
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ">hello world"
+     ],
+     {
+      "line": 0,
+      "at": 12
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ">hello wor"
+     ],
+     {
+      "line": 0,
+      "at": 10
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ">hello world"
+     ],
+     {
+      "line": 0,
+      "at": 12
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ">hello worlda"
+     ],
+     {
+      "line": 0,
+      "at": 13
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ">hello worlda "
+     ],
+     {
+      "line": 0,
+      "at": 14
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ">hello worlda  "
+     ],
+     {
+      "line": 0,
+      "at": 15
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ">hello worlda  b"
+     ],
+     {
+      "line": 0,
+      "at": 16
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ">hello worlda"
+     ],
+     {
+      "line": 0,
+      "at": 13
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      ">hello world"
+     ],
+     {
+      "line": 0,
+      "at": 12
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "hello world"
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     true,
+     "",
+     "    "
+    ]
+   ]
+  },
+  {
+   "fn": "edit",
+   "args": [
+    "ab",
+    [
+     [
+      "place",
+      {
+       "line": 0,
+       "at": 1
+      },
+      false
+     ],
+     [
+      "type",
+      "x\ty\n\tz",
+      ""
+     ],
+     [
+      "undo"
+     ],
+     [
+      "type",
+      "中\n",
+      "type"
+     ],
+     [
+      "type",
+      "é",
+      "type"
+     ],
+     [
+      "undo"
+     ]
+    ]
+   ],
+   "out": [
+    [
+     null,
+     [
+      "ab"
+     ],
+     {
+      "line": 0,
+      "at": 1
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "ax\ty",
+      "\tzb"
+     ],
+     {
+      "line": 1,
+      "at": 2
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "ab"
+     ],
+     {
+      "line": 0,
+      "at": 1
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "a中",
+      "b"
+     ],
+     {
+      "line": 1,
+      "at": 0
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "a中",
+      "éb"
+     ],
+     {
+      "line": 1,
+      "at": 2
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "ab"
+     ],
+     {
+      "line": 0,
+      "at": 1
+     },
+     null,
+     false,
+     "",
+     "    "
+    ]
+   ]
+  },
+  {
+   "fn": "edit",
+   "args": [
+    "foo Foo\nbar foo",
+    [
+     [
+      "place",
+      {
+       "line": 0,
+       "at": 1
+      },
+      false
+     ],
+     [
+      "find",
+      "foo",
+      1,
+      false
+     ],
+     [
+      "find",
+      "foo",
+      1,
+      false
+     ],
+     [
+      "find",
+      "foo",
+      1,
+      false
+     ],
+     [
+      "find",
+      "foo",
+      -1,
+      false
+     ],
+     [
+      "find",
+      "foo",
+      1,
+      true
+     ],
+     [
+      "find",
+      "nope",
+      1,
+      false
+     ],
+     [
+      "replaceOne",
+      "foo",
+      "qux"
+     ],
+     [
+      "replaceOne",
+      "foo",
+      "qux"
+     ],
+     [
+      "replaceAll",
+      "foo",
+      "x"
+     ],
+     [
+      "replaceAll",
+      "nope",
+      "x"
+     ],
+     [
+      "undo"
+     ],
+     [
+      "changed"
+     ]
+    ]
+   ],
+   "out": [
+    [
+     null,
+     [
+      "foo Foo",
+      "bar foo"
+     ],
+     {
+      "line": 0,
+      "at": 1
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     {
+      "line": 0,
+      "a": 4,
+      "b": 7
+     },
+     [
+      "foo Foo",
+      "bar foo"
+     ],
+     {
+      "line": 0,
+      "at": 7
+     },
+     {
+      "line": 0,
+      "at": 4
+     },
+     false,
+     "Foo",
+     "    "
+    ],
+    [
+     {
+      "line": 1,
+      "a": 4,
+      "b": 7
+     },
+     [
+      "foo Foo",
+      "bar foo"
+     ],
+     {
+      "line": 1,
+      "at": 7
+     },
+     {
+      "line": 1,
+      "at": 4
+     },
+     false,
+     "foo",
+     "    "
+    ],
+    [
+     {
+      "line": 0,
+      "a": 0,
+      "b": 3
+     },
+     [
+      "foo Foo",
+      "bar foo"
+     ],
+     {
+      "line": 0,
+      "at": 3
+     },
+     {
+      "line": 0,
+      "at": 0
+     },
+     false,
+     "foo",
+     "    "
+    ],
+    [
+     {
+      "line": 1,
+      "a": 4,
+      "b": 7
+     },
+     [
+      "foo Foo",
+      "bar foo"
+     ],
+     {
+      "line": 1,
+      "at": 7
+     },
+     {
+      "line": 1,
+      "at": 4
+     },
+     false,
+     "foo",
+     "    "
+    ],
+    [
+     {
+      "line": 1,
+      "a": 4,
+      "b": 7
+     },
+     [
+      "foo Foo",
+      "bar foo"
+     ],
+     {
+      "line": 1,
+      "at": 7
+     },
+     {
+      "line": 1,
+      "at": 4
+     },
+     false,
+     "foo",
+     "    "
+    ],
+    [
+     null,
+     [
+      "foo Foo",
+      "bar foo"
+     ],
+     {
+      "line": 1,
+      "at": 7
+     },
+     {
+      "line": 1,
+      "at": 4
+     },
+     false,
+     "foo",
+     "    "
+    ],
+    [
+     true,
+     [
+      "foo Foo",
+      "bar qux"
+     ],
+     {
+      "line": 0,
+      "at": 3
+     },
+     {
+      "line": 0,
+      "at": 0
+     },
+     true,
+     "foo",
+     "    "
+    ],
+    [
+     true,
+     [
+      "qux Foo",
+      "bar qux"
+     ],
+     {
+      "line": 0,
+      "at": 7
+     },
+     {
+      "line": 0,
+      "at": 4
+     },
+     true,
+     "Foo",
+     "    "
+    ],
+    [
+     1,
+     [
+      "qux x",
+      "bar qux"
+     ],
+     {
+      "line": 0,
+      "at": 5
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     0,
+     [
+      "qux x",
+      "bar qux"
+     ],
+     {
+      "line": 0,
+      "at": 5
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "qux Foo",
+      "bar qux"
+     ],
+     {
+      "line": 0,
+      "at": 7
+     },
+     {
+      "line": 0,
+      "at": 4
+     },
+     true,
+     "Foo",
+     "    "
+    ],
+    [
+     {
+      "kinds": [
+       "mod",
+       "mod"
+      ],
+      "deleted": []
+     },
+     [
+      "qux Foo",
+      "bar qux"
+     ],
+     {
+      "line": 0,
+      "at": 7
+     },
+     {
+      "line": 0,
+      "at": 4
+     },
+     true,
+     "Foo",
+     "    "
+    ]
+   ]
+  },
+  {
+   "fn": "edit",
+   "args": [
+    "été 中文 🇫🇷x\nl2",
+    [
+     [
+      "place",
+      {
+       "line": 0,
+       "at": 1
+      },
+      false
+     ],
+     [
+      "move",
+      "right",
+      false,
+      10
+     ],
+     [
+      "move",
+      "right",
+      false,
+      10
+     ],
+     [
+      "move",
+      "down",
+      false,
+      10
+     ],
+     [
+      "move",
+      "up",
+      false,
+      10
+     ],
+     [
+      "selectWord",
+      {
+       "line": 0,
+       "at": 0
+      }
+     ],
+     [
+      "selectWord",
+      {
+       "line": 0,
+       "at": 7
+      }
+     ],
+     [
+      "selectWord",
+      {
+       "line": 0,
+       "at": 10
+      }
+     ],
+     [
+      "selectWord",
+      {
+       "line": 0,
+       "at": 18
+      }
+     ],
+     [
+      "selectWord",
+      {
+       "line": 0,
+       "at": 99
+      }
+     ],
+     [
+      "selectLine",
+      {
+       "line": 0,
+       "at": 3
+      }
+     ],
+     [
+      "selectLine",
+      {
+       "line": 1,
+       "at": 0
+      }
+     ],
+     [
+      "place",
+      {
+       "line": 0,
+       "at": 22
+      },
+      false
+     ],
+     [
+      "erase",
+      -1,
+      false
+     ],
+     [
+      "erase",
+      -1,
+      true
+     ],
+     [
+      "find",
+      "É",
+      1,
+      false
+     ],
+     [
+      "find",
+      "é",
+      1,
+      false
+     ]
+    ]
+   ],
+   "out": [
+    [
+     null,
+     [
+      "été 中文 🇫🇷x",
+      "l2"
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     null,
+     [
+      "été 中文 🇫🇷x",
+      "l2"
+     ],
+     {
+      "line": 0,
+      "at": 3
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     null,
+     [
+      "été 中文 🇫🇷x",
+      "l2"
+     ],
+     {
+      "line": 0,
+      "at": 4
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     null,
+     [
+      "été 中文 🇫🇷x",
+      "l2"
+     ],
+     {
+      "line": 1,
+      "at": 2
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     null,
+     [
+      "été 中文 🇫🇷x",
+      "l2"
+     ],
+     {
+      "line": 0,
+      "at": 4
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     null,
+     [
+      "été 中文 🇫🇷x",
+      "l2"
+     ],
+     {
+      "line": 0,
+      "at": 6
+     },
+     {
+      "line": 0,
+      "at": 0
+     },
+     false,
+     "été",
+     "    "
+    ],
+    [
+     null,
+     [
+      "été 中文 🇫🇷x",
+      "l2"
+     ],
+     {
+      "line": 0,
+      "at": 13
+     },
+     {
+      "line": 0,
+      "at": 7
+     },
+     false,
+     "中文",
+     "    "
+    ],
+    [
+     null,
+     [
+      "été 中文 🇫🇷x",
+      "l2"
+     ],
+     {
+      "line": 0,
+      "at": 13
+     },
+     {
+      "line": 0,
+      "at": 7
+     },
+     false,
+     "中文",
+     "    "
+    ],
+    [
+     null,
+     [
+      "été 中文 🇫🇷x",
+      "l2"
+     ],
+     {
+      "line": 0,
+      "at": 22
+     },
+     {
+      "line": 0,
+      "at": 14
+     },
+     false,
+     "🇫🇷",
+     "    "
+    ],
+    [
+     null,
+     [
+      "été 中文 🇫🇷x",
+      "l2"
+     ],
+     {
+      "line": 0,
+      "at": 23
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     null,
+     [
+      "été 中文 🇫🇷x",
+      "l2"
+     ],
+     {
+      "line": 1,
+      "at": 0
+     },
+     {
+      "line": 0,
+      "at": 0
+     },
+     false,
+     "été 中文 🇫🇷x\n",
+     "    "
+    ],
+    [
+     null,
+     [
+      "été 中文 🇫🇷x",
+      "l2"
+     ],
+     {
+      "line": 1,
+      "at": 2
+     },
+     {
+      "line": 1,
+      "at": 0
+     },
+     false,
+     "l2",
+     "    "
+    ],
+    [
+     null,
+     [
+      "été 中文 🇫🇷x",
+      "l2"
+     ],
+     {
+      "line": 0,
+      "at": 22
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "été 中文 x",
+      "l2"
+     ],
+     {
+      "line": 0,
+      "at": 14
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "été x",
+      "l2"
+     ],
+     {
+      "line": 0,
+      "at": 7
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     null,
+     [
+      "été x",
+      "l2"
+     ],
+     {
+      "line": 0,
+      "at": 7
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     {
+      "line": 0,
+      "a": 4,
+      "b": 6
+     },
+     [
+      "été x",
+      "l2"
+     ],
+     {
+      "line": 0,
+      "at": 6
+     },
+     {
+      "line": 0,
+      "at": 4
+     },
+     true,
+     "é",
+     "    "
+    ]
+   ]
+  },
+  {
+   "fn": "edit",
+   "args": [
+    "a\nb\nc",
+    [
+     [
+      "place",
+      {
+       "line": 2,
+       "at": 1
+      },
+      false
+     ],
+     [
+      "type",
+      "X",
+      ""
+     ],
+     [
+      "reset",
+      "a\nB\n"
+     ],
+     [
+      "changed"
+     ],
+     [
+      "type",
+      "z",
+      ""
+     ]
+    ]
+   ],
+   "out": [
+    [
+     null,
+     [
+      "a",
+      "b",
+      "c"
+     ],
+     {
+      "line": 2,
+      "at": 1
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "a",
+      "b",
+      "cX"
+     ],
+     {
+      "line": 2,
+      "at": 2
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     null,
+     [
+      "a",
+      "B"
+     ],
+     {
+      "line": 1,
+      "at": 1
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     {
+      "kinds": [
+       "",
+       ""
+      ],
+      "deleted": []
+     },
+     [
+      "a",
+      "B"
+     ],
+     {
+      "line": 1,
+      "at": 1
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "a",
+      "Bz"
+     ],
+     {
+      "line": 1,
+      "at": 2
+     },
+     null,
+     true,
+     "",
+     "    "
+    ]
+   ]
+  },
+  {
+   "fn": "edit",
+   "args": [
+    "",
+    [
+     [
+      "erase",
+      -1,
+      false
+     ],
+     [
+      "erase",
+      1,
+      false
+     ],
+     [
+      "undo"
+     ],
+     [
+      "redo"
+     ],
+     [
+      "indentLines",
+      1
+     ],
+     [
+      "changed"
+     ]
+    ]
+   ],
+   "out": [
+    [
+     false,
+     [
+      ""
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     false,
+     [
+      ""
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     false,
+     [
+      ""
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     false,
+     [
+      ""
+     ],
+     {
+      "line": 0,
+      "at": 0
+     },
+     null,
+     false,
+     "",
+     "    "
+    ],
+    [
+     true,
+     [
+      "    "
+     ],
+     {
+      "line": 0,
+      "at": 4
+     },
+     null,
+     true,
+     "",
+     "    "
+    ],
+    [
+     {
+      "kinds": [
+       "mod"
+      ],
+      "deleted": []
+     },
+     [
+      "    "
+     ],
+     {
+      "line": 0,
+      "at": 4
+     },
+     null,
+     true,
+     "",
+     "    "
+    ]
+   ]
+  }
+ ]
+}
