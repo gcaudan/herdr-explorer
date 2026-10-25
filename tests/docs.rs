@@ -46,15 +46,23 @@ fn scheme(url: &str) -> bool {
     url.split_once(':').is_some_and(|(s, _)| !s.is_empty() && s.bytes().all(|b| b.is_ascii_lowercase()))
 }
 
+/// The Markdown files of a folder and of its subfolders.
+fn markdown_under(dir: &Path, out: &mut Vec<PathBuf>) {
+    for p in std::fs::read_dir(dir).unwrap().filter_map(|e| e.ok().map(|e| e.path())) {
+        if p.is_dir() {
+            markdown_under(&p, out);
+        } else if p.extension().is_some_and(|x| x == "md") {
+            out.push(p);
+        }
+    }
+}
+
 #[test]
 fn the_links_of_the_docs_point_at_files_and_anchors_that_exist() {
     let root = root();
     let mut docs: Vec<PathBuf> = ["README.md", "SECURITY.md", "CONTRIBUTING.md"].iter().map(|d| root.join(d)).collect();
-    let mut more: Vec<PathBuf> = std::fs::read_dir(root.join("docs"))
-        .unwrap()
-        .filter_map(|e| e.ok().map(|e| e.path()))
-        .filter(|p| p.extension().is_some_and(|x| x == "md"))
-        .collect();
+    let mut more = Vec::new();
+    markdown_under(&root.join("docs"), &mut more);
     more.sort();
     docs.extend(more);
     let mut broken = Vec::new();
