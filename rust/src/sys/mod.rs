@@ -16,7 +16,7 @@ mod windows;
 #[cfg(windows)]
 use windows as imp;
 #[cfg(windows)]
-pub use windows::{file_id, hostname, links};
+pub use windows::{file_id, hostname, links, wait_process};
 
 #[cfg(target_os = "linux")]
 pub use unix::pty;

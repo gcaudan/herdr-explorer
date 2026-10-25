@@ -47,12 +47,21 @@ pub fn launch() -> Option<i32> {
     Some(launcher(&exe, &args))
 }
 
-/// The launcher gone (killed), the child goes too, instead of running on in a terminal that nobody shows. Unix only:
-/// the parent's end is seen by the parent's id changing, from the launcher's id it was given (EXPLORER_LAUNCHER), as
-/// it may be gone already, else from the parent it has at the start (the node shim).
+/// The launcher gone (killed), the child goes too, instead of running on in a terminal that nobody shows. On Unix, the
+/// parent's end is seen by the parent's id changing, from the launcher's id it was given (EXPLORER_LAUNCHER), as it
+/// may be gone already, else from the parent it has at the start (the node shim). On Windows, the launcher's process
+/// is waited for, by the id it was given; one that cannot be opened (gone already, or with other rights) is left
+/// unwatched rather than ending a pane that may well have its launcher.
 fn watch_parent(launcher: Option<u32>) {
-    #[cfg(not(unix))]
-    let _ = launcher;
+    #[cfg(windows)]
+    if let Some(pid) = launcher {
+        std::thread::spawn(move || {
+            if sys::wait_process(pid) {
+                exec::exit_hooks();
+                std::process::exit(0);
+            }
+        });
+    }
     #[cfg(unix)]
     {
         let parent = launcher.unwrap_or_else(sys::getppid);

@@ -265,7 +265,7 @@ or `src/preview.js` (or the binary itself, started without one), stays as the la
 child process, with `EXPLORER_IPC_FILE` naming the file where the child writes its messages, a line of JSON each.
 
 - The launcher keeps the terminal in raw mode between children, so a `ctrl+c` typed during a restart
-  cannot kill the pane, and forwards `SIGTERM`, `SIGHUP` and `SIGINT` to the child. On Linux and macOS, if it is killed, the child
+  cannot kill the pane, and forwards `SIGTERM`, `SIGHUP` and `SIGINT` to the child. If it is killed, the child
   exits too.
 - `update::VersionWatch` polls the `version` line of `herdr-plugin.toml` every 2 s. When it differs from the
   version the process started with, the pane waits 2 s, so that an update has written every file. Then

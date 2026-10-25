@@ -74,6 +74,23 @@ unsafe extern "system" {
     fn SetConsoleCtrlHandler(handler: Option<unsafe extern "system" fn(u32) -> Bool>, add: Bool) -> Bool;
     fn GetComputerNameExW(kind: u32, buf: *mut u16, len: *mut u32) -> Bool;
     fn GetFileInformationByHandle(h: Handle, info: *mut FileInfo) -> Bool;
+    fn OpenProcess(access: u32, inherit: Bool, pid: u32) -> Handle;
+    fn CloseHandle(h: Handle) -> Bool;
+}
+
+/// Waits for the process `pid` to end: false at once when it cannot be opened (gone already, or not this user's).
+pub fn wait_process(pid: u32) -> bool {
+    const SYNCHRONIZE: u32 = 0x0010_0000;
+    // SAFETY: a handle opened here, waited on, then closed; null when the process cannot be opened.
+    unsafe {
+        let h = OpenProcess(SYNCHRONIZE, 0, pid);
+        if h.is_null() {
+            return false;
+        }
+        WaitForSingleObject(h, INFINITE);
+        CloseHandle(h);
+    }
+    true
 }
 
 /// BY_HANDLE_FILE_INFORMATION: attributes, three times, the volume, the size, the link count, the file's index.
