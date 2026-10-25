@@ -1,0 +1,1328 @@
+{
+ "module": "scm/parse",
+ "cases": [
+  {
+   "fn": "parseRepo",
+   "args": [
+    "/repo\n/repo/.git\n.git\n",
+    "/repo"
+   ],
+   "out": {
+    "top": "/repo",
+    "gitdir": "/repo/.git",
+    "common": "/repo/.git"
+   }
+  },
+  {
+   "fn": "parseRepo",
+   "args": [
+    "/a/b\r\n/a/b/.git\r\n../../x/.git\r\n",
+    "/a/b/c/d"
+   ],
+   "out": {
+    "top": "/a/b",
+    "gitdir": "/a/b/.git",
+    "common": "/a/b/x/.git"
+   }
+  },
+  {
+   "fn": "parseRepo",
+   "args": [
+    "/w\n/r/.git/worktrees/w\n/r/.git\n",
+    "/w"
+   ],
+   "out": {
+    "top": "/w",
+    "gitdir": "/r/.git/worktrees/w",
+    "common": "/r/.git"
+   }
+  },
+  {
+   "fn": "parseRepo",
+   "args": [
+    "",
+    "/repo"
+   ],
+   "out": null
+  },
+  {
+   "fn": "parseRepo",
+   "args": [
+    "\n/x\n",
+    "/repo"
+   ],
+   "out": null
+  },
+  {
+   "fn": "parseRepo",
+   "args": [
+    "/a/../b/\n/b/.git/\n./.git\n",
+    "/b"
+   ],
+   "out": {
+    "top": "/b",
+    "gitdir": "/b/.git",
+    "common": "/b/.git"
+   }
+  },
+  {
+   "fn": "parseStatus",
+   "args": [
+    "# branch.oid (initial)\u0000# branch.head main\u0000"
+   ],
+   "out": {
+    "branch": "main",
+    "oid": "(initial)",
+    "upstream": "",
+    "ahead": 0,
+    "behind": 0,
+    "conflicts": [],
+    "staged": [],
+    "changes": [],
+    "detached": false,
+    "hasHead": false
+   }
+  },
+  {
+   "fn": "parseStatus",
+   "args": [
+    "# branch.oid 5de5c897f4428a5692f5231cb6fc7d24c977d804\u0000# branch.head (detached)\u0000"
+   ],
+   "out": {
+    "branch": "(detached)",
+    "oid": "5de5c897f4428a5692f5231cb6fc7d24c977d804",
+    "upstream": "",
+    "ahead": 0,
+    "behind": 0,
+    "conflicts": [],
+    "staged": [],
+    "changes": [],
+    "detached": true,
+    "hasHead": true
+   }
+  },
+  {
+   "fn": "parseStatus",
+   "args": [
+    "# branch.oid 5de5c897f4428a5692f5231cb6fc7d24c977d804\u0000# branch.head feat\u0000# branch.upstream origin/feat\u0000# branch.ab +12 -0\u0000"
+   ],
+   "out": {
+    "branch": "feat",
+    "oid": "5de5c897f4428a5692f5231cb6fc7d24c977d804",
+    "upstream": "origin/feat",
+    "ahead": 12,
+    "behind": 0,
+    "conflicts": [],
+    "staged": [],
+    "changes": [],
+    "detached": false,
+    "hasHead": true
+   }
+  },
+  {
+   "fn": "parseStatus",
+   "args": [
+    "# branch.ab +x -1\u0000# branch.ab -1 +2\u0000# branch.ab ++3 -4\u0000"
+   ],
+   "out": {
+    "branch": "",
+    "oid": "",
+    "upstream": "",
+    "ahead": 3,
+    "behind": 4,
+    "conflicts": [],
+    "staged": [],
+    "changes": [],
+    "detached": false,
+    "hasHead": true
+   }
+  },
+  {
+   "fn": "parseStatus",
+   "args": [
+    "1 MM N... 100644 100644 100644 5de5c897f4428a5692f5231cb6fc7d24c977d804 5de5c897f4428a5692f5231cb6fc7d24c977d804 file10.txt\u00001 M. N... 100644 100644 100644 5de5c897f4428a5692f5231cb6fc7d24c977d804 5de5c897f4428a5692f5231cb6fc7d24c977d804 file2.txt\u00001 .M N... 100644 100644 100644 5de5c897f4428a5692f5231cb6fc7d24c977d804 5de5c897f4428a5692f5231cb6fc7d24c977d804 File1.txt\u00001 A. N... 000000 100644 100644 0000000000000000000000000000000000000000 5de5c897f4428a5692f5231cb6fc7d24c977d804 b c  d.txt\u00001 D. N... 100644 000000 000000 5de5c897f4428a5692f5231cb6fc7d24c977d804 0000000000000000000000000000000000000000 gone.txt\u00001 .T N... 100644 100644 120000 5de5c897f4428a5692f5231cb6fc7d24c977d804 5de5c897f4428a5692f5231cb6fc7d24c977d804 link\u00001 AD N... 000000 100644 000000 0000000000000000000000000000000000000000 5de5c897f4428a5692f5231cb6fc7d24c977d804 added then deleted\u00001 X. N... 100644 100644 100644 5de5c897f4428a5692f5231cb6fc7d24c977d804 5de5c897f4428a5692f5231cb6fc7d24c977d804 unknown.txt\u0000"
+   ],
+   "out": {
+    "branch": "",
+    "oid": "",
+    "upstream": "",
+    "ahead": 0,
+    "behind": 0,
+    "conflicts": [],
+    "staged": [
+     {
+      "path": "added then deleted",
+      "orig": null,
+      "code": "A",
+      "sec": "staged"
+     },
+     {
+      "path": "b c  d.txt",
+      "orig": null,
+      "code": "A",
+      "sec": "staged"
+     },
+     {
+      "path": "file2.txt",
+      "orig": null,
+      "code": "M",
+      "sec": "staged"
+     },
+     {
+      "path": "file10.txt",
+      "orig": null,
+      "code": "M",
+      "sec": "staged"
+     },
+     {
+      "path": "gone.txt",
+      "orig": null,
+      "code": "D",
+      "sec": "staged"
+     },
+     {
+      "path": "unknown.txt",
+      "orig": null,
+      "code": "M",
+      "sec": "staged"
+     }
+    ],
+    "changes": [
+     {
+      "path": "added then deleted",
+      "code": "D",
+      "sec": "changes"
+     },
+     {
+      "path": "File1.txt",
+      "code": "M",
+      "sec": "changes"
+     },
+     {
+      "path": "file10.txt",
+      "code": "M",
+      "sec": "changes"
+     },
+     {
+      "path": "link",
+      "code": "M",
+      "sec": "changes"
+     }
+    ],
+    "detached": false,
+    "hasHead": true
+   }
+  },
+  {
+   "fn": "parseStatus",
+   "args": [
+    "2 R. N... 100644 100644 100644 5de5c897f4428a5692f5231cb6fc7d24c977d804 5de5c897f4428a5692f5231cb6fc7d24c977d804 R100 new name.js\u0000old name.js\u00002 RM N... 100644 100644 100644 5de5c897f4428a5692f5231cb6fc7d24c977d804 5de5c897f4428a5692f5231cb6fc7d24c977d804 R80 moved.js\u0000was.js\u00002 .R N... 100644 100644 100644 5de5c897f4428a5692f5231cb6fc7d24c977d804 5de5c897f4428a5692f5231cb6fc7d24c977d804 R100 y.js\u0000x.js\u00002 C. N... 100644 100644 100644 5de5c897f4428a5692f5231cb6fc7d24c977d804 5de5c897f4428a5692f5231cb6fc7d24c977d804 C75 copy.js\u0000orig.js\u0000"
+   ],
+   "out": {
+    "branch": "",
+    "oid": "",
+    "upstream": "",
+    "ahead": 0,
+    "behind": 0,
+    "conflicts": [],
+    "staged": [
+     {
+      "path": "copy.js",
+      "orig": null,
+      "code": "A",
+      "sec": "staged"
+     },
+     {
+      "path": "moved.js",
+      "orig": "was.js",
+      "code": "R",
+      "sec": "staged"
+     },
+     {
+      "path": "new name.js",
+      "orig": "old name.js",
+      "code": "R",
+      "sec": "staged"
+     }
+    ],
+    "changes": [
+     {
+      "path": "moved.js",
+      "code": "M",
+      "sec": "changes"
+     },
+     {
+      "path": "y.js",
+      "code": "R",
+      "sec": "changes"
+     }
+    ],
+    "detached": false,
+    "hasHead": true
+   }
+  },
+  {
+   "fn": "parseStatus",
+   "args": [
+    "u UU N... 100644 100644 100644 100644 5de5c897f4428a5692f5231cb6fc7d24c977d804 5de5c897f4428a5692f5231cb6fc7d24c977d804 5de5c897f4428a5692f5231cb6fc7d24c977d804 b.txt\u0000u AA N... 000000 100644 100644 100644 0000000000000000000000000000000000000000 5de5c897f4428a5692f5231cb6fc7d24c977d804 5de5c897f4428a5692f5231cb6fc7d24c977d804 a.txt\u0000u DD N... 100644 000000 000000 000000 5de5c897f4428a5692f5231cb6fc7d24c977d804 0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 dd.txt\u0000u AU N... 000000 100644 000000 100644 0000000000000000000000000000000000000000 5de5c897f4428a5692f5231cb6fc7d24c977d804 0000000000000000000000000000000000000000 au.txt\u0000u UD N... 100644 100644 000000 100644 5de5c897f4428a5692f5231cb6fc7d24c977d804 5de5c897f4428a5692f5231cb6fc7d24c977d804 0000000000000000000000000000000000000000 ud.txt\u0000u UA N... 000000 000000 100644 100644 0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 5de5c897f4428a5692f5231cb6fc7d24c977d804 ua.txt\u0000u DU N... 100644 000000 100644 100644 5de5c897f4428a5692f5231cb6fc7d24c977d804 0000000000000000000000000000000000000000 5de5c897f4428a5692f5231cb6fc7d24c977d804 du space.txt\u0000u XY N... 100644 100644 100644 100644 5de5c897f4428a5692f5231cb6fc7d24c977d804 5de5c897f4428a5692f5231cb6fc7d24c977d804 5de5c897f4428a5692f5231cb6fc7d24c977d804 odd.txt\u0000"
+   ],
+   "out": {
+    "branch": "",
+    "oid": "",
+    "upstream": "",
+    "ahead": 0,
+    "behind": 0,
+    "conflicts": [
+     {
+      "path": "a.txt",
+      "code": "C",
+      "label": "both added",
+      "sec": "conflicts"
+     },
+     {
+      "path": "au.txt",
+      "code": "C",
+      "label": "added by us",
+      "sec": "conflicts"
+     },
+     {
+      "path": "b.txt",
+      "code": "C",
+      "label": "both modified",
+      "sec": "conflicts"
+     },
+     {
+      "path": "dd.txt",
+      "code": "C",
+      "label": "both deleted",
+      "sec": "conflicts"
+     },
+     {
+      "path": "du space.txt",
+      "code": "C",
+      "label": "deleted by us",
+      "sec": "conflicts"
+     },
+     {
+      "path": "odd.txt",
+      "code": "C",
+      "sec": "conflicts"
+     },
+     {
+      "path": "ua.txt",
+      "code": "C",
+      "label": "added by them",
+      "sec": "conflicts"
+     },
+     {
+      "path": "ud.txt",
+      "code": "C",
+      "label": "deleted by them",
+      "sec": "conflicts"
+     }
+    ],
+    "staged": [],
+    "changes": [],
+    "detached": false,
+    "hasHead": true
+   }
+  },
+  {
+   "fn": "parseStatus",
+   "args": [
+    "? z.txt\u0000? A.txt\u0000? a.txt\u0000? é.md\u0000? e.md\u0000? dir/x 2.txt\u0000? dir/x 10.txt\u0000! ignored.txt\u0000# other\u0000"
+   ],
+   "out": {
+    "branch": "",
+    "oid": "",
+    "upstream": "",
+    "ahead": 0,
+    "behind": 0,
+    "conflicts": [],
+    "staged": [],
+    "changes": [
+     {
+      "path": "A.txt",
+      "code": "U",
+      "untracked": true,
+      "sec": "changes"
+     },
+     {
+      "path": "a.txt",
+      "code": "U",
+      "untracked": true,
+      "sec": "changes"
+     },
+     {
+      "path": "dir/x 2.txt",
+      "code": "U",
+      "untracked": true,
+      "sec": "changes"
+     },
+     {
+      "path": "dir/x 10.txt",
+      "code": "U",
+      "untracked": true,
+      "sec": "changes"
+     },
+     {
+      "path": "é.md",
+      "code": "U",
+      "untracked": true,
+      "sec": "changes"
+     },
+     {
+      "path": "e.md",
+      "code": "U",
+      "untracked": true,
+      "sec": "changes"
+     },
+     {
+      "path": "z.txt",
+      "code": "U",
+      "untracked": true,
+      "sec": "changes"
+     }
+    ],
+    "detached": false,
+    "hasHead": true
+   }
+  },
+  {
+   "fn": "parseStatus",
+   "args": [
+    "1 M\u00001 \u00002 R\u0000next\u0000"
+   ],
+   "out": {
+    "branch": "",
+    "oid": "",
+    "upstream": "",
+    "ahead": 0,
+    "behind": 0,
+    "conflicts": [],
+    "staged": [
+     {
+      "path": "",
+      "orig": null,
+      "code": "M",
+      "sec": "staged"
+     },
+     {
+      "path": "",
+      "orig": null,
+      "code": "M",
+      "sec": "staged"
+     },
+     {
+      "path": "",
+      "orig": "next",
+      "code": "R",
+      "sec": "staged"
+     }
+    ],
+    "changes": [
+     {
+      "path": "",
+      "code": "M",
+      "sec": "changes"
+     },
+     {
+      "path": "",
+      "code": "M",
+      "sec": "changes"
+     },
+     {
+      "path": "",
+      "code": "M",
+      "sec": "changes"
+     }
+    ],
+    "detached": false,
+    "hasHead": true
+   }
+  },
+  {
+   "fn": "parseStatus",
+   "args": [
+    ""
+   ],
+   "out": {
+    "branch": "",
+    "oid": "",
+    "upstream": "",
+    "ahead": 0,
+    "behind": 0,
+    "conflicts": [],
+    "staged": [],
+    "changes": [],
+    "detached": false,
+    "hasHead": true
+   }
+  },
+  {
+   "fn": "parseStatus",
+   "args": [
+    "\u0000\u0000"
+   ],
+   "out": {
+    "branch": "",
+    "oid": "",
+    "upstream": "",
+    "ahead": 0,
+    "behind": 0,
+    "conflicts": [],
+    "staged": [],
+    "changes": [],
+    "detached": false,
+    "hasHead": true
+   }
+  },
+  {
+   "fn": "parseNames",
+   "args": [
+    ""
+   ],
+   "out": []
+  },
+  {
+   "fn": "parseNames",
+   "args": [
+    "a\u0000b\u0000"
+   ],
+   "out": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "fn": "parseNames",
+   "args": [
+    "\n\nx\u0000\ny\n\u0000z"
+   ],
+   "out": [
+    "x",
+    "y",
+    "z"
+   ]
+  },
+  {
+   "fn": "parseNames",
+   "args": [
+    "same\u0000same\u0000"
+   ],
+   "out": [
+    "same",
+    "same"
+   ]
+  },
+  {
+   "fn": "parseHistory",
+   "args": [
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\u001faaaaaaa\u001fMerge\u001fZoë\u001f4102444800\u001fHEAD -> refs/heads/main, refs/remotes/origin/main, refs/remotes/origin/HEAD, tag: refs/tags/v1\u001fbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb cccccccccccccccccccccccccccccccccccccccc\nbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\u001fbbbbbbb\u001ffix: x | y\u001fT\u001f4102444800\u001f\u001fdddddddddddddddddddddddddddddddddddddddd\ndddddddddddddddddddddddddddddddddddddddd\u001fddddddd\u001froot\u001fT\u001f4102444800\u001fHEAD\u001f\neeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\u001feeeeeee\u001fheads\u001fT\u001f4102444800\u001frefs/heads/HEAD, refs/heads/x, HEADS\u001f\nffffffffffffffffffffffffffffffffffffffff\u001ffffffff\u001fodd\u001fT\u001fx\u001frefs/notes/x, refs/stash, refs/heads/, tag: refs/tags/a b\u001f a  b \n"
+   ],
+   "out": [
+    {
+     "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "short": "aaaaaaa",
+     "subject": "Merge",
+     "author": "Zoë",
+     "date": "1 min",
+     "refs": [
+      {
+       "name": "main",
+       "kind": "heads"
+      },
+      {
+       "name": "origin/main",
+       "kind": "remotes"
+      },
+      {
+       "name": "v1",
+       "kind": "tags"
+      }
+     ],
+     "head": true,
+     "parents": [
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "cccccccccccccccccccccccccccccccccccccccc"
+     ]
+    },
+    {
+     "hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+     "short": "bbbbbbb",
+     "subject": "fix: x | y",
+     "author": "T",
+     "date": "1 min",
+     "refs": [],
+     "head": false,
+     "parents": [
+      "dddddddddddddddddddddddddddddddddddddddd"
+     ]
+    },
+    {
+     "hash": "dddddddddddddddddddddddddddddddddddddddd",
+     "short": "ddddddd",
+     "subject": "root",
+     "author": "T",
+     "date": "1 min",
+     "refs": [
+      {
+       "name": "HEAD",
+       "kind": "heads"
+      }
+     ],
+     "head": true,
+     "parents": []
+    },
+    {
+     "hash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+     "short": "eeeeeee",
+     "subject": "heads",
+     "author": "T",
+     "date": "1 min",
+     "refs": [
+      {
+       "name": "HEAD",
+       "kind": "heads"
+      },
+      {
+       "name": "x",
+       "kind": "heads"
+      }
+     ],
+     "head": false,
+     "parents": []
+    },
+    {
+     "hash": "ffffffffffffffffffffffffffffffffffffffff",
+     "short": "fffffff",
+     "subject": "odd",
+     "author": "T",
+     "date": "NaN y",
+     "refs": [
+      {
+       "name": "a b",
+       "kind": "tags"
+      }
+     ],
+     "head": false,
+     "parents": [
+      "a",
+      "b"
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "parseHistory",
+   "args": [
+    ""
+   ],
+   "out": []
+  },
+  {
+   "fn": "parseHistory",
+   "args": [
+    "\n\n"
+   ],
+   "out": []
+  },
+  {
+   "fn": "refList",
+   "args": [
+    ""
+   ],
+   "out": []
+  },
+  {
+   "fn": "refList",
+   "args": [
+    "HEAD"
+   ],
+   "out": [
+    {
+     "name": "HEAD",
+     "kind": "heads"
+    }
+   ]
+  },
+  {
+   "fn": "refList",
+   "args": [
+    "HEAD -> refs/heads/main"
+   ],
+   "out": [
+    {
+     "name": "main",
+     "kind": "heads"
+    }
+   ]
+  },
+  {
+   "fn": "refList",
+   "args": [
+    "tag: refs/tags/v1.0, refs/remotes/up/HEAD, refs/remotes/up/main"
+   ],
+   "out": [
+    {
+     "name": "v1.0",
+     "kind": "tags"
+    },
+    {
+     "name": "up/main",
+     "kind": "remotes"
+    }
+   ]
+  },
+  {
+   "fn": "refList",
+   "args": [
+    "refs/remotes/HEAD, refs/remotes/x/HEADS, refs/heads/a/HEAD"
+   ],
+   "out": [
+    {
+     "name": "HEAD",
+     "kind": "remotes"
+    },
+    {
+     "name": "x/HEADS",
+     "kind": "remotes"
+    },
+    {
+     "name": "a/HEAD",
+     "kind": "heads"
+    }
+   ]
+  },
+  {
+   "fn": "refList",
+   "args": [
+    "HEAD, HEAD -> HEAD, refs/heads/x, ,refs/tags/t"
+   ],
+   "out": [
+    {
+     "name": "HEAD",
+     "kind": "heads"
+    },
+    {
+     "name": "HEAD",
+     "kind": "heads"
+    },
+    {
+     "name": "x",
+     "kind": "heads"
+    }
+   ]
+  },
+  {
+   "fn": "labels",
+   "args": [
+    "tag: refs/tags/v1, refs/remotes/origin/old, refs/heads/main, HEAD -> refs/heads/feat, refs/remotes/origin/main, refs/remotes/origin/HEAD",
+    true,
+    "feat"
+   ],
+   "out": [
+    {
+     "name": "feat",
+     "remote": false,
+     "current": true
+    },
+    {
+     "name": "main",
+     "remote": true,
+     "current": false
+    },
+    {
+     "name": "origin/old"
+    },
+    {
+     "name": "v1",
+     "tag": true
+    }
+   ]
+  },
+  {
+   "fn": "labels",
+   "args": [
+    "tag: refs/tags/v1, refs/remotes/origin/old, refs/heads/main, HEAD -> refs/heads/feat, refs/remotes/origin/main",
+    false,
+    "feat"
+   ],
+   "out": [
+    {
+     "name": "main",
+     "remote": true,
+     "current": false
+    },
+    {
+     "name": "feat",
+     "remote": false,
+     "current": false
+    },
+    {
+     "name": "origin/old"
+    },
+    {
+     "name": "v1",
+     "tag": true
+    }
+   ]
+  },
+  {
+   "fn": "labels",
+   "args": [
+    "HEAD, refs/heads/main",
+    true,
+    ""
+   ],
+   "out": [
+    {
+     "name": "HEAD",
+     "remote": false,
+     "current": true
+    },
+    {
+     "name": "main",
+     "remote": false,
+     "current": false
+    }
+   ]
+  },
+  {
+   "fn": "labels",
+   "args": [
+    "refs/heads/main, refs/remotes/origin/main, refs/remotes/up/main, refs/remotes/main",
+    true,
+    "main"
+   ],
+   "out": [
+    {
+     "name": "main",
+     "remote": true,
+     "current": true
+    }
+   ]
+  },
+  {
+   "fn": "labels",
+   "args": [
+    "refs/heads/a, refs/heads/b, refs/remotes/o/b, refs/remotes/o/a, refs/remotes/o/c, tag: refs/tags/x, tag: refs/tags/y",
+    true,
+    "b"
+   ],
+   "out": [
+    {
+     "name": "b",
+     "remote": true,
+     "current": true
+    },
+    {
+     "name": "a",
+     "remote": true,
+     "current": false
+    },
+    {
+     "name": "o/c"
+    },
+    {
+     "name": "x",
+     "tag": true
+    },
+    {
+     "name": "y",
+     "tag": true
+    }
+   ]
+  },
+  {
+   "fn": "labels",
+   "args": [
+    "",
+    true,
+    "main"
+   ],
+   "out": []
+  },
+  {
+   "fn": "parseStashes",
+   "args": [
+    ""
+   ],
+   "out": []
+  },
+  {
+   "fn": "parseStashes",
+   "args": [
+    "stash@{0}\u001fWIP on main: a\u001f2 minutes ago\nstash@{1}\u001fOn feat: été\u001f3 days ago\n"
+   ],
+   "out": [
+    {
+     "ref": "stash@{0}",
+     "subject": "WIP on main: a",
+     "date": "2 minutes ago"
+    },
+    {
+     "ref": "stash@{1}",
+     "subject": "On feat: été",
+     "date": "3 days ago"
+    }
+   ]
+  },
+  {
+   "fn": "parseStashes",
+   "args": [
+    "stash@{0}\u001fa\u001fb\u001fextra\n\n"
+   ],
+   "out": [
+    {
+     "ref": "stash@{0}",
+     "subject": "a",
+     "date": "b"
+    }
+   ]
+  },
+  {
+   "fn": "parseRefs",
+   "args": [
+    "refs/heads/feat/x\u001fd5c4e81\u001forigin/feat/x\u001f[ahead 1, behind 2]\u001f2 days ago\u001ffix: readme\nrefs/heads/main\u001fae3311f\u001f\u001f\u001f31 seconds ago\u001fchore: z\nrefs/remotes/origin/HEAD\u001fae3311f\u001f\u001f\u001f1 day ago\u001fchore: z\nrefs/remotes/origin/feat/x\u001f0520c69\u001f\u001f[gone]\u001f1 day ago\u001ffeat: initial\nrefs/tags/v1\u001fd5c4e81\u001f\u001f\u001f2 days ago\u001ffix: readme\nrefs/notes/commits\u001faaaaaaa\u001f\u001f\u001f\u001f\nrefs/heads/\u001faaaaaaa\u001f\u001f\u001f\u001f\n",
+    "origin\tgit@example.com:me/repo.git (fetch)\norigin\tgit@example.com:me/repo.git (push)\nup  https://e.com/r x (fetch)\nnone (fetch)\nempty  (fetch)\n\tlead x (fetch)\nlocal\t/path/to/repo (fetch)\n",
+    "worktree /src/repo\nHEAD 5de5c897f4428a5692f5231cb6fc7d24c977d804\nbranch refs/heads/main\n\nworktree /src/wt\nHEAD 5de5c897f4428a5692f5231cb6fc7d24c977d804\ndetached\n\nworktree /src/wt é\nHEAD 5de5c897f4428a5692f5231cb6fc7d24c977d804\nbranch refs/heads/feat/x\nlocked\n\nworktree /bare\nbare\n\nnot a worktree\n\nworktree /e\nbranch refs/heads/\n"
+   ],
+   "out": {
+    "heads": [
+     {
+      "name": "feat/x",
+      "hash": "d5c4e81",
+      "upstream": "origin/feat/x",
+      "track": "[ahead 1, behind 2]",
+      "date": "2 days ago",
+      "subject": "fix: readme",
+      "remote": false,
+      "tag": false
+     },
+     {
+      "name": "main",
+      "hash": "ae3311f",
+      "upstream": "",
+      "track": "",
+      "date": "31 seconds ago",
+      "subject": "chore: z",
+      "remote": false,
+      "tag": false
+     }
+    ],
+    "remotes": [
+     {
+      "name": "origin/feat/x",
+      "hash": "0520c69",
+      "upstream": "",
+      "track": "[gone]",
+      "date": "1 day ago",
+      "subject": "feat: initial",
+      "remote": true,
+      "tag": false
+     }
+    ],
+    "tags": [
+     {
+      "name": "v1",
+      "hash": "d5c4e81",
+      "upstream": "",
+      "track": "",
+      "date": "2 days ago",
+      "subject": "fix: readme",
+      "remote": false,
+      "tag": true
+     }
+    ],
+    "urls": [
+     {
+      "name": "origin",
+      "url": "git@example.com:me/repo.git"
+     },
+     {
+      "name": "up",
+      "url": "https://e.com/r x"
+     },
+     {
+      "name": "empty",
+      "url": ""
+     },
+     {
+      "name": "local",
+      "url": "/path/to/repo"
+     }
+    ],
+    "worktrees": [
+     {
+      "path": "/src/repo",
+      "branch": "main"
+     },
+     {
+      "path": "/src/wt",
+      "branch": "(detached)"
+     },
+     {
+      "path": "/src/wt é",
+      "branch": "feat/x"
+     },
+     {
+      "path": "/bare",
+      "branch": "(detached)"
+     },
+     {
+      "path": "/e",
+      "branch": "(detached)"
+     }
+    ]
+   }
+  },
+  {
+   "fn": "parseRefs",
+   "args": [
+    "",
+    "",
+    ""
+   ],
+   "out": {
+    "heads": [],
+    "remotes": [],
+    "tags": [],
+    "urls": [],
+    "worktrees": []
+   }
+  },
+  {
+   "fn": "parseCompare",
+   "args": [
+    ""
+   ],
+   "out": []
+  },
+  {
+   "fn": "parseCompare",
+   "args": [
+    ">\u001fd5c4e81\u001fdddddddddddddddddddddddddddddddddddddddd\u001ffix: readme\u001f4102444800\n=\u001fae3311f\u001faaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\u001fchore: z\u001f4102444800\n<\u001f1234567\u001f1111111111111111111111111111111111111111\u001fx\n"
+   ],
+   "out": [
+    {
+     "same": false,
+     "short": "d5c4e81",
+     "hash": "dddddddddddddddddddddddddddddddddddddddd",
+     "subject": "fix: readme",
+     "date": "1 min"
+    },
+    {
+     "same": true,
+     "short": "ae3311f",
+     "hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "subject": "chore: z",
+     "date": "1 min"
+    },
+    {
+     "same": false,
+     "short": "1234567",
+     "hash": "1111111111111111111111111111111111111111",
+     "subject": "x",
+     "date": "NaN y"
+    }
+   ]
+  },
+  {
+   "fn": "parseCount",
+   "args": [
+    "3\t1\n"
+   ],
+   "out": [
+    3,
+    1
+   ]
+  },
+  {
+   "fn": "parseCount",
+   "args": [
+    ""
+   ],
+   "out": [
+    0
+   ]
+  },
+  {
+   "fn": "parseCount",
+   "args": [
+    "  5  "
+   ],
+   "out": [
+    5
+   ]
+  },
+  {
+   "fn": "parseCount",
+   "args": [
+    "0\t0"
+   ],
+   "out": [
+    0,
+    0
+   ]
+  },
+  {
+   "fn": "parseCount",
+   "args": [
+    "a b"
+   ],
+   "out": [
+    null,
+    null
+   ]
+  },
+  {
+   "fn": "parseCount",
+   "args": [
+    "1\n\n2"
+   ],
+   "out": [
+    1,
+    2
+   ]
+  },
+  {
+   "fn": "parseNumstat",
+   "args": [
+    ""
+   ],
+   "out": []
+  },
+  {
+   "fn": "parseNumstat",
+   "args": [
+    "1\t0\tREADME.md\n-\t-\timg.png\n2\t2\ta\tb.txt\n"
+   ],
+   "out": [
+    {
+     "add": "1",
+     "del": "0",
+     "path": "README.md"
+    },
+    {
+     "add": "-",
+     "del": "-",
+     "path": "img.png"
+    },
+    {
+     "add": "2",
+     "del": "2",
+     "path": "a\tb.txt"
+    }
+   ]
+  },
+  {
+   "fn": "parseNumstat",
+   "args": [
+    "0\t0\told => new\n\n"
+   ],
+   "out": [
+    {
+     "add": "0",
+     "del": "0",
+     "path": "old => new"
+    }
+   ]
+  },
+  {
+   "fn": "parseScopes",
+   "args": [
+    ""
+   ],
+   "out": []
+  },
+  {
+   "fn": "parseScopes",
+   "args": [
+    "global\u0000credential.helper\nstore\u0000local\u0000credential.helper\nevil\u0000local\u0000core.sshcommand\nsh -c x\u0000worktree\u0000http.proxy\u0000"
+   ],
+   "out": [
+    [
+     "credential.helper",
+     [
+      [
+       "global",
+       "store"
+      ],
+      [
+       "local",
+       "evil"
+      ]
+     ]
+    ],
+    [
+     "core.sshcommand",
+     [
+      [
+       "local",
+       "sh -c x"
+      ]
+     ]
+    ],
+    [
+     "http.proxy",
+     [
+      [
+       "worktree",
+       ""
+      ]
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "parseScopes",
+   "args": [
+    "local\u0000a.b\nline1\nline2\u0000command\u0000a.b\nz\u0000dangling"
+   ],
+   "out": [
+    [
+     "a.b",
+     [
+      [
+       "local",
+       "line1\nline2"
+      ],
+      [
+       "command",
+       "z"
+      ]
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "repoKeys",
+   "args": [
+    ""
+   ],
+   "out": []
+  },
+  {
+   "fn": "repoKeys",
+   "args": [
+    "global\u0000credential.helper\nstore\u0000local\u0000credential.helper\nevil\u0000local\u0000core.sshcommand\nsh -c x\u0000worktree\u0000http.proxy\u0000system\u0000x.y\n1\u0000command\u0000p.q\n2\u0000"
+   ],
+   "out": [
+    "credential.helper",
+    "core.sshcommand",
+    "http.proxy"
+   ]
+  },
+  {
+   "fn": "errorOf",
+   "args": [
+    {
+     "code": 128,
+     "err": "hint: x\nfatal: not a git repository\n",
+     "out": ""
+    }
+   ],
+   "out": "not a git repository"
+  },
+  {
+   "fn": "errorOf",
+   "args": [
+    {
+     "code": 1,
+     "err": "error: pathspec 'x' did not match\n",
+     "out": ""
+    }
+   ],
+   "out": "pathspec 'x' did not match"
+  },
+  {
+   "fn": "errorOf",
+   "args": [
+    {
+     "code": 1,
+     "err": "To x\n ! [rejected]        main -> main (non-fast-forward)\nerror: failed to push some refs\n",
+     "out": ""
+    }
+   ],
+   "out": "rejected main -> main (non-fast-forward)"
+  },
+  {
+   "fn": "errorOf",
+   "args": [
+    {
+     "code": 1,
+     "err": " ! [remote rejected] main -> main (pre-receive hook declined)\n",
+     "out": ""
+    }
+   ],
+   "out": "rejected main -> main (pre-receive hook declined)"
+  },
+  {
+   "fn": "errorOf",
+   "args": [
+    {
+     "code": 1,
+     "err": "! [rejected]\n",
+     "out": ""
+    }
+   ],
+   "out": "! [rejected]"
+  },
+  {
+   "fn": "errorOf",
+   "args": [
+    {
+     "code": 1,
+     "err": "",
+     "out": "nothing to commit\n"
+    }
+   ],
+   "out": "nothing to commit"
+  },
+  {
+   "fn": "errorOf",
+   "args": [
+    {
+     "code": null,
+     "err": "",
+     "out": ""
+    }
+   ],
+   "out": "timed out or not run"
+  },
+  {
+   "fn": "errorOf",
+   "args": [
+    {
+     "code": 1,
+     "err": "",
+     "out": ""
+    }
+   ],
+   "out": "failed"
+  },
+  {
+   "fn": "errorOf",
+   "args": [
+    {
+     "code": 1,
+     "err": "  \r\n\r\n  warning: x  \r\nerror:no space\r\n",
+     "out": ""
+    }
+   ],
+   "out": "error:no space"
+  },
+  {
+   "fn": "errorOf",
+   "args": [
+    {
+     "code": 1,
+     "err": "fatal: \n",
+     "out": ""
+    }
+   ],
+   "out": "fatal:"
+  }
+ ]
+}

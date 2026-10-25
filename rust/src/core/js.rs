@@ -218,6 +218,8 @@ pub fn string(v: &Value) -> String {
     match v {
         Value::Null => "null".into(),
         Value::Bool(b) => b.to_string(),
+        Value::Num(n) if n.is_nan() => "NaN".into(),
+        Value::Num(n) if n.is_infinite() => if *n > 0.0 { "Infinity" } else { "-Infinity" }.into(),
         Value::Num(n) => json::number(*n),
         Value::Str(s) => s.clone(),
         Value::Arr(items) => {

@@ -444,5 +444,22 @@ fn the_lines_changed_since_head_staged_or_not_as_the_file_view_marks_them() {
 }
 
 #[test]
-#[ignore = "case 16"]
-fn the_fork_point_of_the_history_where_the_branch_leaves_main_none_on_main() {}
+fn the_fork_point_of_the_history_where_the_branch_leaves_main_none_on_main() {
+    use herdr_explorer::scm::state::fork_point;
+    let Some(r) = Repo::new(&[("a.txt", "a\n")]) else { return };
+    let head = || r.out(&["rev-parse", "HEAD"]).trim().to_string();
+    r.git(&["branch", "-M", "main"]);
+    let base = head();
+    assert_eq!(fork_point(&r.top, true), None);
+    // A straight line ahead of main.
+    r.git(&["switch", "-q", "-c", "feat"]);
+    r.write("a.txt", "b\n");
+    r.git(&["commit", "-qam", "b"]);
+    assert_eq!(fork_point(&r.top, true), Some(base.clone()));
+    // main went on: still where they parted.
+    r.git(&["switch", "-q", "main"]);
+    r.write("a.txt", "c\n");
+    r.git(&["commit", "-qam", "c"]);
+    r.git(&["switch", "-q", "feat"]);
+    assert_eq!(fork_point(&r.top, true), Some(base));
+}

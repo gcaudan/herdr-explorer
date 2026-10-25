@@ -1,0 +1,647 @@
+{
+ "module": "scm/state",
+ "cases": [
+  {
+   "fn": "english",
+   "args": [
+    {}
+   ],
+   "out": {
+    "LC_MESSAGES": "C"
+   }
+  },
+  {
+   "fn": "english",
+   "args": [
+    {
+     "LC_ALL": "fr_FR.UTF-8",
+     "LANG": "fr_FR.UTF-8",
+     "LANGUAGE": "fr",
+     "LC_MESSAGES": "fr_FR.UTF-8"
+    }
+   ],
+   "out": {
+    "LANG": "fr_FR.UTF-8",
+    "LC_MESSAGES": "C",
+    "LC_CTYPE": "fr_FR.UTF-8"
+   }
+  },
+  {
+   "fn": "english",
+   "args": [
+    {
+     "LC_ALL": "",
+     "LC_CTYPE": "x"
+    }
+   ],
+   "out": {
+    "LC_ALL": "",
+    "LC_CTYPE": "x",
+    "LC_MESSAGES": "C"
+   }
+  },
+  {
+   "fn": "english",
+   "args": [
+    {
+     "LANG": "de_DE.UTF-8",
+     "PATH": "/bin"
+    }
+   ],
+   "out": {
+    "LANG": "de_DE.UTF-8",
+    "PATH": "/bin",
+    "LC_MESSAGES": "C"
+   }
+  },
+  {
+   "fn": "nul",
+   "args": [
+    []
+   ],
+   "out": "\u0000"
+  },
+  {
+   "fn": "nul",
+   "args": [
+    [
+     {
+      "path": "a"
+     }
+    ]
+   ],
+   "out": "a\u0000"
+  },
+  {
+   "fn": "nul",
+   "args": [
+    [
+     {
+      "path": "new",
+      "orig": "old"
+     },
+     {
+      "path": "b c"
+     }
+    ]
+   ],
+   "out": "old\u0000new\u0000b c\u0000"
+  },
+  {
+   "fn": "fullRef",
+   "args": [
+    {
+     "name": "main"
+    }
+   ],
+   "out": "refs/heads/main"
+  },
+  {
+   "fn": "fullRef",
+   "args": [
+    {
+     "name": "origin/x",
+     "remote": true
+    }
+   ],
+   "out": "refs/remotes/origin/x"
+  },
+  {
+   "fn": "fullRef",
+   "args": [
+    {
+     "name": "-x"
+    }
+   ],
+   "out": "refs/heads/-x"
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [
+     [
+      "core.sshCommand",
+      "evil"
+     ]
+    ],
+    [],
+    "core.sshcommand",
+    true
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "evil\nssh\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [
+     [
+      "core.sshCommand",
+      "evil"
+     ]
+    ],
+    [],
+    "core.sshcommand",
+    false
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "evil\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [
+     [
+      "core.sshCommand",
+      "evil"
+     ]
+    ],
+    [
+     [
+      "core.sshCommand",
+      "ssh -i k"
+     ]
+    ],
+    "core.sshcommand",
+    true
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "ssh -i k\nevil\nssh -i k\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [
+     [
+      "core.sshCommand",
+      "evil"
+     ]
+    ],
+    [
+     [
+      "core.sshCommand",
+      "ssh -i k"
+     ]
+    ],
+    "core.sshcommand",
+    false
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "ssh -i k\nevil\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [
+     [
+      "credential.helper",
+      "evil"
+     ]
+    ],
+    [
+     [
+      "credential.helper",
+      "store"
+     ],
+     [
+      "credential.helper",
+      "cache"
+     ]
+    ],
+    "credential.helper",
+    true
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "store\ncache\nevil\n\nstore\ncache\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [
+     [
+      "credential.helper",
+      "evil"
+     ]
+    ],
+    [
+     [
+      "credential.helper",
+      "store"
+     ],
+     [
+      "credential.helper",
+      "cache"
+     ]
+    ],
+    "credential.helper",
+    false
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "store\ncache\nevil\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [
+     [
+      "credential.https://x.helper",
+      "evil"
+     ]
+    ],
+    [],
+    "credential.https://x.helper",
+    true
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "evil\n\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [
+     [
+      "credential.https://x.helper",
+      "evil"
+     ]
+    ],
+    [],
+    "credential.https://x.helper",
+    false
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "evil\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [
+     [
+      "gpg.program",
+      "evil"
+     ]
+    ],
+    [],
+    "gpg.program",
+    true
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "evil\ngpg\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [
+     [
+      "gpg.program",
+      "evil"
+     ]
+    ],
+    [],
+    "gpg.program",
+    false
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "evil\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [
+     [
+      "gpg.ssh.defaultKeyCommand",
+      "evil"
+     ]
+    ],
+    [],
+    "gpg.ssh.defaultkeycommand",
+    true
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "evil\n\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [
+     [
+      "gpg.ssh.defaultKeyCommand",
+      "evil"
+     ]
+    ],
+    [],
+    "gpg.ssh.defaultkeycommand",
+    false
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "evil\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [
+     [
+      "merge.x.driver",
+      "evil"
+     ]
+    ],
+    [],
+    "merge.x.driver",
+    true
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "evil\ngit merge-file %A %O %B\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [
+     [
+      "merge.x.driver",
+      "evil"
+     ]
+    ],
+    [],
+    "merge.x.driver",
+    false
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "evil\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [
+     [
+      "core.askpass",
+      "evil"
+     ]
+    ],
+    [
+     [
+      "core.askpass",
+      "mine"
+     ]
+    ],
+    "core.askpass",
+    true
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "mine\nevil\nmine\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [
+     [
+      "core.askpass",
+      "evil"
+     ]
+    ],
+    [
+     [
+      "core.askpass",
+      "mine"
+     ]
+    ],
+    "core.askpass",
+    false
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "mine\nevil\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [],
+    [
+     [
+      "core.sshCommand",
+      "ssh -v"
+     ]
+    ],
+    "core.sshcommand",
+    true
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "ssh -v\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [],
+    [
+     [
+      "core.sshCommand",
+      "ssh -v"
+     ]
+    ],
+    "core.sshcommand",
+    false
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "ssh -v\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [],
+    [],
+    "protocol.ext.allow",
+    true
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 0,
+    "out": "never\n"
+   }
+  },
+  {
+   "fn": "safeGit",
+   "args": [
+    "$ROOT",
+    [],
+    [],
+    "protocol.ext.allow",
+    false
+   ],
+   "env": {
+    "HOME": "$ROOT",
+    "XDG_CONFIG_HOME": "$ROOT/xdg",
+    "GIT_CONFIG_GLOBAL": "$ROOT/global",
+    "GIT_CONFIG_NOSYSTEM": "1"
+   },
+   "out": {
+    "code": 1,
+    "out": ""
+   }
+  }
+ ]
+}

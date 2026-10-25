@@ -1745,3 +1745,175 @@ fn explorer_tree() {
         })
     });
 }
+
+/// scm/parse: git's output read by the source control pane (tools/fixtures/modules/scm.parse.js).
+#[test]
+fn scm_parse() {
+    use herdr_explorer::core::exec::Exec;
+    use herdr_explorer::obj;
+    use herdr_explorer::scm::parse::{self, Branch, Decoration, Item, Label};
+    let s = |v: &Value| v.as_str().unwrap_or("").to_string();
+    let item = |i: &Item| {
+        let mut o = obj! { "path" => i.path.clone() };
+        if i.sec == "staged" {
+            o.set("orig", Value::from(i.orig.clone()));
+        }
+        o.set("code", Value::Str(i.code.to_string()));
+        if let Some(l) = i.label {
+            o.set("label", Value::Str(l.into()));
+        }
+        if i.untracked {
+            o.set("untracked", Value::Bool(true));
+        }
+        o.set("sec", Value::Str(i.sec.into()));
+        o
+    };
+    let items = |l: &[Item]| Value::Arr(l.iter().map(item).collect());
+    let decs =
+        |l: &[Decoration]| Value::Arr(l.iter().map(|d| obj! { "name" => d.name.clone(), "kind" => d.kind }).collect());
+    let branch = |b: &Branch| {
+        obj! { "name" => b.name.clone(), "hash" => b.hash.clone(), "upstream" => b.upstream.clone(), "track" => b.track.clone(),
+        "date" => b.date.clone(), "subject" => b.subject.clone(), "remote" => b.remote, "tag" => b.tag }
+    };
+    let branches = |l: &[Branch]| Value::Arr(l.iter().map(branch).collect());
+    support::replay("scm/parse", |name, args| {
+        Ok(match name {
+            "parseRepo" => match parse::parse_repo(&s(&args[0]), &s(&args[1])) {
+                Some(d) => obj! { "top" => d.top, "gitdir" => d.gitdir, "common" => d.common },
+                None => Value::Null,
+            },
+            "parseStatus" => {
+                let st = parse::parse_status(&s(&args[0]));
+                obj! { "branch" => st.branch, "oid" => st.oid, "upstream" => st.upstream, "ahead" => st.ahead,
+                "behind" => st.behind, "conflicts" => items(&st.conflicts), "staged" => items(&st.staged),
+                "changes" => items(&st.changes), "detached" => st.detached, "hasHead" => st.has_head }
+            }
+            "parseNames" => str_arr(parse::parse_names(&s(&args[0]))),
+            "parseHistory" => Value::Arr(
+                parse::parse_history(&s(&args[0]))
+                    .into_iter()
+                    .map(|c| {
+                        obj! { "hash" => c.hash, "short" => c.short, "subject" => c.subject, "author" => c.author,
+                        "date" => c.date, "refs" => decs(&c.refs), "head" => c.head, "parents" => str_arr(c.parents) }
+                    })
+                    .collect(),
+            ),
+            "refList" => decs(&parse::ref_list(&s(&args[0]))),
+            "labels" => Value::Arr(
+                parse::labels(&parse::ref_list(&s(&args[0])), args[1].truthy(), &s(&args[2]))
+                    .into_iter()
+                    .map(|l| match l {
+                        Label::Local { name, remote, current } => {
+                            obj! { "name" => name, "remote" => remote, "current" => current }
+                        }
+                        Label::Remote { name } => obj! { "name" => name },
+                        Label::Tag { name } => obj! { "name" => name, "tag" => true },
+                    })
+                    .collect(),
+            ),
+            "parseStashes" => Value::Arr(
+                parse::parse_stashes(&s(&args[0]))
+                    .into_iter()
+                    .map(|x| obj! { "ref" => x.r#ref, "subject" => x.subject, "date" => x.date })
+                    .collect(),
+            ),
+            "parseRefs" => {
+                let r = parse::parse_refs(&s(&args[0]), &s(&args[1]), &s(&args[2]));
+                obj! { "heads" => branches(&r.heads), "remotes" => branches(&r.remotes), "tags" => branches(&r.tags),
+                "urls" => Value::Arr(r.urls.into_iter().map(|u| obj! { "name" => u.name, "url" => u.url }).collect()),
+                "worktrees" => Value::Arr(r.worktrees.into_iter().map(|w| obj! { "path" => w.path, "branch" => w.branch }).collect()) }
+            }
+            "parseCompare" => Value::Arr(
+                parse::parse_compare(&s(&args[0]))
+                    .into_iter()
+                    .map(|c| obj! { "same" => c.same, "short" => c.short, "hash" => c.hash, "subject" => c.subject, "date" => c.date })
+                    .collect(),
+            ),
+            "parseCount" => Value::from(parse::parse_count(&s(&args[0]))),
+            "parseNumstat" => Value::Arr(
+                parse::parse_numstat(&s(&args[0]))
+                    .into_iter()
+                    .map(|n| obj! { "add" => n.add, "del" => n.del, "path" => n.path })
+                    .collect(),
+            ),
+            "parseScopes" => Value::Arr(
+                parse::parse_scopes(&s(&args[0]))
+                    .into_iter()
+                    .map(|(k, list)| {
+                        let pairs = list.into_iter().map(|(a, b)| Value::Arr(vec![Value::Str(a), Value::Str(b)]));
+                        Value::Arr(vec![Value::Str(k), Value::Arr(pairs.collect())])
+                    })
+                    .collect(),
+            ),
+            "repoKeys" => str_arr(parse::repo_keys(&s(&args[0]))),
+            "errorOf" => {
+                let r = &args[0];
+                let code = r.get("code").and_then(Value::as_f64).map(|c| c as i32);
+                let get = |k: &str| r.get(k).map(s).unwrap_or_default();
+                Value::Str(parse::error_of(&Exec { code, out: get("out"), err: get("err") }))
+            }
+            _ => return Err(format!("no function {name}")),
+        })
+    });
+}
+
+/// scm/state: git's environment in English, paths on stdin, full branch names, and the hardened environment of the
+/// commands that write (tools/fixtures/modules/scm.state.js).
+#[test]
+fn scm_state() {
+    use herdr_explorer::obj;
+    use herdr_explorer::scm::parse::{Branch, Item};
+    use herdr_explorer::scm::state::{self, GitOpts};
+    use std::process::Command;
+    let s = |v: &Value| v.as_str().unwrap_or("").to_string();
+    let pairs = |v: &Value| -> Vec<(String, String)> {
+        v.as_array().unwrap().iter().map(|p| (s(&p.as_array().unwrap()[0]), s(&p.as_array().unwrap()[1]))).collect()
+    };
+    support::replay("scm/state", |name, args| {
+        Ok(match name {
+            "english" => {
+                let mut env = args[0].as_object().unwrap().iter().map(|(k, v)| (k.clone(), s(v))).collect();
+                state::english(&mut env);
+                Value::Obj(env.into_iter().map(|(k, v)| (k, Value::Str(v))).collect())
+            }
+            "nul" => {
+                let items: Vec<Item> = args[0]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|i| Item { path: s(i.get("path").unwrap()), orig: i.get("orig").map(s), ..Item::default() })
+                    .collect();
+                Value::Str(String::from_utf8(state::nul(&items)).unwrap())
+            }
+            "fullRef" => Value::Str(state::full_ref(&Branch {
+                name: s(args[0].get("name").unwrap()),
+                remote: args[0].get("remote").is_some_and(Value::truthy),
+                ..Branch::default()
+            })),
+            "safeGit" => {
+                let root = s(&args[0]);
+                let top = format!("{root}/repo");
+                let git = |a: &[&str], cwd: &str| {
+                    assert!(Command::new("git").args(a).current_dir(cwd).status().unwrap().success());
+                };
+                std::fs::create_dir(&top).unwrap();
+                git(&["init", "-q", &top], &root);
+                for (k, v) in pairs(&args[1]) {
+                    git(&["config", "--add", &k, &v], &top);
+                }
+                let global = format!("{root}/global");
+                for (k, v) in pairs(&args[2]) {
+                    git(&["config", "--file", &global, "--add", &k, &v], &root);
+                }
+                let key = s(&args[3]);
+                let res = state::git(
+                    &top,
+                    &["config", "--get-all", &key],
+                    &GitOpts { safe: args[4].truthy(), ..GitOpts::default() },
+                );
+                obj! { "code" => res.code.map(|c| c as f64), "out" => res.out }
+            }
+            _ => return Err(format!("no function {name}")),
+        })
+    });
+}
