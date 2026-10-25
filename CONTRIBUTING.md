@@ -123,6 +123,7 @@ every push to `main`, on Linux (x86_64 and arm64), macOS and Windows, and checks
 | `modules.rs` | the module fixtures recorded from the JS of 0.8.0 (`rust/tests/fixtures/modules/`), replayed against the port |
 | `screens.rs` | screen captures of the panes in a terminal, started directly and through their shim, against those recorded from the JS (Linux) |
 | `shims.rs` | every script of the root and of `src/` passes `node --check` |
+| `smoke.rs` | the shims as herdr runs them (Linux): each pane started and quit, the hook and peek, the restart on code 75 and the folder announced through `EXPLORER_IPC_FILE` |
 | `docs.rs` | relative links and `#anchors` of `README.md`, `SECURITY.md`, `CONTRIBUTING.md` and `docs/*.md` |
 | `show.rs` | a commit, stash or tag shown by the preview's Diff view |
 | `ui.rs` | terminal width of text (emoji, flags, wide characters), the segment helpers and the menus |
