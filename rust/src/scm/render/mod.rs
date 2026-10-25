@@ -1,7 +1,13 @@
 //! Drawing of the source control pane (src/scm/render.js): the rows of each view, the header, tabs, commit box,
 //! status line and key help, the diff or branch comparison beside the list, and the branch picker.
+//!
+//! This file holds the frame, its header, tabs, commit box, status line and key help; rows.rs the rows of the views,
+//! picker.rs the branch picker.
 
-use super::context::{self, CmpRow, DiffView, Row, RowRef, VIEWS, base, dir_of};
+mod picker;
+mod rows;
+
+use super::context::{self, DiffView, Row, RowRef, VIEWS, base, dir_of};
 use super::parse::{self, Commit, Item, Label};
 use super::state;
 use super::{Act, Hit, Pane};
@@ -10,37 +16,49 @@ use crate::core::icons;
 use crate::core::ui::{self, Rgb, Seg, bg, c, fg, seg, shade};
 use crate::diff::{self, View, layout_of};
 use crate::json::Value;
+use rows::compare_lines;
 
 const BOLD: &str = "\x1b[1m";
+
 /// The active tab, underlined in blue where the terminal can.
 const UNDERLINE: &str = "\x1b[4m\x1b[58;2;55;148;255m";
+
 /// Columns of the graph at most: lanes further right are cut.
 const MAX_GRAPH: usize = 24;
+
 const SPIN: [char; 10] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+
 /// Columns of the list beside the diff: at least 30, and 40 left to the diff.
 const MIN_LIST: i64 = 30;
+
 const MIN_DIFF: i64 = 40;
 
 fn dim() -> String {
     fg(c().dim)
 }
+
 fn key_style() -> String {
     format!("{BOLD}{}", fg(c().text))
 }
+
 /// The main button of the header and the commit box.
 fn primary() -> String {
     format!("{}{}{BOLD}", bg([14, 99, 156]), fg([255, 255, 255]))
 }
+
 /// A button or the branch while its menu hangs under it.
 fn lit() -> String {
     format!("{}{}{BOLD}", bg(c().blue), fg(c().canvas))
 }
+
 fn badge_color(code: char) -> String {
     fg(ui::git(code).unwrap_or(c().text))
 }
+
 fn red_d() -> String {
     fg(ui::git('D').unwrap_or(c().red))
 }
+
 fn chevron(open: bool) -> &'static str {
     if open { ui::g().open } else { ui::g().closed }
 }
@@ -53,15 +71,18 @@ fn pill_rgb(kind: &str) -> Rgb {
         _ => c().yellow,
     }
 }
+
 fn pill(name: &str, kind: &str, style: &str) -> Seg {
     let rgb = pill_rgb(kind);
     seg(format!(" {name} "), format!("{}{}{style}", bg(shade(rgb)), fg(rgb)))
 }
+
 /// Colours of the graph's lanes, in turn; a branch's pill takes the colour of its lane, on a shade of it.
 fn lane_rgb(n: usize) -> Rgb {
     let p = c();
     [p.blue, p.green, p.purple, p.orange, p.yellow, [86, 182, 194], [224, 108, 117]][n % 7]
 }
+
 fn lane_pill(name: &str, n: usize, style: &str) -> Seg {
     seg(format!(" {name} "), format!("{}{}{style}", bg(shade(lane_rgb(n))), fg(lane_rgb(n))))
 }
@@ -73,30 +94,37 @@ pub(super) fn spinner() -> char {
 fn tw(text: &str) -> i64 {
     ui::text_width(text) as i64
 }
+
 fn sw(segs: &[Seg]) -> i64 {
     ui::seg_width(segs) as i64
 }
+
 fn spaces(n: i64) -> String {
     " ".repeat(n.max(0) as usize)
 }
+
 fn pad(text: &str, w: i64) -> String {
     let t = ui::ellipsis(text, w);
     let n = w - tw(&t);
     format!("{t}{}", spaces(n))
 }
+
 /// A count as JS prints a number.
 fn num(n: f64) -> String {
     if n.is_nan() { "NaN".into() } else { crate::json::number(n) }
 }
+
 /// `text.padStart(6)`.
 fn pad_start(text: &str, n: usize) -> String {
     let len = crate::core::js::utf16_len(text);
     format!("{}{text}", " ".repeat(n.saturating_sub(len)))
 }
+
 /// Windows paths ignore case, and git gives them with '/'.
 fn same_path(a: &str, b: &str) -> bool {
     if WIN { a.to_lowercase() == b.to_lowercase() } else { a == b }
 }
+
 fn tilde(p: &str) -> String {
     let h = icons::homedir();
     let abs = crate::core::paths::resolve(&[p]);
@@ -151,9 +179,11 @@ fn buttons(hits: &mut Vec<Hit>, list: Vec<Btn>, y: i64, width: i64, right_after:
 }
 
 const RANK: [(char, u8); 6] = [('U', 1), ('A', 2), ('R', 2), ('M', 3), ('D', 4), ('C', 5)];
+
 fn rank_of(code: char) -> Option<u8> {
     RANK.iter().find(|(c, _)| *c == code).map(|(_, r)| *r)
 }
+
 /// The change shown for a folder: the strongest of its files'.
 fn rank(items: &[Item]) -> char {
     items.iter().fold(
@@ -191,251 +221,6 @@ fn lead_of(kind: &str) -> Option<&'static str> {
 
 impl Pane {
     // --- rows of the views
-
-    fn change_rows(&self) -> Vec<Row> {
-        let Some(r) = self.repo() else { return Vec::new() };
-        let s = &r.status;
-        let mut out = Vec::new();
-        for (sec, title) in [("conflicts", "Merge Changes"), ("staged", "Staged Changes"), ("changes", "Changes")] {
-            let items = r.section(sec);
-            if items.is_empty() && sec != "changes" {
-                continue;
-            }
-            let open = !self.s.collapsed.contains(sec);
-            out.push(Row {
-                kind: "section",
-                key: sec.into(),
-                sec,
-                title: title.into(),
-                count: items.len(),
-                items: items.to_vec(),
-                open,
-                ..Row::default()
-            });
-            if !open {
-                continue;
-            }
-            if items.is_empty() && s.staged.is_empty() && s.conflicts.is_empty() {
-                out.push(Row {
-                    kind: "note",
-                    key: "none".into(),
-                    text: "No changes".into(),
-                    depth: 1,
-                    ..Row::default()
-                });
-            } else if self.s.tree {
-                self.tree_rows(&mut out, sec, items);
-            } else {
-                for it in items {
-                    out.push(file_row(sec, it, 1));
-                }
-            }
-        }
-        out
-    }
-
-    /// Folders of a section, single-child chains compacted as in VS Code (src/lib).
-    fn tree_rows(&self, out: &mut Vec<Row>, sec: &'static str, items: &[Item]) {
-        #[derive(Default)]
-        struct Node {
-            dirs: Vec<(String, Node)>,
-            files: Vec<Item>,
-        }
-        let mut root = Node::default();
-        for it in items {
-            let parts: Vec<&str> = it.path.split('/').collect();
-            let mut n = &mut root;
-            for part in &parts[..parts.len() - 1] {
-                let i = match n.dirs.iter().position(|(k, _)| k == part) {
-                    Some(i) => i,
-                    None => {
-                        n.dirs.push((part.to_string(), Node::default()));
-                        n.dirs.len() - 1
-                    }
-                };
-                n = &mut n.dirs[i].1;
-            }
-            n.files.push(it.clone());
-        }
-        fn all(n: &Node, out: &mut Vec<Item>) {
-            for (_, d) in &n.dirs {
-                all(d, out);
-            }
-            out.extend(n.files.iter().cloned());
-        }
-        fn walk(p: &Pane, out: &mut Vec<Row>, sec: &'static str, n: &Node, prefix: &str, depth: usize) {
-            let mut dirs: Vec<&(String, Node)> = n.dirs.iter().collect();
-            dirs.sort_by(|a, b| crate::unicode::locale_compare(&a.0, &b.0, false));
-            for (name, d) in dirs {
-                let (mut label, mut dir, mut full) = (name.clone(), d, format!("{prefix}{name}"));
-                while dir.dirs.len() == 1 && dir.files.is_empty() {
-                    let (k, v) = &dir.dirs[0];
-                    label = format!("{label}/{k}");
-                    full = format!("{full}/{k}");
-                    dir = v;
-                }
-                let key = format!("{sec}:{full}/");
-                let open = !p.s.collapsed.contains(&key);
-                let mut items = Vec::new();
-                all(dir, &mut items);
-                out.push(Row {
-                    kind: "folder",
-                    key,
-                    sec,
-                    label,
-                    count: items.len(),
-                    items,
-                    depth,
-                    open,
-                    ..Row::default()
-                });
-                if open {
-                    walk(p, out, sec, dir, &format!("{full}/"), depth + 1);
-                }
-            }
-            for it in &n.files {
-                out.push(file_row(sec, it, depth));
-            }
-        }
-        walk(self, out, sec, &root, "", 1);
-    }
-
-    fn ref_rows(&self) -> Vec<Row> {
-        let Some(refs) = &self.s.refs else {
-            return vec![Row {
-                kind: "note",
-                key: "loading".into(),
-                text: "Loading…".into(),
-                depth: 1,
-                ..Row::default()
-            }];
-        };
-        let current = self.repo().map_or("", |r| r.status.branch.as_str());
-        let mut out = Vec::new();
-        let mut empty: Vec<String> = Vec::new();
-        // Empty sections are named together on one line at the end.
-        let mut section = |key: &str, title: &str, list: Vec<(String, Row)>| {
-            if list.is_empty() {
-                empty.push(title.to_lowercase());
-                return;
-            }
-            let open = !self.s.collapsed.contains(&format!("refs:{key}"));
-            out.push(Row {
-                kind: "section",
-                key: format!("refs:{key}"),
-                title: title.into(),
-                count: list.len(),
-                open,
-                ..Row::default()
-            });
-            if open {
-                for (name, row) in list {
-                    out.push(Row { key: format!("{key}:{name}"), depth: 1, ..row });
-                }
-            }
-        };
-        let branch = |b: &parse::Branch, kind: &'static str, current: bool| {
-            (b.name.clone(), Row { kind, r#ref: Some(RowRef::Branch(b.clone())), current, ..Row::default() })
-        };
-        section("heads", "Local Branches", refs.heads.iter().map(|b| branch(b, "branch", b.name == current)).collect());
-        section("remotes", "Remote Branches", refs.remotes.iter().map(|b| branch(b, "branch", false)).collect());
-        section("tags", "Tags", refs.tags.iter().map(|t| branch(t, "tag", false)).collect());
-        section(
-            "urls",
-            "Remotes",
-            refs.urls
-                .iter()
-                .map(|u| {
-                    (u.name.clone(), Row { kind: "remote", r#ref: Some(RowRef::Remote(u.clone())), ..Row::default() })
-                })
-                .collect(),
-        );
-        section(
-            "worktrees",
-            "Worktrees",
-            refs.worktrees
-                .iter()
-                .map(|w| {
-                    (
-                        w.path.clone(),
-                        Row { kind: "worktree", r#ref: Some(RowRef::Worktree(w.clone())), ..Row::default() },
-                    )
-                })
-                .collect(),
-        );
-        if !empty.is_empty() {
-            let names = if empty.len() > 1 {
-                format!("{} or {}", empty[..empty.len() - 1].join(", "), empty[empty.len() - 1])
-            } else {
-                empty[0].clone()
-            };
-            out.push(Row {
-                kind: "note",
-                key: "empty".into(),
-                text: format!("No {names}"),
-                depth: 1,
-                ..Row::default()
-            });
-        }
-        out
-    }
-
-    pub(super) fn view_rows(&self) -> Vec<Row> {
-        let Some(repo) = self.repo() else { return Vec::new() };
-        match self.s.view {
-            "changes" => self.change_rows(),
-            "history" => {
-                let h = &self.s.history;
-                if h.is_empty() {
-                    let text = if !repo.status.has_head {
-                        "No commits yet"
-                    } else if self.s.hist_loaded {
-                        "No commits for this file"
-                    } else {
-                        "Loading…"
-                    };
-                    return vec![Row {
-                        kind: "note",
-                        key: "none".into(),
-                        text: text.into(),
-                        depth: 1,
-                        ..Row::default()
-                    }];
-                }
-                let author_w = 20.min(h.iter().map(|c| ui::text_width(&c.commit.author)).max().unwrap_or(0));
-                let graph_w = MAX_GRAPH.min(h.iter().map(|c| c.graph.len()).max().unwrap_or(0).max(1));
-                h.iter()
-                    .map(|c| Row {
-                        kind: "commit",
-                        key: c.commit.hash.clone(),
-                        commit: Some(Box::new(c.clone())),
-                        author_w,
-                        graph_w,
-                        ..Row::default()
-                    })
-                    .collect()
-            }
-            "stashes" => {
-                let mut out = vec![Row {
-                    kind: "action",
-                    key: "new".into(),
-                    text: "+ Stash all changes…  (n)".into(),
-                    ..Row::default()
-                }];
-                out.extend(self.s.stashes.iter().map(|s| Row {
-                    kind: "stash",
-                    key: s.r#ref.clone(),
-                    stash: Some(s.clone()),
-                    ..Row::default()
-                }));
-                out
-            }
-            _ => self.ref_rows(),
-        }
-    }
-
-    // --- drawing
-
     fn select_rgb(&self) -> Rgb {
         if self.s.diff.as_ref().is_some_and(|d| d.focus) { c().select_blur } else { c().select }
     }
@@ -1350,261 +1135,6 @@ impl Pane {
         self.s.cursor = self.s.cursor.min(rows.len() as i64 - 1).max(0);
         self.s.sel_key = rows.get(self.s.cursor as usize).map(|r| r.key.clone());
     }
-
-    // --- branch picker
-
-    /// A menu in a frame, as wide as its branches (72 columns at most): the switch's hangs under the header's branch,
-    /// merge's and rebase's under the Actions menu that opened them (p.anchor, its right edge), shifted to stay on
-    /// screen. The lines keep what they showed on both sides of it.
-    fn draw_picker(&mut self, lines: &mut Vec<String>, w: i64, h: i64) {
-        let edge = dim();
-        let head_name = self.repo().map_or(String::new(), |r| state::head_name(r).to_string());
-        let pill_x = self.frame.pill_x;
-        let inline_branch = self.inline.as_ref().is_some_and(|it| it.kind == "branch");
-        let p = self.s.picker.as_mut().expect("a picker to draw");
-        let title = match p.mode {
-            Some("merge") => format!("Merge into {head_name}"),
-            Some("rebase") => format!("Rebase {head_name} onto"),
-            _ => "Switch branch".into(),
-        };
-        let width = |b: &context::PickItem| match b {
-            context::PickItem::Create(name) => 3 + tw(name),
-            context::PickItem::Branch(b) => {
-                let b = &b.branch;
-                3 + tw(&format!("{}  {}", b.name, b.subject)) + tw(&format!(" {} ", b.date)) + 1
-            }
-        };
-        let want = p.items.iter().map(width).fold((tw(&title) + 4).max(30), i64::max);
-        let inner = (w - 2).min(70).min(want);
-        let x = match p.anchor {
-            Some((right, _)) => (right - inner - 2).max(0),
-            None => pill_x.min(w - inner - 2).max(0),
-        };
-        let y = p.anchor.map_or(1, |a| a.1);
-        let bh = 4.max((h - 1 - y).min(p.items.len() as i64 + 3));
-        let body = bh - 3;
-        if p.sel < p.top {
-            p.top = p.sel;
-        }
-        if p.sel >= p.top + body {
-            p.top = p.sel - body + 1;
-        }
-        p.r#box = (x, y, inner + 2, bh, body);
-        let (top, sel) = (p.top, p.sel);
-        let items = p.items.clone();
-        let search: Vec<Seg> = if p.typing {
-            p.field.segments(inner - 4, "")
-        } else {
-            vec![seg(
-                if p.field.value.is_empty() { "type / to filter".to_string() } else { p.field.value.clone() },
-                dim(),
-            )]
-        };
-        while (lines.len() as i64) < h - 1 {
-            lines.push(ui::line(&[], w as usize, None));
-        }
-        let iw = inner.max(0) as usize;
-        let mut boxed = Vec::new();
-        let head = format!(" {} ", ui::ellipsis(&title, inner - 4));
-        boxed.push(ui::line(
-            &[
-                seg("╭─", edge.clone()),
-                seg(head.clone(), BOLD),
-                seg(format!("{}╮", "─".repeat((inner - 1 - tw(&head)).max(0) as usize)), edge.clone()),
-            ],
-            (inner + 2).max(0) as usize,
-            None,
-        ));
-        let side = |l: String| format!("{edge}│\x1b[0m{l}{edge}│\x1b[0m");
-        let mut first = vec![seg(format!(" {} ", ui::g().search), dim())];
-        first.extend(search);
-        boxed.push(side(ui::line(&first, iw, Some(c().panel))));
-        for i in top..top + body {
-            let Some(b) = items.get(i.max(0) as usize).filter(|_| i >= 0) else {
-                boxed.push(side(ui::line(&[], iw, Some(c().menu))));
-                continue;
-            };
-            let back = Some(if i == sel { c().select } else { c().menu });
-            boxed.push(side(match b {
-                context::PickItem::Create(_) if inline_branch => self.inline_row(inner, " + ", Some(c().menu)),
-                context::PickItem::Create(name) => {
-                    ui::line(&[seg(" + ", fg(c().green)), seg(name, fg(c().green))], iw, back)
-                }
-                context::PickItem::Branch(pick) => {
-                    let b = &pick.branch;
-                    let style = if b.remote {
-                        fg(c().purple)
-                    } else if pick.current {
-                        BOLD.into()
-                    } else {
-                        String::new()
-                    };
-                    split(
-                        &[
-                            seg(if pick.current { " ● " } else { "   " }, fg(c().green)),
-                            seg(&b.name, style),
-                            seg(format!("  {}", b.subject), dim()),
-                        ],
-                        &[seg(format!(" {} ", b.date), dim())],
-                        inner,
-                        back,
-                    )
-                }
-            }));
-        }
-        let count = items.iter().filter(|b| matches!(b, context::PickItem::Branch(_))).count();
-        let foot = format!(" {count} branch{} ", if count == 1 { "" } else { "es" });
-        boxed.push(ui::line(
-            &[
-                seg("╰─", edge.clone()),
-                seg(foot.clone(), dim()),
-                seg(format!("{}╯", "─".repeat((inner - 1 - tw(&foot)).max(0) as usize)), edge.clone()),
-            ],
-            (inner + 2).max(0) as usize,
-            None,
-        ));
-        for (i, l) in boxed.into_iter().enumerate() {
-            let at = (y.max(0) as usize) + i;
-            while lines.len() <= at {
-                lines.push(ui::line(&[], w as usize, None));
-            }
-            let old = lines[at].clone();
-            let before = if x > 0 { ui::head(&old, x as usize) } else { String::new() };
-            lines[at] = format!("{before}{l}{}", ui::tail(&old, (x + inner + 2).max(0) as usize));
-        }
-    }
-
-    /// The row of the name being typed, width w, on back.
-    fn inline_row(&self, w: i64, lead: &str, back: Option<Rgb>) -> String {
-        let Some(it) = &self.inline else { return String::new() };
-        let right = format!(" {} ", it.right);
-        let field_bg = bg(c().field);
-        let fw = (w - tw(lead) - tw(&right) - 1).max(4);
-        let field: Vec<Seg> =
-            it.field.segments(fw - 1, "").into_iter().map(|(t, st)| seg(t, format!("{field_bg}{st}"))).collect();
-        let mut segs = vec![seg(lead, dim()), seg(" ", field_bg.clone())];
-        let used = sw(&field);
-        segs.extend(field);
-        segs.push(seg(spaces(fw - 1 - used), field_bg));
-        segs.push(seg(spaces((w - tw(lead) - fw - tw(&right)).max(1)), ""));
-        segs.push(seg(right, dim()));
-        ui::line(&segs, w.max(0) as usize, back)
-    }
-}
-
-fn file_row(sec: &'static str, it: &Item, depth: usize) -> Row {
-    Row {
-        kind: "file",
-        key: format!("{sec}:{}", it.path),
-        sec,
-        item: Some(it.clone()),
-        items: vec![it.clone()],
-        count: 1,
-        depth,
-        ..Row::default()
-    }
-}
-
-/// A comparison in the diff area: its title row, then its rows (selected commit highlighted).
-fn compare_lines(d: &mut DiffView, bar: &mut ui::Scrollbar, resizing: bool, width: i64, height: i64) -> Vec<String> {
-    let body = height - 1;
-    if !resizing && d.cache != width.to_string() {
-        d.cmp_rows = compare_rows(d, width - 1);
-        d.cache = width.to_string();
-    }
-    d.top = d.top.min(d.cmp_rows.len() as i64 - body).max(0);
-    let bw = bar.set(d.cmp_rows.len() as i64, body, d.top, &[]) as i64;
-    let state: Vec<Seg> = match &d.cmp {
-        Some(c) if c.failed.is_none() => {
-            let style = if c.ahead != 0.0 || c.behind != 0.0 { fg(self::c().yellow) } else { dim() };
-            vec![seg(format!("{} ahead · {} behind ", num(c.ahead), num(c.behind)), style)]
-        }
-        _ => Vec::new(),
-    };
-    let title = [seg(format!(" {}", d.title), BOLD), seg("  ↔  ", dim()), seg(&d.base, BOLD)];
-    let mut lines = vec![split(&title, &state, width, Some(if d.focus { c().select } else { c().header }))];
-    let (w, b) = (width.max(0) as usize, body.max(0) as usize);
-    if d.cmp.is_none() {
-        lines.extend(ui::empty::<&str, &str>(w, b, "Loading…", &[]));
-    }
-    let from = (d.top as usize).min(d.cmp_rows.len());
-    for (k, r) in d.cmp_rows[from..(from + b).min(d.cmp_rows.len())].iter().enumerate() {
-        let sel =
-            if d.top + k as i64 == d.sel { Some(if d.focus { c().select } else { c().select_blur }) } else { r.back };
-        lines.push(ui::line(&r.segs, (width - bw).max(0) as usize, sel) + &bar.cell(k as i64));
-    }
-    while (lines.len() as i64) < height {
-        lines.push(ui::line(&[], w, None));
-    }
-    lines.truncate(height.max(0) as usize);
-    lines
-}
-
-/// The rows of a comparison for a width; the commit rows can be selected (Enter shows them).
-fn compare_rows(d: &DiffView, width: i64) -> Vec<CmpRow> {
-    let Some(c) = &d.cmp else { return Vec::new() };
-    let row = |segs: Vec<Seg>| CmpRow { segs, ..CmpRow::default() };
-    if let Some(failed) = &c.failed {
-        return vec![row(vec![seg(format!(" {failed}"), fg(self::c().red))])];
-    }
-    let mut out = Vec::new();
-    let section = |out: &mut Vec<CmpRow>, title: String, n: String| {
-        out.push(CmpRow {
-            segs: vec![seg(format!(" {title}"), BOLD), seg(format!("  {n}"), dim())],
-            back: Some(self::c().section),
-            commit: None,
-        });
-    };
-    let commits = |out: &mut Vec<CmpRow>, list: &[parse::Compared], total: f64| {
-        if list.is_empty() {
-            out.push(row(vec![seg("   none", dim())]));
-        }
-        for x in list {
-            let date = format!(" {} ", pad_start(&x.date, 6));
-            let room = (width - crate::core::js::utf16_len(&date) as i64 - 13).max(1);
-            out.push(CmpRow {
-                commit: Some(x.clone()),
-                segs: vec![
-                    seg(if x.same { "   = " } else { "     " }, dim()),
-                    seg(format!("{}  ", x.short), fg(self::c().yellow)),
-                    seg(pad(&x.subject, room), if x.same { dim() } else { String::new() }),
-                    seg(date, dim()),
-                ],
-                back: None,
-            });
-        }
-        if total > list.len() as f64 {
-            out.push(row(vec![seg(format!("   … and {} more", num(total - list.len() as f64)), dim())]));
-        }
-        out.push(row(Vec::new()));
-    };
-    section(&mut out, format!("Only on {}", d.title), num(c.ahead));
-    commits(&mut out, &c.mine, c.ahead);
-    section(&mut out, format!("Only on {}", d.base), num(c.behind));
-    commits(&mut out, &c.theirs, c.behind);
-    let n = |v: &str| if v == "-" { 0.0 } else { crate::core::js::string_to_number(v) };
-    let add: f64 = c.files.iter().map(|f| n(&f.add)).sum();
-    let del: f64 = c.files.iter().map(|f| n(&f.del)).sum();
-    section(&mut out, "Files changed".into(), format!("{}  +{} −{}", c.files.len(), num(add), num(del)));
-    if c.files.is_empty() {
-        out.push(row(vec![seg("   none", dim())]));
-    }
-    for f in &c.files {
-        let binary = f.add == "-";
-        let counts = if binary { " binary ".to_string() } else { format!(" +{} −{} ", f.add, f.del) };
-        let mut segs = vec![
-            seg("   ", ""),
-            seg(pad(&f.path, (width - crate::core::js::utf16_len(&counts) as i64 - 3).max(1)), ""),
-        ];
-        if binary {
-            segs.push(seg(counts, dim()));
-        } else {
-            segs.push(seg(format!(" +{}", f.add), fg(self::c().green)));
-            segs.push(seg(format!(" −{} ", f.del), red_d()));
-        }
-        out.push(row(segs));
-    }
-    out
 }
 
 /// The diff's options (⚙ or , in the diff), as in the preview's Diff view, kept for later panes: the layout switched.
