@@ -258,6 +258,7 @@ fn decode(s: &str) -> Option<Vec<u8>> {
 mod tests {
     use super::*;
 
+    #[cfg(unix)]
     #[test]
     fn reads_file_urls() {
         let c = |u: &str| clicked(u, "me");
@@ -271,5 +272,14 @@ mod tests {
         assert_eq!(c("file://a@b/x").as_deref(), None);
         assert_eq!(c("file:///x#L1-L2").as_deref(), Some("/x:1-2"));
         assert_eq!(c("file:///x#1-").as_deref(), Some("/x"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn reads_windows_file_urls() {
+        let c = |u: &str| clicked(u, "me");
+        assert_eq!(c("file:///C:/a/../b/d.js#L3").as_deref(), Some("C:\\b\\d.js:3"));
+        assert_eq!(c("file:///a/b").as_deref(), None);
+        assert_eq!(c("file:///C:/a%5Cb").as_deref(), None);
     }
 }

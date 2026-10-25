@@ -1308,12 +1308,14 @@ mod tests {
         let e = sh("echo started; sleep 5; echo never", &slow);
         assert_eq!((e.code, e.out.as_str()), (None, "started\n"));
         assert!(t.elapsed() < Duration::from_secs(3));
-        // Detached: a session of its own, without terminal.
-        let alone = Opts { detached: true, ..Default::default() };
-        let e = sh("ps -o sid= -p $$; ps -o pid= -p $$", &alone);
-        let ids: Vec<&str> = e.out.split_whitespace().collect();
-        assert_eq!(ids.len(), 2);
-        assert_eq!(ids[0], ids[1]);
+        // Detached: a session of its own, without terminal (macOS's ps has no sid).
+        if cfg!(target_os = "linux") {
+            let alone = Opts { detached: true, ..Default::default() };
+            let e = sh("ps -o sid= -p $$; ps -o pid= -p $$", &alone);
+            let ids: Vec<&str> = e.out.split_whitespace().collect();
+            assert_eq!(ids.len(), 2);
+            assert_eq!(ids[0], ids[1]);
+        }
         let shell = Opts { shell: true, ..Default::default() };
         assert_eq!(exec(Some("echo"), &["a", "$((1+2))"], &shell).out, "a 3\n");
     }
@@ -1389,7 +1391,9 @@ mod tests {
         assert!(has("filter.a=b.smudge", ""));
         assert!(has("hook.pre.enabled", "false"));
         assert_eq!(env_get(&env, "GIT_NO_LAZY_FETCH"), Some("1"));
-        assert_eq!(env_get(&env, "GIT_WORK_TREE"), Some(d));
+        // git gives the real path: /private/var for macOS's /var.
+        let real = std::fs::canonicalize(&dir).unwrap();
+        assert_eq!(env_get(&env, "GIT_WORK_TREE"), real.to_str());
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
