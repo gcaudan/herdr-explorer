@@ -6,12 +6,13 @@
 //! As in the explorer, the herdr and clipboard calls run on a worker thread and their results come back to the
 //! pane's loop; the JS's timers are deadlines of that loop.
 //!
-//! TODO(case 13): rendered Markdown, images (Kitty graphics and half blocks), the review notes.
+//! TODO(case 13): the review notes.
 //! TODO(case 20): the update watched, the preview restarted on the new code.
 
 mod diff;
 mod edit;
 mod input;
+mod media;
 mod render;
 
 use crate::core::actions::{self, Kept};
@@ -69,6 +70,7 @@ fn clean_marks(list: Option<&Value>) -> Vec<Mark> {
 pub enum Kind {
     Text,
     Markdown,
+    Image,
     Binary,
     Error,
 }
@@ -104,6 +106,12 @@ pub struct Row {
     pub back: Option<ui::Rgb>,
     /// A row of the Diff view: what it shows, for n, s, u, D and the references.
     pub diff: Option<crate::diff::Row>,
+    /// An image file in pixels: the first of its blank rows holds what to place (see place_image).
+    pub picture: Option<Rc<media::Picture>>,
+    /// The line under an image drawn with half blocks: its clickable parts.
+    pub hint: Option<Vec<Chip>>,
+    /// A row of an image of rendered Markdown in pixels (see place_figures).
+    pub figure: Option<Rc<media::Fig>>,
 }
 
 impl Row {
@@ -118,6 +126,8 @@ pub struct Rows {
     pub list: Vec<Row>,
     width: usize,
     height: usize,
+    /// The ids of the images of rendered Markdown in pixels that the rows hold, for place_figures.
+    figures: Vec<u32>,
 }
 
 /// A position: a display row and the byte index of a character in its text.
@@ -159,6 +169,8 @@ pub enum Opt {
     LineNumbers,
     Changes,
     Edit,
+    Markdown,
+    Sharp,
     Layout,
     Compare,
     Scope(scope::Pick),
@@ -175,6 +187,13 @@ pub struct State {
     /// Highlighted source lines, and the same lines as plain text, for the find and the copy.
     source: Vec<Vec<Seg>>,
     plain: Vec<String>,
+    /// Image bytes.
+    buffer: Option<Arc<Vec<u8>>>,
+    /// A WebP waiting for its PNG (dwebp), and what to install when the tool is missing.
+    converting: bool,
+    missing: Option<String>,
+    /// p: images in pixels (true) or half blocks (false) in this pane; None: as the Images setting.
+    sharp: Option<bool>,
     /// Markdown shown as source.
     raw: bool,
     rows: Option<Rc<Rows>>,
@@ -217,14 +236,6 @@ pub struct State {
     ask: Option<edit::Question>,
 }
 
-/// The Kitty graphics protocol: whether the terminal answered, whether its answer is still awaited (500 ms at most),
-/// and the size of a cell in pixels.
-struct Kitty {
-    supported: bool,
-    probing: bool,
-    cell: (i64, i64),
-}
-
 /// The width kept: None at first, the width herdr gave the pane.
 struct Width(Arc<Mutex<Option<f64>>>);
 
@@ -253,7 +264,9 @@ pub struct Preview {
     tabs: PaneTabs,
     strip_first: i64,
     scrollbar: Scrollbar,
-    kitty: Kitty,
+    kitty: media::Kitty,
+    /// The images of rendered Markdown, drawn.
+    pictures: media::Pictures,
     screen: Screen,
     tx: Sender<Then>,
     rx: Receiver<Then>,
@@ -429,6 +442,10 @@ impl Preview {
                 text: String::new(),
                 source: Vec::new(),
                 plain: Vec::new(),
+                buffer: None,
+                converting: false,
+                missing: None,
+                sharp: None,
                 raw: false,
                 rows: None,
                 top: 0,
@@ -462,7 +479,8 @@ impl Preview {
             tabs,
             strip_first: 0,
             scrollbar: Scrollbar::new(),
-            kitty: Kitty { supported: false, probing: true, cell: (8, 16) },
+            kitty: media::Kitty::new(),
+            pictures: media::Pictures::default(),
             screen,
             tx,
             rx,
@@ -511,10 +529,14 @@ impl Preview {
     fn start(&mut self) {
         let restored = self.restored;
         // The JS's process.on('exit', saveFile), a signal included.
-        let (pane, snapshot) = (self.pane.clone(), self.snapshot.clone());
+        let (pane, snapshot, images) = (self.pane.clone(), self.snapshot.clone(), self.kitty.exit.clone());
         exec::at_exit(move || {
             if let Some(data) = snapshot.lock().unwrap_or_else(|e| e.into_inner()).take() {
                 exec::write_pane_state(&pane, &data);
+            }
+            let images = std::mem::take(&mut *images.lock().unwrap_or_else(|e| e.into_inner()));
+            if !images.is_empty() {
+                let _ = sys::write_stdout(images.as_bytes());
             }
             if edit::CURSOR_SHOWN.load(std::sync::atomic::Ordering::Relaxed) {
                 let _ = sys::write_stdout(b"\x1b[0 q");
@@ -909,6 +931,7 @@ impl Preview {
             return;
         }
         self.settings.set("images", saved.get("images").cloned().unwrap_or(Value::Null));
+        self.state.sharp = None;
         self.state.rows = None;
         self.render();
     }
@@ -923,7 +946,10 @@ impl Preview {
         if exec::remote_link(&file, &top) {
             return self.set_error("Link to a network share: not opened");
         }
-        let limit = MAX_BYTES;
+        // An image is read whole, up to the decoder's limit and one byte more, so that a larger one is reported as too
+        // large rather than decoded from its start.
+        let picture = crate::render::image::FORMATS.contains(&ext(&file).as_str());
+        let limit = if picture { crate::render::image::MAX_BYTES as u64 + 1 } else { MAX_BYTES };
         let read = || -> Result<Result<(Vec<u8>, u64), &'static str>, std::io::Error> {
             let stat = std::fs::metadata(&file)?;
             if stat.is_dir() {
@@ -954,9 +980,16 @@ impl Preview {
         let (top, left) = (self.state.top, self.state.left);
         let s = &mut self.state;
         s.rows = None;
+        s.buffer = None;
         s.matches.clear();
         s.matched = -1;
-        if buf[..buf.len().min(8000)].contains(&0) {
+        s.converting = false;
+        s.missing = None;
+        self.forget_pictures(&file);
+        if picture {
+            info = self.load_image(&file, buf, info);
+        } else if buf[..buf.len().min(8000)].contains(&0) {
+            let s = &mut self.state;
             s.kind = Kind::Binary;
             s.plain = hexdump(&buf[..buf.len().min(HEX_BYTES)]);
             s.source = s
@@ -968,6 +1001,7 @@ impl Preview {
                 info += &format!(" · first {}", size(HEX_BYTES as u64));
             }
         } else {
+            let s = &mut self.state;
             let text = String::from_utf8_lossy(&buf);
             let text = text.strip_prefix('\u{feff}').unwrap_or(&text).to_string();
             s.kind = if is_markdown(&file) { Kind::Markdown } else { Kind::Text };
@@ -994,6 +1028,7 @@ impl Preview {
             info = format!("{} line{} · {info}", lines.len(), if lines.len() == 1 { "" } else { "s" });
             s.text = text;
         }
+        let s = &mut self.state;
         s.info = info;
         if keep_scroll {
             s.top = top;
@@ -1022,6 +1057,7 @@ impl Preview {
         s.rows = None;
         s.plain.clear();
         s.source.clear();
+        s.buffer = None;
         if self.state.edit.is_some() {
             self.disk_changed();
         }

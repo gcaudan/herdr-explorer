@@ -1,0 +1,7 @@
+# An image that cannot be decoded: why, and what to do.
+size 60 10
+file bad.png not an image
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false,"images":"blocks"}
+env EXPLORER_FILE=$ROOT/work/bad.png
+start
+until 800

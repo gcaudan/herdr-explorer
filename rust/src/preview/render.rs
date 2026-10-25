@@ -139,23 +139,23 @@ fn byte_of(text: &str, u: i64) -> usize {
 impl Preview {
     // --- display rows
 
-    /// Rendered Markdown. TODO(case 13): shown rendered, rather than as its source.
-    pub(super) fn markdown_view(&self) -> bool {
-        false
-    }
-
     /// The line numbers, the first of their columns taking the changes' signs; without them, a column of its own for
     /// the changes, only when the file has some.
     pub(super) fn gutter(&self) -> usize {
         let s = &self.state;
-        if !s.diff && s.show.is_none() && self.on("lineNumbers") && !self.markdown_view() && s.kind != Kind::Binary {
+        if !s.diff
+            && s.show.is_none()
+            && self.on("lineNumbers")
+            && !self.markdown_view()
+            && !matches!(s.kind, Kind::Binary | Kind::Image)
+        {
             s.source.len().to_string().len() + 2
         } else {
             usize::from(self.changes_shown())
         }
     }
 
-    /// Display rows for the current width: wrapped or not, built again when the width changes.
+    /// Display rows for the current width: wrapped or rendered text, built again when the width changes.
     pub(super) fn rows(&mut self) -> Rc<Rows> {
         let (w, h) = self.size();
         let width = (w as i64 - self.gutter() as i64 - 1).max(1) as usize;
@@ -172,6 +172,10 @@ impl Preview {
         let mut list = Vec::new();
         if s.diff || s.show.is_some() {
             list = self.diff_rows(w);
+        } else if s.kind == Kind::Image {
+            list = self.image_rows(w, h);
+        } else if self.markdown_view() {
+            list = self.markdown_rows(width);
         } else if s.kind == Kind::Error {
             list.push(Row::empty(&s.info, &[("r", "reload"), ("q", "close")]));
         } else if self.on("wrap") {
@@ -192,7 +196,13 @@ impl Preview {
                 .map(|(i, segs)| Row { segs: segs.clone(), src: i as i64, first: true, ..Row::default() })
                 .collect();
         }
-        let rows = Rc::new(Rows { list, width, height: h });
+        let mut figures = Vec::new();
+        for f in list.iter().filter_map(|r| r.figure.as_ref()) {
+            if !figures.contains(&f.pic.id) {
+                figures.push(f.pic.id);
+            }
+        }
+        let rows = Rc::new(Rows { list, width, height: h, figures });
         self.state.rows = Some(rows.clone());
         rows
     }
@@ -217,15 +227,16 @@ impl Preview {
         let mut lines = vec![self.header(w)];
         let gw = self.gutter();
         let ranges = self.match_ranges();
+        let md = self.markdown_view();
         let s = &self.state;
         let current =
             s.find.as_ref().filter(|_| s.matched >= 0).and_then(|_| s.matches.get(s.matched as usize).copied());
-        // Wrapped rows leave the last column free for the scrollbar.
+        // Wrapped and rendered rows leave the last column free for the scrollbar.
         let marks = self.change_marks(&rows);
         let s = &self.state;
         let bw = self.scrollbar.set(list.len() as i64, body_h, s.top, &marks);
         let signs = self.changes_shown();
-        // Nothing to show (an error, an empty file): why, centred, and what to do.
+        // Nothing to show (an error, an image that cannot be drawn, an empty file): why, centred, and what to do.
         let none = if list.len() == 1 && list[0].empty.is_some() {
             list[0].empty.clone()
         } else if !s.diff && s.show.is_none() && matches!(s.kind, Kind::Text | Kind::Markdown) && s.text.is_empty() {
@@ -260,23 +271,24 @@ impl Preview {
                     None => vec![sign],
                 };
             }
-            // The find's matches: every one marked, the current one brighter.
-            let off = r.off;
+            // The find's matches: every one marked, the current one brighter (in rendered Markdown, matches are by
+            // row).
+            let (at, off) = (if md { i } else { r.src }, r.off);
             let mut segs = self.segs_of(r);
-            if r.src >= 0
-                && let Some(rs) = ranges.get(&(r.src as usize))
+            if (md || r.src >= 0)
+                && let Some(rs) = ranges.get(&(at as usize))
             {
                 let shifted: Vec<(usize, usize)> =
                     rs.iter().map(|&(a, b)| (a.saturating_sub(off), b.saturating_sub(off))).collect();
                 segs = ui::mark(&segs, &shifted, &bg(c().find));
-                if let Some((l, a, b)) = current.filter(|m| m.0 as i64 == r.src) {
+                if let Some((l, a, b)) = current.filter(|m| m.0 as i64 == at) {
                     let _ = l;
                     let style = format!("{}\x1b[1m", bg(c().current));
                     segs = ui::mark(&segs, &[(a.saturating_sub(off), b.saturating_sub(off))], &style);
                 }
             }
             // The caller's marks: parts of the line on the selection's colour, whole lines on the line highlight's.
-            if let Some(text) = usize::try_from(r.src).ok().and_then(|i| s.plain.get(i)) {
+            if let Some(text) = usize::try_from(r.src).ok().filter(|_| !md).and_then(|i| s.plain.get(i)) {
                 let cols: Vec<(usize, usize)> = self
                     .marks_of(r.src)
                     .filter(|m| m.a != 0)
@@ -310,6 +322,8 @@ impl Preview {
         self.overlays(&mut lines, w, h);
         self.screen.paint(&lines);
         super::edit::show_cursor(None);
+        self.place_image();
+        self.place_figures();
     }
 
     /// The menu, the key help and a question, over the pane.
@@ -523,6 +537,15 @@ impl Preview {
         let mut pairs = marks;
         if s.show.is_some() {
             pairs = self.show_pairs();
+        } else if s.kind == Kind::Image && !s.diff {
+            let sharp = if self.sharp() { "pixelated" } else { "sharp" };
+            pairs = vec![
+                pair("p", sharp),
+                pair("o", "open"),
+                pair("y", "copy path"),
+                pair("q", "close"),
+                pair("?", "keys"),
+            ];
         } else if s.diff {
             if n <= 1 {
                 pairs.push(pair("n N", "hunks"));

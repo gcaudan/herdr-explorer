@@ -1,0 +1,10 @@
+# The terminal answers the Kitty query: the Markdown's image in pixels over blank rows; the menu has Images.
+size 60 22
+file doc.md # Title\n\nSome *text* with an item.\n\n- one item\n- two\n\n![logo](b.png)\n\n![web](https://example.com/x.png) and ![out](../out.png)\n\nThe end item.\n
+hex b.png 89504e470d0a1a0a0000000d49484452000000060000000408020000002266d9140000001349444154789c63f8cfc0004130fa3f03b942008ce917e97461d1c50000000049454e44ae426082
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/doc.md
+start
+text \e_Gi=31;OK\e\\
+until 800
+keys ,

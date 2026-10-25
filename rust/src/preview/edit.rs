@@ -684,6 +684,8 @@ impl Preview {
         let covered = s.menu.is_some() || s.help.is_some() || s.ask.is_some() || prompt;
         let inside = y >= 2 && y < 2 + body_h as i64 && x > gw as i64 && x <= (w - bw) as i64;
         show_cursor((!covered && inside).then_some((y, x)));
+        self.place_image();
+        self.place_figures();
     }
 
     /// The view moved to the cursor: just enough when it is near, a third of the way down when it jumped (a find, a

@@ -1,0 +1,20 @@
+size 60x14
+⟪bg=#252526 b i⟫ pic.png⟪fg=#8c8c8c bg=#252526⟫  PNG 12×8 · 231 B⟪bg=#252526⟫                  ⟪fg=#d4d4d4 bg=#04395e b⟫ File ⟪fg=#8c8c8c bg=#3a3a3e⟫ Diff ⟪bg=#252526⟫ ⟪fg=#d4d4d4 bg=#252526⟫ ⚙ ⟪⟫
+                                        ⟪fg=#8c8c8c⟫╭ View ───────────╮⟪⟫
+                                        ⟪fg=#8c8c8c⟫│⟪bg=#04395e⟫ Image⟪fg=#8c8c8c bg=#04395e⟫  p⟪bg=#04395e⟫  ⟪fg=#519aba bg=#04395e⟫sharp ⟪fg=#8c8c8c⟫│⟪⟫
+                                        ⟪fg=#8c8c8c⟫╰─────────────────╯⟪⟫
+
+
+
+
+
+
+
+
+
+⟪fg=#8dc149 bg=#252526⟫ ✓ ⟪bg=#252526⟫The terminal did not answer the Kitty graphics query: the⟪⟫
+graphics
+a=d,d=I,i=18502,q=2 @14;60
+a=t,f=32,o=z,s=48,v=32,i=18502,q=2 @14;60
+a=p,i=18502,p=1,c=6,r=2,C=1,q=2 @2;28
+a=d,d=i,i=18502,q=2 @4;60

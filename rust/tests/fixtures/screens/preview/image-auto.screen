@@ -1,0 +1,15 @@
+size 60x14
+⟪bg=#252526 b i⟫ pic.png⟪fg=#8c8c8c bg=#252526⟫  PNG 12×8 · 231 B⟪bg=#252526⟫                  ⟪fg=#d4d4d4 bg=#04395e b⟫ File ⟪fg=#8c8c8c bg=#3a3a3e⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+                  ⟪fg=#000028 bg=#000028⟫▀▀⟪fg=#1400c8 bg=#1400c8⟫▀▀⟪fg=#280028 bg=#280028⟫▀▀⟪fg=#3c00c8 bg=#3c00c8⟫▀▀⟪fg=#500028 bg=#500028⟫▀▀⟪fg=#6400c8 bg=#6400c8⟫▀▀⟪fg=#780028 bg=#780028⟫▀▀⟪fg=#8c00c8 bg=#8c00c8⟫▀▀⟪fg=#a00028 bg=#a00028⟫▀▀⟪fg=#b400c8 bg=#b400c8⟫▀▀⟪fg=#c80028 bg=#c80028⟫▀▀⟪fg=#dc00c8 bg=#dc00c8⟫▀▀⟪⟫
+                  ⟪fg=#001ec8 bg=#001ec8⟫▀▀⟪fg=#141e28 bg=#141e28⟫▀▀⟪fg=#281ec8 bg=#281ec8⟫▀▀⟪fg=#3c1e28 bg=#3c1e28⟫▀▀⟪fg=#501ec8 bg=#501ec8⟫▀▀⟪fg=#641e28 bg=#641e28⟫▀▀⟪fg=#781ec8 bg=#781ec8⟫▀▀⟪fg=#8c1e28 bg=#8c1e28⟫▀▀⟪fg=#a01ec8 bg=#a01ec8⟫▀▀⟪fg=#b41e28 bg=#b41e28⟫▀▀⟪fg=#c81ec8 bg=#c81ec8⟫▀▀⟪fg=#dc1e28 bg=#dc1e28⟫▀▀⟪⟫
+                  ⟪fg=#003c28 bg=#003c28⟫▀▀⟪fg=#143cc8 bg=#143cc8⟫▀▀⟪fg=#283c28 bg=#283c28⟫▀▀⟪fg=#3c3cc8 bg=#3c3cc8⟫▀▀⟪fg=#503c28 bg=#503c28⟫▀▀⟪fg=#643cc8 bg=#643cc8⟫▀▀⟪fg=#783c28 bg=#783c28⟫▀▀⟪fg=#8c3cc8 bg=#8c3cc8⟫▀▀⟪fg=#a03c28 bg=#a03c28⟫▀▀⟪fg=#b43cc8 bg=#b43cc8⟫▀▀⟪fg=#c83c28 bg=#c83c28⟫▀▀⟪fg=#dc3cc8 bg=#dc3cc8⟫▀▀⟪⟫
+                  ⟪fg=#005ac8 bg=#005ac8⟫▀▀⟪fg=#145a28 bg=#145a28⟫▀▀⟪fg=#285ac8 bg=#285ac8⟫▀▀⟪fg=#3c5a28 bg=#3c5a28⟫▀▀⟪fg=#505ac8 bg=#505ac8⟫▀▀⟪fg=#645a28 bg=#645a28⟫▀▀⟪fg=#785ac8 bg=#785ac8⟫▀▀⟪fg=#8c5a28 bg=#8c5a28⟫▀▀⟪fg=#a05ac8 bg=#a05ac8⟫▀▀⟪fg=#b45a28 bg=#b45a28⟫▀▀⟪fg=#c85ac8 bg=#c85ac8⟫▀▀⟪fg=#dc5a28 bg=#dc5a28⟫▀▀⟪⟫
+                  ⟪fg=#007828 bg=#007828⟫▀▀⟪fg=#1478c8 bg=#1478c8⟫▀▀⟪fg=#287828 bg=#287828⟫▀▀⟪fg=#3c78c8 bg=#3c78c8⟫▀▀⟪fg=#507828 bg=#507828⟫▀▀⟪fg=#6478c8 bg=#6478c8⟫▀▀⟪fg=#787828 bg=#787828⟫▀▀⟪fg=#8c78c8 bg=#8c78c8⟫▀▀⟪fg=#a07828 bg=#a07828⟫▀▀⟪fg=#b478c8 bg=#b478c8⟫▀▀⟪fg=#c87828 bg=#c87828⟫▀▀⟪fg=#dc78c8 bg=#dc78c8⟫▀▀⟪⟫
+                  ⟪fg=#0096c8 bg=#0096c8⟫▀▀⟪fg=#149628 bg=#149628⟫▀▀⟪fg=#2896c8 bg=#2896c8⟫▀▀⟪fg=#3c9628 bg=#3c9628⟫▀▀⟪fg=#5096c8 bg=#5096c8⟫▀▀⟪fg=#649628 bg=#649628⟫▀▀⟪fg=#7896c8 bg=#7896c8⟫▀▀⟪fg=#8c9628 bg=#8c9628⟫▀▀⟪fg=#a096c8 bg=#a096c8⟫▀▀⟪fg=#b49628 bg=#b49628⟫▀▀⟪fg=#c896c8 bg=#c896c8⟫▀▀⟪fg=#dc9628 bg=#dc9628⟫▀▀⟪⟫
+                  ⟪fg=#00b428 bg=#00b428⟫▀▀⟪fg=#14b4c8 bg=#14b4c8⟫▀▀⟪fg=#28b428 bg=#28b428⟫▀▀⟪fg=#3cb4c8 bg=#3cb4c8⟫▀▀⟪fg=#50b428 bg=#50b428⟫▀▀⟪fg=#64b4c8 bg=#64b4c8⟫▀▀⟪fg=#78b428 bg=#78b428⟫▀▀⟪fg=#8cb4c8 bg=#8cb4c8⟫▀▀⟪fg=#a0b428 bg=#a0b428⟫▀▀⟪fg=#b4b4c8 bg=#b4b4c8⟫▀▀⟪fg=#c8b428 bg=#c8b428⟫▀▀⟪fg=#dcb4c8 bg=#dcb4c8⟫▀▀⟪⟫
+                  ⟪fg=#00d2c8 bg=#00d2c8⟫▀▀⟪fg=#14d228 bg=#14d228⟫▀▀⟪fg=#28d2c8 bg=#28d2c8⟫▀▀⟪fg=#3cd228 bg=#3cd228⟫▀▀⟪fg=#50d2c8 bg=#50d2c8⟫▀▀⟪fg=#64d228 bg=#64d228⟫▀▀⟪fg=#78d2c8 bg=#78d2c8⟫▀▀⟪fg=#8cd228 bg=#8cd228⟫▀▀⟪fg=#a0d2c8 bg=#a0d2c8⟫▀▀⟪fg=#b4d228 bg=#b4d228⟫▀▀⟪fg=#c8d2c8 bg=#c8d2c8⟫▀▀⟪fg=#dcd228 bg=#dcd228⟫▀▀⟪⟫
+
+                ⟪fg=#8c8c8c⟫▦ Pixelated  ⟪fg=#519aba u⟫Sharp images ↗⟪⟫
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ p⟪fg=#8c8c8c bg=#252526⟫ sharp⟪fg=#d4d4d4 bg=#252526 b⟫   o⟪fg=#8c8c8c bg=#252526⟫ open⟪fg=#d4d4d4 bg=#252526 b⟫   y⟪fg=#8c8c8c bg=#252526⟫ copy path⟪fg=#d4d4d4 bg=#252526 b⟫   q⟪fg=#8c8c8c bg=#252526⟫ close⟪fg=#d4d4d4 bg=#252526 b⟫   ?⟪fg=#8c8c8c bg=#252526⟫ keys          ⟪⟫

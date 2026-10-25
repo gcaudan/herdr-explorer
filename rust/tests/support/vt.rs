@@ -1,7 +1,8 @@
 //! A minimal terminal emulator for the screen captures: what a pane wrote, played on a grid of cells (text and SGR
 //! attributes), then written out as text. JS and Rust captures go through the same emulator, so it only needs to be
 //! deterministic and to keep what a user sees: cursor moves, erases, scrolling, alternate screen, colours. Queries,
-//! OSC, APC (Kitty graphics) and DCS are skipped.
+//! OSC and DCS are skipped; the Kitty graphics commands (APC) are listed, without their data, which depends on the
+//! compressor.
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum Color {
@@ -74,9 +75,10 @@ enum State {
     Csi(String),
     /// ESC ( ) * + # %: the next character designates a charset or a line size, never shown.
     Designate,
-    /// OSC, DCS, APC, PM, SOS: skipped up to BEL (OSC) or ESC \.
+    /// OSC, DCS, APC, PM, SOS: skipped up to BEL (OSC) or ESC \; an APC's control part (up to ;) kept.
     Str {
         esc: bool,
+        apc: Option<String>,
     },
 }
 
@@ -98,6 +100,8 @@ pub struct Screen {
     bottom: usize,
     state: State,
     utf8: Vec<u8>,
+    /// The Kitty graphics commands, where the cursor was: a=q queries and the data's later chunks left out.
+    graphics: Vec<String>,
 }
 
 /// Columns of a character: 0 for combining marks and joiners, 2 for wide ones (East Asian wide, emoji), else 1. A
@@ -141,6 +145,7 @@ impl Screen {
             bottom: h - 1,
             state: State::Ground,
             utf8: Vec::new(),
+            graphics: Vec::new(),
         }
     }
 
@@ -190,13 +195,27 @@ impl Screen {
                     self.state = State::Csi(params);
                 }
             }
-            State::Str { esc } => {
+            State::Str { esc, mut apc } => {
                 if c == '\x07' || (esc && c == '\\') {
-                    return;
+                    return self.apc(apc);
                 }
-                self.state = State::Str { esc: c == '\x1b' };
+                if let Some(a) = apc.as_mut().filter(|a| !a.ends_with(';') && c != '\x1b') {
+                    a.push(c);
+                }
+                self.state = State::Str { esc: c == '\x1b', apc };
             }
         }
+    }
+
+    /// A Kitty graphics command listed: its keys but m (whether more data follows), and the cursor's row and column.
+    fn apc(&mut self, apc: Option<String>) {
+        let Some(control) = apc.as_deref().and_then(|a| a.strip_prefix('G')) else { return };
+        let keys: Vec<&str> = control.trim_end_matches(';').split(',').collect();
+        if keys.iter().all(|k| !k.starts_with("a=")) || keys.contains(&"a=q") {
+            return;
+        }
+        let kept: Vec<&str> = keys.into_iter().filter(|k| !k.starts_with("m=")).collect();
+        self.graphics.push(format!("{} @{};{}", kept.join(","), self.y + 1, self.x + 1));
     }
 
     fn ground(&mut self, c: char) {
@@ -293,7 +312,8 @@ impl Screen {
     fn esc(&mut self, c: char) {
         match c {
             '[' => self.state = State::Csi(String::new()),
-            ']' | 'P' | '_' | '^' | 'X' => self.state = State::Str { esc: false },
+            '_' => self.state = State::Str { esc: false, apc: Some(String::new()) },
+            ']' | 'P' | '^' | 'X' => self.state = State::Str { esc: false, apc: None },
             '(' | ')' | '*' | '+' | '#' | '%' => self.state = State::Designate,
             '7' => self.saved = (self.x, self.y),
             '8' => (self.x, self.y) = self.saved,
@@ -558,6 +578,13 @@ impl Screen {
             }
             out.push_str(&line);
             out.push('\n');
+        }
+        if !self.graphics.is_empty() {
+            out.push_str("graphics\n");
+            for g in &self.graphics {
+                out.push_str(g);
+                out.push('\n');
+            }
         }
         out
     }

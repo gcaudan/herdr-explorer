@@ -7,6 +7,7 @@
 //!   size <cols> <rows>          the terminal's size at start (default 80 24)
 //!   file <path> <text>          a file of the working folder; \n, \t, \e and \\ escaped in text
 //!   dir <path>                  a folder of the working folder
+//!   hex <path> <bytes>          a file of any bytes (an image), in hexadecimal
 //!   state <path> <text>         a file of the plugin's state folder ($ROOT: the scenario's folder)
 //!   config <path> <text>        a file of the plugin's config folder
 //!   home <path> <text>          a file of the pane's home folder (VS Code icon themes)
@@ -222,6 +223,15 @@ pub fn run(scenario: &Path, command: &[OsString], root: &Path) -> Capture {
             }
             "file" => write(&work, rest),
             "dir" => std::fs::create_dir_all(work.join(rest)).unwrap(),
+            // A file of any bytes (an image), given in hexadecimal.
+            "hex" => {
+                let (path, hex) = rest.split_once(' ').unwrap();
+                let bytes: Vec<u8> =
+                    (0..hex.len()).step_by(2).map(|i| u8::from_str_radix(&hex[i..i + 2], 16).unwrap()).collect();
+                let p = work.join(path);
+                std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+                std::fs::write(p, bytes).unwrap();
+            }
             "state" => write(&root.join("state"), &rest.replace("$ROOT", rootstr)),
             "config" => write(&root.join("config"), rest),
             "home" => write(&root.join("home"), rest),

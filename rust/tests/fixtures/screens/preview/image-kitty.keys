@@ -1,0 +1,9 @@
+# The terminal answers the Kitty query: the image in pixels (blank rows here), then p: half blocks.
+size 60 14
+hex pic.png 89504e470d0a1a0a0000000d494844520000000c000000080802000000428689a6000000ae49444154789c05c1210100211045c11f028d7e2136c469342136041a4d880df1359a30372389262342fec494532cf988922d9e2c75b70eddd1f9ba6727bb57e77457c7ddaf23052d4c10e12f98e10c56f8041576f0c2d2701b301c836f780e72780dce700d3cfc0652d2d22491fe9299ce64a54f5269272f2d6db70ddbb1f9b6e726b7d7e66cd7c6db6f2315ad4c11e5af98e52c56f9145576f1cad275bb701d97ef7a5ef27a5dce755d7cfd2e3f0c297da1002d083e0000000049454e44ae426082
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/pic.png
+start
+text \e_Gi=31;OK\e\\
+keys p
+until 800

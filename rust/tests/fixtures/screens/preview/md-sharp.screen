@@ -1,0 +1,26 @@
+size 60x22
+⟪bg=#252526 b i⟫ doc.md⟪fg=#8c8c8c bg=#252526⟫  12 lines · 142 B⟪bg=#252526⟫                   ⟪fg=#d4d4d4 bg=#04395e b⟫ File ⟪fg=#8c8c8c bg=#3a3a3e⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+ ⟪fg=#569cd6 b⟫Title⟪⟫
+ ⟪fg=#569cd6⟫━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━⟪⟫
+
+ Some ⟪i⟫text⟪⟫ with an item.
+
+ ⟪fg=#569cd6⟫• ⟪⟫one item
+ ⟪fg=#569cd6⟫• ⟪⟫two
+
+ ⟪fg=#c586c0⟫🖼 logo⟪⟫
+
+
+ ⟪fg=#c586c0⟫🖼 web⟪⟫ and ⟪fg=#c586c0⟫🖼 out⟪⟫
+
+ The end item.
+
+
+
+
+
+
+⟪fg=#8dc149 bg=#252526⟫ ✓ ⟪bg=#252526⟫The terminal did not answer the Kitty graphics query: the⟪⟫
+graphics
+a=t,f=32,o=z,s=24,v=16,i=18503,q=2 @22;60
+a=p,i=18503,p=10,x=0,y=0,w=24,h=16,c=3,r=1,C=1,q=2 @11;3

@@ -286,6 +286,28 @@ pub fn time_ms(t: std::time::SystemTime) -> f64 {
     }
 }
 
+/// `decodeURIComponent(s)`: its %XX escapes decoded as UTF-8; None where the JS throws (a % not followed by two hex
+/// digits, bytes that are not UTF-8).
+pub fn decode_uri_component(s: &str) -> Option<String> {
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'%' {
+            let hex = b.get(i + 1..i + 3).and_then(|h| std::str::from_utf8(h).ok())?;
+            if !hex.bytes().all(|c| c.is_ascii_hexdigit()) {
+                return None;
+            }
+            out.push(u8::from_str_radix(hex, 16).ok()?);
+            i += 3;
+        } else {
+            out.push(b[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8(out).ok()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -346,5 +368,15 @@ mod tests {
         assert!(greater(Some(&Value::Num(10.0)), Some(&s("9"))));
         assert!(!greater(None, Some(&Value::Num(1.0))));
         assert!(greater(Some(&Value::Num(1.0)), Some(&Value::Null)));
+    }
+
+    #[test]
+    fn decode_uri_component_throws_as_the_js() {
+        assert_eq!(decode_uri_component("a%20b%C3%A9").as_deref(), Some("a bé"));
+        assert_eq!(decode_uri_component("%5C%5Chost").as_deref(), Some(r"\\host"));
+        assert_eq!(decode_uri_component("100%"), None);
+        assert_eq!(decode_uri_component("%zz"), None);
+        assert_eq!(decode_uri_component("%C3x"), None);
+        assert_eq!(decode_uri_component("é%41").as_deref(), Some("éA"));
     }
 }

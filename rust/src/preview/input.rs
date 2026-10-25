@@ -6,7 +6,7 @@ use crate::core::actions;
 use crate::core::regex::Regex;
 use crate::core::stage::Mode;
 use crate::core::tabs;
-use crate::core::ui::{self, BarHit, Choice, Event, Field, HelpState, Menu, MenuItem, Mouse};
+use crate::core::ui::{self, BarHit, Choice, Event, Field, HelpState, Menu, MenuItem, Mouse, c, fg};
 use crate::core::{js, paths};
 use crate::unicode;
 use std::time::{Duration, Instant};
@@ -283,6 +283,7 @@ impl Preview {
                 self.next_change(if k == "]" { 1 } else { -1 });
                 self.render()
             }
+            "p" => self.toggle_sharp(),
             "m" => {
                 if s.kind == Kind::Markdown {
                     s.raw = !s.raw;
@@ -375,7 +376,13 @@ impl Preview {
         if !q.is_empty() {
             let flags = if q != js::lower(&q) { "g" } else { "gi" };
             if let Ok(re) = Regex::new(&escape(&q), flags) {
-                for (i, l) in self.state.plain.iter().enumerate() {
+                // Rendered Markdown: matches in the displayed text.
+                let lines: Vec<String> = if self.markdown_view() {
+                    self.rows().list.iter().map(|r| ui::seg_text(&r.segs)).collect()
+                } else {
+                    self.state.plain.clone()
+                };
+                for (i, l) in lines.iter().enumerate() {
                     matches.extend(re.matches(l).iter().map(|m| (i, m.start(), m.end())));
                 }
             }
@@ -392,28 +399,35 @@ impl Preview {
             return self.render();
         }
         let len = self.state.matches.len() as i64;
+        let md = self.markdown_view();
         if from_top {
-            // `(rows()[top] || {}).src || 0`, less one going down.
+            // `(rows()[top] || {}).src || 0` (the top row in rendered Markdown), less one going down.
             let rows = self.rows();
-            let at = rows.list.get(self.state.top.max(0) as usize).map_or(0, |r| r.src) - i64::from(dir > 0);
+            let top =
+                if md { self.state.top } else { rows.list.get(self.state.top.max(0) as usize).map_or(0, |r| r.src) };
+            let at = top - i64::from(dir > 0);
             let i = self.state.matches.iter().position(|m| m.0 as i64 > at);
             self.state.matched = i.map_or(0, |i| i as i64);
         } else {
             self.state.matched = (self.state.matched + dir).rem_euclid(len);
         }
         let (l, a, _) = self.state.matches[self.state.matched as usize];
-        let row = self.row_of(l as f64);
+        let row = if md { l as i64 } else { self.row_of(l as f64) };
         let (w, h) = self.size();
         let body_h = h as i64 - 2;
         if row < self.state.top || row >= self.state.top + body_h {
             self.state.top = (row - body_h.div_euclid(3)).max(0);
         }
-        // Less the scrollbar's column, shown when the rows do not fit.
-        let rows = self.rows().list.len() as i64;
-        let width = w as i64 - self.gutter() as i64 - i64::from(rows > body_h);
-        let col = ui::text_width(&self.state.plain[l][..a]) as i64;
-        if col < self.state.left || col >= self.state.left + width {
-            self.state.left = (col - 8).max(0);
+        if !md {
+            // Less the scrollbar's column, shown when the rows do not fit.
+            let rows = self.rows().list.len() as i64;
+            let width = w as i64 - self.gutter() as i64 - i64::from(rows > body_h);
+            // Matches found in rendered Markdown, then m: cut as slice does, a line past the end empty.
+            let line = self.state.plain.get(l).map_or("", String::as_str);
+            let col = ui::text_width(&line[..line.floor_char_boundary(a.min(line.len()))]) as i64;
+            if col < self.state.left || col >= self.state.left + width {
+                self.state.left = (col - 8).max(0);
+            }
         }
         // The match itself is marked: no line highlight.
         self.state.line = 0.0;
@@ -435,6 +449,10 @@ impl Preview {
             items = self.diff_items();
         } else {
             let editing = s.edit.is_some();
+            if s.kind == Kind::Markdown && !editing {
+                let value = (if s.raw { "raw" } else { "rendered" }).to_string();
+                items.push(item("Markdown", "m", (value, fg(c().blue)), Opt::Markdown, true));
+            }
             if !editing && (s.kind == Kind::Text || (s.kind == Kind::Markdown && s.raw)) {
                 items.push(item("Wrap lines", "w", ui::on_off(self.on("wrap")), Opt::Wrap, true));
                 items.push(item("Line numbers", "L", ui::on_off(self.on("lineNumbers")), Opt::LineNumbers, true));
@@ -445,6 +463,9 @@ impl Preview {
             }
             if editing || matches!(s.kind, Kind::Text | Kind::Markdown) {
                 items.push(item("Edit here", "i", ui::on_off(editing), Opt::Edit, false));
+            }
+            if let Some((label, value)) = self.sharp_item() {
+                items.push(item(label, "p", (value.to_string(), fg(c().blue)), Opt::Sharp, true));
             }
         }
         if items.is_empty() {
@@ -471,6 +492,13 @@ impl Preview {
                         self.toggle("changes");
                         self.load_changes()
                     }
+                    Opt::Markdown => {
+                        let s = &mut self.state;
+                        s.raw = !s.raw;
+                        s.rows = None;
+                        s.top = 0;
+                    }
+                    Opt::Sharp => self.toggle_sharp(),
                     Opt::Layout => self.switch_layout(),
                     Opt::Compare => self.open_scopes(),
                     Opt::Scope(pick) => self.scope_item(pick),
@@ -604,6 +632,16 @@ impl Preview {
         let (w, h) = self.size();
         let (w, h) = (w as i64, h as i64);
         let rows = self.rows();
+        // An image: its hint's parts only.
+        if self.state.kind == Kind::Image {
+            let at = usize::try_from(self.state.top + m.y - 2).ok().filter(|_| m.press && !m.drag);
+            let r = at.and_then(|i| rows.list.get(i));
+            let chip = r.and_then(|r| r.hint.as_ref()).and_then(|h| h.iter().find(|c| m.x >= c.from && m.x <= c.to));
+            if let Some(id) = chip.map(|c| c.id.clone()) {
+                self.image_click(&id);
+            }
+            return;
+        }
         if rows.list.is_empty() {
             return;
         }
