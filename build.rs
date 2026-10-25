@@ -3,7 +3,7 @@
 use std::{env, fs, path::Path};
 
 fn main() {
-    let manifest = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).join("../herdr-plugin.toml");
+    let manifest = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).join("herdr-plugin.toml");
     println!("cargo:rerun-if-changed={}", manifest.display());
     let text = fs::read_to_string(&manifest).expect("herdr-plugin.toml is readable");
     // The top-level key, before the first table.

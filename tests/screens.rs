@@ -1,5 +1,5 @@
 //! Screen captures of the panes (Linux): each scenario of rust/tests/fixtures/screens/<pane>/ runs the pane in a
-//! pty (support/pty.rs), started directly and through its shim (`node src/<entry>.js`), and compares its screen and
+//! pty (support/pty.rs), started directly and through its shim (`node shims/<entry>.js`), and compares its screen and
 //! herdr calls with the capture recorded from the JS of 0.8.0 before the switch to Rust. `HX_ONLY=<prefix>` keeps the
 //! scenarios whose name starts with it.
 #![cfg(target_os = "linux")]
@@ -67,10 +67,10 @@ fn plugin() -> &'static Path {
     DIR.get_or_init(|| {
         let dir = std::env::temp_dir().join(format!("hxs-plugin-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(dir.join("src")).unwrap();
+        std::fs::create_dir_all(dir.join("shims")).unwrap();
         std::fs::create_dir_all(dir.join("bin")).unwrap();
-        for e in std::fs::read_dir(pty::repo().join("src")).unwrap().filter_map(Result::ok) {
-            std::fs::copy(e.path(), dir.join("src").join(e.file_name())).unwrap();
+        for e in std::fs::read_dir(pty::repo().join("shims")).unwrap().filter_map(Result::ok) {
+            std::fs::copy(e.path(), dir.join("shims").join(e.file_name())).unwrap();
         }
         std::fs::copy(pty::repo().join("herdr-plugin.toml"), dir.join("herdr-plugin.toml")).unwrap();
         std::os::unix::fs::symlink(env!("CARGO_BIN_EXE_herdr-explorer"), dir.join("bin/herdr-explorer")).unwrap();
@@ -87,7 +87,7 @@ fn shim(pane: &str) {
         return;
     };
     let script = PANES.iter().find(|(p, _)| *p == pane).unwrap().1;
-    let cmd: Vec<OsString> = vec![node.into(), plugin().join("src").join(script).into()];
+    let cmd: Vec<OsString> = vec![node.into(), plugin().join("shims").join(script).into()];
     let failures: Vec<_> =
         scenarios(pane).iter().filter_map(|s| compare(s, &pty::run(s, &cmd, &root(pane, s)))).collect();
     assert!(failures.is_empty(), "{}", failures.join("\n"));

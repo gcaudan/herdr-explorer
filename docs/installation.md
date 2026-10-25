@@ -10,7 +10,7 @@ the release of its version (see [The binary](#the-binary)).
 | Requirement | Used for |
 |---|---|
 | herdr 0.9.4 or later, as `herdr` on `PATH` (or its path in `HERDR_BIN_PATH`) | the host (`min_herdr_version` in `herdr-plugin.toml`) |
-| Node.js 20 or later, as `node` on the `PATH` herdr gives plugins | the manifest's commands, `node src/<script>.js`: small shims that start the binary |
+| Node.js 20 or later, as `node` on the `PATH` herdr gives plugins | the manifest's commands, `node shims/<script>.js` : small shims that start the binary |
 | `curl`, and `sha256sum` or `shasum` (`curl.exe` and PowerShell on Windows, both built in on Windows 10 and later) | downloading the binary and checking it, at install and at each update |
 | Linux or macOS on x86_64 or arm64, or Windows on x86_64 or arm64 | the platforms with a release binary; elsewhere, build it with [dev-build](#building-the-binary) |
 | A [Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr | icons, chevrons and header icons; without one, choose emoji, Unicode or ASCII icons in the settings ([Without a Nerd Font](configuration.md#without-a-nerd-font)) |
@@ -133,7 +133,7 @@ description = "preview the last changed file"
 ### The binary
 
 The panes and the hook all run `bin/herdr-explorer` (`bin\herdr-explorer.exe` on Windows); the scripts of the
-manifest, `src/<script>.js`, only start it. `scripts/fetch-bin.sh` (`scripts\fetch-bin.ps1`) puts it there:
+manifest, `shims/<script>.js`, only start it. `scripts/fetch-bin.sh` (`scripts\fetch-bin.ps1`) puts it there:
 
 1. It reads `version` in `herdr-plugin.toml`, and does nothing when `bin/.dev` exists (a binary you built, see
    below) or when the binary already gives that version.
@@ -157,7 +157,7 @@ installs the toolchain of `rust-toolchain.toml`):
 scripts/dev-build.sh    # Windows (PowerShell): powershell -ExecutionPolicy Bypass -File .\scripts\dev-build.ps1
 ```
 
-It runs `cargo build --release` in `rust/`, copies the binary to `bin/` and writes `bin/.dev`: fetch-bin, the
+It runs `cargo build --release`, copies the binary to `bin/` and writes `bin/.dev`: fetch-bin, the
 updates and the shims then never replace it. Run it again after each change; delete `bin/.dev` (and run
 `scripts/fetch-bin.sh`) to go back to the release binary.
 
@@ -199,7 +199,7 @@ Click the pill, or press `u` (or click **↑ X.Y.Z available**) in the settings.
 
 ### Refusals
 
-The update checks, in this order (`rust/src/core/update.rs`), and stops with the message when a check fails:
+The update checks, in this order (`src/core/update.rs`), and stops with the message when a check fails:
 
 | Check | Message |
 |---|---|

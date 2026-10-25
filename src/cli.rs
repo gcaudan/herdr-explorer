@@ -151,7 +151,7 @@ mod tests {
 
     #[test]
     fn embeds_the_manifest_version() {
-        let toml = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../herdr-plugin.toml")).unwrap();
+        let toml = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/herdr-plugin.toml")).unwrap();
         let line = format!("version = \"{}\"", crate::VERSION);
         assert!(toml.lines().any(|l| l == line), "{line} is not a line of herdr-plugin.toml");
     }

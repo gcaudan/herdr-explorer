@@ -1,32 +1,32 @@
 # How it works
 
-The plugin is one binary, `bin/herdr-explorer`, written in Rust with no crate beyond the standard library (`rust/`).
-`herdr-plugin.toml` declares its commands to herdr as `node src/<script>.js`: each of those scripts is a small shim
+The plugin is one binary, `bin/herdr-explorer`, written in Rust with no crate beyond the standard library (`src/`).
+`herdr-plugin.toml` declares its commands to herdr as `node shims/<script>.js`: each of those scripts is a small shim
 that starts the binary with the matching subcommand (`pane <id>`, `hook`, `peek`), downloading it first when it is
 missing or of another version ([The binary](installation.md#the-binary)). The manifest's `[[build]]` steps run
 `scripts/fetch-bin` for `herdr plugin install` and `update`.
 
 | Kind      | Id         | Command                       | Placement                 |
 | --------- | ---------- | ----------------------------- | ------------------------- |
-| startup   |            | `node src/hook.js --restore`  |                           |
-| event     | `tab.created` | `node src/hook.js`         |                           |
-| event     | `tab.closed`, `workspace.closed` | `node src/hook.js --closed` |        |
-| event     | `pane.agent_status_changed` | `node src/hook.js --agent` |              |
-| event     | `tab.focused` | `node src/hook.js --focused` |                         |
-| pane      | `tree`     | `node src/explorer.js`        | split                     |
-| pane      | `preview`  | `node src/preview.js`         | split                     |
-| pane      | `search`   | `node src/search.js`          | tab                       |
-| pane      | `scm`      | `node src/scm.js`             | tab                       |
-| pane      | `diff`     | `node src/diff.js`            | split                     |
-| pane      | `edit`     | `node src/edit.js`            | tab                       |
-| action    | `toggle`   | `node src/hook.js --toggle`   | tab context               |
-| action    | `search`   | `node src/hook.js --search`   | tab context               |
-| action    | `scm`      | `node src/hook.js --scm`      | tab context               |
-| action    | `peek`     | `node src/peek.js --last`     | tab context               |
-| action    | `open-link` | `node src/peek.js --url`     | link handler `file`       |
+| startup   |            | `node shims/hook.js --restore` |                           |
+| event     | `tab.created` | `node shims/hook.js`       |                           |
+| event     | `tab.closed`, `workspace.closed` | `node shims/hook.js --closed` |        |
+| event     | `pane.agent_status_changed` | `node shims/hook.js --agent` |              |
+| event     | `tab.focused` | `node shims/hook.js --focused` |                         |
+| pane      | `tree`     | `node shims/explorer.js`      | split                     |
+| pane      | `preview`  | `node shims/preview.js`       | split                     |
+| pane      | `search`   | `node shims/search.js`        | tab                       |
+| pane      | `scm`      | `node shims/scm.js`           | tab                       |
+| pane      | `diff`     | `node shims/diff.js`          | split                     |
+| pane      | `edit`     | `node shims/edit.js`          | tab                       |
+| action    | `toggle`   | `node shims/hook.js --toggle` | tab context               |
+| action    | `search`   | `node shims/hook.js --search` | tab context               |
+| action    | `scm`      | `node shims/hook.js --scm`    | tab context               |
+| action    | `peek`     | `node shims/peek.js --last`   | tab context               |
+| action    | `open-link` | `node shims/peek.js --url`   | link handler `file`       |
 | link      | `file`     | `^file://` → `open-link`      | ctrl+click on a link      |
 
-In `rust/src/`, `cli.rs` reads the subcommand; `hook.rs`, `peek.rs`, `launch.rs` (the launcher of the explorer and
+In `src/`, `cli.rs` reads the subcommand; `hook.rs`, `peek.rs`, `launch.rs` (the launcher of the explorer and
 preview, see [Launcher and self-restart](#launcher-and-self-restart)) and `edit.rs` are entries of their own, and each
 pane has its folder: `explorer/`, `preview/`, `search/`, `scm/` and `changes/`. Shared modules are in `diff/` (the
 diff collection, parser and layout that the Changes pane, the preview's Diff view and source control use), `core/`
@@ -44,9 +44,9 @@ The modules form four layers, and an import only goes to the same layer or a low
 | shared  | `core`, `render`, `diff` (the diff library)               | shared and base                     |
 | base    | `codec`, `unicode`, `json`, `sys`                         | base                                |
 
-`rust/tests/layers.rs` reads the `crate::…` paths of every file and fails on one that goes up a layer or across
+`tests/layers.rs` reads the `crate::…` paths of every file and fails on one that goes up a layer or across
 panes; it has no exception. What two panes need goes down to `core/`.
-The `*.js` files at the top of the repository only load their counterpart in `src/`, for panes and hooks started
+The `*.js` files at the top of the repository only load their counterpart in `shims/`, for panes and hooks started
 from a 0.5.x manifest until the installer is run again.
 
 The binary was ported from the plugin's JavaScript (0.8.0 and earlier): its state files, settings, screens and
@@ -180,12 +180,12 @@ while a preview opens find it rather than each opening their own. `marks`, from
 keeps at most 200 well-formed ones (`EXPLORER_MARKS` for a new pane). `view: 'diff'` opens the Diff view
 (`EXPLORER_VIEW`), whose changes come from `diff::collect`, the function the Changes pane uses too, run from the
 nearest folder of the file still on disk. `keep` opens the file in a kept tab; otherwise it replaces the temporary
-tab. The tab list itself (`rust/src/core/tabs.rs`: open, keep, close, next, the strip's layout for a width) is pure and
+tab. The tab list itself (`src/core/tabs.rs`: open, keep, close, next, the strip's layout for a width) is pure and
 tested; the preview keeps each tab's scroll, view and marks beside it, and saves the list with its pane state, which
 `hook.js --restore` gives back as `EXPLORER_TABS`. At most 50 tabs: past it, the one furthest from the new tab goes.
 
 Editing (`i`) keeps a `buffer::Editor` in the tab: the lines, the cursor and selection, and the undo history. Its
-pure logic is in `rust/src/core/buffer.rs` and tested: reading (UTF-8 only, at most 2 MB, line endings detected),
+pure logic is in `src/core/buffer.rs` and tested: reading (UTF-8 only, at most 2 MB, line endings detected),
 cursor columns over wide characters and tabs, the changed lines (Myers' diff of the lines' hashes against the text
 at opening, at most 1000 differences), find and replace, and saving (a temporary file with the same mode, renamed
 over the file, after checking that its mtime and size have not changed). Only the visible lines and 200 around them
@@ -200,7 +200,7 @@ agent's pane, where herdr gives `HERDR_PANE_ID` but not the plugin's state folde
 `state-dir` in the config folder (`herdr plugin config-dir`), which every hook run saves, else takes herdr's usual
 place. As the action, it takes the focused pane of the tab from `HERDR_PLUGIN_CONTEXT_JSON`, or the tab's first
 terminal when the focus is on one of the plugin's panes. Its argument's places (`file:12-14,42:5-18`) are read by
-`rust/src/core/places.rs`, pure and tested.
+`src/core/places.rs`, pure and tested.
 
 ## Restore after a herdr restart
 

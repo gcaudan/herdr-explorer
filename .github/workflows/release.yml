@@ -90,12 +90,12 @@ jobs:
         with:
           ref: ${{ needs.release-please.outputs.tag }}
       - run: rustup toolchain install
-      - run: cargo build --manifest-path rust/Cargo.toml --release --locked --target ${{ matrix.target }}
+      - run: cargo build --release --locked --target ${{ matrix.target }}
       # gh finds a draft release by its tag; a release just created can take a moment to be seen, hence the tries.
       - name: Attach the binary
         run: |
           set -euo pipefail
-          cp "rust/target/${{ matrix.target }}/release/herdr-explorer${{ matrix.ext }}" "$ASSET"
+          cp "target/${{ matrix.target }}/release/herdr-explorer${{ matrix.ext }}" "$ASSET"
           for try in 1 2 3 4 5; do
             gh release upload "$TAG" "$ASSET" --clobber && exit 0
             sleep $((try * 10))

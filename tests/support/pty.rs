@@ -41,11 +41,11 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 pub fn repo() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().to_path_buf()
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
 pub fn screens_dir() -> PathBuf {
-    repo().join("rust/tests/fixtures/screens")
+    repo().join("tests/fixtures/screens")
 }
 
 /// What a scenario gave.

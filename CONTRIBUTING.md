@@ -2,8 +2,8 @@
 
 ## Development loop
 
-The plugin is one Rust binary, `bin/herdr-explorer`, with no crate besides the standard library. The `src/*.js` files
-herdr runs are shims that start it (Node 20 or later).
+The plugin is one Rust binary, `bin/herdr-explorer`, with no crate besides the standard library. The `shims/*.js`
+files herdr runs are shims that start it (Node 20 or later).
 
 1. Install Rust with [rustup](https://rustup.rs): `rust-toolchain.toml` pins the toolchain, its components and the
    5 release targets, and rustup installs them on the first build.
@@ -22,10 +22,10 @@ herdr runs are shims that start it (Node 20 or later).
    scripts/dev-build.sh    # Windows: powershell -ExecutionPolicy Bypass -File .\scripts\dev-build.ps1
    ```
 
-   It runs `cargo build --release` in `rust/`, copies the result to `bin/herdr-explorer` and writes `bin/.dev`:
+   It runs `cargo build --release`, copies the result to `bin/herdr-explorer` and writes `bin/.dev`:
    `scripts/fetch-bin.sh`, the updater and the shims then leave your binary alone. Delete `bin/.dev`, then run
    `scripts/fetch-bin.sh`, to go back to the release binary.
-4. Edit the code under `rust/src`, run `scripts/dev-build.sh` again, then reload what you changed:
+4. Edit the code under `src/`, run `scripts/dev-build.sh` again, then reload what you changed:
    - **search, source control, changes, editor**: these panes start a fresh process each time they
      open. Close the pane and open it again.
    - **explorer and preview**: these panes keep running. Close and reopen them (`prefix+f` twice
@@ -43,11 +43,11 @@ herdr runs are shims that start it (Node 20 or later).
 Keep the conventions of the existing code:
 
 - Standard library only, in `[dependencies]` as in `[dev-dependencies]`: what the code needs from a system (terminal,
-  folder watching, Windows' console) is declared in `rust/src/sys/`. Keep every feature working on Linux, macOS and
+  folder watching, Windows' console) is declared in `src/sys/`. Keep every feature working on Linux, macOS and
   Windows: CI checks all three.
-- `cargo fmt` (`rust/rustfmt.toml`) and `cargo clippy -- -D warnings`, for the host and the 5 release targets.
+- `cargo fmt` (`rustfmt.toml`) and `cargo clippy -- -D warnings`, for the host and the 5 release targets.
   Comments and user-facing text are in English; comments explain *why*.
-- The port follows the JS of 0.8.0 (`src/` before the rewrite), defects included: a difference on purpose is noted
+- The port follows the JS of 0.8.0 (`src/*.js` before the rewrite), defects included: a difference on purpose is noted
   where it is made, with its reason.
 - Every external program runs with an argument list (`core::exec`), never a shell; the one exception is an
   npm-installed `claude.cmd` on Windows. Resolve it with `core::which`, which searches only the absolute folders of
@@ -68,42 +68,43 @@ Keep the conventions of the existing code:
 
 ## Project structure
 
-herdr runs the shims of `src/` (the manifest names them, and the shim relaunches the binary on a self-restart); they
+herdr runs the shims of `shims/` (the manifest names them, and the shim relaunches the binary on a self-restart); they
 start `bin/herdr-explorer` with a subcommand: `pane <id>` for the panes, `hook` for the events and actions, `peek`.
-The crate lives in `rust/`; each module's first lines say what it holds and which JS file it ports. Its modules form
-four layers (entries, panes, shared, base) that `rust/tests/layers.rs` checks: see
-[How it works](docs/architecture.md#how-it-works).
+The crate is at the root (`Cargo.toml`, `src/`, `tests/`); each module's first lines say what it holds and which JS
+file it ports. Its modules form four layers (entries, panes, shared, base) that `tests/layers.rs` checks: see [How it
+works](docs/architecture.md#how-it-works).
 
 | Path                  | Role                                                                                         |
 | --------------------- | -------------------------------------------------------------------------------------------- |
 | `herdr-plugin.toml`   | manifest: id, version, min herdr version, build step (fetch-bin), startup hook, `tab.created` event, panes, actions |
 | `install.sh`, `install.ps1` | link the clone to herdr, fetch the binary, add the three key bindings and, with Claude Code, link the skill |
 | `scripts/fetch-bin.sh`, `.ps1` | download the release binary of the manifest's version, checked against `SHA256SUMS`, into `bin/` |
-| `scripts/dev-build.sh`, `.ps1` | build the binary from `rust/` into `bin/`, marked as a development one (`bin/.dev`) |
+| `scripts/dev-build.sh`, `.ps1` | build the binary into `bin/`, marked as a development one (`bin/.dev`) |
 | `scripts/check.sh`    | every check, see [Tests](#tests)                                                             |
-| `src/*.js`            | shims: start the binary (fetching it if missing), relaunch it on exit code 75, relay its messages |
-| `rust/src/cli.rs`, `main.rs` | the command line: subcommands, `--version`                                            |
-| `rust/src/hook.rs`    | startup restore, `tab.created`, and the toggle, search and source control actions. Opens and places the explorer |
-| `rust/src/launch.rs`  | launcher that keeps the explorer and preview panes alive across self-restarts (exit code 75) |
-| `rust/src/peek.rs`    | shows a file in the tab's preview from outside the plugin (an agent's pane) and the peek action |
-| `rust/src/explorer/`  | explorer pane: tree (pure), drawing, settings view, keys and mouse, update UI                |
-| `rust/src/preview/`   | preview pane: text, Markdown, images, hex dump, Diff view; find, selection, edit mode, review notes, live reload |
-| `rust/src/search/`    | Go to file (fuzzy) and Search in files (text/regex, globs)                                   |
-| `rust/src/scm/`       | source control pane: git output parsers (pure), state and loaders, operations, drawing, keys and mouse |
-| `rust/src/changes/`   | Changes pane: a file's or folder's changes against the tab's scope, staged by line, with review notes |
-| `rust/src/diff/`      | diff collection, parser and layout (inline, side by side, word highlights), shared by the Changes pane, the preview and source control |
-| `rust/src/edit.rs`    | Editor pane: runs the terminal editor on a file                                              |
-| `rust/src/core/`      | shared core: actions, text buffer, tabs, notes, scopes, staging, icons, terminal helpers (`ui`, `screen`), safe program execution (`exec`, `which`), places, viewed files, updates, workers, JS behaviours (`js`, `regex`, `paths`) |
-| `rust/src/render/`    | syntax highlighter, Markdown, image decoders and rendering, branch graph                     |
-| `rust/src/codec/`     | inflate, deflate, SHA-1, SHA-256, base64                                                     |
-| `rust/src/unicode/`   | Unicode classes and collation tables, generated from Node before the switch to Rust          |
-| `rust/src/sys/`       | the terminal, the process and folder watching per system (Linux, macOS, Windows)             |
-| `rust/src/json.rs`    | JSON read and written as the JS did                                                          |
+| `shims/*.js`          | shims: start the binary (fetching it if missing), relaunch it on exit code 75, relay its messages |
+| `src/cli.rs`, `main.rs` | the command line: subcommands, `--version`                                                 |
+| `src/hook.rs`         | startup restore, `tab.created`, and the toggle, search and source control actions. Opens and places the explorer |
+| `src/launch.rs`       | launcher that keeps the explorer and preview panes alive across self-restarts (exit code 75) |
+| `src/peek.rs`         | shows a file in the tab's preview from outside the plugin (an agent's pane) and the peek action |
+| `src/explorer/`       | explorer pane: tree (pure), drawing, settings view, keys and mouse, update UI                |
+| `src/preview/`        | preview pane: text, Markdown, images, hex dump, Diff view; find, selection, edit mode, review notes, live reload |
+| `src/search/`         | Go to file (fuzzy) and Search in files (text/regex, globs)                                   |
+| `src/scm/`            | source control pane: git output parsers (pure), state and loaders, operations, drawing, keys and mouse |
+| `src/changes/`        | Changes pane: a file's or folder's changes against the tab's scope, staged by line, with review notes |
+| `src/diff/`           | diff collection, parser and layout (inline, side by side, word highlights), shared by the Changes pane, the preview and source control |
+| `src/edit.rs`         | Editor pane: runs the terminal editor on a file                                              |
+| `src/core/`           | shared core: actions, text buffer, tabs, notes, scopes, staging, icons, terminal helpers (`ui`, `screen`), safe program execution (`exec`, `which`), places, viewed files, updates, workers, JS behaviours (`js`, `regex`, `paths`) |
+| `src/render/`         | syntax highlighter, Markdown, image decoders and rendering, branch graph                     |
+| `src/codec/`          | inflate, deflate, SHA-1, SHA-256, base64                                                     |
+| `src/unicode/`        | Unicode classes and collation tables, generated from Node before the switch to Rust          |
+| `src/sys/`            | the terminal, the process and folder watching per system (Linux, macOS, Windows)             |
+| `src/json.rs`         | JSON read and written as the JS did                                                          |
+| `Cargo.toml`, `build.rs` | the crate, with no dependency; `build.rs` embeds the version of `herdr-plugin.toml`      |
 | `rust-toolchain.toml` | the toolchain and the 5 release targets                                                      |
 | `skills/herdr-preview/` | Claude Code skill that calls peek                                                          |
 | `tools/fake-herdr/`   | the fake herdr the tests put first on `PATH`                                                 |
 | `release-please-config.json`, `.release-please-manifest.json` | release automation                       |
-| `rust/tests/`         | integration tests, see [Tests](#tests)                                                       |
+| `tests/`              | integration tests, see [Tests](#tests)                                                       |
 | `.github/workflows/ci.yml` | runs the checks on every pull request and push to `main`                                |
 | `.github/workflows/release.yml` | runs release-please on every push to `main`, builds and attaches the binaries, publishes the release |
 | `CHANGELOG.md`        | generated by release-please                                                                  |
@@ -121,11 +122,11 @@ neither herdr nor a terminal: those that run a pane, the hook or peek remove her
 every push to `main`, on Linux (x86_64 and arm64), macOS and Windows, and checks that the shims parse on Node 20 and
 24.
 
-| File (`rust/tests/`) | Covers |
+| File (`tests/`     ) | Covers |
 | --- | --- |
-| `modules.rs` | the module fixtures recorded from the JS of 0.8.0 (`rust/tests/fixtures/modules/`), replayed against the port |
+| `modules.rs` | the module fixtures recorded from the JS of 0.8.0 (`tests/fixtures/modules/`     ), replayed against the port |
 | `screens.rs` | screen captures of the panes in a terminal, started directly and through their shim, against those recorded from the JS (Linux) |
-| `shims.rs` | every script of the root and of `src/` passes `node --check` |
+| `shims.rs` | every script of the root and of `shims/` passes `node --check` |
 | `smoke.rs` | the shims as herdr runs them (Linux): each pane started and quit, the hook and peek, the restart on code 75 and the folder announced through `EXPLORER_IPC_FILE` |
 | `docs.rs` | relative links and `#anchors` of `README.md`, `SECURITY.md`, `CONTRIBUTING.md` and `docs/*.md` |
 | `layers.rs` | imports follow the layers of [How it works](docs/architecture.md#how-it-works): never up a layer, never from one pane to another |

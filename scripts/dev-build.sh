@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds the binary from rust/ (cargo build --release) into bin/, marked as a development one (bin/.dev): fetch-bin,
+# Builds the binary (cargo build --release) into bin/, marked as a development one (bin/.dev): fetch-bin,
 # the updater and the shims then leave it alone. Delete bin/.dev to go back to the release binaries.
 set -eu
 dir=$(cd "$(dirname "$0")/.." && pwd)
@@ -10,12 +10,12 @@ cargo=$(command -v cargo 2>/dev/null || true)
   echo "dev-build: cargo not found: install Rust (https://rustup.rs)" >&2
   exit 1
 }
-# From rust/, so that rustup takes the toolchain of rust-toolchain.toml; into rust/target whatever CARGO_TARGET_DIR
+# From the clone, so that rustup takes the toolchain of rust-toolchain.toml; into target/ whatever CARGO_TARGET_DIR
 # says.
-(cd "$dir/rust" && "$cargo" build --release --target-dir "$dir/rust/target")
+(cd "$dir" && "$cargo" build --release --target-dir "$dir/target")
 mkdir -p "$dir/bin"
 exe="$dir/bin/herdr-explorer"
-cp "$dir/rust/target/release/herdr-explorer" "$exe.new-$$"
+cp "$dir/target/release/herdr-explorer" "$exe.new-$$"
 chmod +x "$exe.new-$$"
 # bin/.dev before the binary, so that no fetch replaces it in between; taken back if the binary cannot be put.
 had_dev=

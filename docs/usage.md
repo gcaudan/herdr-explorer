@@ -859,7 +859,7 @@ Source control's `=` sets it too ([Comparing branches](#source-control)).
 
 ## Show a file from an agent or a script
 
-`src/peek.js` shows a file in the preview of the tab it runs in, scrolled to a line, opening the preview next to the
+`shims/peek.js` shows a file in the preview of the tab it runs in, scrolled to a line, opening the preview next to the
 terminal when there is none, without taking the focus. Run it from a herdr pane, such as the terminal of an agent:
 
 ```sh

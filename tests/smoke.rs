@@ -1,4 +1,4 @@
-//! The shims as herdr runs them (Linux): `node src/<entry>.js` in a plugin folder of its own, whose bin/ holds the
+//! The shims as herdr runs them (Linux): `node shims/<entry>.js` in a plugin folder of its own, whose bin/ holds the
 //! binary cargo built behind a script that logs each start, marked as a development one (bin/.dev) so that no shim
 //! fetches anything. Each pane starts in a pty, shows its first screen and quits on its key with code 0; the hook and
 //! peek give what the binary gives; the preview's shim starts the binary again on code 75, with the environment it
@@ -24,7 +24,7 @@ unsafe extern "C" {
 }
 
 fn repo() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().to_path_buf()
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
 fn node() -> Option<PathBuf> {
@@ -50,11 +50,11 @@ impl Setup {
         let tmp = support::TempDir::new(&format!("smoke-{name}"));
         let root = tmp.path.clone();
         let plugin = root.join("plugin");
-        for d in ["plugin/src", "plugin/bin", "work", "state", "config", "home", "herdr"] {
+        for d in ["plugin/shims", "plugin/bin", "work", "state", "config", "home", "herdr"] {
             std::fs::create_dir_all(root.join(d)).unwrap();
         }
-        for e in std::fs::read_dir(repo().join("src")).unwrap().filter_map(Result::ok) {
-            std::fs::copy(e.path(), plugin.join("src").join(e.file_name())).unwrap();
+        for e in std::fs::read_dir(repo().join("shims")).unwrap().filter_map(Result::ok) {
+            std::fs::copy(e.path(), plugin.join("shims").join(e.file_name())).unwrap();
         }
         std::fs::copy(repo().join("herdr-plugin.toml"), plugin.join("herdr-plugin.toml")).unwrap();
         // A copy, not a link: the binary finds its plugin folder (the manifest it watches) above its own bin/.
@@ -102,7 +102,7 @@ impl Setup {
     }
 
     fn shim(&self, entry: &str) -> Vec<OsString> {
-        vec![self.node.clone().into(), self.plugin.join("src").join(entry).into()]
+        vec![self.node.clone().into(), self.plugin.join("shims").join(entry).into()]
     }
 
     fn starts(&self) -> Vec<String> {

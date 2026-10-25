@@ -1,6 +1,6 @@
 # LF everywhere, so that sources, fixtures and screen captures are identical to the byte on Windows.
 * text=auto eol=lf
 # Fixtures are compared byte for byte: never converted.
-rust/tests/fixtures/** -text
+tests/fixtures/** -text
 # Batch files keep CRLF, which cmd.exe expects.
 *.cmd text eol=crlf

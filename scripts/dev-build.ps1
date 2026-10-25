@@ -1,4 +1,4 @@
-# Builds the binary from rust\ (cargo build --release) into bin\, marked as a development one (bin\.dev): fetch-bin,
+# Builds the binary (cargo build --release) into bin\, marked as a development one (bin\.dev): fetch-bin,
 # the updater and the shims then leave it alone. Delete bin\.dev to go back to the release binaries.
 $ErrorActionPreference = 'Stop'
 $dir = Split-Path -Parent $PSScriptRoot
@@ -12,15 +12,15 @@ if (-not (Test-Path -LiteralPath $cargo)) {
     [Console]::Error.WriteLine('dev-build: cargo not found: install Rust (https://rustup.rs)')
     exit 1
 }
-# From rust\, so that rustup takes the toolchain of rust-toolchain.toml; into rust\target whatever CARGO_TARGET_DIR
+# From the clone, so that rustup takes the toolchain of rust-toolchain.toml; into target\ whatever CARGO_TARGET_DIR
 # says.
-Push-Location -LiteralPath (Join-Path $dir 'rust')
-try { & $cargo build --release --target-dir (Join-Path $dir 'rust\target') } finally { Pop-Location }
+Push-Location -LiteralPath $dir
+try { & $cargo build --release --target-dir (Join-Path $dir 'target') } finally { Pop-Location }
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
 $bin = Join-Path $dir 'bin'
 New-Item -ItemType Directory -Force -Path $bin | Out-Null
 $exe = Join-Path $bin 'herdr-explorer.exe'
-Copy-Item -LiteralPath (Join-Path $dir 'rust\target\release\herdr-explorer.exe') -Destination "$exe.new-$PID" -Force
+Copy-Item -LiteralPath (Join-Path $dir 'target\release\herdr-explorer.exe') -Destination "$exe.new-$PID" -Force
 # bin\.dev before the binary, so that no fetch replaces it in between; taken back if the binary cannot be put.
 $dev = Join-Path $bin '.dev'
 $hadDev = Test-Path -LiteralPath $dev
