@@ -242,7 +242,7 @@ pub fn theme_name() -> &'static str {
 }
 
 /// The background file of the state folder, written when a pane reads the terminal's background.
-fn background_file() -> Option<String> {
+pub(crate) fn background_file() -> Option<String> {
     exec::state_dir().map(|d| super::paths::join(&[&d, "background"]))
 }
 

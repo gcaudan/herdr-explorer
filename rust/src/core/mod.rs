@@ -9,6 +9,7 @@ pub mod notes;
 pub mod paths;
 pub mod places;
 pub mod scope;
+pub mod screen;
 pub mod stage;
 pub mod tabs;
 pub mod ui;
