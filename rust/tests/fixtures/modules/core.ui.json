@@ -1,0 +1,6240 @@
+{
+ "module": "core/ui",
+ "cases": [
+  {
+   "fn": "shade",
+   "args": [
+    [
+     0,
+     0,
+     0
+    ]
+   ],
+   "out": [
+    23,
+    23,
+    23
+   ]
+  },
+  {
+   "fn": "shade",
+   "args": [
+    [
+     255,
+     255,
+     255
+    ]
+   ],
+   "out": [
+    86,
+    86,
+    86
+   ]
+  },
+  {
+   "fn": "shade",
+   "args": [
+    [
+     10,
+     20,
+     30
+    ]
+   ],
+   "out": [
+    25,
+    28,
+    30
+   ]
+  },
+  {
+   "fn": "shade",
+   "args": [
+    [
+     200,
+     100,
+     50
+    ]
+   ],
+   "out": [
+    73,
+    48,
+    35
+   ]
+  },
+  {
+   "fn": "light",
+   "args": [
+    "shade",
+    [
+     10,
+     20,
+     30
+    ]
+   ],
+   "out": [
+    194,
+    196,
+    199
+   ]
+  },
+  {
+   "fn": "glyph",
+   "args": [
+    58878
+   ],
+   "out": ""
+  },
+  {
+   "fn": "glyph",
+   "args": [
+    128512
+   ],
+   "out": "😀"
+  },
+  {
+   "fn": "glyph",
+   "args": [
+    65
+   ],
+   "out": "A"
+  },
+  {
+   "fn": "backgroundOf",
+   "args": [
+    "\u001b]11;rgb:0c0c/0c0c/0c0c\u001b\\"
+   ],
+   "out": "dark"
+  },
+  {
+   "fn": "backgroundOf",
+   "args": [
+    "\u001b]11;rgb:ffff/ffff/ffff\u0007"
+   ],
+   "out": "light"
+  },
+  {
+   "fn": "backgroundOf",
+   "args": [
+    "\u001b]11;rgb:fd/f6/e3\u0007"
+   ],
+   "out": "light"
+  },
+  {
+   "fn": "backgroundOf",
+   "args": [
+    "\u001b]11;rgb:8080/8080/8080\u0007"
+   ],
+   "out": "light"
+  },
+  {
+   "fn": "backgroundOf",
+   "args": [
+    "\u001b]11;rgb:7f7f/7f7f/7f7f\u0007"
+   ],
+   "out": "dark"
+  },
+  {
+   "fn": "backgroundOf",
+   "args": [
+    "\u001b]10;rgb:ffff/ffff/ffff\u0007"
+   ],
+   "out": null
+  },
+  {
+   "fn": "backgroundOf",
+   "args": [
+    "\u001b]11;rgba:ffff/ffff/ffff/ffff\u0007"
+   ],
+   "out": null
+  },
+  {
+   "fn": "backgroundOf",
+   "args": [
+    "\u001b]11;#ffffff\u0007"
+   ],
+   "out": null
+  },
+  {
+   "fn": "backgroundOf",
+   "args": [
+    ""
+   ],
+   "out": null
+  },
+  {
+   "fn": "clean",
+   "args": [
+    "plain"
+   ],
+   "out": "plain"
+  },
+  {
+   "fn": "clean",
+   "args": [
+    "a\tb\u0001cde"
+   ],
+   "out": "a?b?c?d?e"
+  },
+  {
+   "fn": "clean",
+   "args": [
+    "é\n"
+   ],
+   "out": "é?"
+  },
+  {
+   "fn": "cleanLine",
+   "args": [
+    "plain",
+    4,
+    false
+   ],
+   "out": "plain"
+  },
+  {
+   "fn": "cleanLine",
+   "args": [
+    "a\tb",
+    4,
+    false
+   ],
+   "out": "a   b"
+  },
+  {
+   "fn": "cleanLine",
+   "args": [
+    "\tab\tc",
+    4,
+    true
+   ],
+   "out": [
+    "    ab  c",
+    [
+     0,
+     4,
+     5,
+     6,
+     8,
+     9
+    ]
+   ]
+  },
+  {
+   "fn": "cleanLine",
+   "args": [
+    "中\tx",
+    4,
+    true
+   ],
+   "out": [
+    "中   x",
+    [
+     0,
+     1,
+     4,
+     5
+    ]
+   ]
+  },
+  {
+   "fn": "cleanLine",
+   "args": [
+    "a\u0001bc",
+    8,
+    true
+   ],
+   "out": [
+    "abc",
+    [
+     0,
+     1,
+     1,
+     2,
+     2,
+     3
+    ]
+   ]
+  },
+  {
+   "fn": "cleanLine",
+   "args": [
+    "x\ty",
+    2,
+    true
+   ],
+   "out": [
+    "x y",
+    [
+     0,
+     1,
+     2,
+     3
+    ]
+   ]
+  },
+  {
+   "fn": "cleanLine",
+   "args": [
+    "😀\tb",
+    4,
+    true
+   ],
+   "out": [
+    "😀   b",
+    [
+     0,
+     1,
+     2,
+     5,
+     6
+    ]
+   ]
+  },
+  {
+   "fn": "cleanLine",
+   "args": [
+    "",
+    4,
+    true
+   ],
+   "out": [
+    "",
+    [
+     0
+    ]
+   ]
+  },
+  {
+   "fn": "cols",
+   "args": [
+    "a",
+    null
+   ],
+   "out": 1
+  },
+  {
+   "fn": "cols",
+   "args": [
+    "中",
+    null
+   ],
+   "out": 2
+  },
+  {
+   "fn": "cols",
+   "args": [
+    "́",
+    "e"
+   ],
+   "out": 0
+  },
+  {
+   "fn": "cols",
+   "args": [
+    "️",
+    "⚠"
+   ],
+   "out": 1
+  },
+  {
+   "fn": "cols",
+   "args": [
+    "️",
+    "中"
+   ],
+   "out": 0
+  },
+  {
+   "fn": "cols",
+   "args": [
+    "️",
+    "a"
+   ],
+   "out": 0
+  },
+  {
+   "fn": "cols",
+   "args": [
+    "‍",
+    null
+   ],
+   "out": 0
+  },
+  {
+   "fn": "cols",
+   "args": [
+    "🇫",
+    null
+   ],
+   "out": 1
+  },
+  {
+   "fn": "cols",
+   "args": [
+    "☰",
+    null
+   ],
+   "out": 2
+  },
+  {
+   "fn": "cols",
+   "args": [
+    "😀",
+    null
+   ],
+   "out": 2
+  },
+  {
+   "fn": "fit",
+   "args": [
+    "abc中def",
+    4,
+    null
+   ],
+   "out": [
+    "abc",
+    3
+   ]
+  },
+  {
+   "fn": "fit",
+   "args": [
+    "abc中def",
+    5,
+    null
+   ],
+   "out": [
+    "abc中",
+    5
+   ]
+  },
+  {
+   "fn": "fit",
+   "args": [
+    "⚠️x",
+    1,
+    null
+   ],
+   "out": [
+    "⚠",
+    1
+   ]
+  },
+  {
+   "fn": "fit",
+   "args": [
+    "️x",
+    3,
+    "⚠"
+   ],
+   "out": [
+    "️x",
+    2
+   ]
+  },
+  {
+   "fn": "fit",
+   "args": [
+    "",
+    3,
+    null
+   ],
+   "out": [
+    "",
+    0
+   ]
+  },
+  {
+   "fn": "fit",
+   "args": [
+    "abc",
+    null,
+    null
+   ],
+   "out": [
+    "abc",
+    3
+   ]
+  },
+  {
+   "fn": "fit",
+   "args": [
+    "abc",
+    0,
+    null
+   ],
+   "out": [
+    "",
+    0
+   ]
+  },
+  {
+   "fn": "textWidth",
+   "args": [
+    ""
+   ],
+   "out": 0
+  },
+  {
+   "fn": "textWidth",
+   "args": [
+    "abc"
+   ],
+   "out": 3
+  },
+  {
+   "fn": "textWidth",
+   "args": [
+    "中文"
+   ],
+   "out": 4
+  },
+  {
+   "fn": "textWidth",
+   "args": [
+    "é"
+   ],
+   "out": 1
+  },
+  {
+   "fn": "textWidth",
+   "args": [
+    "👨‍👩‍👧"
+   ],
+   "out": 6
+  },
+  {
+   "fn": "textWidth",
+   "args": [
+    "🇫🇷🇩🇪"
+   ],
+   "out": 4
+  },
+  {
+   "fn": "textWidth",
+   "args": [
+    "1️⃣"
+   ],
+   "out": 2
+  },
+  {
+   "fn": "textWidth",
+   "args": [
+    "\t"
+   ],
+   "out": 1
+  },
+  {
+   "fn": "ellipsis",
+   "args": [
+    "abcdef",
+    6
+   ],
+   "out": "abcdef"
+  },
+  {
+   "fn": "ellipsis",
+   "args": [
+    "abcdef",
+    5
+   ],
+   "out": "abcd…"
+  },
+  {
+   "fn": "ellipsis",
+   "args": [
+    "abcdef",
+    1
+   ],
+   "out": "…"
+  },
+  {
+   "fn": "ellipsis",
+   "args": [
+    "abcdef",
+    0
+   ],
+   "out": "…"
+  },
+  {
+   "fn": "ellipsis",
+   "args": [
+    "abcdef",
+    -3
+   ],
+   "out": "…"
+  },
+  {
+   "fn": "ellipsis",
+   "args": [
+    "中文字",
+    4
+   ],
+   "out": "中…"
+  },
+  {
+   "fn": "ellipsis",
+   "args": [
+    "中文字",
+    3
+   ],
+   "out": "中…"
+  },
+  {
+   "fn": "line",
+   "args": [
+    [
+     [
+      "abc",
+      "S1"
+     ],
+     [
+      "中文",
+      "S2"
+     ],
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️x",
+      "S3"
+     ]
+    ],
+    10,
+    null
+   ],
+   "out": "S1abc\u001b[0mS2中文\u001b[0m⚠\u001b[0mS3️x\u001b[0m\u001b[0m"
+  },
+  {
+   "fn": "line",
+   "args": [
+    [
+     [
+      "abc",
+      "S1"
+     ],
+     [
+      "中文",
+      "S2"
+     ],
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️x",
+      "S3"
+     ]
+    ],
+    4,
+    null
+   ],
+   "out": "S1abc\u001b[0m⚠\u001b[0m\u001b[0m"
+  },
+  {
+   "fn": "line",
+   "args": [
+    [
+     [
+      "abc",
+      "S1"
+     ],
+     [
+      "中文",
+      "S2"
+     ],
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️x",
+      "S3"
+     ]
+    ],
+    0,
+    null
+   ],
+   "out": "S3️\u001b[0m\u001b[0m"
+  },
+  {
+   "fn": "line",
+   "args": [
+    [
+     [
+      "a\tb",
+      "X"
+     ],
+     [
+      "",
+      "Y"
+     ],
+     [
+      "c",
+      ""
+     ]
+    ],
+    6,
+    [
+     1,
+     2,
+     3
+    ]
+   ],
+   "out": "\u001b[48;2;1;2;3mXa?b\u001b[0m\u001b[48;2;1;2;3mc\u001b[0m\u001b[48;2;1;2;3m  \u001b[0m"
+  },
+  {
+   "fn": "line",
+   "args": [
+    [],
+    3,
+    [
+     9,
+     9,
+     9
+    ]
+   ],
+   "out": "\u001b[48;2;9;9;9m   \u001b[0m"
+  },
+  {
+   "fn": "line",
+   "args": [
+    [
+     [
+      "中",
+      ""
+     ]
+    ],
+    1,
+    null
+   ],
+   "out": " \u001b[0m"
+  },
+  {
+   "fn": "light",
+   "args": [
+    "line",
+    [
+     [
+      "abc",
+      "S1"
+     ],
+     [
+      "中文",
+      "S2"
+     ],
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️x",
+      "S3"
+     ]
+    ],
+    12,
+    [
+     5,
+     5,
+     5
+    ]
+   ],
+   "out": "\u001b[48;2;5;5;5mS1abc\u001b[0m\u001b[48;2;5;5;5mS2中文\u001b[0m\u001b[48;2;5;5;5m⚠\u001b[0m\u001b[48;2;5;5;5mS3️x\u001b[0m\u001b[48;2;5;5;5m  \u001b[0m"
+  },
+  {
+   "fn": "keys",
+   "args": [
+    [
+     [
+      "s",
+      "stage"
+     ],
+     [
+      "d",
+      "discard"
+     ],
+     [
+      "q",
+      "quit"
+     ]
+    ],
+    null
+   ],
+   "out": {
+    "segs": [
+     [
+      " s",
+      "\u001b[1m\u001b[38;2;212;212;212m"
+     ],
+     [
+      " stage",
+      "\u001b[38;2;140;140;140m"
+     ],
+     [
+      "   d",
+      "\u001b[1m\u001b[38;2;212;212;212m"
+     ],
+     [
+      " discard",
+      "\u001b[38;2;140;140;140m"
+     ],
+     [
+      "   q",
+      "\u001b[1m\u001b[38;2;212;212;212m"
+     ],
+     [
+      " quit",
+      "\u001b[38;2;140;140;140m"
+     ]
+    ],
+    "zones": [
+     {
+      "x0": 1,
+      "x1": 8,
+      "key": "s"
+     },
+     {
+      "x0": 11,
+      "x1": 20,
+      "key": "d"
+     },
+     {
+      "x0": 23,
+      "x1": 29,
+      "key": "q"
+     }
+    ]
+   }
+  },
+  {
+   "fn": "keys",
+   "args": [
+    [
+     [
+      "s",
+      "stage"
+     ],
+     [
+      "d",
+      "discard"
+     ],
+     [
+      "q",
+      "quit"
+     ]
+    ],
+    20
+   ],
+   "out": {
+    "segs": [
+     [
+      " s",
+      "\u001b[1m\u001b[38;2;212;212;212m"
+     ],
+     [
+      " stage",
+      "\u001b[38;2;140;140;140m"
+     ],
+     [
+      "   d",
+      "\u001b[1m\u001b[38;2;212;212;212m"
+     ],
+     [
+      " discard",
+      "\u001b[38;2;140;140;140m"
+     ]
+    ],
+    "zones": [
+     {
+      "x0": 1,
+      "x1": 8,
+      "key": "s"
+     },
+     {
+      "x0": 11,
+      "x1": 20,
+      "key": "d"
+     }
+    ]
+   }
+  },
+  {
+   "fn": "keys",
+   "args": [
+    [
+     [
+      "⏎",
+      "open"
+     ],
+     [
+      "↑↓",
+      "move"
+     ],
+     [
+      "1-4",
+      "tabs"
+     ],
+     [
+      "esc",
+      "close"
+     ],
+     [
+      "pgdn",
+      "page"
+     ]
+    ],
+    null
+   ],
+   "out": {
+    "segs": [
+     [
+      " ⏎",
+      "\u001b[1m\u001b[38;2;212;212;212m"
+     ],
+     [
+      " open",
+      "\u001b[38;2;140;140;140m"
+     ],
+     [
+      "   ↑↓",
+      "\u001b[1m\u001b[38;2;212;212;212m"
+     ],
+     [
+      " move",
+      "\u001b[38;2;140;140;140m"
+     ],
+     [
+      "   1-4",
+      "\u001b[1m\u001b[38;2;212;212;212m"
+     ],
+     [
+      " tabs",
+      "\u001b[38;2;140;140;140m"
+     ],
+     [
+      "   esc",
+      "\u001b[1m\u001b[38;2;212;212;212m"
+     ],
+     [
+      " close",
+      "\u001b[38;2;140;140;140m"
+     ],
+     [
+      "   pgdn",
+      "\u001b[1m\u001b[38;2;212;212;212m"
+     ],
+     [
+      " page",
+      "\u001b[38;2;140;140;140m"
+     ]
+    ],
+    "zones": [
+     {
+      "x0": 1,
+      "x1": 7,
+      "key": "enter"
+     },
+     {
+      "x0": 31,
+      "x1": 40,
+      "key": "escape"
+     },
+     {
+      "x0": 43,
+      "x1": 52,
+      "key": "pagedown"
+     }
+    ]
+   }
+  },
+  {
+   "fn": "keys",
+   "args": [
+    [],
+    5
+   ],
+   "out": {
+    "segs": [],
+    "zones": []
+   }
+  },
+  {
+   "fn": "keyAt",
+   "args": [
+    [
+     [
+      "⏎",
+      "open"
+     ],
+     [
+      "↑↓",
+      "move"
+     ],
+     [
+      "space s",
+      "stage"
+     ],
+     [
+      "del",
+      "delete"
+     ]
+    ],
+    1,
+    0
+   ],
+   "out": "enter"
+  },
+  {
+   "fn": "keyAt",
+   "args": [
+    [
+     [
+      "⏎",
+      "open"
+     ],
+     [
+      "↑↓",
+      "move"
+     ],
+     [
+      "space s",
+      "stage"
+     ],
+     [
+      "del",
+      "delete"
+     ]
+    ],
+    2,
+    0
+   ],
+   "out": "enter"
+  },
+  {
+   "fn": "keyAt",
+   "args": [
+    [
+     [
+      "⏎",
+      "open"
+     ],
+     [
+      "↑↓",
+      "move"
+     ],
+     [
+      "space s",
+      "stage"
+     ],
+     [
+      "del",
+      "delete"
+     ]
+    ],
+    5,
+    0
+   ],
+   "out": "enter"
+  },
+  {
+   "fn": "keyAt",
+   "args": [
+    [
+     [
+      "⏎",
+      "open"
+     ],
+     [
+      "↑↓",
+      "move"
+     ],
+     [
+      "space s",
+      "stage"
+     ],
+     [
+      "del",
+      "delete"
+     ]
+    ],
+    11,
+    0
+   ],
+   "out": null
+  },
+  {
+   "fn": "keyAt",
+   "args": [
+    [
+     [
+      "⏎",
+      "open"
+     ],
+     [
+      "↑↓",
+      "move"
+     ],
+     [
+      "space s",
+      "stage"
+     ],
+     [
+      "del",
+      "delete"
+     ]
+    ],
+    21,
+    0
+   ],
+   "out": "space"
+  },
+  {
+   "fn": "keyAt",
+   "args": [
+    [
+     [
+      "⏎",
+      "open"
+     ],
+     [
+      "↑↓",
+      "move"
+     ],
+     [
+      "space s",
+      "stage"
+     ],
+     [
+      "del",
+      "delete"
+     ]
+    ],
+    22,
+    1
+   ],
+   "out": "space"
+  },
+  {
+   "fn": "keyAt",
+   "args": [
+    [
+     [
+      "⏎",
+      "open"
+     ],
+     [
+      "↑↓",
+      "move"
+     ],
+     [
+      "space s",
+      "stage"
+     ],
+     [
+      "del",
+      "delete"
+     ]
+    ],
+    40,
+    0
+   ],
+   "out": "delete"
+  },
+  {
+   "fn": "keyLabel",
+   "args": [
+    "up"
+   ],
+   "out": "↑"
+  },
+  {
+   "fn": "keyLabel",
+   "args": [
+    "ctrl+up"
+   ],
+   "out": "ctrl+↑"
+  },
+  {
+   "fn": "keyLabel",
+   "args": [
+    "enter"
+   ],
+   "out": "⏎"
+  },
+  {
+   "fn": "keyLabel",
+   "args": [
+    "escape"
+   ],
+   "out": "esc"
+  },
+  {
+   "fn": "keyLabel",
+   "args": [
+    "pagedown"
+   ],
+   "out": "pgdn"
+  },
+  {
+   "fn": "keyLabel",
+   "args": [
+    "x"
+   ],
+   "out": "x"
+  },
+  {
+   "fn": "keyLabel",
+   "args": [
+    "upx"
+   ],
+   "out": "upx"
+  },
+  {
+   "fn": "keyLabel",
+   "args": [
+    "shift+left"
+   ],
+   "out": "shift+←"
+  },
+  {
+   "fn": "empty",
+   "args": [
+    20,
+    6,
+    "Nothing here",
+    [
+     [
+      "n",
+      "new"
+     ],
+     [
+      "q",
+      "quit"
+     ]
+    ]
+   ],
+   "out": [
+    "                    \u001b[0m",
+    "    \u001b[0m\u001b[38;2;140;140;140mNothing here\u001b[0m    \u001b[0m",
+    "          \u001b[0m          \u001b[0m",
+    "  \u001b[0m\u001b[1m\u001b[38;2;212;212;212m n\u001b[0m\u001b[38;2;140;140;140m new\u001b[0m\u001b[1m\u001b[38;2;212;212;212m   q\u001b[0m\u001b[38;2;140;140;140m quit\u001b[0m   \u001b[0m",
+    "                    \u001b[0m",
+    "                    \u001b[0m"
+   ]
+  },
+  {
+   "fn": "empty",
+   "args": [
+    8,
+    2,
+    "Nothing here at all",
+    []
+   ],
+   "out": [
+    " \u001b[0m\u001b[38;2;140;140;140mNothi…\u001b[0m \u001b[0m",
+    "        \u001b[0m"
+   ]
+  },
+  {
+   "fn": "messageKind",
+   "args": [
+    "Saved"
+   ],
+   "out": "ok"
+  },
+  {
+   "fn": "messageKind",
+   "args": [
+    "Cannot write x"
+   ],
+   "out": "error"
+  },
+  {
+   "fn": "messageKind",
+   "args": [
+    "Working…"
+   ],
+   "out": "busy"
+  },
+  {
+   "fn": "messageKind",
+   "args": [
+    "No change"
+   ],
+   "out": "info"
+  },
+  {
+   "fn": "messageKind",
+   "args": [
+    "Nothing to do"
+   ],
+   "out": "info"
+  },
+  {
+   "fn": "messageKind",
+   "args": [
+    "git: not found"
+   ],
+   "out": "error"
+  },
+  {
+   "fn": "messageKind",
+   "args": [
+    "x: already bound"
+   ],
+   "out": "error"
+  },
+  {
+   "fn": "messageKind",
+   "args": [
+    "Staged 1 line; cannot stage u"
+   ],
+   "out": "error"
+  },
+  {
+   "fn": "messageKind",
+   "args": [
+    "Not now"
+   ],
+   "out": "error"
+  },
+  {
+   "fn": "messageTime",
+   "args": [
+    "error"
+   ],
+   "out": 4000
+  },
+  {
+   "fn": "messageTime",
+   "args": [
+    "ok"
+   ],
+   "out": 2000
+  },
+  {
+   "fn": "message",
+   "args": [
+    "Saved",
+    null
+   ],
+   "out": [
+    [
+     " ✓ ",
+     "\u001b[38;2;141;193;73m"
+    ],
+    [
+     "Saved",
+     ""
+    ]
+   ]
+  },
+  {
+   "fn": "message",
+   "args": [
+    "Cannot write",
+    null
+   ],
+   "out": [
+    [
+     " ✕ ",
+     "\u001b[38;2;204;62;68m"
+    ],
+    [
+     "Cannot write",
+     "\u001b[38;2;204;62;68m"
+    ]
+   ]
+  },
+  {
+   "fn": "message",
+   "args": [
+    "Busy…",
+    null
+   ],
+   "out": [
+    [
+     " ⋯ Busy…",
+     "\u001b[38;2;140;140;140m"
+    ]
+   ]
+  },
+  {
+   "fn": "message",
+   "args": [
+    "No change",
+    null
+   ],
+   "out": [
+    [
+     " · ",
+     "\u001b[38;2;140;140;140m"
+    ],
+    [
+     "No change",
+     ""
+    ]
+   ]
+  },
+  {
+   "fn": "message",
+   "args": [
+    "x",
+    "error"
+   ],
+   "out": [
+    [
+     " ✕ ",
+     "\u001b[38;2;204;62;68m"
+    ],
+    [
+     "x",
+     "\u001b[38;2;204;62;68m"
+    ]
+   ]
+  },
+  {
+   "fn": "wrap",
+   "args": [
+    "a few words to wrap here",
+    8
+   ],
+   "out": [
+    "a few",
+    "words",
+    "to wrap",
+    "here"
+   ]
+  },
+  {
+   "fn": "wrap",
+   "args": [
+    "averyveryverylongword and more",
+    6
+   ],
+   "out": [
+    "averyv",
+    "eryver",
+    "ylongw",
+    "ord",
+    "and",
+    "more"
+   ]
+  },
+  {
+   "fn": "wrap",
+   "args": [
+    "two\nparagraphs  here",
+    5
+   ],
+   "out": [
+    "two",
+    "parag",
+    "raphs",
+    "",
+    "here"
+   ]
+  },
+  {
+   "fn": "wrap",
+   "args": [
+    "",
+    4
+   ],
+   "out": [
+    ""
+   ]
+  },
+  {
+   "fn": "wrap",
+   "args": [
+    "中文中文中文",
+    3
+   ],
+   "out": [
+    "中",
+    "文",
+    "中",
+    "文",
+    "中",
+    "文"
+   ]
+  },
+  {
+   "fn": "wrap",
+   "args": [
+    "a  b",
+    0
+   ],
+   "out": [
+    "a",
+    "",
+    "",
+    "b"
+   ]
+  },
+  {
+   "fn": "segText",
+   "args": [
+    [
+     [
+      "abc",
+      "S1"
+     ],
+     [
+      "中文",
+      "S2"
+     ],
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️x",
+      "S3"
+     ]
+    ]
+   ],
+   "out": "abc中文⚠️x"
+  },
+  {
+   "fn": "segWidth",
+   "args": [
+    [
+     [
+      "abc",
+      "S1"
+     ],
+     [
+      "中文",
+      "S2"
+     ],
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️x",
+      "S3"
+     ]
+    ]
+   ],
+   "out": 10
+  },
+  {
+   "fn": "slice",
+   "args": [
+    [
+     [
+      "abc",
+      "S1"
+     ],
+     [
+      "中文",
+      "S2"
+     ],
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️x",
+      "S3"
+     ]
+    ],
+    0,
+    3
+   ],
+   "out": [
+    [
+     "abc",
+     "S1"
+    ]
+   ]
+  },
+  {
+   "fn": "slice",
+   "args": [
+    [
+     [
+      "abc",
+      "S1"
+     ],
+     [
+      "中文",
+      "S2"
+     ],
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️x",
+      "S3"
+     ]
+    ],
+    2,
+    4
+   ],
+   "out": [
+    [
+     "c",
+     "S1"
+    ],
+    [
+     "中",
+     "S2"
+    ]
+   ]
+  },
+  {
+   "fn": "slice",
+   "args": [
+    [
+     [
+      "abc",
+      "S1"
+     ],
+     [
+      "中文",
+      "S2"
+     ],
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️x",
+      "S3"
+     ]
+    ],
+    4,
+    2
+   ],
+   "out": [
+    [
+     " ",
+     "S2"
+    ]
+   ]
+  },
+  {
+   "fn": "slice",
+   "args": [
+    [
+     [
+      "abc",
+      "S1"
+     ],
+     [
+      "中文",
+      "S2"
+     ],
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️x",
+      "S3"
+     ]
+    ],
+    5,
+    10
+   ],
+   "out": [
+    [
+     "文",
+     "S2"
+    ],
+    [
+     "⚠",
+     ""
+    ],
+    [
+     "️x",
+     "S3"
+    ]
+   ]
+  },
+  {
+   "fn": "slice",
+   "args": [
+    [
+     [
+      "a⚠️bc",
+      ""
+     ]
+    ],
+    2,
+    3
+   ],
+   "out": [
+    [
+     " bc",
+     ""
+    ]
+   ]
+  },
+  {
+   "fn": "slice",
+   "args": [
+    [
+     [
+      "abc",
+      "S1"
+     ],
+     [
+      "中文",
+      "S2"
+     ],
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️x",
+      "S3"
+     ]
+    ],
+    20,
+    3
+   ],
+   "out": []
+  },
+  {
+   "fn": "split",
+   "args": [
+    [
+     [
+      "abc",
+      "S1"
+     ],
+     [
+      "中文",
+      "S2"
+     ],
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️x",
+      "S3"
+     ]
+    ],
+    3
+   ],
+   "out": [
+    [
+     [
+      "abc",
+      "S1"
+     ]
+    ],
+    [
+     [
+      "中",
+      "S2"
+     ]
+    ],
+    [
+     [
+      "文",
+      "S2"
+     ]
+    ],
+    [
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️x",
+      "S3"
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "split",
+   "args": [
+    [
+     [
+      "abc",
+      "S1"
+     ],
+     [
+      "中文",
+      "S2"
+     ],
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️x",
+      "S3"
+     ]
+    ],
+    1
+   ],
+   "out": [
+    [
+     [
+      "a",
+      "S1"
+     ]
+    ],
+    [
+     [
+      "b",
+      "S1"
+     ]
+    ],
+    [
+     [
+      "c",
+      "S1"
+     ]
+    ],
+    [
+     [
+      "中",
+      "S2"
+     ]
+    ],
+    [
+     [
+      "文",
+      "S2"
+     ]
+    ],
+    [
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️",
+      "S3"
+     ]
+    ],
+    [
+     [
+      "x",
+      "S3"
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "split",
+   "args": [
+    [
+     [
+      "ab⚠️cd",
+      ""
+     ]
+    ],
+    3
+   ],
+   "out": [
+    [
+     [
+      "ab",
+      ""
+     ]
+    ],
+    [
+     [
+      "⚠️c",
+      ""
+     ]
+    ],
+    [
+     [
+      "d",
+      ""
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "split",
+   "args": [
+    [
+     [
+      "",
+      "x"
+     ]
+    ],
+    3
+   ],
+   "out": [
+    []
+   ]
+  },
+  {
+   "fn": "split",
+   "args": [
+    [
+     [
+      "abcdef",
+      "A"
+     ],
+     [
+      "gh",
+      "B"
+     ]
+    ],
+    2
+   ],
+   "out": [
+    [
+     [
+      "ab",
+      "A"
+     ]
+    ],
+    [
+     [
+      "cd",
+      "A"
+     ]
+    ],
+    [
+     [
+      "ef",
+      "A"
+     ]
+    ],
+    [
+     [
+      "gh",
+      "B"
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "mark",
+   "args": [
+    [
+     [
+      "abc",
+      "S1"
+     ],
+     [
+      "中文",
+      "S2"
+     ],
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️x",
+      "S3"
+     ]
+    ],
+    [
+     [
+      1,
+      4
+     ]
+    ],
+    "M"
+   ],
+   "out": [
+    [
+     "a",
+     "S1"
+    ],
+    [
+     "bc",
+     "S1M"
+    ],
+    [
+     "中",
+     "S2M"
+    ],
+    [
+     "文",
+     "S2"
+    ],
+    [
+     "⚠",
+     ""
+    ],
+    [
+     "️x",
+     "S3"
+    ]
+   ]
+  },
+  {
+   "fn": "mark",
+   "args": [
+    [
+     [
+      "abc",
+      "S1"
+     ],
+     [
+      "中文",
+      "S2"
+     ],
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️x",
+      "S3"
+     ]
+    ],
+    [],
+    "M"
+   ],
+   "out": [
+    [
+     "abc",
+     "S1"
+    ],
+    [
+     "中文",
+     "S2"
+    ],
+    [
+     "⚠",
+     ""
+    ],
+    [
+     "️x",
+     "S3"
+    ]
+   ]
+  },
+  {
+   "fn": "mark",
+   "args": [
+    [
+     [
+      "abc",
+      "S1"
+     ],
+     [
+      "中文",
+      "S2"
+     ],
+     [
+      "⚠",
+      ""
+     ],
+     [
+      "️x",
+      "S3"
+     ]
+    ],
+    [
+     [
+      0,
+      2
+     ],
+     [
+      3,
+      5
+     ]
+    ],
+    "M"
+   ],
+   "out": [
+    [
+     "ab",
+     "S1M"
+    ],
+    [
+     "c",
+     "S1"
+    ],
+    [
+     "中文",
+     "S2M"
+    ],
+    [
+     "⚠",
+     ""
+    ],
+    [
+     "️x",
+     "S3"
+    ]
+   ]
+  },
+  {
+   "fn": "mark",
+   "args": [
+    [
+     [
+      "hello world",
+      "B"
+     ]
+    ],
+    [
+     [
+      6,
+      11
+     ],
+     [
+      0,
+      1
+     ]
+    ],
+    "M"
+   ],
+   "out": [
+    [
+     "h",
+     "BM"
+    ],
+    [
+     "ello ",
+     "B"
+    ],
+    [
+     "world",
+     "BM"
+    ]
+   ]
+  },
+  {
+   "fn": "onOff",
+   "args": [
+    true
+   ],
+   "out": [
+    "● on",
+    "\u001b[38;2;141;193;73m"
+   ]
+  },
+  {
+   "fn": "onOff",
+   "args": [
+    false
+   ],
+   "out": [
+    "○ off",
+    "\u001b[38;2;140;140;140m"
+   ]
+  },
+  {
+   "fn": "switchStyle",
+   "args": [
+    true
+   ],
+   "out": "\u001b[48;2;4;57;94m\u001b[38;2;212;212;212m\u001b[1m"
+  },
+  {
+   "fn": "switchStyle",
+   "args": [
+    false
+   ],
+   "out": "\u001b[48;2;58;58;62m\u001b[38;2;140;140;140m"
+  },
+  {
+   "fn": "segmented",
+   "args": [
+    [
+     [
+      "file",
+      "File"
+     ],
+     [
+      "diff",
+      "Diff"
+     ],
+     [
+      "md",
+      "中文"
+     ]
+    ],
+    "diff"
+   ],
+   "out": {
+    "segs": [
+     [
+      " File ",
+      "\u001b[48;2;58;58;62m\u001b[38;2;140;140;140m"
+     ],
+     [
+      " Diff ",
+      "\u001b[48;2;4;57;94m\u001b[38;2;212;212;212m\u001b[1m"
+     ],
+     [
+      " 中文 ",
+      "\u001b[48;2;58;58;62m\u001b[38;2;140;140;140m"
+     ]
+    ],
+    "width": 18,
+    "hits": [
+     {
+      "id": "file",
+      "from": 0,
+      "to": 5
+     },
+     {
+      "id": "diff",
+      "from": 6,
+      "to": 11
+     },
+     {
+      "id": "md",
+      "from": 12,
+      "to": 17
+     }
+    ]
+   }
+  },
+  {
+   "fn": "head",
+   "args": [
+    "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+    0
+   ],
+   "out": "\u001b[38;2;1;2;3m\u001b[0m"
+  },
+  {
+   "fn": "head",
+   "args": [
+    "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+    3
+   ],
+   "out": "\u001b[38;2;1;2;3mabc\u001b[0m"
+  },
+  {
+   "fn": "head",
+   "args": [
+    "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+    7
+   ],
+   "out": "\u001b[38;2;1;2;3mabcdefg\u001b[0m"
+  },
+  {
+   "fn": "head",
+   "args": [
+    "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+    12
+   ],
+   "out": "\u001b[38;2;1;2;3mabcdefghijkl\u001b[0m"
+  },
+  {
+   "fn": "head",
+   "args": [
+    "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+    30
+   ],
+   "out": "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m\u001b[0m"
+  },
+  {
+   "fn": "head",
+   "args": [
+    "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+    40
+   ],
+   "out": "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m\u001b[0m          "
+  },
+  {
+   "fn": "tail",
+   "args": [
+    "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+    0
+   ],
+   "out": "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m\u001b[0m"
+  },
+  {
+   "fn": "tail",
+   "args": [
+    "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+    3
+   ],
+   "out": "\u001b[38;2;1;2;3mdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m\u001b[0m"
+  },
+  {
+   "fn": "tail",
+   "args": [
+    "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+    26
+   ],
+   "out": "\u001b[38;2;1;2;3m\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m\u001b[0m"
+  },
+  {
+   "fn": "tail",
+   "args": [
+    "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+    27
+   ],
+   "out": "\u001b[38;2;1;2;3m\u001b[0m\u001b[1m xy\u001b[0m\u001b[0m\u001b[0m"
+  },
+  {
+   "fn": "tail",
+   "args": [
+    "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+    29
+   ],
+   "out": "\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m"
+  },
+  {
+   "fn": "tail",
+   "args": [
+    "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+    40
+   ],
+   "out": "\u001b[38;2;1;2;3m\u001b[0m\u001b[1m\u001b[0m\u001b[0m\u001b[0m"
+  },
+  {
+   "fn": "keyName",
+   "args": [
+    "\u001b[A"
+   ],
+   "out": "up"
+  },
+  {
+   "fn": "keyName",
+   "args": [
+    "\u001b[1;5C"
+   ],
+   "out": "ctrl+right"
+  },
+  {
+   "fn": "keyName",
+   "args": [
+    "\r"
+   ],
+   "out": "enter"
+  },
+  {
+   "fn": "keyName",
+   "args": [
+    "\u0001"
+   ],
+   "out": "ctrl+a"
+  },
+  {
+   "fn": "keyName",
+   "args": [
+    "\u001bx"
+   ],
+   "out": "alt+x"
+  },
+  {
+   "fn": "keyName",
+   "args": [
+    "\u001b[99~"
+   ],
+   "out": null
+  },
+  {
+   "fn": "keyName",
+   "args": [
+    "a"
+   ],
+   "out": "a"
+  },
+  {
+   "fn": "keyName",
+   "args": [
+    "É"
+   ],
+   "out": "É"
+  },
+  {
+   "fn": "keyName",
+   "args": [
+    " "
+   ],
+   "out": "space"
+  },
+  {
+   "fn": "keyName",
+   "args": [
+    "\u001b"
+   ],
+   "out": "escape"
+  },
+  {
+   "fn": "keyName",
+   "args": [
+    "\u001b[122;6u"
+   ],
+   "out": "ctrl+shift+z"
+  },
+  {
+   "fn": "printable",
+   "args": [
+    "a"
+   ],
+   "out": true
+  },
+  {
+   "fn": "printable",
+   "args": [
+    "É"
+   ],
+   "out": true
+  },
+  {
+   "fn": "printable",
+   "args": [
+    "space"
+   ],
+   "out": true
+  },
+  {
+   "fn": "printable",
+   "args": [
+    "up"
+   ],
+   "out": false
+  },
+  {
+   "fn": "printable",
+   "args": [
+    "ctrl+a"
+   ],
+   "out": false
+  },
+  {
+   "fn": "printable",
+   "args": [
+    "中"
+   ],
+   "out": true
+  },
+  {
+   "fn": "printable",
+   "args": [
+    ""
+   ],
+   "out": false
+  },
+  {
+   "fn": "decode",
+   "args": [
+    "a\u001b_Gi=31;OK\u001b\\b\u001b[6;16;8tc"
+   ],
+   "out": [
+    [
+     "key",
+     "a"
+    ],
+    [
+     "reply",
+     "\u001b_Gi=31;OK\u001b\\"
+    ],
+    [
+     "key",
+     "b"
+    ],
+    [
+     "reply",
+     "\u001b[6;16;8t"
+    ],
+    [
+     "key",
+     "c"
+    ]
+   ]
+  },
+  {
+   "fn": "decode",
+   "args": [
+    "\u001b[<0;5;7M\u001b[<64;1;1M\u001b[<65;2;2M\u001b[<32;3;3M\u001b[<0;4;4m\u001b[<16;5;5M"
+   ],
+   "out": [
+    [
+     "mouse",
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 5,
+      "y": 7,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     }
+    ],
+    [
+     "mouse",
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 1,
+      "y": 1,
+      "press": true,
+      "drag": false,
+      "wheel": -1
+     }
+    ],
+    [
+     "mouse",
+     {
+      "button": 1,
+      "mods": 0,
+      "x": 2,
+      "y": 2,
+      "press": true,
+      "drag": false,
+      "wheel": 1
+     }
+    ],
+    [
+     "mouse",
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 3,
+      "y": 3,
+      "press": true,
+      "drag": true,
+      "wheel": 0
+     }
+    ],
+    [
+     "mouse",
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 4,
+      "y": 4,
+      "press": false,
+      "drag": false,
+      "wheel": 0
+     }
+    ],
+    [
+     "mouse",
+     {
+      "button": 0,
+      "mods": 16,
+      "x": 5,
+      "y": 5,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     }
+    ]
+   ]
+  },
+  {
+   "fn": "decode",
+   "args": [
+    "\u001b[I\u001b[O"
+   ],
+   "out": [
+    [
+     "focus",
+     true
+    ],
+    [
+     "focus",
+     false
+    ]
+   ]
+  },
+  {
+   "fn": "decode",
+   "args": [
+    "\u001b[200~line1\r\nline2\u0001\u001b[201~"
+   ],
+   "out": [
+    [
+     "paste",
+     [
+      "line1\nline2",
+      "line1\nline2\u0001"
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "decode",
+   "args": [
+    "\u001b]11;rgb:0/0/0\u0007x"
+   ],
+   "out": [
+    [
+     "reply",
+     "\u001b]11;rgb:0/0/0\u0007"
+    ],
+    [
+     "key",
+     "x"
+    ]
+   ]
+  },
+  {
+   "fn": "decode",
+   "args": [
+    "\u001b[1;5A\u001bOP\u001b\u001bx\u001b"
+   ],
+   "out": [
+    [
+     "key",
+     "ctrl+up"
+    ],
+    [
+     "key",
+     "f1"
+    ],
+    [
+     "key",
+     "alt+backspace"
+    ],
+    [
+     "key",
+     "alt+x"
+    ],
+    [
+     "key",
+     "escape"
+    ]
+   ]
+  },
+  {
+   "fn": "decode",
+   "args": [
+    "\u001b_"
+   ],
+   "out": [
+    [
+     "reply",
+     "\u001b_"
+    ]
+   ]
+  },
+  {
+   "fn": "decode",
+   "args": [
+    "\u001b]"
+   ],
+   "out": [
+    [
+     "reply",
+     "\u001b]"
+    ]
+   ]
+  },
+  {
+   "fn": "decode",
+   "args": [
+    "😀é"
+   ],
+   "out": [
+    [
+     "key",
+     "😀"
+    ],
+    [
+     "key",
+     "é"
+    ]
+   ]
+  },
+  {
+   "fn": "decode",
+   "args": [
+    "\u001b[1;2H\u001b[27;6;90~"
+   ],
+   "out": [
+    [
+     "key",
+     "shift+home"
+    ],
+    [
+     "key",
+     "ctrl+shift+z"
+    ]
+   ]
+  },
+  {
+   "fn": "field",
+   "args": [
+    "hello world",
+    [
+     "left",
+     "left",
+     "x",
+     "home",
+     "delete",
+     "end",
+     "backspace",
+     "ctrl+w",
+     "space",
+     "é",
+     "ctrl+u",
+     "f1",
+     "insert:a\nb"
+    ],
+    6,
+    "S"
+   ],
+   "out": {
+    "steps": [
+     [
+      true,
+      "hello world",
+      10
+     ],
+     [
+      true,
+      "hello world",
+      9
+     ],
+     [
+      true,
+      "hello worxld",
+      10
+     ],
+     [
+      true,
+      "hello worxld",
+      0
+     ],
+     [
+      true,
+      "ello worxld",
+      0
+     ],
+     [
+      true,
+      "ello worxld",
+      11
+     ],
+     [
+      true,
+      "ello worxl",
+      10
+     ],
+     [
+      true,
+      "ello ",
+      5
+     ],
+     [
+      true,
+      "ello  ",
+      6
+     ],
+     [
+      true,
+      "ello  é",
+      7
+     ],
+     [
+      true,
+      "",
+      0
+     ],
+     [
+      false,
+      "",
+      0
+     ],
+     [
+      true,
+      "a b",
+      3
+     ]
+    ],
+    "segments": [
+     [
+      "a b",
+      "S"
+     ],
+     [
+      " ",
+      "\u001b[7m"
+     ],
+     [
+      "",
+      "S"
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "field",
+   "args": [
+    "中文中文中文",
+    [
+     "home",
+     "right",
+     "right",
+     "ctrl+k",
+     "alt+backspace",
+     "backspace"
+    ],
+    4,
+    ""
+   ],
+   "out": {
+    "steps": [
+     [
+      true,
+      "中文中文中文",
+      0
+     ],
+     [
+      true,
+      "中文中文中文",
+      1
+     ],
+     [
+      true,
+      "中文中文中文",
+      2
+     ],
+     [
+      true,
+      "中文",
+      2
+     ],
+     [
+      true,
+      "",
+      0
+     ],
+     [
+      true,
+      "",
+      0
+     ]
+    ],
+    "segments": [
+     [
+      "",
+      ""
+     ],
+     [
+      " ",
+      "\u001b[7m"
+     ],
+     [
+      "",
+      ""
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "field",
+   "args": [
+    "abcdefghij",
+    [
+     "ctrl+b",
+     "ctrl+f",
+     "ctrl+d"
+    ],
+    4,
+    ""
+   ],
+   "out": {
+    "steps": [
+     [
+      true,
+      "abcdefghij",
+      9
+     ],
+     [
+      true,
+      "abcdefghij",
+      10
+     ],
+     [
+      true,
+      "abcdefghij",
+      10
+     ]
+    ],
+    "segments": [
+     [
+      "hij",
+      ""
+     ],
+     [
+      " ",
+      "\u001b[7m"
+     ],
+     [
+      "",
+      ""
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "help",
+   "args": [
+    40,
+    12,
+    "Explorer",
+    [
+     [
+      "Move",
+      [
+       [
+        "up down",
+        "move"
+       ],
+       [
+        "enter",
+        "open"
+       ],
+       [
+        "pageup",
+        "page up"
+       ]
+      ]
+     ],
+     [
+      "Files",
+      [
+       [
+        "ctrl+n",
+        "new file"
+       ],
+       [
+        "del",
+        "delete"
+       ],
+       [
+        "a very long key name",
+        "cut"
+       ]
+      ]
+     ]
+    ],
+    [
+     [
+      "key",
+      "down"
+     ],
+     [
+      "key",
+      "end"
+     ],
+     [
+      "key",
+      "home"
+     ],
+     [
+      "key",
+      "/"
+     ],
+     [
+      "key",
+      "d"
+     ],
+     [
+      "key",
+      "e"
+     ],
+     [
+      "key",
+      "backspace"
+     ],
+     [
+      "key",
+      "escape"
+     ],
+     [
+      "key",
+      "escape"
+     ]
+    ]
+   ],
+   "out": [
+    [
+     "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m\u001b[38;2;140;140;140m · Explorer\u001b[0m                      \u001b[0m",
+     "\u001b[1m\u001b[38;2;81;154;186m Move\u001b[0m                                   \u001b[0m",
+     "\u001b[1m\u001b[38;2;212;212;212m  ↑ ↓        \u001b[0m\u001b[38;2;140;140;140mmove\u001b[0m                       \u001b[0m",
+     "\u001b[1m\u001b[38;2;212;212;212m  ⏎          \u001b[0m\u001b[38;2;140;140;140mopen\u001b[0m                       \u001b[0m",
+     "\u001b[1m\u001b[38;2;212;212;212m  pgup       \u001b[0m\u001b[38;2;140;140;140mpage up\u001b[0m                    \u001b[0m",
+     "\u001b[1m\u001b[38;2;81;154;186m Files\u001b[0m                                  \u001b[0m",
+     "\u001b[1m\u001b[38;2;212;212;212m  ctrl+n     \u001b[0m\u001b[38;2;140;140;140mnew file\u001b[0m                   \u001b[0m",
+     "\u001b[1m\u001b[38;2;212;212;212m  del        \u001b[0m\u001b[38;2;140;140;140mdelete\u001b[0m                     \u001b[0m",
+     "\u001b[1m\u001b[38;2;212;212;212m  a very l…  \u001b[0m\u001b[38;2;140;140;140mcut\u001b[0m                        \u001b[0m",
+     "                                        \u001b[0m",
+     "\u001b[38;2;140;140;140m───────────────────────────────────────\u001b[0m \u001b[0m",
+     "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   esc\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m close\u001b[0m\u001b[48;2;37;37;38m         \u001b[0m"
+    ],
+    [
+     true,
+     0,
+     null,
+     [
+      "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m\u001b[38;2;140;140;140m · Explorer\u001b[0m                      \u001b[0m",
+      "\u001b[1m\u001b[38;2;81;154;186m Move\u001b[0m                                   \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ↑ ↓        \u001b[0m\u001b[38;2;140;140;140mmove\u001b[0m                       \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ⏎          \u001b[0m\u001b[38;2;140;140;140mopen\u001b[0m                       \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  pgup       \u001b[0m\u001b[38;2;140;140;140mpage up\u001b[0m                    \u001b[0m",
+      "\u001b[1m\u001b[38;2;81;154;186m Files\u001b[0m                                  \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ctrl+n     \u001b[0m\u001b[38;2;140;140;140mnew file\u001b[0m                   \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  del        \u001b[0m\u001b[38;2;140;140;140mdelete\u001b[0m                     \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  a very l…  \u001b[0m\u001b[38;2;140;140;140mcut\u001b[0m                        \u001b[0m",
+      "                                        \u001b[0m",
+      "\u001b[38;2;140;140;140m───────────────────────────────────────\u001b[0m \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   esc\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m close\u001b[0m\u001b[48;2;37;37;38m         \u001b[0m"
+     ]
+    ],
+    [
+     true,
+     0,
+     null,
+     [
+      "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m\u001b[38;2;140;140;140m · Explorer\u001b[0m                      \u001b[0m",
+      "\u001b[1m\u001b[38;2;81;154;186m Move\u001b[0m                                   \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ↑ ↓        \u001b[0m\u001b[38;2;140;140;140mmove\u001b[0m                       \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ⏎          \u001b[0m\u001b[38;2;140;140;140mopen\u001b[0m                       \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  pgup       \u001b[0m\u001b[38;2;140;140;140mpage up\u001b[0m                    \u001b[0m",
+      "\u001b[1m\u001b[38;2;81;154;186m Files\u001b[0m                                  \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ctrl+n     \u001b[0m\u001b[38;2;140;140;140mnew file\u001b[0m                   \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  del        \u001b[0m\u001b[38;2;140;140;140mdelete\u001b[0m                     \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  a very l…  \u001b[0m\u001b[38;2;140;140;140mcut\u001b[0m                        \u001b[0m",
+      "                                        \u001b[0m",
+      "\u001b[38;2;140;140;140m───────────────────────────────────────\u001b[0m \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   esc\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m close\u001b[0m\u001b[48;2;37;37;38m         \u001b[0m"
+     ]
+    ],
+    [
+     true,
+     0,
+     null,
+     [
+      "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m\u001b[38;2;140;140;140m · Explorer\u001b[0m                      \u001b[0m",
+      "\u001b[1m\u001b[38;2;81;154;186m Move\u001b[0m                                   \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ↑ ↓        \u001b[0m\u001b[38;2;140;140;140mmove\u001b[0m                       \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ⏎          \u001b[0m\u001b[38;2;140;140;140mopen\u001b[0m                       \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  pgup       \u001b[0m\u001b[38;2;140;140;140mpage up\u001b[0m                    \u001b[0m",
+      "\u001b[1m\u001b[38;2;81;154;186m Files\u001b[0m                                  \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ctrl+n     \u001b[0m\u001b[38;2;140;140;140mnew file\u001b[0m                   \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  del        \u001b[0m\u001b[38;2;140;140;140mdelete\u001b[0m                     \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  a very l…  \u001b[0m\u001b[38;2;140;140;140mcut\u001b[0m                        \u001b[0m",
+      "                                        \u001b[0m",
+      "\u001b[38;2;140;140;140m───────────────────────────────────────\u001b[0m \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   esc\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m close\u001b[0m\u001b[48;2;37;37;38m         \u001b[0m"
+     ]
+    ],
+    [
+     true,
+     0,
+     "",
+     [
+      "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m\u001b[38;2;140;140;140m · Explorer\u001b[0m                      \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m  \u001b[0m\u001b[48;2;37;37;38m\u001b[7m \u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m                                    \u001b[0m\u001b[48;2;37;37;38m\u001b[0m",
+      "\u001b[1m\u001b[38;2;81;154;186m Move\u001b[0m                                   \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ↑ ↓        \u001b[0m\u001b[38;2;140;140;140mmove\u001b[0m                       \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ⏎          \u001b[0m\u001b[38;2;140;140;140mopen\u001b[0m                       \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  pgup       \u001b[0m\u001b[38;2;140;140;140mpage up\u001b[0m                    \u001b[0m",
+      "\u001b[1m\u001b[38;2;81;154;186m Files\u001b[0m                                  \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ctrl+n     \u001b[0m\u001b[38;2;140;140;140mnew file\u001b[0m                   \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  del        \u001b[0m\u001b[38;2;140;140;140mdelete\u001b[0m                     \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  a very l…  \u001b[0m\u001b[38;2;140;140;140mcut\u001b[0m                        \u001b[0m",
+      "\u001b[38;2;140;140;140m───────────────────────────────────────\u001b[0m \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   esc\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m close\u001b[0m\u001b[48;2;37;37;38m         \u001b[0m"
+     ]
+    ],
+    [
+     true,
+     0,
+     "d",
+     [
+      "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m\u001b[38;2;140;140;140m · Explorer\u001b[0m                      \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m  \u001b[0m\u001b[48;2;37;37;38md\u001b[0m\u001b[48;2;37;37;38m\u001b[7m \u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m                                  1\u001b[0m\u001b[48;2;37;37;38m\u001b[0m",
+      "\u001b[1m\u001b[38;2;81;154;186m Files\u001b[0m                                  \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  del   \u001b[0m\u001b[38;2;140;140;140mdelete\u001b[0m                          \u001b[0m",
+      "                                        \u001b[0m",
+      "                                        \u001b[0m",
+      "                                        \u001b[0m",
+      "                                        \u001b[0m",
+      "                                        \u001b[0m",
+      "                                        \u001b[0m",
+      "\u001b[38;2;140;140;140m───────────────────────────────────────\u001b[0m \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   esc\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m close\u001b[0m\u001b[48;2;37;37;38m         \u001b[0m"
+     ]
+    ],
+    [
+     true,
+     0,
+     "de",
+     [
+      "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m\u001b[38;2;140;140;140m · Explorer\u001b[0m                      \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m  \u001b[0m\u001b[48;2;37;37;38mde\u001b[0m\u001b[48;2;37;37;38m\u001b[7m \u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m                                 1\u001b[0m\u001b[48;2;37;37;38m\u001b[0m",
+      "\u001b[1m\u001b[38;2;81;154;186m Files\u001b[0m                                  \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  del   \u001b[0m\u001b[38;2;140;140;140mdelete\u001b[0m                          \u001b[0m",
+      "                                        \u001b[0m",
+      "                                        \u001b[0m",
+      "                                        \u001b[0m",
+      "                                        \u001b[0m",
+      "                                        \u001b[0m",
+      "                                        \u001b[0m",
+      "\u001b[38;2;140;140;140m───────────────────────────────────────\u001b[0m \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   esc\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m close\u001b[0m\u001b[48;2;37;37;38m         \u001b[0m"
+     ]
+    ],
+    [
+     true,
+     0,
+     "d",
+     [
+      "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m\u001b[38;2;140;140;140m · Explorer\u001b[0m                      \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m  \u001b[0m\u001b[48;2;37;37;38md\u001b[0m\u001b[48;2;37;37;38m\u001b[7m \u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m                                  1\u001b[0m\u001b[48;2;37;37;38m\u001b[0m",
+      "\u001b[1m\u001b[38;2;81;154;186m Files\u001b[0m                                  \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  del   \u001b[0m\u001b[38;2;140;140;140mdelete\u001b[0m                          \u001b[0m",
+      "                                        \u001b[0m",
+      "                                        \u001b[0m",
+      "                                        \u001b[0m",
+      "                                        \u001b[0m",
+      "                                        \u001b[0m",
+      "                                        \u001b[0m",
+      "\u001b[38;2;140;140;140m───────────────────────────────────────\u001b[0m \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   esc\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m close\u001b[0m\u001b[48;2;37;37;38m         \u001b[0m"
+     ]
+    ],
+    [
+     true,
+     0,
+     null,
+     [
+      "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m\u001b[38;2;140;140;140m · Explorer\u001b[0m                      \u001b[0m",
+      "\u001b[1m\u001b[38;2;81;154;186m Move\u001b[0m                                   \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ↑ ↓        \u001b[0m\u001b[38;2;140;140;140mmove\u001b[0m                       \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ⏎          \u001b[0m\u001b[38;2;140;140;140mopen\u001b[0m                       \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  pgup       \u001b[0m\u001b[38;2;140;140;140mpage up\u001b[0m                    \u001b[0m",
+      "\u001b[1m\u001b[38;2;81;154;186m Files\u001b[0m                                  \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ctrl+n     \u001b[0m\u001b[38;2;140;140;140mnew file\u001b[0m                   \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  del        \u001b[0m\u001b[38;2;140;140;140mdelete\u001b[0m                     \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  a very l…  \u001b[0m\u001b[38;2;140;140;140mcut\u001b[0m                        \u001b[0m",
+      "                                        \u001b[0m",
+      "\u001b[38;2;140;140;140m───────────────────────────────────────\u001b[0m \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   esc\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m close\u001b[0m\u001b[48;2;37;37;38m         \u001b[0m"
+     ]
+    ],
+    [
+     false,
+     0,
+     null,
+     null
+    ]
+   ]
+  },
+  {
+   "fn": "help",
+   "args": [
+    24,
+    6,
+    "",
+    [
+     [
+      "Move",
+      [
+       [
+        "up down",
+        "move"
+       ],
+       [
+        "enter",
+        "open"
+       ],
+       [
+        "pageup",
+        "page up"
+       ]
+      ]
+     ],
+     [
+      "Files",
+      [
+       [
+        "ctrl+n",
+        "new file"
+       ],
+       [
+        "del",
+        "delete"
+       ],
+       [
+        "a very long key name",
+        "cut"
+       ]
+      ]
+     ]
+    ],
+    [
+     [
+      "mouse",
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 0,
+       "y": 0,
+       "press": false,
+       "drag": false,
+       "wheel": 1
+      }
+     ],
+     [
+      "key",
+      "pagedown"
+     ],
+     [
+      "key",
+      "ctrl+u"
+     ],
+     [
+      "key",
+      "/"
+     ],
+     [
+      "key",
+      "z"
+     ],
+     [
+      "mouse",
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 2,
+       "y": 6,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      }
+     ],
+     [
+      "mouse",
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 4,
+       "y": 1,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      }
+     ]
+    ]
+   ],
+   "out": [
+    [
+     "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m                 \u001b[0m",
+     "\u001b[1m\u001b[38;2;81;154;186m Move\u001b[0m                   \u001b[0m",
+     "\u001b[1m\u001b[38;2;212;212;212m  ↑ ↓        \u001b[0m\u001b[38;2;140;140;140mmove\u001b[0m       \u001b[0m",
+     "\u001b[1m\u001b[38;2;212;212;212m  ⏎          \u001b[0m\u001b[38;2;140;140;140mopen\u001b[0m       \u001b[0m",
+     "\u001b[38;2;140;140;140m──────────────────────▾\u001b[0m \u001b[0m",
+     "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m     \u001b[0m"
+    ],
+    [
+     true,
+     3,
+     null,
+     [
+      "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m                 \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  pgup       \u001b[0m\u001b[38;2;140;140;140mpage up\u001b[0m    \u001b[0m",
+      "\u001b[1m\u001b[38;2;81;154;186m Files\u001b[0m                  \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ctrl+n     \u001b[0m\u001b[38;2;140;140;140mnew file\u001b[0m   \u001b[0m",
+      "\u001b[38;2;140;140;140m─────────────────────▴▾\u001b[0m \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m     \u001b[0m"
+     ]
+    ],
+    [
+     true,
+     5,
+     null,
+     [
+      "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m                 \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ctrl+n     \u001b[0m\u001b[38;2;140;140;140mnew file\u001b[0m   \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  del        \u001b[0m\u001b[38;2;140;140;140mdelete\u001b[0m     \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  a very l…  \u001b[0m\u001b[38;2;140;140;140mcut\u001b[0m        \u001b[0m",
+      "\u001b[38;2;140;140;140m──────────────────────▴\u001b[0m \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m     \u001b[0m"
+     ]
+    ],
+    [
+     true,
+     4,
+     null,
+     [
+      "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m                 \u001b[0m",
+      "\u001b[1m\u001b[38;2;81;154;186m Files\u001b[0m                  \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ctrl+n     \u001b[0m\u001b[38;2;140;140;140mnew file\u001b[0m   \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  del        \u001b[0m\u001b[38;2;140;140;140mdelete\u001b[0m     \u001b[0m",
+      "\u001b[38;2;140;140;140m─────────────────────▴▾\u001b[0m \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m     \u001b[0m"
+     ]
+    ],
+    [
+     true,
+     0,
+     "",
+     [
+      "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m                 \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m  \u001b[0m\u001b[48;2;37;37;38m\u001b[7m \u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m                    \u001b[0m\u001b[48;2;37;37;38m\u001b[0m",
+      "\u001b[1m\u001b[38;2;81;154;186m Move\u001b[0m                   \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ↑ ↓        \u001b[0m\u001b[38;2;140;140;140mmove\u001b[0m       \u001b[0m",
+      "\u001b[38;2;140;140;140m──────────────────────▾\u001b[0m \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m     \u001b[0m"
+     ]
+    ],
+    [
+     true,
+     0,
+     "z",
+     [
+      "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m                 \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m  \u001b[0m\u001b[48;2;37;37;38mz\u001b[0m\u001b[48;2;37;37;38m\u001b[7m \u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m                  0\u001b[0m\u001b[48;2;37;37;38m\u001b[0m",
+      "        \u001b[0m\u001b[38;2;140;140;140mNo match\u001b[0m        \u001b[0m",
+      "            \u001b[0m            \u001b[0m",
+      "\u001b[38;2;140;140;140m───────────────────────\u001b[0m \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m     \u001b[0m"
+     ]
+    ],
+    [
+     true,
+     0,
+     "z",
+     [
+      "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m                 \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m  \u001b[0m\u001b[48;2;37;37;38mz\u001b[0m\u001b[48;2;37;37;38m\u001b[7m \u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m                  0\u001b[0m\u001b[48;2;37;37;38m\u001b[0m",
+      "        \u001b[0m\u001b[38;2;140;140;140mNo match\u001b[0m        \u001b[0m",
+      "            \u001b[0m            \u001b[0m",
+      "\u001b[38;2;140;140;140m───────────────────────\u001b[0m \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m     \u001b[0m"
+     ]
+    ],
+    [
+     false,
+     0,
+     "z",
+     null
+    ]
+   ]
+  },
+  {
+   "fn": "help",
+   "args": [
+    30,
+    8,
+    "T",
+    [
+     [
+      "Move",
+      [
+       [
+        "up down",
+        "move"
+       ],
+       [
+        "enter",
+        "open"
+       ],
+       [
+        "pageup",
+        "page up"
+       ]
+      ]
+     ],
+     [
+      "Files",
+      [
+       [
+        "ctrl+n",
+        "new file"
+       ],
+       [
+        "del",
+        "delete"
+       ],
+       [
+        "a very long key name",
+        "cut"
+       ]
+      ]
+     ]
+    ],
+    [
+     [
+      "mouse",
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 14,
+       "y": 8,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      }
+     ],
+     [
+      "key",
+      "q"
+     ]
+    ]
+   ],
+   "out": [
+    [
+     "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m\u001b[38;2;140;140;140m · T\u001b[0m                   \u001b[0m",
+     "\u001b[1m\u001b[38;2;81;154;186m Move\u001b[0m                         \u001b[0m",
+     "\u001b[1m\u001b[38;2;212;212;212m  ↑ ↓        \u001b[0m\u001b[38;2;140;140;140mmove\u001b[0m             \u001b[0m",
+     "\u001b[1m\u001b[38;2;212;212;212m  ⏎          \u001b[0m\u001b[38;2;140;140;140mopen\u001b[0m             \u001b[0m",
+     "\u001b[1m\u001b[38;2;212;212;212m  pgup       \u001b[0m\u001b[38;2;140;140;140mpage up\u001b[0m          \u001b[0m",
+     "\u001b[1m\u001b[38;2;81;154;186m Files\u001b[0m                        \u001b[0m",
+     "\u001b[38;2;140;140;140m────────────────────────────▾\u001b[0m \u001b[0m",
+     "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m           \u001b[0m"
+    ],
+    [
+     true,
+     0,
+     "",
+     [
+      "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m\u001b[38;2;140;140;140m · T\u001b[0m                   \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m  \u001b[0m\u001b[48;2;37;37;38m\u001b[7m \u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m                          \u001b[0m\u001b[48;2;37;37;38m\u001b[0m",
+      "\u001b[1m\u001b[38;2;81;154;186m Move\u001b[0m                         \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ↑ ↓        \u001b[0m\u001b[38;2;140;140;140mmove\u001b[0m             \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  ⏎          \u001b[0m\u001b[38;2;140;140;140mopen\u001b[0m             \u001b[0m",
+      "\u001b[1m\u001b[38;2;212;212;212m  pgup       \u001b[0m\u001b[38;2;140;140;140mpage up\u001b[0m          \u001b[0m",
+      "\u001b[38;2;140;140;140m────────────────────────────▾\u001b[0m \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m           \u001b[0m"
+     ]
+    ],
+    [
+     true,
+     0,
+     "q",
+     [
+      "\u001b[38;2;140;140;140m ‹ \u001b[0m\u001b[1mKeys\u001b[0m\u001b[38;2;140;140;140m · T\u001b[0m                   \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m  \u001b[0m\u001b[48;2;37;37;38mq\u001b[0m\u001b[48;2;37;37;38m\u001b[7m \u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m                        0\u001b[0m\u001b[48;2;37;37;38m\u001b[0m",
+      "           \u001b[0m\u001b[38;2;140;140;140mNo match\u001b[0m           \u001b[0m",
+      "               \u001b[0m               \u001b[0m",
+      "          \u001b[0m\u001b[1m\u001b[38;2;212;212;212m esc\u001b[0m\u001b[38;2;140;140;140m clear\u001b[0m          \u001b[0m",
+      "                              \u001b[0m",
+      "\u001b[38;2;140;140;140m─────────────────────────────\u001b[0m \u001b[0m",
+      "\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m ↑↓\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m scroll\u001b[0m\u001b[48;2;37;37;38m\u001b[1m\u001b[38;2;212;212;212m   /\u001b[0m\u001b[48;2;37;37;38m\u001b[38;2;140;140;140m find\u001b[0m\u001b[48;2;37;37;38m           \u001b[0m"
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "confirm",
+   "args": [
+    80,
+    30,
+    {
+     "title": "Move to the trash?",
+     "name": "a name long enough to wrap on a few lines.txt",
+     "where": "in src/",
+     "note": "This cannot be undone.",
+     "action": "Move",
+     "focus": "no"
+    },
+    [
+     "left",
+     "enter",
+     "x"
+    ],
+    [
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 1,
+      "y": 1,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     }
+    ]
+   ],
+   "out": {
+    "lines": [
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                 \u001b[38;2;140;140;140m╭────────────────────────────────────────────╮\u001b[0m\u001b[0m                 ",
+     "                 \u001b[38;2;140;140;140m│\u001b[0m\u001b[1m Move to the trash?\u001b[0m                         \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m                 ",
+     "                 \u001b[38;2;140;140;140m│\u001b[0m                                            \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m                 ",
+     "                 \u001b[38;2;140;140;140m│\u001b[0m a name long enough to wrap on a few\u001b[0m        \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m                 ",
+     "                 \u001b[38;2;140;140;140m│\u001b[0m lines.txt\u001b[0m                                  \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m                 ",
+     "                 \u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;140;140;140m in src/\u001b[0m                                    \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m                 ",
+     "                 \u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;204;62;68m This cannot be undone.\u001b[0m                     \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m                 ",
+     "                 \u001b[38;2;140;140;140m│\u001b[0m                                            \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m                 ",
+     "                 \u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[38;2;229;120;109m\u001b[48;2;45;45;45m y Move \u001b[0m   \u001b[0m\u001b[1m\u001b[38;2;255;255;255m\u001b[48;2;96;96;96m n Cancel \u001b[0m                     \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m                 ",
+     "                 \u001b[38;2;140;140;140m╰────────────────────────────────────────────╯\u001b[0m\u001b[0m                 ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                "
+    ],
+    "zones": {
+     "y": 14,
+     "yes": [
+      21,
+      28
+     ],
+     "no": [
+      32,
+      41
+     ]
+    },
+    "clicks": [
+     "no"
+    ],
+    "keys": [
+     [
+      "move",
+      "yes"
+     ],
+     [
+      "yes",
+      "yes"
+     ],
+     [
+      "no",
+      "yes"
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "confirm",
+   "args": [
+    26,
+    12,
+    {
+     "title": "Move to the trash?",
+     "name": "a name long enough to wrap on a few lines.txt",
+     "where": "in src/",
+     "note": "This cannot be undone.",
+     "action": "Move",
+     "focus": "no"
+    },
+    [
+     "left",
+     "enter",
+     "x"
+    ],
+    [
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 1,
+      "y": 1,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     }
+    ]
+   ],
+   "out": {
+    "lines": [
+     "                          ",
+     " \u001b[38;2;140;140;140m╭──────────────────────╮\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m\u001b[1m Move to the trash?\u001b[0m   \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m                      \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m a name long enough\u001b[0m   \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m to wrap on a few\u001b[0m     \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m lines.txt\u001b[0m            \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;140;140;140m in src/\u001b[0m              \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;204;62;68m This cannot be undo…\u001b[0m \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m                      \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[38;2;229;120;109m\u001b[48;2;45;45;45m y Move \u001b[0m \u001b[0m\u001b[1m\u001b[38;2;255;255;255m\u001b[48;2;96;96;96m n Cancel \u001b[0m \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m╰──────────────────────╯\u001b[0m\u001b[0m "
+    ],
+    "zones": {
+     "y": 10,
+     "yes": [
+      5,
+      12
+     ],
+     "no": [
+      14,
+      23
+     ]
+    },
+    "clicks": [
+     "no"
+    ],
+    "keys": [
+     [
+      "move",
+      "yes"
+     ],
+     [
+      "yes",
+      "yes"
+     ],
+     [
+      "no",
+      "yes"
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "confirm",
+   "args": [
+    12,
+    8,
+    {
+     "title": "Move to the trash?",
+     "name": "a name long enough to wrap on a few lines.txt",
+     "where": "in src/",
+     "note": "This cannot be undone.",
+     "action": "Move",
+     "focus": "no"
+    },
+    [
+     "left",
+     "enter",
+     "x"
+    ],
+    [
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 1,
+      "y": 1,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     }
+    ]
+   ],
+   "out": {
+    "lines": [
+     "            ",
+     "\u001b[38;2;140;140;140m╭──────────╮\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[0m\u001b[1m Move to…\u001b[0m \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[0m a name\u001b[0m   \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[0m long\u001b[0m     \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;204;62;68m This ca…\u001b[0m \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[38;2;229;120;109m\u001b[48;2;45;45;45m y Move \u001b[0m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m╰──────────╯\u001b[0m\u001b[0m"
+    ],
+    "zones": {
+     "y": 6,
+     "yes": [
+      4,
+      11
+     ],
+     "no": [
+      13,
+      11
+     ]
+    },
+    "clicks": [
+     "no"
+    ],
+    "keys": [
+     [
+      "move",
+      "yes"
+     ],
+     [
+      "yes",
+      "yes"
+     ],
+     [
+      "no",
+      "yes"
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "confirm",
+   "args": [
+    10,
+    5,
+    {
+     "title": "Move to the trash?",
+     "name": "a name long enough to wrap on a few lines.txt",
+     "where": "in src/",
+     "note": "This cannot be undone.",
+     "action": "Move",
+     "focus": "no"
+    },
+    [
+     "left",
+     "enter",
+     "x"
+    ],
+    [
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 1,
+      "y": 1,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     }
+    ]
+   ],
+   "out": {
+    "lines": [
+     "          ",
+     "\u001b[38;2;140;140;140m╭────────╮\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[0m\u001b[1m Move …\u001b[0m \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[38;2;229;120;109m\u001b[48;2;45;45;45m y Mov\u001b[0m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m╰────────╯\u001b[0m\u001b[0m"
+    ],
+    "zones": {
+     "y": 3,
+     "yes": [
+      4,
+      9
+     ],
+     "no": [
+      13,
+      9
+     ]
+    },
+    "clicks": [
+     "no"
+    ],
+    "keys": [
+     [
+      "move",
+      "yes"
+     ],
+     [
+      "yes",
+      "yes"
+     ],
+     [
+      "no",
+      "yes"
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "confirm",
+   "args": [
+    30,
+    4,
+    {
+     "title": "Move to the trash?",
+     "name": "a name long enough to wrap on a few lines.txt",
+     "where": "in src/",
+     "note": "This cannot be undone.",
+     "action": "Move",
+     "focus": "no"
+    },
+    [
+     "left",
+     "enter",
+     "x"
+    ],
+    [
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 1,
+      "y": 1,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     }
+    ]
+   ],
+   "out": {
+    "lines": [
+     "                              ",
+     " \u001b[38;2;140;140;140m╭──────────────────────────╮\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[38;2;229;120;109m\u001b[48;2;45;45;45m y Move \u001b[0m   \u001b[0m\u001b[1m\u001b[38;2;255;255;255m\u001b[48;2;96;96;96m n Cancel \u001b[0m   \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m╰──────────────────────────╯\u001b[0m\u001b[0m "
+    ],
+    "zones": {
+     "y": 2,
+     "yes": [
+      5,
+      12
+     ],
+     "no": [
+      16,
+      25
+     ]
+    },
+    "clicks": [
+     "no"
+    ],
+    "keys": [
+     [
+      "move",
+      "yes"
+     ],
+     [
+      "yes",
+      "yes"
+     ],
+     [
+      "no",
+      "yes"
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "confirm",
+   "args": [
+    30,
+    3,
+    {
+     "title": "Move to the trash?",
+     "name": "a name long enough to wrap on a few lines.txt",
+     "where": "in src/",
+     "note": "This cannot be undone.",
+     "action": "Move",
+     "focus": "no"
+    },
+    [
+     "left",
+     "enter",
+     "x"
+    ],
+    [
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 1,
+      "y": 1,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     }
+    ]
+   ],
+   "out": {
+    "lines": [
+     "                              ",
+     " \u001b[38;2;140;140;140m╭──────────────────────────╮\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[38;2;229;120;109m\u001b[48;2;45;45;45m y Move \u001b[0m   \u001b[0m\u001b[1m\u001b[38;2;255;255;255m\u001b[48;2;96;96;96m n Cancel \u001b[0m   \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m "
+    ],
+    "zones": {
+     "y": 2,
+     "yes": [
+      5,
+      12
+     ],
+     "no": [
+      16,
+      25
+     ]
+    },
+    "clicks": [
+     "no"
+    ],
+    "keys": [
+     [
+      "move",
+      "yes"
+     ],
+     [
+      "yes",
+      "yes"
+     ],
+     [
+      "no",
+      "yes"
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "confirm",
+   "args": [
+    2,
+    10,
+    {
+     "title": "Move to the trash?",
+     "name": "a name long enough to wrap on a few lines.txt",
+     "where": "in src/",
+     "note": "This cannot be undone.",
+     "action": "Move",
+     "focus": "no"
+    },
+    [
+     "left",
+     "enter",
+     "x"
+    ],
+    [
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 1,
+      "y": 1,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     }
+    ]
+   ],
+   "out": {
+    "lines": [
+     "  ",
+     "\u001b[38;2;140;140;140m╭╮\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m╰╯\u001b[0m\u001b[0m"
+    ],
+    "zones": {
+     "y": 8,
+     "yes": [
+      4,
+      1
+     ],
+     "no": [
+      13,
+      1
+     ]
+    },
+    "clicks": [
+     "no"
+    ],
+    "keys": [
+     [
+      "move",
+      "yes"
+     ],
+     [
+      "yes",
+      "yes"
+     ],
+     [
+      "no",
+      "yes"
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "confirm",
+   "args": [
+    1,
+    10,
+    {
+     "title": "Move to the trash?",
+     "name": "a name long enough to wrap on a few lines.txt",
+     "where": "in src/",
+     "note": "This cannot be undone.",
+     "action": "Move",
+     "focus": "no"
+    },
+    [
+     "left",
+     "enter",
+     "x"
+    ],
+    [
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 1,
+      "y": 1,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     }
+    ]
+   ],
+   "out": {
+    "lines": [
+     " ",
+     " ",
+     " ",
+     " ",
+     " ",
+     " ",
+     " ",
+     " ",
+     " ",
+     " "
+    ],
+    "zones": null,
+    "clicks": [
+     "no"
+    ],
+    "keys": [
+     [
+      "move",
+      "yes"
+     ],
+     [
+      "yes",
+      "yes"
+     ],
+     [
+      "no",
+      "yes"
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "confirm",
+   "args": [
+    40,
+    12,
+    {
+     "title": "Move to the trash?",
+     "name": "a name long enough to wrap on a few lines.txt",
+     "action": "Move",
+     "focus": "yes",
+     "tone": "go"
+    },
+    [
+     "tab",
+     "y"
+    ],
+    []
+   ],
+   "out": {
+    "lines": [
+     "                                        ",
+     " \u001b[38;2;140;140;140m╭────────────────────────────────────╮\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m\u001b[1m Move to the trash?\u001b[0m                 \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m                                    \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m a name long enough to wrap on a\u001b[0m    \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m few lines.txt\u001b[0m                      \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m                                    \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[1m\u001b[38;2;255;255;255m\u001b[48;2;46;110;58m y Move \u001b[0m   \u001b[0m\u001b[38;2;140;140;140m\u001b[48;2;45;45;45m n Cancel \u001b[0m             \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m╰────────────────────────────────────╯\u001b[0m\u001b[0m ",
+     "                                        ",
+     "                                        ",
+     "                                        "
+    ],
+    "zones": {
+     "y": 7,
+     "yes": [
+      5,
+      12
+     ],
+     "no": [
+      16,
+      25
+     ]
+    },
+    "clicks": [],
+    "keys": [
+     [
+      "move",
+      "no"
+     ],
+     [
+      "yes",
+      "no"
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "ask",
+   "args": [
+    80,
+    30,
+    {
+     "title": "Update herdr-explorer",
+     "name": "0.7.1 → 0.9.0",
+     "list": [
+      "a change",
+      "another change"
+     ],
+     "note": "and 2 more",
+     "buttons": [
+      {
+       "key": "y",
+       "label": "Update",
+       "tone": "go"
+      },
+      {
+       "key": "r",
+       "label": "Notes"
+      },
+      {
+       "key": "s",
+       "label": "Skip version",
+       "tone": "danger"
+      },
+      {
+       "key": "n",
+       "label": "Later"
+      }
+     ],
+     "focus": 3
+    },
+    [
+     "left",
+     "right",
+     "enter",
+     "s",
+     "escape",
+     "x"
+    ],
+    [
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 1,
+      "y": 1,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     },
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 40,
+      "y": 15,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     }
+    ]
+   ],
+   "out": {
+    "lines": [
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "               \u001b[38;2;140;140;140m╭────────────────────────────────────────────────╮\u001b[0m\u001b[0m               ",
+     "               \u001b[38;2;140;140;140m│\u001b[0m\u001b[1m Update herdr-explorer\u001b[0m                          \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m               ",
+     "               \u001b[38;2;140;140;140m│\u001b[0m                                                \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m               ",
+     "               \u001b[38;2;140;140;140m│\u001b[0m 0.7.1 → 0.9.0\u001b[0m                                  \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m               ",
+     "               \u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;140;140;140m • \u001b[0ma change\u001b[0m                                     \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m               ",
+     "               \u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;140;140;140m • \u001b[0manother change\u001b[0m                               \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m               ",
+     "               \u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;140;140;140m and 2 more\u001b[0m                                     \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m               ",
+     "               \u001b[38;2;140;140;140m│\u001b[0m                                                \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m               ",
+     "               \u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[38;2;111;191;142m\u001b[48;2;45;45;45m y Update \u001b[0m  \u001b[0m\u001b[38;2;140;140;140m\u001b[48;2;45;45;45m r Notes \u001b[0m  \u001b[0m\u001b[38;2;229;120;109m\u001b[48;2;45;45;45m s Skip version \u001b[0m       \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m               ",
+     "               \u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[1m\u001b[38;2;255;255;255m\u001b[48;2;96;96;96m n Later \u001b[0m                                     \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m               ",
+     "               \u001b[38;2;140;140;140m╰────────────────────────────────────────────────╯\u001b[0m\u001b[0m               ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                ",
+     "                                                                                "
+    ],
+    "zones": [
+     [
+      19,
+      28,
+      "y",
+      14
+     ],
+     [
+      31,
+      39,
+      "r",
+      14
+     ],
+     [
+      42,
+      57,
+      "s",
+      14
+     ],
+     [
+      19,
+      27,
+      "n",
+      15
+     ]
+    ],
+    "box": {
+     "x0": 16,
+     "x1": 65,
+     "y0": 7,
+     "y1": 17
+    },
+    "clicks": [
+     "escape",
+     null
+    ],
+    "keys": [
+     [
+      "move",
+      2
+     ],
+     [
+      "move",
+      3
+     ],
+     [
+      "n",
+      3
+     ],
+     [
+      "s",
+      3
+     ],
+     [
+      "escape",
+      3
+     ],
+     [
+      null,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "ask",
+   "args": [
+    34,
+    24,
+    {
+     "title": "Update herdr-explorer",
+     "name": "0.7.1 → 0.9.0",
+     "list": [
+      "a change",
+      "another change"
+     ],
+     "note": "and 2 more",
+     "buttons": [
+      {
+       "key": "y",
+       "label": "Update",
+       "tone": "go"
+      },
+      {
+       "key": "r",
+       "label": "Notes"
+      },
+      {
+       "key": "s",
+       "label": "Skip version",
+       "tone": "danger"
+      },
+      {
+       "key": "n",
+       "label": "Later"
+      }
+     ],
+     "focus": 3
+    },
+    [
+     "left",
+     "right",
+     "enter",
+     "s",
+     "escape",
+     "x"
+    ],
+    [
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 1,
+      "y": 1,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     },
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 17,
+      "y": 12,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     }
+    ]
+   ],
+   "out": {
+    "lines": [
+     "                                  ",
+     "                                  ",
+     "                                  ",
+     "                                  ",
+     " \u001b[38;2;140;140;140m╭──────────────────────────────╮\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m\u001b[1m Update herdr-explorer\u001b[0m        \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m                              \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m 0.7.1 → 0.9.0\u001b[0m                \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;140;140;140m • \u001b[0ma change\u001b[0m                   \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;140;140;140m • \u001b[0manother change\u001b[0m             \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;140;140;140m and 2 more\u001b[0m                   \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m                              \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[38;2;111;191;142m\u001b[48;2;45;45;45m y Update \u001b[0m  \u001b[0m\u001b[38;2;140;140;140m\u001b[48;2;45;45;45m r Notes \u001b[0m       \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[38;2;229;120;109m\u001b[48;2;45;45;45m s Skip version \u001b[0m  \u001b[0m\u001b[1m\u001b[38;2;255;255;255m\u001b[48;2;96;96;96m n Later \u001b[0m \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m╰──────────────────────────────╯\u001b[0m\u001b[0m ",
+     "                                  ",
+     "                                  ",
+     "                                  ",
+     "                                  ",
+     "                                  ",
+     "                                  ",
+     "                                  ",
+     "                                  ",
+     "                                  "
+    ],
+    "zones": [
+     [
+      5,
+      14,
+      "y",
+      12
+     ],
+     [
+      17,
+      25,
+      "r",
+      12
+     ],
+     [
+      5,
+      20,
+      "s",
+      13
+     ],
+     [
+      23,
+      31,
+      "n",
+      13
+     ]
+    ],
+    "box": {
+     "x0": 2,
+     "x1": 33,
+     "y0": 5,
+     "y1": 15
+    },
+    "clicks": [
+     "escape",
+     null
+    ],
+    "keys": [
+     [
+      "move",
+      2
+     ],
+     [
+      "move",
+      3
+     ],
+     [
+      "n",
+      3
+     ],
+     [
+      "s",
+      3
+     ],
+     [
+      "escape",
+      3
+     ],
+     [
+      null,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "ask",
+   "args": [
+    20,
+    12,
+    {
+     "title": "Update herdr-explorer",
+     "name": "0.7.1 → 0.9.0",
+     "list": [
+      "a change",
+      "another change"
+     ],
+     "note": "and 2 more",
+     "buttons": [
+      {
+       "key": "y",
+       "label": "Update",
+       "tone": "go"
+      },
+      {
+       "key": "r",
+       "label": "Notes"
+      },
+      {
+       "key": "s",
+       "label": "Skip version",
+       "tone": "danger"
+      },
+      {
+       "key": "n",
+       "label": "Later"
+      }
+     ],
+     "focus": 3
+    },
+    [
+     "left",
+     "right",
+     "enter",
+     "s",
+     "escape",
+     "x"
+    ],
+    [
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 1,
+      "y": 1,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     },
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 10,
+      "y": 6,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     }
+    ]
+   ],
+   "out": {
+    "lines": [
+     "                    ",
+     " \u001b[38;2;140;140;140m╭────────────────╮\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m\u001b[1m Update herdr-…\u001b[0m \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m                \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m 0.7.1 → 0.9.0\u001b[0m  \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;140;140;140m and 2 more\u001b[0m     \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m                \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[38;2;111;191;142m\u001b[48;2;45;45;45m y Update \u001b[0m    \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[38;2;140;140;140m\u001b[48;2;45;45;45m r Notes \u001b[0m     \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[38;2;229;120;109m\u001b[48;2;45;45;45m s Skip versio\u001b[0m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[1m\u001b[38;2;255;255;255m\u001b[48;2;96;96;96m n Later \u001b[0m     \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m╰────────────────╯\u001b[0m\u001b[0m "
+    ],
+    "zones": [
+     [
+      5,
+      14,
+      "y",
+      7
+     ],
+     [
+      5,
+      13,
+      "r",
+      8
+     ],
+     [
+      5,
+      18,
+      "s",
+      9
+     ],
+     [
+      5,
+      13,
+      "n",
+      10
+     ]
+    ],
+    "box": {
+     "x0": 2,
+     "x1": 19,
+     "y0": 2,
+     "y1": 12
+    },
+    "clicks": [
+     "escape",
+     null
+    ],
+    "keys": [
+     [
+      "move",
+      2
+     ],
+     [
+      "move",
+      3
+     ],
+     [
+      "n",
+      3
+     ],
+     [
+      "s",
+      3
+     ],
+     [
+      "escape",
+      3
+     ],
+     [
+      null,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "ask",
+   "args": [
+    30,
+    5,
+    {
+     "title": "Update herdr-explorer",
+     "name": "0.7.1 → 0.9.0",
+     "list": [
+      "a change",
+      "another change"
+     ],
+     "note": "and 2 more",
+     "buttons": [
+      {
+       "key": "y",
+       "label": "Update",
+       "tone": "go"
+      },
+      {
+       "key": "r",
+       "label": "Notes"
+      },
+      {
+       "key": "s",
+       "label": "Skip version",
+       "tone": "danger"
+      },
+      {
+       "key": "n",
+       "label": "Later"
+      }
+     ],
+     "focus": 3
+    },
+    [
+     "left",
+     "right",
+     "enter",
+     "s",
+     "escape",
+     "x"
+    ],
+    [
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 1,
+      "y": 1,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     },
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 15,
+      "y": 2,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     }
+    ]
+   ],
+   "out": {
+    "lines": [
+     "                              ",
+     " \u001b[38;2;140;140;140m╭──────────────────────────╮\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[38;2;111;191;142m\u001b[48;2;45;45;45m y Update \u001b[0m  \u001b[0m\u001b[38;2;140;140;140m\u001b[48;2;45;45;45m r Notes \u001b[0m   \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[38;2;229;120;109m\u001b[48;2;45;45;45m s Skip version \u001b[0m        \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[1m\u001b[38;2;255;255;255m\u001b[48;2;96;96;96m n Later \u001b[0m               \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m "
+    ],
+    "zones": [
+     [
+      5,
+      14,
+      "y",
+      2
+     ],
+     [
+      17,
+      25,
+      "r",
+      2
+     ],
+     [
+      5,
+      20,
+      "s",
+      3
+     ],
+     [
+      5,
+      13,
+      "n",
+      4
+     ]
+    ],
+    "box": {
+     "x0": 2,
+     "x1": 29,
+     "y0": 2,
+     "y1": 6
+    },
+    "clicks": [
+     "escape",
+     null
+    ],
+    "keys": [
+     [
+      "move",
+      2
+     ],
+     [
+      "move",
+      3
+     ],
+     [
+      "n",
+      3
+     ],
+     [
+      "s",
+      3
+     ],
+     [
+      "escape",
+      3
+     ],
+     [
+      null,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "ask",
+   "args": [
+    6,
+    4,
+    {
+     "title": "Update herdr-explorer",
+     "name": "0.7.1 → 0.9.0",
+     "list": [
+      "a change",
+      "another change"
+     ],
+     "note": "and 2 more",
+     "buttons": [
+      {
+       "key": "y",
+       "label": "Update",
+       "tone": "go"
+      },
+      {
+       "key": "r",
+       "label": "Notes"
+      },
+      {
+       "key": "s",
+       "label": "Skip version",
+       "tone": "danger"
+      },
+      {
+       "key": "n",
+       "label": "Later"
+      }
+     ],
+     "focus": 3
+    },
+    [
+     "left",
+     "right",
+     "enter",
+     "s",
+     "escape",
+     "x"
+    ],
+    [
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 1,
+      "y": 1,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     },
+     {
+      "button": 0,
+      "mods": 0,
+      "x": 3,
+      "y": 2,
+      "press": true,
+      "drag": false,
+      "wheel": 0
+     }
+    ]
+   ],
+   "out": {
+    "lines": [
+     "      ",
+     "\u001b[38;2;140;140;140m╭────╮\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[38;2;111;191;142m\u001b[48;2;45;45;45m y\u001b[0m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m\u001b[38;2;140;140;140m\u001b[48;2;45;45;45m r\u001b[0m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m"
+    ],
+    "zones": [
+     [
+      4,
+      5,
+      "y",
+      2
+     ],
+     [
+      4,
+      5,
+      "r",
+      3
+     ]
+    ],
+    "box": {
+     "x0": 1,
+     "x1": 6,
+     "y0": 2,
+     "y1": 7
+    },
+    "clicks": [
+     "escape",
+     null
+    ],
+    "keys": [
+     [
+      "move",
+      2
+     ],
+     [
+      "move",
+      3
+     ],
+     [
+      "n",
+      3
+     ],
+     [
+      "s",
+      3
+     ],
+     [
+      "escape",
+      3
+     ],
+     [
+      null,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "ask",
+   "args": [
+    40,
+    14,
+    {
+     "title": "Update herdr-explorer",
+     "name": "0.7.1 → 0.9.0",
+     "list": [],
+     "buttons": [],
+     "focus": 0
+    },
+    [
+     "x",
+     "escape"
+    ],
+    []
+   ],
+   "out": {
+    "lines": [
+     "                                        ",
+     "                                        ",
+     " \u001b[38;2;140;140;140m╭────────────────────────────────────╮\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m\u001b[1m Update herdr-explorer\u001b[0m              \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m                                    \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m 0.7.1 → 0.9.0\u001b[0m                      \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m                                    \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m│\u001b[0m  \u001b[0m                                  \u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m ",
+     " \u001b[38;2;140;140;140m╰────────────────────────────────────╯\u001b[0m\u001b[0m ",
+     "                                        ",
+     "                                        ",
+     "                                        ",
+     "                                        ",
+     "                                        "
+    ],
+    "zones": [],
+    "box": {
+     "x0": 2,
+     "x1": 39,
+     "y0": 3,
+     "y1": 9
+    },
+    "clicks": [],
+    "keys": [
+     [
+      null,
+      0
+     ],
+     [
+      "escape",
+      0
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "scrollbar",
+   "args": [
+    100,
+    10,
+    0,
+    [
+     {
+      "row": 50,
+      "color": [
+       0,
+       200,
+       0
+      ],
+      "weight": 1
+     },
+     {
+      "row": 51,
+      "color": [
+       200,
+       0,
+       0
+      ],
+      "weight": 3
+     },
+     {
+      "row": 99,
+      "color": [
+       0,
+       200,
+       0
+      ],
+      "weight": 1
+     }
+    ],
+    [
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      },
+      9,
+      true
+     ],
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": false,
+       "drag": false,
+       "wheel": 0
+      },
+      9,
+      true
+     ],
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      },
+      5,
+      true
+     ],
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": true,
+       "drag": true,
+       "wheel": 0
+      },
+      8,
+      true
+     ],
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": true,
+       "drag": true,
+       "wheel": 0
+      },
+      2,
+      false
+     ],
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": false,
+       "drag": false,
+       "wheel": 0
+      },
+      2,
+      false
+     ],
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      },
+      0,
+      true
+     ],
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": true,
+       "drag": true,
+       "wheel": 0
+      },
+      3,
+      true
+     ],
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": false,
+       "drag": false,
+       "wheel": 0
+      },
+      3,
+      true
+     ],
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      },
+      4,
+      false
+     ],
+     [
+      {
+       "button": 2,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      },
+      4,
+      true
+     ],
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": true,
+       "drag": false,
+       "wheel": 1
+      },
+      4,
+      true
+     ],
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      },
+      12,
+      true
+     ]
+    ]
+   ],
+   "out": {
+    "cols": 1,
+    "cells": [
+     "\u001b[38;2;140;140;140m▴\u001b[0m",
+     "\u001b[38;2;130;130;130m┃\u001b[0m",
+     "\u001b[38;2;60;60;60m│\u001b[0m",
+     "\u001b[38;2;60;60;60m│\u001b[0m",
+     "\u001b[38;2;60;60;60m│\u001b[0m",
+     "\u001b[38;2;200;0;0m│\u001b[0m",
+     "\u001b[38;2;60;60;60m│\u001b[0m",
+     "\u001b[38;2;60;60;60m│\u001b[0m",
+     "\u001b[38;2;0;200;0m│\u001b[0m",
+     "\u001b[38;2;140;140;140m▾\u001b[0m"
+    ],
+    "topAt": [
+     0,
+     0,
+     13,
+     26,
+     39,
+     51,
+     64,
+     77,
+     90,
+     90
+    ],
+    "steps": [
+     [
+      true,
+      1,
+      [
+       "\u001b[38;2;140;140;140m▴\u001b[0m",
+       "\u001b[38;2;130;130;130m┃\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;200;0;0m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;0;200;0m│\u001b[0m",
+       "\u001b[38;2;140;140;140m▾\u001b[0m"
+      ]
+     ],
+     [
+      true,
+      null,
+      [
+       "\u001b[38;2;140;140;140m▴\u001b[0m",
+       "\u001b[38;2;130;130;130m┃\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;200;0;0m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;0;200;0m│\u001b[0m",
+       "\u001b[38;2;140;140;140m▾\u001b[0m"
+      ]
+     ],
+     [
+      true,
+      51,
+      [
+       "\u001b[38;2;140;140;140m▴\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;200;0;0m┃\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;0;200;0m│\u001b[0m",
+       "\u001b[38;2;140;140;140m▾\u001b[0m"
+      ]
+     ],
+     [
+      true,
+      90,
+      [
+       "\u001b[38;2;140;140;140m▴\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;200;0;0m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;0;200;0m┃\u001b[0m",
+       "\u001b[38;2;140;140;140m▾\u001b[0m"
+      ]
+     ],
+     [
+      true,
+      12,
+      [
+       "\u001b[38;2;140;140;140m▴\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;130;130;130m┃\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;200;0;0m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;0;200;0m│\u001b[0m",
+       "\u001b[38;2;140;140;140m▾\u001b[0m"
+      ]
+     ],
+     [
+      true,
+      null,
+      [
+       "\u001b[38;2;140;140;140m▴\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;130;130;130m┃\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;200;0;0m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;0;200;0m│\u001b[0m",
+       "\u001b[38;2;140;140;140m▾\u001b[0m"
+      ]
+     ],
+     [
+      true,
+      11,
+      [
+       "\u001b[38;2;140;140;140m▴\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;130;130;130m┃\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;200;0;0m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;0;200;0m│\u001b[0m",
+       "\u001b[38;2;140;140;140m▾\u001b[0m"
+      ]
+     ],
+     [
+      true,
+      null,
+      [
+       "\u001b[38;2;140;140;140m▴\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;130;130;130m┃\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;200;0;0m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;0;200;0m│\u001b[0m",
+       "\u001b[38;2;140;140;140m▾\u001b[0m"
+      ]
+     ],
+     [
+      true,
+      null,
+      [
+       "\u001b[38;2;140;140;140m▴\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;130;130;130m┃\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;200;0;0m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;0;200;0m│\u001b[0m",
+       "\u001b[38;2;140;140;140m▾\u001b[0m"
+      ]
+     ],
+     [
+      false,
+      null,
+      [
+       "\u001b[38;2;140;140;140m▴\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;130;130;130m┃\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;200;0;0m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;0;200;0m│\u001b[0m",
+       "\u001b[38;2;140;140;140m▾\u001b[0m"
+      ]
+     ],
+     [
+      false,
+      null,
+      [
+       "\u001b[38;2;140;140;140m▴\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;130;130;130m┃\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;200;0;0m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;0;200;0m│\u001b[0m",
+       "\u001b[38;2;140;140;140m▾\u001b[0m"
+      ]
+     ],
+     [
+      false,
+      null,
+      [
+       "\u001b[38;2;140;140;140m▴\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;130;130;130m┃\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;200;0;0m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;0;200;0m│\u001b[0m",
+       "\u001b[38;2;140;140;140m▾\u001b[0m"
+      ]
+     ],
+     [
+      false,
+      null,
+      [
+       "\u001b[38;2;140;140;140m▴\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;130;130;130m┃\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;200;0;0m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;0;200;0m│\u001b[0m",
+       "\u001b[38;2;140;140;140m▾\u001b[0m"
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "scrollbar",
+   "args": [
+    100,
+    10,
+    45,
+    [
+     {
+      "row": 50,
+      "color": [
+       200,
+       0,
+       0
+      ],
+      "weight": 3
+     }
+    ],
+    [
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      },
+      5,
+      true
+     ],
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": true,
+       "drag": true,
+       "wheel": 0
+      },
+      9,
+      true
+     ]
+    ]
+   ],
+   "out": {
+    "cols": 1,
+    "cells": [
+     "\u001b[38;2;140;140;140m▴\u001b[0m",
+     "\u001b[38;2;60;60;60m│\u001b[0m",
+     "\u001b[38;2;60;60;60m│\u001b[0m",
+     "\u001b[38;2;60;60;60m│\u001b[0m",
+     "\u001b[38;2;60;60;60m│\u001b[0m",
+     "\u001b[38;2;200;0;0m┃\u001b[0m",
+     "\u001b[38;2;60;60;60m│\u001b[0m",
+     "\u001b[38;2;60;60;60m│\u001b[0m",
+     "\u001b[38;2;60;60;60m│\u001b[0m",
+     "\u001b[38;2;140;140;140m▾\u001b[0m"
+    ],
+    "topAt": [
+     0,
+     0,
+     13,
+     26,
+     39,
+     51,
+     64,
+     77,
+     90,
+     90
+    ],
+    "steps": [
+     [
+      true,
+      null,
+      [
+       "\u001b[38;2;140;140;140m▴\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;200;0;0m┃\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;140;140;140m▾\u001b[0m"
+      ]
+     ],
+     [
+      true,
+      90,
+      [
+       "\u001b[38;2;140;140;140m▴\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;200;0;0m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;130;130;130m┃\u001b[0m",
+       "\u001b[38;2;140;140;140m▾\u001b[0m"
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "scrollbar",
+   "args": [
+    5,
+    3,
+    1,
+    [
+     {
+      "row": -1,
+      "color": [
+       200,
+       0,
+       0
+      ],
+      "weight": 1
+     },
+     {
+      "row": 7,
+      "color": [
+       200,
+       0,
+       0
+      ],
+      "weight": 1
+     }
+    ],
+    [
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      },
+      0,
+      true
+     ],
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      },
+      2,
+      true
+     ]
+    ]
+   ],
+   "out": {
+    "cols": 1,
+    "cells": [
+     "\u001b[38;2;60;60;60m│\u001b[0m",
+     "\u001b[38;2;130;130;130m┃\u001b[0m",
+     "\u001b[38;2;200;0;0m┃\u001b[0m"
+    ],
+    "topAt": [
+     0,
+     2,
+     2
+    ],
+    "steps": [
+     [
+      true,
+      0,
+      [
+       "\u001b[38;2;130;130;130m┃\u001b[0m",
+       "\u001b[38;2;130;130;130m┃\u001b[0m",
+       "\u001b[38;2;200;0;0m│\u001b[0m"
+      ]
+     ],
+     [
+      true,
+      2,
+      [
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;130;130;130m┃\u001b[0m",
+       "\u001b[38;2;200;0;0m┃\u001b[0m"
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "scrollbar",
+   "args": [
+    10,
+    10,
+    0,
+    [],
+    [
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      },
+      0,
+      true
+     ]
+    ]
+   ],
+   "out": {
+    "cols": 0,
+    "cells": [
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     "",
+     ""
+    ],
+    "topAt": null,
+    "steps": [
+     [
+      false,
+      null,
+      [
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       ""
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "scrollbar",
+   "args": [
+    1000,
+    4,
+    999,
+    [],
+    [
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      },
+      3,
+      true
+     ],
+     [
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 1,
+       "y": 1,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      },
+      0,
+      true
+     ]
+    ]
+   ],
+   "out": {
+    "cols": 1,
+    "cells": [
+     "\u001b[38;2;140;140;140m▴\u001b[0m",
+     "\u001b[38;2;60;60;60m│\u001b[0m",
+     "\u001b[38;2;130;130;130m┃\u001b[0m",
+     "\u001b[38;2;140;140;140m▾\u001b[0m"
+    ],
+    "topAt": [
+     0,
+     0,
+     996,
+     996
+    ],
+    "steps": [
+     [
+      true,
+      null,
+      [
+       "\u001b[38;2;140;140;140m▴\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;130;130;130m┃\u001b[0m",
+       "\u001b[38;2;140;140;140m▾\u001b[0m"
+      ]
+     ],
+     [
+      true,
+      995,
+      [
+       "\u001b[38;2;140;140;140m▴\u001b[0m",
+       "\u001b[38;2;60;60;60m│\u001b[0m",
+       "\u001b[38;2;130;130;130m┃\u001b[0m",
+       "\u001b[38;2;140;140;140m▾\u001b[0m"
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "fn": "menu",
+   "args": [
+    {
+     "title": "Settings",
+     "items": [
+      {
+       "label": "Wrap",
+       "value": [
+        "● on",
+        "V"
+       ],
+       "keep": true,
+       "run": "wrap"
+      },
+      null,
+      {
+       "label": "Push",
+       "key": "P",
+       "run": "push"
+      },
+      {
+       "label": "Delete everything at once",
+       "key": "del",
+       "danger": true,
+       "run": "delete"
+      },
+      {
+       "label": "Last",
+       "run": "last"
+      }
+     ],
+     "at": 1,
+     "right": 30
+    },
+    [
+     "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+     "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+     "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+     "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+     "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+     "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+     "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+     "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m"
+    ],
+    30,
+    8,
+    [
+     [
+      "key",
+      "down"
+     ],
+     [
+      "key",
+      "down"
+     ],
+     [
+      "key",
+      "up"
+     ],
+     [
+      "key",
+      "right"
+     ],
+     [
+      "key",
+      "enter"
+     ],
+     [
+      "key",
+      "P"
+     ],
+     [
+      "key",
+      "z"
+     ],
+     [
+      "key",
+      "q"
+     ],
+     [
+      "mouse",
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 0,
+       "y": 0,
+       "press": false,
+       "drag": false,
+       "wheel": 1
+      }
+     ],
+     [
+      "mouse",
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 20,
+       "y": 3,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      }
+     ],
+     [
+      "mouse",
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 20,
+       "y": 5,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      }
+     ],
+     [
+      "mouse",
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 2,
+       "y": 3,
+       "press": true,
+       "drag": false,
+       "wheel": 0
+      }
+     ],
+     [
+      "mouse",
+      {
+       "button": 0,
+       "mods": 0,
+       "x": 20,
+       "y": 3,
+       "press": true,
+       "drag": true,
+       "wheel": 0
+      }
+     ],
+     [
+      "move",
+      -1
+     ]
+    ]
+   ],
+   "out": [
+    [
+     "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m╭ Settings ─────────────────╮\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m Wrap\u001b[0m\u001b[48;2;4;57;94m                 \u001b[0m\u001b[48;2;4;57;94mV● on \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m├───────────────────────────┤\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Push\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;55;55;61m                  \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m\u001b[38;2;204;62;68m Delete everything …\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  del\u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Last\u001b[0m\u001b[48;2;55;55;61m                     \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m╰───────────────────────────╯\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m"
+    ],
+    1,
+    27,
+    [
+     null,
+     2,
+     0,
+     [
+      "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╭ Settings ─────────────────╮\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Wrap\u001b[0m\u001b[48;2;55;55;61m                 \u001b[0m\u001b[48;2;55;55;61mV● on \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────────────────────────┤\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m Push\u001b[0m\u001b[48;2;4;57;94m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;4;57;94m                  \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m\u001b[38;2;204;62;68m Delete everything …\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  del\u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Last\u001b[0m\u001b[48;2;55;55;61m                     \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╰───────────────────────────╯\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m"
+     ]
+    ],
+    [
+     null,
+     3,
+     0,
+     [
+      "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╭ Settings ─────────────────╮\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Wrap\u001b[0m\u001b[48;2;55;55;61m                 \u001b[0m\u001b[48;2;55;55;61mV● on \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────────────────────────┤\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Push\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;55;55;61m                  \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m\u001b[38;2;204;62;68m Delete everything …\u001b[0m\u001b[48;2;4;57;94m\u001b[38;2;140;140;140m  del\u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Last\u001b[0m\u001b[48;2;55;55;61m                     \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╰───────────────────────────╯\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m"
+     ]
+    ],
+    [
+     null,
+     2,
+     0,
+     [
+      "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╭ Settings ─────────────────╮\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Wrap\u001b[0m\u001b[48;2;55;55;61m                 \u001b[0m\u001b[48;2;55;55;61mV● on \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────────────────────────┤\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m Push\u001b[0m\u001b[48;2;4;57;94m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;4;57;94m                  \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m\u001b[38;2;204;62;68m Delete everything …\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  del\u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Last\u001b[0m\u001b[48;2;55;55;61m                     \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╰───────────────────────────╯\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m"
+     ]
+    ],
+    [
+     null,
+     2,
+     0,
+     [
+      "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╭ Settings ─────────────────╮\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Wrap\u001b[0m\u001b[48;2;55;55;61m                 \u001b[0m\u001b[48;2;55;55;61mV● on \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────────────────────────┤\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m Push\u001b[0m\u001b[48;2;4;57;94m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;4;57;94m                  \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m\u001b[38;2;204;62;68m Delete everything …\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  del\u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Last\u001b[0m\u001b[48;2;55;55;61m                     \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╰───────────────────────────╯\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m"
+     ]
+    ],
+    [
+     {
+      "run": "push",
+      "keep": false
+     },
+     2,
+     0,
+     [
+      "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╭ Settings ─────────────────╮\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Wrap\u001b[0m\u001b[48;2;55;55;61m                 \u001b[0m\u001b[48;2;55;55;61mV● on \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────────────────────────┤\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m Push\u001b[0m\u001b[48;2;4;57;94m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;4;57;94m                  \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m\u001b[38;2;204;62;68m Delete everything …\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  del\u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Last\u001b[0m\u001b[48;2;55;55;61m                     \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╰───────────────────────────╯\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m"
+     ]
+    ],
+    [
+     {
+      "run": "push",
+      "keep": false
+     },
+     2,
+     0,
+     [
+      "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╭ Settings ─────────────────╮\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Wrap\u001b[0m\u001b[48;2;55;55;61m                 \u001b[0m\u001b[48;2;55;55;61mV● on \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────────────────────────┤\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m Push\u001b[0m\u001b[48;2;4;57;94m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;4;57;94m                  \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m\u001b[38;2;204;62;68m Delete everything …\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  del\u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Last\u001b[0m\u001b[48;2;55;55;61m                     \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╰───────────────────────────╯\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m"
+     ]
+    ],
+    [
+     null,
+     2,
+     0,
+     [
+      "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╭ Settings ─────────────────╮\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Wrap\u001b[0m\u001b[48;2;55;55;61m                 \u001b[0m\u001b[48;2;55;55;61mV● on \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────────────────────────┤\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m Push\u001b[0m\u001b[48;2;4;57;94m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;4;57;94m                  \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m\u001b[38;2;204;62;68m Delete everything …\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  del\u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Last\u001b[0m\u001b[48;2;55;55;61m                     \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╰───────────────────────────╯\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m"
+     ]
+    ],
+    [
+     "close",
+     2,
+     0,
+     [
+      "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╭ Settings ─────────────────╮\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Wrap\u001b[0m\u001b[48;2;55;55;61m                 \u001b[0m\u001b[48;2;55;55;61mV● on \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────────────────────────┤\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m Push\u001b[0m\u001b[48;2;4;57;94m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;4;57;94m                  \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m\u001b[38;2;204;62;68m Delete everything …\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  del\u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Last\u001b[0m\u001b[48;2;55;55;61m                     \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╰───────────────────────────╯\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m"
+     ]
+    ],
+    [
+     null,
+     3,
+     0,
+     [
+      "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╭ Settings ─────────────────╮\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Wrap\u001b[0m\u001b[48;2;55;55;61m                 \u001b[0m\u001b[48;2;55;55;61mV● on \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────────────────────────┤\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Push\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;55;55;61m                  \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m\u001b[38;2;204;62;68m Delete everything …\u001b[0m\u001b[48;2;4;57;94m\u001b[38;2;140;140;140m  del\u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Last\u001b[0m\u001b[48;2;55;55;61m                     \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╰───────────────────────────╯\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m"
+     ]
+    ],
+    [
+     {
+      "run": "wrap",
+      "keep": true
+     },
+     3,
+     0,
+     [
+      "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╭ Settings ─────────────────╮\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Wrap\u001b[0m\u001b[48;2;55;55;61m                 \u001b[0m\u001b[48;2;55;55;61mV● on \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────────────────────────┤\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Push\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;55;55;61m                  \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m\u001b[38;2;204;62;68m Delete everything …\u001b[0m\u001b[48;2;4;57;94m\u001b[38;2;140;140;140m  del\u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Last\u001b[0m\u001b[48;2;55;55;61m                     \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╰───────────────────────────╯\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m"
+     ]
+    ],
+    [
+     {
+      "run": "push",
+      "keep": false
+     },
+     3,
+     0,
+     [
+      "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╭ Settings ─────────────────╮\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Wrap\u001b[0m\u001b[48;2;55;55;61m                 \u001b[0m\u001b[48;2;55;55;61mV● on \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────────────────────────┤\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Push\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;55;55;61m                  \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m\u001b[38;2;204;62;68m Delete everything …\u001b[0m\u001b[48;2;4;57;94m\u001b[38;2;140;140;140m  del\u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Last\u001b[0m\u001b[48;2;55;55;61m                     \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╰───────────────────────────╯\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m"
+     ]
+    ],
+    [
+     {
+      "run": "wrap",
+      "keep": true
+     },
+     3,
+     0,
+     [
+      "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╭ Settings ─────────────────╮\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Wrap\u001b[0m\u001b[48;2;55;55;61m                 \u001b[0m\u001b[48;2;55;55;61mV● on \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────────────────────────┤\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Push\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;55;55;61m                  \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m\u001b[38;2;204;62;68m Delete everything …\u001b[0m\u001b[48;2;4;57;94m\u001b[38;2;140;140;140m  del\u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Last\u001b[0m\u001b[48;2;55;55;61m                     \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╰───────────────────────────╯\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m"
+     ]
+    ],
+    [
+     null,
+     3,
+     0,
+     [
+      "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╭ Settings ─────────────────╮\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Wrap\u001b[0m\u001b[48;2;55;55;61m                 \u001b[0m\u001b[48;2;55;55;61mV● on \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────────────────────────┤\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Push\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;55;55;61m                  \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m\u001b[38;2;204;62;68m Delete everything …\u001b[0m\u001b[48;2;4;57;94m\u001b[38;2;140;140;140m  del\u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Last\u001b[0m\u001b[48;2;55;55;61m                     \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╰───────────────────────────╯\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m"
+     ]
+    ],
+    [
+     null,
+     2,
+     0,
+     [
+      "\u001b[38;2;1;2;3mabcdefghijklmnopqrstuvwxyz\u001b[0m\u001b[1m界xy\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╭ Settings ─────────────────╮\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Wrap\u001b[0m\u001b[48;2;55;55;61m                 \u001b[0m\u001b[48;2;55;55;61mV● on \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────────────────────────┤\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m Push\u001b[0m\u001b[48;2;4;57;94m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;4;57;94m                  \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m\u001b[38;2;204;62;68m Delete everything …\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  del\u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Last\u001b[0m\u001b[48;2;55;55;61m                     \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╰───────────────────────────╯\u001b[0m\u001b[0m\u001b[38;2;1;2;3m\u001b[0m\u001b[1my\u001b[0m\u001b[0m\u001b[0m"
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "menu",
+   "args": [
+    {
+     "title": "A title longer than the pane",
+     "items": [
+      {
+       "label": "Wrap",
+       "value": [
+        "● on",
+        "V"
+       ],
+       "keep": true,
+       "run": "wrap"
+      },
+      null,
+      {
+       "label": "Push",
+       "key": "P",
+       "run": "push"
+      },
+      {
+       "label": "Delete everything at once",
+       "key": "del",
+       "danger": true,
+       "run": "delete"
+      },
+      {
+       "label": "Last",
+       "run": "last"
+      }
+     ],
+     "at": 0,
+     "left": 3
+    },
+    [
+     "",
+     "xyz"
+    ],
+    16,
+    5,
+    [
+     [
+      "key",
+      "down"
+     ],
+     [
+      "key",
+      "down"
+     ],
+     [
+      "key",
+      "down"
+     ]
+    ]
+   ],
+   "out": [
+    [
+     "  \u001b[0m\u001b[38;2;140;140;140m╭ A titl… ──╮\u001b[0m\u001b[0m \u001b[0m\u001b[0m",
+     "xy\u001b[0m\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m Wr…\u001b[0m\u001b[48;2;4;57;94m  \u001b[0m\u001b[48;2;4;57;94mV● on \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+     "  \u001b[0m\u001b[38;2;140;140;140m├───────────┤\u001b[0m\u001b[0m \u001b[0m\u001b[0m",
+     "  \u001b[0m\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Push\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;55;55;61m  \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m \u001b[0m\u001b[0m",
+     "  \u001b[0m\u001b[38;2;140;140;140m╰─────────▾─╯\u001b[0m\u001b[0m \u001b[0m\u001b[0m"
+    ],
+    3,
+    11,
+    [
+     null,
+     2,
+     0,
+     [
+      "  \u001b[0m\u001b[38;2;140;140;140m╭ A titl… ──╮\u001b[0m\u001b[0m \u001b[0m\u001b[0m",
+      "xy\u001b[0m\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Wr…\u001b[0m\u001b[48;2;55;55;61m  \u001b[0m\u001b[48;2;55;55;61mV● on \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+      "  \u001b[0m\u001b[38;2;140;140;140m├───────────┤\u001b[0m\u001b[0m \u001b[0m\u001b[0m",
+      "  \u001b[0m\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m Push\u001b[0m\u001b[48;2;4;57;94m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;4;57;94m  \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m \u001b[0m\u001b[0m",
+      "  \u001b[0m\u001b[38;2;140;140;140m╰─────────▾─╯\u001b[0m\u001b[0m \u001b[0m\u001b[0m"
+     ]
+    ],
+    [
+     null,
+     3,
+     1,
+     [
+      "  \u001b[0m\u001b[38;2;140;140;140m╭ A titl… ▴─╮\u001b[0m\u001b[0m \u001b[0m\u001b[0m",
+      "xy\u001b[0m\u001b[38;2;140;140;140m├───────────┤\u001b[0m\u001b[0m\u001b[0m",
+      "  \u001b[0m\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Push\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;55;55;61m  \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m \u001b[0m\u001b[0m",
+      "  \u001b[0m\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m\u001b[38;2;204;62;68m De…\u001b[0m\u001b[48;2;4;57;94m\u001b[38;2;140;140;140m  del\u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m \u001b[0m\u001b[0m",
+      "  \u001b[0m\u001b[38;2;140;140;140m╰─────────▾─╯\u001b[0m\u001b[0m \u001b[0m\u001b[0m"
+     ]
+    ],
+    [
+     null,
+     4,
+     2,
+     [
+      "  \u001b[0m\u001b[38;2;140;140;140m╭ A titl… ▴─╮\u001b[0m\u001b[0m \u001b[0m\u001b[0m",
+      "xy\u001b[0m\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m Push\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  P\u001b[0m\u001b[48;2;55;55;61m  \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m\u001b[0m",
+      "  \u001b[0m\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;55;55;61m\u001b[38;2;204;62;68m De…\u001b[0m\u001b[48;2;55;55;61m\u001b[38;2;140;140;140m  del\u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m \u001b[0m\u001b[48;2;55;55;61m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m \u001b[0m\u001b[0m",
+      "  \u001b[0m\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m Last\u001b[0m\u001b[48;2;4;57;94m     \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m \u001b[0m\u001b[0m",
+      "  \u001b[0m\u001b[38;2;140;140;140m╰───────────╯\u001b[0m\u001b[0m \u001b[0m\u001b[0m"
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "menu",
+   "args": [
+    {
+     "title": "M",
+     "items": [
+      null,
+      {
+       "label": "Only",
+       "run": "only"
+      },
+      null
+     ],
+     "at": 0,
+     "left": 1
+    },
+    [],
+    20,
+    10,
+    [
+     [
+      "key",
+      "down"
+     ],
+     [
+      "key",
+      "h"
+     ],
+     [
+      "key",
+      "space"
+     ]
+    ]
+   ],
+   "out": [
+    [
+     "\u001b[38;2;140;140;140m╭ M ────╮\u001b[0m\u001b[0m           \u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m├───────┤\u001b[0m\u001b[0m           \u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m Only\u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m           \u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m├───────┤\u001b[0m\u001b[0m           \u001b[0m\u001b[0m",
+     "\u001b[38;2;140;140;140m╰───────╯\u001b[0m\u001b[0m           \u001b[0m\u001b[0m"
+    ],
+    1,
+    7,
+    [
+     null,
+     1,
+     0,
+     [
+      "\u001b[38;2;140;140;140m╭ M ────╮\u001b[0m\u001b[0m           \u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────┤\u001b[0m\u001b[0m           \u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m Only\u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m           \u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────┤\u001b[0m\u001b[0m           \u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╰───────╯\u001b[0m\u001b[0m           \u001b[0m\u001b[0m"
+     ]
+    ],
+    [
+     null,
+     1,
+     0,
+     [
+      "\u001b[38;2;140;140;140m╭ M ────╮\u001b[0m\u001b[0m           \u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────┤\u001b[0m\u001b[0m           \u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m Only\u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m           \u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────┤\u001b[0m\u001b[0m           \u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╰───────╯\u001b[0m\u001b[0m           \u001b[0m\u001b[0m"
+     ]
+    ],
+    [
+     {
+      "run": "only",
+      "keep": false
+     },
+     1,
+     0,
+     [
+      "\u001b[38;2;140;140;140m╭ M ────╮\u001b[0m\u001b[0m           \u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────┤\u001b[0m\u001b[0m           \u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m│\u001b[39m\u001b[48;2;4;57;94m Only\u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m \u001b[0m\u001b[48;2;4;57;94m\u001b[0m\u001b[38;2;140;140;140m│\u001b[0m           \u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m├───────┤\u001b[0m\u001b[0m           \u001b[0m\u001b[0m",
+      "\u001b[38;2;140;140;140m╰───────╯\u001b[0m\u001b[0m           \u001b[0m\u001b[0m"
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "light",
+   "args": [
+    "menu",
+    {
+     "title": "M",
+     "items": [
+      {
+       "label": "Wrap",
+       "value": [
+        "● on",
+        "V"
+       ],
+       "keep": true,
+       "run": "wrap"
+      },
+      null,
+      {
+       "label": "Push",
+       "key": "P",
+       "run": "push"
+      },
+      {
+       "label": "Delete everything at once",
+       "key": "del",
+       "danger": true,
+       "run": "delete"
+      },
+      {
+       "label": "Last",
+       "run": "last"
+      }
+     ],
+     "at": 0,
+     "right": 20
+    },
+    [],
+    20,
+    10,
+    []
+   ],
+   "out": [
+    [
+     "\u001b[38;2;110;110;110m╭ M ──────────────╮\u001b[0m\u001b[0m \u001b[0m\u001b[0m",
+     "\u001b[38;2;110;110;110m│\u001b[39m\u001b[48;2;173;214;255m Wrap\u001b[0m\u001b[48;2;173;214;255m       \u001b[0m\u001b[48;2;173;214;255mV● on \u001b[0m\u001b[48;2;173;214;255m\u001b[0m\u001b[38;2;110;110;110m│\u001b[0m \u001b[0m\u001b[0m",
+     "\u001b[38;2;110;110;110m├─────────────────┤\u001b[0m\u001b[0m \u001b[0m\u001b[0m",
+     "\u001b[38;2;110;110;110m│\u001b[39m\u001b[48;2;228;230;236m Push\u001b[0m\u001b[48;2;228;230;236m\u001b[38;2;110;110;110m  P\u001b[0m\u001b[48;2;228;230;236m        \u001b[0m\u001b[48;2;228;230;236m \u001b[0m\u001b[48;2;228;230;236m\u001b[0m\u001b[38;2;110;110;110m│\u001b[0m \u001b[0m\u001b[0m",
+     "\u001b[38;2;110;110;110m│\u001b[39m\u001b[48;2;228;230;236m\u001b[38;2;205;49;49m Delete e…\u001b[0m\u001b[48;2;228;230;236m\u001b[38;2;110;110;110m  del\u001b[0m\u001b[48;2;228;230;236m \u001b[0m\u001b[48;2;228;230;236m \u001b[0m\u001b[48;2;228;230;236m\u001b[0m\u001b[38;2;110;110;110m│\u001b[0m \u001b[0m\u001b[0m",
+     "\u001b[38;2;110;110;110m│\u001b[39m\u001b[48;2;228;230;236m Last\u001b[0m\u001b[48;2;228;230;236m           \u001b[0m\u001b[48;2;228;230;236m \u001b[0m\u001b[48;2;228;230;236m\u001b[0m\u001b[38;2;110;110;110m│\u001b[0m \u001b[0m\u001b[0m",
+     "\u001b[38;2;110;110;110m╰─────────────────╯\u001b[0m\u001b[0m \u001b[0m\u001b[0m"
+    ],
+    1,
+    17
+   ]
+  }
+ ]
+}

@@ -10,6 +10,10 @@ const files = dir => sh(`cd '${dir}' 2>/dev/null && find . -type f | sort || tru
 const turnOf = tab => { const t = scope.readTurn(tab); return t && { ...t, t: typeof t.t }; };
 const impl = {
   ...scope,
+  // The items of the menu, each run given as what it calls: ['pick', scope] or ['ask', kind].
+  itemsOf: (sc, baseName) => scope.items(sc, baseName, s => ['pick', s], k => ['ask', k]).map(it => it && { label: it.label, value: it.value, run: it.run() }),
+  // Keys typed in the field of Commit or range…, from value: what each gave, and the field's value after.
+  revKeyOf: (value, keys) => { const f = new (require('../../../src/core/ui').Field)(value); return keys.map(k => [scope.revKey(f, k), f.value]); },
   branchesIn: (setup, cwd) => { sh(setup); return scope.branches(cwd); },
   worktreeOf: async (setup, top, keep, only, calls = 1) => {
     sh(setup);
@@ -93,5 +97,9 @@ module.exports = {
     { fn: 'agentStatusIn', args: [repo(''), [['w1:t1', 'p1', 'working', '$ROOT/repo']]], env: GIT,
       files: { 'state/turn-w1_t1.json': turn(5, { ended: true }) } },
     { fn: 'agentStatusIn', args: [repo(''), [['', 'p1', 'working', '$ROOT/repo']]], env: GIT },
+    ...[[{ kind: 'head' }, ''], [{ kind: 'branch' }, 'develop'], [{ kind: 'turn' }, ''], [{ kind: 'rev', rev: 'a..b' }, ''], [{ kind: 'ref', rev: 'main' }, 'x'], [{ kind: 'rev' }, '']]
+      .map(a => ({ fn: 'itemsOf', args: a })),
+    { fn: 'revKeyOf', args: ['  HEAD~2  ', ['x', 'left', 'enter', 'escape', 'ctrl+c', 'f9']] },
+    { fn: 'revKeyOf', args: ['', ['enter', 'backspace']] },
   ],
 };

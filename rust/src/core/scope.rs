@@ -10,6 +10,7 @@
 //! The menu b opens (the JS's items, menu and revKey) comes with the ui layer.
 
 use super::exec::{self, Env, Opts, env_remove, env_set, git, run, tab_file, write_atomic};
+use super::ui::{self, Field, Menu, MenuItem};
 use super::{js, paths};
 use crate::codec::sha;
 use crate::json::{self, Value};
@@ -113,6 +114,89 @@ fn strip_ref_prefixes(s: &str) -> String {
         rest = &rest[c.len_utf8()..];
     }
     out
+}
+
+/// What an item of the scope menus does: a scope chosen at once, or one that needs a commit or range ("rev") or a
+/// branch ("ref") asked first: the pane hides the menu, then prompts from the rev typed before (prompt_rev), or shows
+/// the menu of the branches (branch_menu).
+#[derive(Debug, Clone, PartialEq)]
+pub enum Pick {
+    Scope(Scope),
+    Ask(&'static str),
+}
+
+/// The items of the menu b opens, as ui::Menu takes them.
+pub fn items(scope: &Scope, base_name: &str) -> Vec<Option<MenuItem<Pick>>> {
+    let mark = |s: &Scope| {
+        (same(scope, s) || (scope.kind() == s.kind() && ["rev", "ref"].contains(&s.kind()))).then(|| ui::seg("●", ""))
+    };
+    let item = |label: String, value, run| {
+        Some(MenuItem { label, key: String::new(), value, danger: false, keep: false, run })
+    };
+    let base = if base_name.is_empty() { "main" } else { base_name };
+    // A scope without its rev shows "undefined", as the JS's template does.
+    let rev = scope.0.get("rev").map_or("undefined".into(), js::string);
+    let typed = |kind: &str| if scope.kind() == kind { format!("  {rev}") } else { String::new() };
+    let kind = |k: &str| Scope::new(k, None);
+    vec![
+        item("HEAD".into(), mark(&Scope::head()), Pick::Scope(Scope::head())),
+        item(format!("Merge base with {base}"), mark(&kind("branch")), Pick::Scope(kind("branch"))),
+        item("Last agent turn".into(), mark(&kind("turn")), Pick::Scope(kind("turn"))),
+        None,
+        item(format!("Commit or range…{}", typed("rev")), mark(&kind("rev")), Pick::Ask("rev")),
+        item(format!("Branch…{}", typed("ref")), mark(&kind("ref")), Pick::Ask("ref")),
+    ]
+}
+
+/// The menu b opens, at the right edge of a screen w columns wide.
+pub fn menu(scope: &Scope, base_name: &str, w: i64) -> Menu<Pick> {
+    Menu::new("Compare with", items(scope, base_name), 1, w, 1)
+}
+
+/// The rev Commit or range… starts from: the one typed before.
+pub fn prompt_rev(scope: &Scope) -> &str {
+    if scope.kind() == "rev" { scope.rev() } else { "" }
+}
+
+/// The menu of Branch…, in place of the first, from the repository's branches (branches); None without any (the
+/// pane says "No branch").
+pub fn branch_menu(scope: &Scope, list: &[String], w: i64) -> Option<Menu<Pick>> {
+    if list.is_empty() {
+        return None;
+    }
+    let items = list
+        .iter()
+        .map(|b| {
+            Some(MenuItem {
+                label: b.clone(),
+                key: String::new(),
+                value: (scope.kind() == "ref" && scope.rev() == b).then(|| ui::seg("●", "")),
+                danger: false,
+                keep: false,
+                run: Pick::Scope(Scope::new("ref", Some(b))),
+            })
+        })
+        .collect();
+    Some(Menu::new("Branch", items, 1, w, 1))
+}
+
+/// A key in the field of Commit or range….
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RevKey {
+    /// Enter (the rev, "" when empty) or escape ("").
+    Done(String),
+    /// Whether the field took the key.
+    Changed(bool),
+}
+
+pub fn rev_key(field: &mut Field, k: &str) -> RevKey {
+    if k == "escape" || k == "ctrl+c" {
+        return RevKey::Done(String::new());
+    }
+    if k == "enter" {
+        return RevKey::Done(field.value.trim_matches(js::is_space).to_string());
+    }
+    RevKey::Changed(field.key(k))
 }
 
 /// The branches of the repository holding cwd, local then remote, the latest commit first, for Branch….
@@ -331,4 +415,29 @@ pub fn agent_status(tab: &str, pane: &str, status: &str, cwd: &str) -> &'static 
         return "snapshot dropped: a newer turn";
     }
     if tree.is_some() { "snapshot" } else { "no snapshot" }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Branch…'s menu: one item per branch, the one compared with marked; none without branches.
+    #[test]
+    fn the_branch_menu_marks_the_branch_compared_with() {
+        let list = vec!["main".to_string(), "feat".to_string()];
+        let menu = branch_menu(&Scope::new("ref", Some("feat")), &list, 80).unwrap();
+        assert_eq!((menu.title.as_str(), menu.at, menu.right), ("Branch", 1, 80));
+        let items: Vec<_> =
+            menu.items.iter().flatten().map(|it| (it.label.as_str(), it.value.is_some(), &it.run)).collect();
+        assert_eq!(
+            items,
+            [
+                ("main", false, &Pick::Scope(Scope::new("ref", Some("main")))),
+                ("feat", true, &Pick::Scope(Scope::new("ref", Some("feat"))))
+            ]
+        );
+        assert!(branch_menu(&Scope::head(), &[], 80).is_none());
+        assert_eq!(prompt_rev(&Scope::new("rev", Some("a..b"))), "a..b");
+        assert_eq!(prompt_rev(&Scope::new("ref", Some("main"))), "");
+    }
 }

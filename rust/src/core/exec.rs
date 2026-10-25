@@ -356,6 +356,11 @@ fn spawn_error(cmd: &str, e: &std::io::Error) -> String {
     }
 }
 
+/// An error's code as Node gives it (`e.code`): libuv's name of the OS error, else the error's text.
+pub fn io_code(e: &std::io::Error) -> String {
+    e.raw_os_error().map_or_else(|| e.to_string(), errno_name)
+}
+
 /// libuv's name of an error code: errno on Unix, a Win32 error translated as libuv does on Windows.
 fn errno_name(n: i32) -> String {
     #[cfg(target_os = "linux")]

@@ -1,16 +1,32 @@
-//! test/review.test.js: the line a note set sends, notes following their lines, the files viewed. The terminal's
-//! replies, the diff rows and the image decoders wait for the steps that port them.
+//! test/review.test.js: the terminal's replies kept apart from the keys, the line a note set sends, notes following
+//! their lines, the files viewed. The diff rows and the image decoders wait for the steps that port them.
 
 mod support;
 
 use herdr_explorer::core::notes::{self, Lines};
+use herdr_explorer::core::ui::{self, Event};
 use herdr_explorer::core::{exec, paths, viewed};
 use herdr_explorer::json::Value;
 use herdr_explorer::obj;
 
 #[test]
-#[ignore = "case 6a"]
-fn terminal_replies_never_read_as_keys() {}
+fn terminal_replies_never_read_as_keys() {
+    let (mut keys, mut replies) = (Vec::new(), Vec::new());
+    for e in ui::decode("a\x1b_Gi=31;OK\x1b\\b\x1b[6;16;8tc") {
+        match e {
+            Event::Key(k) => keys.push(k),
+            Event::Reply(r) => replies.push(r),
+            e => panic!("{e:?}"),
+        }
+    }
+    assert_eq!(keys, ["a", "b", "c"]);
+    assert_eq!(replies, ["\x1b_Gi=31;OK\x1b\\", "\x1b[6;16;8t"]);
+    let mouse: Vec<_> = ui::decode("\x1b[<0;5;7M")
+        .into_iter()
+        .filter_map(|e| if let Event::Mouse(m) = e { Some(m) } else { None })
+        .collect();
+    assert_eq!((mouse[0].x, mouse[0].y, mouse[0].press), (5, 7, true));
+}
 
 fn strs(v: &[&str]) -> Value {
     Value::Arr(v.iter().map(|&s| s.into()).collect())

@@ -10,6 +10,7 @@ pub mod places;
 pub mod scope;
 pub mod stage;
 pub mod tabs;
+pub mod ui;
 pub mod viewed;
 pub mod watch;
 pub mod which;

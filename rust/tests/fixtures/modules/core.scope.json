@@ -941,6 +941,454 @@
      null
     ]
    ]
+  },
+  {
+   "fn": "itemsOf",
+   "args": [
+    {
+     "kind": "head"
+    },
+    ""
+   ],
+   "out": [
+    {
+     "label": "HEAD",
+     "value": [
+      "●",
+      ""
+     ],
+     "run": [
+      "pick",
+      {
+       "kind": "head"
+      }
+     ]
+    },
+    {
+     "label": "Merge base with main",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "branch"
+      }
+     ]
+    },
+    {
+     "label": "Last agent turn",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "turn"
+      }
+     ]
+    },
+    null,
+    {
+     "label": "Commit or range…",
+     "value": null,
+     "run": [
+      "ask",
+      "rev"
+     ]
+    },
+    {
+     "label": "Branch…",
+     "value": null,
+     "run": [
+      "ask",
+      "ref"
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "itemsOf",
+   "args": [
+    {
+     "kind": "branch"
+    },
+    "develop"
+   ],
+   "out": [
+    {
+     "label": "HEAD",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "head"
+      }
+     ]
+    },
+    {
+     "label": "Merge base with develop",
+     "value": [
+      "●",
+      ""
+     ],
+     "run": [
+      "pick",
+      {
+       "kind": "branch"
+      }
+     ]
+    },
+    {
+     "label": "Last agent turn",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "turn"
+      }
+     ]
+    },
+    null,
+    {
+     "label": "Commit or range…",
+     "value": null,
+     "run": [
+      "ask",
+      "rev"
+     ]
+    },
+    {
+     "label": "Branch…",
+     "value": null,
+     "run": [
+      "ask",
+      "ref"
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "itemsOf",
+   "args": [
+    {
+     "kind": "turn"
+    },
+    ""
+   ],
+   "out": [
+    {
+     "label": "HEAD",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "head"
+      }
+     ]
+    },
+    {
+     "label": "Merge base with main",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "branch"
+      }
+     ]
+    },
+    {
+     "label": "Last agent turn",
+     "value": [
+      "●",
+      ""
+     ],
+     "run": [
+      "pick",
+      {
+       "kind": "turn"
+      }
+     ]
+    },
+    null,
+    {
+     "label": "Commit or range…",
+     "value": null,
+     "run": [
+      "ask",
+      "rev"
+     ]
+    },
+    {
+     "label": "Branch…",
+     "value": null,
+     "run": [
+      "ask",
+      "ref"
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "itemsOf",
+   "args": [
+    {
+     "kind": "rev",
+     "rev": "a..b"
+    },
+    ""
+   ],
+   "out": [
+    {
+     "label": "HEAD",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "head"
+      }
+     ]
+    },
+    {
+     "label": "Merge base with main",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "branch"
+      }
+     ]
+    },
+    {
+     "label": "Last agent turn",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "turn"
+      }
+     ]
+    },
+    null,
+    {
+     "label": "Commit or range…  a..b",
+     "value": [
+      "●",
+      ""
+     ],
+     "run": [
+      "ask",
+      "rev"
+     ]
+    },
+    {
+     "label": "Branch…",
+     "value": null,
+     "run": [
+      "ask",
+      "ref"
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "itemsOf",
+   "args": [
+    {
+     "kind": "ref",
+     "rev": "main"
+    },
+    "x"
+   ],
+   "out": [
+    {
+     "label": "HEAD",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "head"
+      }
+     ]
+    },
+    {
+     "label": "Merge base with x",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "branch"
+      }
+     ]
+    },
+    {
+     "label": "Last agent turn",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "turn"
+      }
+     ]
+    },
+    null,
+    {
+     "label": "Commit or range…",
+     "value": null,
+     "run": [
+      "ask",
+      "rev"
+     ]
+    },
+    {
+     "label": "Branch…  main",
+     "value": [
+      "●",
+      ""
+     ],
+     "run": [
+      "ask",
+      "ref"
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "itemsOf",
+   "args": [
+    {
+     "kind": "rev"
+    },
+    ""
+   ],
+   "out": [
+    {
+     "label": "HEAD",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "head"
+      }
+     ]
+    },
+    {
+     "label": "Merge base with main",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "branch"
+      }
+     ]
+    },
+    {
+     "label": "Last agent turn",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "turn"
+      }
+     ]
+    },
+    null,
+    {
+     "label": "Commit or range…  undefined",
+     "value": [
+      "●",
+      ""
+     ],
+     "run": [
+      "ask",
+      "rev"
+     ]
+    },
+    {
+     "label": "Branch…",
+     "value": null,
+     "run": [
+      "ask",
+      "ref"
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "revKeyOf",
+   "args": [
+    "  HEAD~2  ",
+    [
+     "x",
+     "left",
+     "enter",
+     "escape",
+     "ctrl+c",
+     "f9"
+    ]
+   ],
+   "out": [
+    [
+     {
+      "changed": true
+     },
+     "  HEAD~2  x"
+    ],
+    [
+     {
+      "changed": true
+     },
+     "  HEAD~2  x"
+    ],
+    [
+     {
+      "done": true,
+      "rev": "HEAD~2  x"
+     },
+     "  HEAD~2  x"
+    ],
+    [
+     {
+      "done": true,
+      "rev": ""
+     },
+     "  HEAD~2  x"
+    ],
+    [
+     {
+      "done": true,
+      "rev": ""
+     },
+     "  HEAD~2  x"
+    ],
+    [
+     {
+      "changed": false
+     },
+     "  HEAD~2  x"
+    ]
+   ]
+  },
+  {
+   "fn": "revKeyOf",
+   "args": [
+    "",
+    [
+     "enter",
+     "backspace"
+    ]
+   ],
+   "out": [
+    [
+     {
+      "done": true,
+      "rev": ""
+     },
+     ""
+    ],
+    [
+     {
+      "changed": true
+     },
+     ""
+    ]
+   ]
   }
  ]
 }

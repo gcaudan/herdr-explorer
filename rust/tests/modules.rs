@@ -176,6 +176,37 @@ fn core_scope() {
         let sc = |i: usize| Scope(args[i].clone());
         Ok(match name {
             "label" => Value::Str(scope::label(&sc(0), &s(1))),
+            "itemsOf" => Value::Arr(
+                scope::items(&sc(0), &s(1))
+                    .into_iter()
+                    .map(|it| {
+                        it.map_or(Value::Null, |it| {
+                            let run = match it.run {
+                                scope::Pick::Scope(p) => Value::Arr(vec!["pick".into(), p.0]),
+                                scope::Pick::Ask(k) => Value::Arr(vec!["ask".into(), k.into()]),
+                            };
+                            let value = it.value.map_or(Value::Null, |(t, st)| Value::Arr(vec![t.into(), st.into()]));
+                            herdr_explorer::obj! { "label" => it.label, "value" => value, "run" => run }
+                        })
+                    })
+                    .collect(),
+            ),
+            "revKeyOf" => {
+                let mut f = herdr_explorer::core::ui::Field::new(&s(0));
+                let steps = args[1]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|k| {
+                        let r = match scope::rev_key(&mut f, k.as_str().unwrap()) {
+                            scope::RevKey::Done(rev) => herdr_explorer::obj! { "done" => true, "rev" => rev },
+                            scope::RevKey::Changed(c) => herdr_explorer::obj! { "changed" => c },
+                        };
+                        Value::Arr(vec![r, f.value.clone().into()])
+                    })
+                    .collect();
+                Value::Arr(steps)
+            }
             "same" => Value::Bool(scope::same(&sc(0), &sc(1))),
             "read" => scope::read(&s(0)).0,
             "write" => Value::Bool(scope::write(&s(0), &sc(1))),
@@ -599,4 +630,400 @@ fn core_stage() {
             _ => return Err(format!("no function {name}")),
         })
     });
+}
+
+#[cfg(unix)]
+#[test]
+fn core_ui() {
+    use herdr_explorer::core::js;
+    use herdr_explorer::core::ui::{self, Ask, BarHit, BarMark, Button, Choice, Confirm, Event, Menu, MenuItem};
+    use herdr_explorer::core::ui::{Field, HelpState, Kind, Mouse, Rgb, Scrollbar, Seg};
+    use herdr_explorer::obj;
+
+    fn at<'a>(v: &'a Value, k: &str) -> &'a Value {
+        static NULL: Value = Value::Null;
+        v.get(k).unwrap_or(&NULL)
+    }
+    fn num(v: &Value) -> f64 {
+        v.as_f64().unwrap_or(0.0)
+    }
+    fn s(v: &Value) -> String {
+        v.as_str().unwrap_or("").to_string()
+    }
+    fn opt_s(v: Option<&Value>) -> Option<String> {
+        v.and_then(Value::as_str).map(str::to_string)
+    }
+    fn arr(v: &Value) -> &[Value] {
+        v.as_array().map_or(&[], Vec::as_slice)
+    }
+    fn rgb(v: &Value) -> Rgb {
+        let a = arr(v);
+        [num(&a[0]) as u8, num(&a[1]) as u8, num(&a[2]) as u8]
+    }
+    fn rgb_val(c: Rgb) -> Value {
+        Value::Arr(c.iter().map(|&x| Value::Num(x as f64)).collect())
+    }
+    fn segs(v: &Value) -> Vec<Seg> {
+        arr(v).iter().map(|p| (s(&arr(p)[0]), arr(p).get(1).map(s).unwrap_or_default())).collect()
+    }
+    fn seg_val(p: &Seg) -> Value {
+        Value::Arr(vec![p.0.clone().into(), p.1.clone().into()])
+    }
+    fn segs_val(v: &[Seg]) -> Value {
+        Value::Arr(v.iter().map(seg_val).collect())
+    }
+    fn strs_val(v: &[String]) -> Value {
+        Value::Arr(v.iter().map(|x| x.clone().into()).collect())
+    }
+    fn pairs(v: &Value) -> Vec<(String, String)> {
+        arr(v).iter().map(|p| (s(&arr(p)[0]), s(&arr(p)[1]))).collect()
+    }
+    fn mouse(v: &Value) -> Mouse {
+        let n = |k: &str| v.get(k).map_or(0, |x| num(x) as i64);
+        let b = |k: &str| v.get(k).is_some_and(Value::truthy);
+        Mouse {
+            button: n("button"),
+            mods: n("mods"),
+            x: n("x"),
+            y: n("y"),
+            press: b("press"),
+            drag: b("drag"),
+            wheel: n("wheel"),
+        }
+    }
+    fn mouse_val(m: &Mouse) -> Value {
+        obj! { "button" => m.button, "mods" => m.mods, "x" => m.x, "y" => m.y, "press" => m.press, "drag" => m.drag,
+        "wheel" => m.wheel }
+    }
+    fn first(v: &Value) -> Option<char> {
+        v.as_str().and_then(|t| t.chars().next())
+    }
+    /// A JS string index (UTF-16) of text as a byte offset.
+    fn byte_of(text: &str, unit: usize) -> usize {
+        let mut u = 0;
+        for (b, ch) in text.char_indices() {
+            if u >= unit {
+                return b;
+            }
+            u += ch.len_utf16();
+        }
+        text.len()
+    }
+    fn kind(name: &str) -> Kind {
+        match name {
+            "error" => Kind::Error,
+            "busy" => Kind::Busy,
+            "info" => Kind::Info,
+            _ => Kind::Ok,
+        }
+    }
+    fn hint_zones(h: &ui::Hints) -> Value {
+        Value::Arr(
+            h.zones.iter().map(|z| obj! { "x0" => z.x0 as f64, "x1" => z.x1 as f64, "key" => z.key.clone() }).collect(),
+        )
+    }
+    fn call(name: &str, args: &[Value]) -> Value {
+        let a = |i: usize| args.get(i).unwrap_or(&Value::Null);
+        match name {
+            "shade" => rgb_val(ui::shade(rgb(a(0)))),
+            "glyph" => ui::glyph(num(a(0)) as u32).into(),
+            "backgroundOf" => ui::background_of(&s(a(0))).map_or(Value::Null, Into::into),
+            "clean" => ui::clean(&s(a(0))).into(),
+            "cleanLine" => {
+                let text = s(a(0));
+                let tab = num(a(1)) as usize;
+                if !a(2).truthy() {
+                    return ui::clean_line(&text, tab, None).into();
+                }
+                let mut at = Vec::new();
+                let out = ui::clean_line(&text, tab, Some(&mut at));
+                // The byte offsets as the JS's UTF-16 ones: one per unit of text, then its end.
+                let units = |b: usize| js::utf16_len(&out[..b]) as f64;
+                let mut js_at = Vec::new();
+                for (b, ch) in text.char_indices() {
+                    for k in 0..ch.len_utf16() {
+                        js_at.push(Value::Num(units(at[b]) + k as f64));
+                    }
+                }
+                js_at.push(Value::Num(units(at[text.len()])));
+                Value::Arr(vec![out.into(), Value::Arr(js_at)])
+            }
+            "cols" => (ui::cols(first(a(0)).unwrap(), first(a(1))) as f64).into(),
+            "fit" => {
+                let max = if a(1).is_null() { usize::MAX } else { num(a(1)) as usize };
+                let text = s(a(0));
+                let (part, w) = ui::fit(&text, max, first(a(2)));
+                Value::Arr(vec![part.into(), (w as f64).into()])
+            }
+            "textWidth" => (ui::text_width(&s(a(0))) as f64).into(),
+            "ellipsis" => ui::ellipsis(&s(a(0)), num(a(1)) as i64).into(),
+            "line" => ui::line(&segs(a(0)), num(a(1)) as usize, (!a(2).is_null()).then(|| rgb(a(2)))).into(),
+            "keys" => {
+                let max = if a(1).is_null() { usize::MAX } else { num(a(1)) as usize };
+                let h = ui::keys(&pairs(a(0)), max);
+                obj! { "segs" => segs_val(&h.segs), "zones" => hint_zones(&h) }
+            }
+            "keyAt" => ui::key_at(&ui::keys(&pairs(a(0)), usize::MAX), num(a(1)) as i64, num(a(2)) as i64)
+                .map_or(Value::Null, Into::into),
+            "keyLabel" => ui::key_label(&s(a(0))).into(),
+            "empty" => strs_val(&ui::empty(num(a(0)) as usize, num(a(1)) as usize, &s(a(2)), &pairs(a(3)))),
+            "messageKind" => ui::message_kind(&s(a(0))).name().into(),
+            "messageTime" => (ui::message_time(kind(&s(a(0)))) as f64).into(),
+            "message" => segs_val(&ui::message(&s(a(0)), a(1).as_str().map(kind))),
+            "wrap" => strs_val(&ui::wrap(&s(a(0)), num(a(1)) as i64)),
+            "segText" => ui::seg_text(&segs(a(0))).into(),
+            "segWidth" => (ui::seg_width(&segs(a(0))) as f64).into(),
+            "slice" => segs_val(&ui::slice(&segs(a(0)), num(a(1)) as usize, num(a(2)) as usize)),
+            "split" => Value::Arr(ui::split(&segs(a(0)), num(a(1)) as usize).iter().map(|l| segs_val(l)).collect()),
+            "mark" => {
+                let list = segs(a(0));
+                let text = ui::seg_text(&list);
+                let ranges: Vec<(usize, usize)> = arr(a(1))
+                    .iter()
+                    .map(|r| (byte_of(&text, num(&arr(r)[0]) as usize), byte_of(&text, num(&arr(r)[1]) as usize)))
+                    .collect();
+                segs_val(&ui::mark(&list, &ranges, &s(a(2))))
+            }
+            "onOff" => seg_val(&ui::on_off(a(0).truthy())),
+            "switchStyle" => ui::switch_style(a(0).truthy()).into(),
+            "segmented" => {
+                let choices: Vec<(String, String)> = pairs(a(0));
+                let refs: Vec<(&str, &str)> = choices.iter().map(|(x, y)| (x.as_str(), y.as_str())).collect();
+                let (sg, width, hits) = ui::segmented(&refs, &s(a(1)));
+                let hits = hits
+                    .iter()
+                    .map(|h| obj! { "id" => h.id.clone(), "from" => h.from as f64, "to" => h.to as f64 })
+                    .collect();
+                obj! { "segs" => segs_val(&sg), "width" => width as f64, "hits" => Value::Arr(hits) }
+            }
+            "head" => ui::head(&s(a(0)), num(a(1)) as usize).into(),
+            "tail" => ui::tail(&s(a(0)), num(a(1)) as usize).into(),
+            "keyName" => ui::key_name(&s(a(0))).map_or(Value::Null, Into::into),
+            "printable" => ui::printable(&s(a(0))).into(),
+            "decode" => Value::Arr(
+                ui::decode(&s(a(0)))
+                    .iter()
+                    .map(|e| match e {
+                        Event::Key(k) => Value::Arr(vec!["key".into(), k.clone().into()]),
+                        Event::Mouse(m) => Value::Arr(vec!["mouse".into(), mouse_val(m)]),
+                        Event::Focus(f) => Value::Arr(vec!["focus".into(), (*f).into()]),
+                        Event::Paste { text, raw } => {
+                            Value::Arr(vec!["paste".into(), Value::Arr(vec![text.clone().into(), raw.clone().into()])])
+                        }
+                        Event::Reply(r) => Value::Arr(vec!["reply".into(), r.clone().into()]),
+                    })
+                    .collect(),
+            ),
+            "field" => {
+                let mut f = Field::new(&s(a(0)));
+                let steps = arr(a(1))
+                    .iter()
+                    .map(|k| {
+                        let k = s(k);
+                        let changed = match k.strip_prefix("insert:") {
+                            Some(t) => {
+                                f.insert(t);
+                                true
+                            }
+                            None => f.key(&k),
+                        };
+                        Value::Arr(vec![changed.into(), f.value.clone().into(), (f.cursor as f64).into()])
+                    })
+                    .collect();
+                obj! { "steps" => Value::Arr(steps), "segments" => segs_val(&f.segments(num(a(2)) as i64, &s(a(3)))) }
+            }
+            "help" => {
+                let (w, h) = (num(a(0)) as usize, num(a(1)) as usize);
+                let title = s(a(2));
+                let groups: Vec<ui::Group> = arr(a(3)).iter().map(|g| (s(&arr(g)[0]), pairs(&arr(g)[1]))).collect();
+                let mut state = HelpState::default();
+                let draw = |state: &mut HelpState| {
+                    let mut lines = vec![String::new(); h];
+                    ui::help(&mut lines, w, &title, &groups, state);
+                    strs_val(&lines)
+                };
+                let mut out = vec![draw(&mut state)];
+                for step in arr(a(4)) {
+                    let (kind, v) = (s(&arr(step)[0]), &arr(step)[1]);
+                    let open = if kind == "key" {
+                        ui::help_key(&s(v), &mut state)
+                    } else {
+                        ui::help_mouse(&mouse(v), &mut state)
+                    };
+                    let find = state.find.as_ref().map_or(Value::Null, |f| f.value.clone().into());
+                    let lines = if open { draw(&mut state) } else { Value::Null };
+                    out.push(Value::Arr(vec![open.into(), (state.top as f64).into(), find, lines]));
+                }
+                Value::Arr(out)
+            }
+            "confirm" => {
+                let (w, h) = (num(a(0)) as i64, num(a(1)) as i64);
+                let q0 = a(2);
+                let mut q = Confirm {
+                    title: s(at(q0, "title")),
+                    name: s(at(q0, "name")),
+                    where_: opt_s(q0.get("where")),
+                    note: opt_s(q0.get("note")),
+                    action: s(at(q0, "action")),
+                    tone: opt_s(q0.get("tone")).unwrap_or_default(),
+                    focus: s(at(q0, "focus")),
+                    zones: None,
+                };
+                let mut lines: Vec<String> = (0..h).map(|_| " ".repeat(w as usize)).collect();
+                ui::confirm(&mut lines, w, h, &mut q);
+                let pair = |p: (i64, i64)| Value::Arr(vec![p.0.into(), p.1.into()]);
+                let zones = q
+                    .zones
+                    .as_ref()
+                    .map_or(Value::Null, |z| obj! { "y" => z.y, "yes" => pair(z.yes), "no" => pair(z.no) });
+                let clicks = arr(a(4))
+                    .iter()
+                    .map(|m| ui::confirm_mouse(&mouse(m), &q).map_or(Value::Null, Into::into))
+                    .collect();
+                let keys = arr(a(3))
+                    .iter()
+                    .map(|k| {
+                        let r = ui::confirm_key(&s(k), &mut q);
+                        Value::Arr(vec![r.into(), q.focus.clone().into()])
+                    })
+                    .collect();
+                obj! { "lines" => strs_val(&lines), "zones" => zones, "clicks" => Value::Arr(clicks), "keys" => Value::Arr(keys) }
+            }
+            "ask" => {
+                let (w, h) = (num(a(0)) as i64, num(a(1)) as i64);
+                let q0 = a(2);
+                let buttons = arr(at(q0, "buttons"))
+                    .iter()
+                    .map(|b| Button {
+                        key: s(at(b, "key")),
+                        label: s(at(b, "label")),
+                        tone: opt_s(b.get("tone")).unwrap_or_default(),
+                    })
+                    .collect();
+                let mut q = Ask {
+                    title: s(at(q0, "title")),
+                    name: s(at(q0, "name")),
+                    where_: opt_s(q0.get("where")),
+                    note: opt_s(q0.get("note")),
+                    list: arr(at(q0, "list")).iter().map(s).collect(),
+                    buttons,
+                    focus: num(at(q0, "focus")) as usize,
+                    ..Ask::default()
+                };
+                let mut lines: Vec<String> = (0..h).map(|_| " ".repeat(w as usize)).collect();
+                ui::ask(&mut lines, w, h, &mut q);
+                let zones = q.zones.as_ref().map_or(Value::Null, |z| {
+                    Value::Arr(
+                        z.iter()
+                            .map(|(x0, x1, k, y)| {
+                                Value::Arr(vec![(*x0).into(), (*x1).into(), k.clone().into(), (*y).into()])
+                            })
+                            .collect(),
+                    )
+                });
+                let boxed = q
+                    .boxed
+                    .map_or(Value::Null, |(x0, x1, y0, y1)| obj! { "x0" => x0, "x1" => x1, "y0" => y0, "y1" => y1 });
+                let clicks =
+                    arr(a(4)).iter().map(|m| ui::ask_mouse(&mouse(m), &q).map_or(Value::Null, Into::into)).collect();
+                let keys = arr(a(3))
+                    .iter()
+                    .map(|k| {
+                        let r = ui::ask_key(&s(k), &mut q).map_or(Value::Null, Into::into);
+                        Value::Arr(vec![r, (q.focus as f64).into()])
+                    })
+                    .collect();
+                obj! { "lines" => strs_val(&lines), "zones" => zones, "box" => boxed, "clicks" => Value::Arr(clicks),
+                "keys" => Value::Arr(keys) }
+            }
+            "scrollbar" => {
+                let (total, height, top) = (num(a(0)) as i64, num(a(1)) as i64, num(a(2)) as i64);
+                let marks: Vec<BarMark> = arr(a(3))
+                    .iter()
+                    .map(|m| BarMark {
+                        row: num(at(m, "row")) as i64,
+                        color: rgb(at(m, "color")),
+                        weight: num(at(m, "weight")),
+                    })
+                    .collect();
+                let mut bar = Scrollbar::new();
+                let cells = |bar: &Scrollbar| strs_val(&(0..height).map(|k| bar.cell(k)).collect::<Vec<_>>());
+                let cols = bar.set(total, height, top, &marks);
+                let first = cells(&bar);
+                let top_at = if bar.bar.is_some() {
+                    Value::Arr((0..height).map(|r| bar.top_at(r).into()).collect())
+                } else {
+                    Value::Null
+                };
+                let now = std::time::Instant::now();
+                let mut steps = Vec::new();
+                for step in arr(a(4)) {
+                    let st = arr(step);
+                    let hit = bar.mouse(&mouse(&st[0]), num(&st[1]) as i64, st[2].truthy(), now);
+                    let (took, scrolled) = match hit {
+                        BarHit::Ignored => (false, Value::Null),
+                        BarHit::Took => (true, Value::Null),
+                        BarHit::Scroll(t) => {
+                            bar.set(total, height, t, &marks);
+                            (true, t.into())
+                        }
+                    };
+                    steps.push(Value::Arr(vec![took.into(), scrolled, cells(&bar)]));
+                }
+                obj! { "cols" => cols as f64, "cells" => first, "topAt" => top_at, "steps" => Value::Arr(steps) }
+            }
+            "menu" => {
+                let o = a(0);
+                let items: Vec<Option<MenuItem<String>>> = arr(at(o, "items"))
+                    .iter()
+                    .map(|it| {
+                        (!it.is_null()).then(|| MenuItem {
+                            label: s(at(it, "label")),
+                            key: opt_s(it.get("key")).unwrap_or_default(),
+                            value: it.get("value").map(|v| (s(&arr(v)[0]), s(&arr(v)[1]))),
+                            danger: it.get("danger").is_some_and(Value::truthy),
+                            keep: it.get("keep").is_some_and(Value::truthy),
+                            run: s(at(it, "run")),
+                        })
+                    })
+                    .collect();
+                let n = |k: &str, d: i64| o.get(k).map_or(d, |v| num(v) as i64);
+                let mut m = Menu::new(&s(at(o, "title")), items, n("at", 0), n("right", 0), n("left", 1));
+                let base: Vec<String> = arr(a(1)).iter().map(s).collect();
+                let (w, h) = (num(a(2)) as i64, num(a(3)) as i64);
+                let draw = |m: &mut Menu<String>| {
+                    let mut l = base.clone();
+                    m.draw(&mut l, w, h);
+                    strs_val(&l)
+                };
+                let mut out = vec![draw(&mut m), (m.x as f64).into(), (m.inner as f64).into()];
+                for step in arr(a(4)) {
+                    let (kind, v) = (s(&arr(step)[0]), &arr(step)[1]);
+                    let r = match kind.as_str() {
+                        "key" => m.key(&s(v), h),
+                        "move" => {
+                            m.move_by(num(v) as i64, h);
+                            None
+                        }
+                        _ => m.mouse(&mouse(v), h),
+                    };
+                    let r = match r {
+                        None => Value::Null,
+                        Some(Choice::Close) => "close".into(),
+                        Some(Choice::Run { run, keep }) => obj! { "run" => run, "keep" => keep },
+                    };
+                    out.push(Value::Arr(vec![r, (m.sel as f64).into(), (m.off as f64).into(), draw(&mut m)]));
+                }
+                Value::Arr(out)
+            }
+            "light" => {
+                ui::use_theme("light");
+                let out = std::panic::catch_unwind(|| call(&s(a(0)), &args[1..]));
+                ui::use_theme("dark");
+                out.unwrap_or_else(|e| std::panic::resume_unwind(e))
+            }
+            _ => panic!("no function {name}"),
+        }
+    }
+    support::replay("core/ui", |name, args| caught(|| call(name, args)));
 }
