@@ -206,6 +206,9 @@ impl Preview {
     // --- rendering
 
     pub(super) fn render(&mut self) {
+        if self.state.edit.is_some() {
+            return self.render_edit();
+        }
         let (w, h) = self.size();
         let rows = self.rows();
         let list = &rows.list;
@@ -294,8 +297,15 @@ impl Preview {
             lines.push(ui::line(&[], w, None));
         }
         lines.push(self.footer(w));
+        self.overlays(&mut lines, w, h);
+        self.screen.paint(&lines);
+        super::edit::show_cursor(None);
+    }
+
+    /// The menu, the key help and a question, over the pane.
+    pub(super) fn overlays(&mut self, lines: &mut Vec<String>, w: usize, h: usize) {
         if let Some(menu) = &mut self.state.menu {
-            menu.draw(&mut lines, w as i64, h as i64);
+            menu.draw(lines, w as i64, h as i64);
         }
         if self.state.help.is_some() {
             let groups: Vec<ui::Group> = HELP
@@ -304,10 +314,12 @@ impl Preview {
                 .collect();
             let title = paths::basename(&self.state.file, None);
             if let Some(help) = &mut self.state.help {
-                ui::help(&mut lines, w, &title, &groups, help);
+                ui::help(lines, w, &title, &groups, help);
             }
         }
-        self.screen.paint(&lines);
+        if let Some(q) = &mut self.state.ask {
+            ui::ask(lines, w as i64, h as i64, &mut q.ask);
+        }
     }
 
     /// The find's matches by line: [start, end) byte ranges.
@@ -324,7 +336,7 @@ impl Preview {
     /// Header: the tabs on the left, or with a single tab, the file's path; then the details; on the right, what the
     /// Diff view compares with, the File · Diff switch and ⚙, which opens the view's options (,). A narrow pane drops
     /// the reminder, then the switch, then the details, then the tabs out of reach of the one shown (tab_strip).
-    fn header(&mut self, w: usize) -> String {
+    pub(super) fn header(&mut self, w: usize) -> String {
         let wi = w as i64;
         let s = &self.state;
         let one = self.tabs.list.len() < 2;
@@ -354,7 +366,7 @@ impl Preview {
         let (mut segs, lw): (Vec<Seg>, i64);
         if one {
             // A temporary tab in italics: the next file clicked replaces it.
-            let text = format!(" {name}");
+            let text = format!(" {name}{}", if self.unsaved_at(self.tabs.current) { " ●" } else { "" });
             let (left, fw) = ui::fit(&text, (wi - right - 1).max(1) as usize, None);
             let style = format!("\x1b[1m{}", if t.is_some_and(|t| !t.kept) { "\x1b[3m" } else { "" });
             segs = vec![seg(left, style)];
@@ -369,7 +381,11 @@ impl Preview {
         // The details whole, else their first part (the lines), else none.
         // TODO(case 13): in the Diff view, the added and removed lines.
         let s = &self.state;
-        let details = if s.diff { String::new() } else { s.info.clone() };
+        let details = match self.edit_info() {
+            Some(info) => info,
+            None if s.diff => String::new(),
+            None => s.info.clone(),
+        };
         let first = details.split(" · ").next().unwrap_or("").to_string();
         let info = [format!("  {details}"), format!("  {first}"), String::new()]
             .into_iter()
@@ -438,8 +454,9 @@ impl Preview {
                 if self.tabs.list[i].kept { "" } else { "\x1b[3m" }
             );
             put(format!(" {name} "), style, Some(("tab", i)));
-            // TODO(case 12b): ● for unsaved edits, as VS Code: the click still closes, asking first.
-            put("× ".into(), format!("{back}{}", fg(c().dim)), Some(("close", i)));
+            // ● for unsaved edits, as VS Code: the click still closes, asking first.
+            let close = if self.unsaved_at(i) { "● " } else { "× " };
+            put(close.into(), format!("{back}{}", fg(c().dim)), Some(("close", i)));
         }
         if st.last < self.tabs.list.len() as i64 - 1 {
             put(" ›".into(), fg(c().dim), Some(("tab", st.last as usize + 1)));

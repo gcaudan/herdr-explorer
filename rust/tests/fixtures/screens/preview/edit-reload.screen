@@ -1,0 +1,11 @@
+size 50x10
+⟪bg=#252526 b⟫ code.js ●⟪fg=#8c8c8c bg=#252526⟫  modified⟪bg=#252526⟫              ⟪fg=#d4d4d4 bg=#04395e b⟫ File ⟪fg=#8c8c8c bg=#3a3a3e⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+⟪fg=#519aba⟫▎⟪fg=#d4d4d4⟫1 ⟪fg=#4ec9b0⟫Znew⟪⟫ ⟪fg=#9cdcfe⟫text⟪⟫
+ ⟪fg=#8c8c8c⟫2 ⟪fg=#9cdcfe⟫second⟪⟫ ⟪fg=#9cdcfe⟫line⟪⟫
+
+
+
+
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ ctrl+s⟪fg=#8c8c8c bg=#252526⟫ save⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ done               Ln 1, Col 2 ⟪⟫

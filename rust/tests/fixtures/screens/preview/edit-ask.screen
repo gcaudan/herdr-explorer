@@ -1,0 +1,13 @@
+size 50x12
+⟪bg=#252526 b⟫ code.js ●⟪fg=#8c8c8c bg=#252526⟫  modified⟪bg=#252526⟫              ⟪fg=#d4d4d4 bg=#04395e b⟫ File ⟪fg=#8c8c8c bg=#3a3a3e⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+ ⟪fg=#8c8c8c⟫╭──────────────────────────────────────────────╮⟪⟫
+ ⟪fg=#8c8c8c⟫│⟪b⟫ Save the changes?⟪⟫                            ⟪fg=#8c8c8c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫│⟪⟫                                              ⟪fg=#8c8c8c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫│⟪⟫ code.js                                      ⟪fg=#8c8c8c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫│ in $ROOT/work⟪⟫            ⟪fg=#8c8c8c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫│⟪⟫                                              ⟪fg=#8c8c8c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫│⟪⟫  ⟪fg=#ffffff bg=#2e6e3a b⟫ s Save ⟪⟫  ⟪fg=#e5786d bg=#2d2d2d⟫ d Don't save ⟪⟫  ⟪fg=#8c8c8c bg=#2d2d2d⟫ esc Cancel ⟪⟫      ⟪fg=#8c8c8c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫╰──────────────────────────────────────────────╯⟪⟫
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ ctrl+s⟪fg=#8c8c8c bg=#252526⟫ save⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ done               Ln 1, Col 2 ⟪⟫

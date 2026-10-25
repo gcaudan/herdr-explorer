@@ -17,6 +17,11 @@ pub const RESTART: i32 = 75;
 /// The terminal given over to the next process by restart(): nothing more is painted nor restored.
 static HANDED: AtomicBool = AtomicBool::new(false);
 
+/// Whether the terminal was handed to the next process (restart): nothing more is written on it.
+pub fn handed() -> bool {
+    HANDED.load(Ordering::Relaxed)
+}
+
 /// What the screen reports: mouse on (motion: drags too), focus reports.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Options {

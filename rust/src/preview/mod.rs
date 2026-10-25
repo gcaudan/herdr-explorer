@@ -10,6 +10,7 @@
 //! over the tabs (enterShow), the review notes and the lines changed since HEAD.
 //! TODO(case 20): the update watched, the preview restarted on the new code.
 
+mod edit;
 mod input;
 mod render;
 
@@ -84,6 +85,8 @@ pub struct TabView {
     marks: Vec<Mark>,
     mark: usize,
     raw: bool,
+    /// A tab being edited keeps its text, cursor and history while another tab shows (never saved for a restart).
+    edit: Option<edit::Shared>,
 }
 
 type PaneTabs = Tabs<Option<TabView>>;
@@ -190,6 +193,10 @@ pub struct State {
     help: Option<HelpState>,
     /// The footer's keys, for clicks: none while the find or a message takes the line.
     hints: Option<ui::Hints>,
+    /// The edit mode (i, see start_edit), shared with its tab.
+    edit: Option<edit::Shared>,
+    /// A question in a card (ui::ask).
+    ask: Option<edit::Question>,
 }
 
 /// The Kitty graphics protocol: whether the terminal answered, whether its answer is still awaited (500 ms at most),
@@ -254,6 +261,10 @@ pub struct Preview {
     last_tab: (Option<Instant>, Option<usize>),
     /// What save_file wrote or would write now, for the exit hook: an ending signal exits from the screen's wait.
     snapshot: Arc<Mutex<Option<Value>>>,
+    /// A drag selecting text while editing.
+    edit_drag: bool,
+    /// The text copied last, for ctrl+v when the system's clipboard cannot be read.
+    clip: String,
 }
 
 /// file inside dir (or dir itself), by their paths.
@@ -320,6 +331,7 @@ fn saved_tabs(text: Option<String>) -> PaneTabs {
                 marks: clean_marks(x.get("marks")),
                 mark: 0,
                 raw: x.get("raw").is_some_and(Value::truthy),
+                edit: None,
             }),
         })
         .collect();
@@ -399,6 +411,8 @@ impl Preview {
                 menu: None,
                 help: None,
                 hints: None,
+                edit: None,
+                ask: None,
             },
             settings_watch: exec::settings_file().map(|f| Watch::new(&f, Duration::from_millis(1000))),
             layout_seen: json::stringify(exec::read_settings().get("diffLayout").unwrap_or(&Value::Null)),
@@ -424,6 +438,8 @@ impl Preview {
             last_click: (None, 0, 0, 0),
             last_tab: (None, None),
             snapshot: Arc::new(Mutex::new(None)),
+            edit_drag: false,
+            clip: String::new(),
             pane,
             tab,
         };
@@ -444,6 +460,9 @@ impl Preview {
         exec::at_exit(move || {
             if let Some(data) = snapshot.lock().unwrap_or_else(|e| e.into_inner()).take() {
                 exec::write_pane_state(&pane, &data);
+            }
+            if edit::CURSOR_SHOWN.load(std::sync::atomic::Ordering::Relaxed) {
+                let _ = sys::write_stdout(b"\x1b[0 q");
             }
         });
         self.check_width(false);
@@ -496,6 +515,9 @@ impl Preview {
                     // The highlighted source too is in the theme's colours: read again.
                     Input::Theme => {
                         self.state.rows = None;
+                        if let Some(e) = &self.state.edit {
+                            e.0.borrow_mut().forget_colours();
+                        }
                         if self.state.file.is_empty() {
                             self.render();
                         } else {
@@ -588,6 +610,7 @@ impl Preview {
             marks: s.marks.clone(),
             mark: s.mark,
             raw: s.raw,
+            edit: s.edit.clone(),
         });
     }
 
@@ -605,6 +628,7 @@ impl Preview {
         s.marks = v.marks;
         s.mark = v.mark;
         s.raw = v.raw;
+        s.edit = v.edit;
     }
 
     /// The tab i shown as it was left: its file loaded again, at its scroll, in its view.
@@ -647,22 +671,21 @@ impl Preview {
         if i >= self.tabs.list.len() {
             return;
         }
-        // TODO(case 12b): its unsaved edits saved or not first.
-        let was = self.tabs.current;
-        self.stash();
-        self.tabs = tabs::close(&self.tabs, i);
-        if i == was {
-            return self.enter_tab();
-        }
-        self.save_file();
-        self.render();
-    }
-
-    /// q, or the last tab closed: the preview closes.
-    fn quit(&mut self) {
-        // TODO(case 12b): once the unsaved edits of its tabs are saved or dropped.
-        self.save_file();
-        self.screen.exit(0)
+        let (edit, file) = (self.edit_at(i), self.tabs.list[i].file.clone());
+        self.unsaved(
+            edit,
+            file,
+            Box::new(move |p: &mut Preview| {
+                let was = p.tabs.current;
+                p.stash();
+                p.tabs = tabs::close(&p.tabs, i);
+                if i == was {
+                    return p.enter_tab();
+                }
+                p.save_file();
+                p.render();
+            }),
+        );
     }
 
     /// The tabs, with the scroll and view of each (the marks of the tab shown only: EXPLORER_MARKS), for the next
@@ -724,9 +747,13 @@ impl Preview {
             return;
         };
         // same: a tab that already showed the file, as it was left; other: the pane shows another file than before.
+        // A question of the tab shown is dropped, as canceled: its answer would go to another tab.
+        self.drop_ask();
         let (prev, was) = (self.state.file.clone(), self.tabs.current);
         self.stash();
-        let opened = tabs::open(&self.tabs, &asked, req.get("keep") == Some(&Value::Bool(true)), |_| false);
+        let busy =
+            |t: &tabs::Tab<Option<TabView>>| t.extra.as_ref().and_then(|v| v.edit.as_ref()).is_some_and(|e| e.dirty());
+        let opened = tabs::open(&self.tabs, &asked, req.get("keep") == Some(&Value::Bool(true)), busy);
         self.tabs = opened.tabs;
         if opened.fresh || self.tabs.current != was {
             self.unstash();
@@ -747,6 +774,15 @@ impl Preview {
             s.matches.clear();
         }
         s.diff = diff;
+        // A tab being edited stays in its edit mode, its cursor on the line asked for.
+        if let Some(e) = &s.edit {
+            s.diff = false;
+            if s.line != 0.0 {
+                let mut e = e.0.borrow_mut();
+                e.ed.goto(s.line as usize);
+                e.reveal = true;
+            }
+        }
         if other {
             s.find = None;
             s.select = None;
@@ -757,7 +793,7 @@ impl Preview {
         self.load(keep_scroll);
         self.show_marks();
         self.save_file();
-        if self.state.line != 0.0 && !self.state.diff {
+        if self.state.line != 0.0 && !self.state.diff && self.state.edit.is_none() {
             self.state.top = (self.row_of(self.state.line - 1.0) - self.third()).max(0);
             self.render();
         }
@@ -897,6 +933,9 @@ impl Preview {
         if self.state.find.as_ref().is_some_and(|f| !f.field.value.is_empty()) {
             self.search(false);
         }
+        if self.state.edit.is_some() {
+            self.disk_changed();
+        }
         self.render();
     }
 
@@ -907,6 +946,9 @@ impl Preview {
         s.rows = None;
         s.plain.clear();
         s.source.clear();
+        if self.state.edit.is_some() {
+            self.disk_changed();
+        }
         self.render();
     }
 

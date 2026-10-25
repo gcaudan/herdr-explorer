@@ -1,0 +1,13 @@
+size 60x12
+⟪fg=#8c8c8c bg=#252526⟫ a.txt ● ⟪fg=#d4d4d4 bg=#37373d b⟫ b.txt ⟪fg=#8c8c8c bg=#37373d⟫× ⟪fg=#8c8c8c bg=#252526⟫  1 line · 5 B⟪bg=#252526⟫            ⟪fg=#d4d4d4 bg=#04395e b⟫ File ⟪fg=#8c8c8c bg=#3a3a3e⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+     ⟪fg=#8c8c8c⟫╭────────────────────────────────────────────────╮⟪⟫
+     ⟪fg=#8c8c8c⟫│⟪b⟫ Save the changes?⟪⟫                              ⟪fg=#8c8c8c⟫│⟪⟫
+     ⟪fg=#8c8c8c⟫│⟪⟫                                                ⟪fg=#8c8c8c⟫│⟪⟫
+     ⟪fg=#8c8c8c⟫│⟪⟫ a.txt                                          ⟪fg=#8c8c8c⟫│⟪⟫
+     ⟪fg=#8c8c8c⟫│ in $ROOT/work⟪⟫             ⟪fg=#8c8c8c⟫│⟪⟫
+     ⟪fg=#8c8c8c⟫│⟪⟫                                                ⟪fg=#8c8c8c⟫│⟪⟫
+     ⟪fg=#8c8c8c⟫│⟪⟫  ⟪fg=#ffffff bg=#2e6e3a b⟫ s Save ⟪⟫  ⟪fg=#e5786d bg=#2d2d2d⟫ d Don't save ⟪⟫  ⟪fg=#8c8c8c bg=#2d2d2d⟫ esc Cancel ⟪⟫        ⟪fg=#8c8c8c⟫│⟪⟫
+     ⟪fg=#8c8c8c⟫╰────────────────────────────────────────────────╯⟪⟫
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   a⟪fg=#8c8c8c bg=#252526⟫ note⟪fg=#d4d4d4 bg=#252526 b⟫   e⟪fg=#8c8c8c bg=#252526⟫ editor⟪fg=#d4d4d4 bg=#252526 b⟫   o⟪fg=#8c8c8c bg=#252526⟫ app⟪fg=#d4d4d4 bg=#252526 b⟫   z⟪fg=#8c8c8c bg=#252526⟫ zoom⟪fg=#d4d4d4 bg=#252526 b⟫   q⟪fg=#8c8c8c bg=#252526⟫ close      ⟪⟫

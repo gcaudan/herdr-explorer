@@ -1,0 +1,11 @@
+# The file changed on disk while edited with changes: the bar; then ctrl+s asks before overwriting.
+size 50 12
+file code.js const answer = 42;\nconsole.log(answer);\nlet apple = 1;\nlet apples = apple + 1;\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/code.js
+start
+keys i
+text X
+file code.js changed on disk, and longer than before\n
+wait 600
+keys ctrl+s

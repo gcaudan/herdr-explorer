@@ -11,7 +11,7 @@ use crate::unicode;
 use std::time::{Duration, Instant};
 
 /// Two clicks closer than this are a double click.
-const DOUBLE: Duration = Duration::from_millis(400);
+pub(super) const DOUBLE: Duration = Duration::from_millis(400);
 
 /// The end of the character at, with the combining marks that follow it (a decomposed accent, an emoji selector).
 fn char_end(text: &str, at: usize) -> usize {
@@ -71,7 +71,13 @@ impl Preview {
                     }));
                 }
             }
-            Event::Paste { text, .. } => {
+            Event::Paste { text, raw } => {
+                if self.state.ask.is_some() {
+                    return;
+                }
+                if self.state.edit.is_some() {
+                    return self.edit_paste(&text, Some(&raw));
+                }
                 if let Some(f) = self.state.find.as_mut().filter(|f| f.active) {
                     f.field.insert(&text);
                     self.search(true);
@@ -110,8 +116,14 @@ impl Preview {
     }
 
     pub(super) fn key(&mut self, k: &str) {
+        if self.state.ask.is_some() {
+            return self.ask_key(k);
+        }
         if self.state.menu.is_some() {
             return self.menu_key(k);
+        }
+        if self.state.edit.is_some() && self.state.help.is_none() {
+            return self.edit_key(k);
         }
         if let Some(f) = self.state.find.as_mut().filter(|f| f.active) {
             if k == "escape" {
@@ -133,6 +145,11 @@ impl Preview {
         }
         let page = self.size().1 as i64 - 3;
         // The key help (ui::help_key): scrolls, finds with /, closes with esc, q, ? or f1.
+        // While editing, ctrl+c (copy there) only closes the help, never the pane.
+        if self.state.help.is_some() && self.state.edit.is_some() && k == "ctrl+c" {
+            self.state.help = None;
+            return self.render();
+        }
         if let Some(help) = &mut self.state.help
             && k != "ctrl+c"
         {
@@ -253,8 +270,7 @@ impl Preview {
                     _ => actions::app(&file, &pane),
                 })
             }
-            // TODO(case 12b): the edit mode.
-            "i" => {}
+            "i" => self.start_edit(),
             "y" => {
                 let file = self.state.file.clone();
                 self.act(move || Some(actions::copy(&file, "Path copied")))
@@ -299,6 +315,9 @@ impl Preview {
     }
 
     fn toggle_view(&mut self) {
+        if self.state.edit.is_some() {
+            return self.flash(Some("Not while editing: esc first".into()));
+        }
         let s = &mut self.state;
         s.diff = !s.diff;
         s.rows = None;
@@ -382,13 +401,17 @@ impl Preview {
         let mut items = Vec::new();
         // TODO(case 13): the Diff view's options (layout, wrap, compare with).
         if !s.diff {
-            if s.kind == Kind::Text || (s.kind == Kind::Markdown && s.raw) {
+            let editing = s.edit.is_some();
+            if !editing && (s.kind == Kind::Text || (s.kind == Kind::Markdown && s.raw)) {
                 items.push(item("Wrap lines", "w", ui::on_off(self.on("wrap")), Opt::Wrap, true));
                 items.push(item("Line numbers", "L", ui::on_off(self.on("lineNumbers")), Opt::LineNumbers, true));
                 items.push(item("Changes", "c", ui::on_off(self.on("changes")), Opt::Changes, true));
             }
-            if matches!(s.kind, Kind::Text | Kind::Markdown) {
-                items.push(item("Edit here", "i", ui::on_off(false), Opt::Edit, false));
+            if editing {
+                items.push(item("Line numbers", "L", ui::on_off(self.on("lineNumbers")), Opt::LineNumbers, true));
+            }
+            if editing || matches!(s.kind, Kind::Text | Kind::Markdown) {
+                items.push(item("Edit here", "i", ui::on_off(editing), Opt::Edit, false));
             }
         }
         if items.is_empty() {
@@ -413,8 +436,13 @@ impl Preview {
                     Opt::LineNumbers => self.toggle("lineNumbers"),
                     // TODO(case 13): the changes loaded again.
                     Opt::Changes => self.toggle("changes"),
-                    // TODO(case 12b): the edit mode.
-                    Opt::Edit => {}
+                    Opt::Edit => {
+                        if self.state.edit.is_some() {
+                            self.stop_edit()
+                        } else {
+                            self.start_edit()
+                        }
+                    }
                 }
                 if keep {
                     self.open_menu(sel);
@@ -434,6 +462,10 @@ impl Preview {
 
     pub(super) fn mouse(&mut self, m: &Mouse) {
         let (w, h) = self.size();
+        if let Some(q) = &self.state.ask {
+            let choice = ui::ask_mouse(m, &q.ask);
+            return self.ask_choice(choice);
+        }
         if let Some(menu) = &mut self.state.menu {
             let r = menu.mouse(m, h as i64);
             return self.menu_choice(r);
@@ -453,6 +485,9 @@ impl Preview {
             && let Some(k) = self.state.hints.as_ref().and_then(|hints| ui::key_at(hints, m.x - 1, 0))
         {
             return self.key(&k);
+        }
+        if self.state.edit.is_some() {
+            return self.edit_mouse(m);
         }
         // The wheel scrolls under a selection, which may still be dragged: the button state is unknown here.
         if m.wheel != 0 {
@@ -479,7 +514,7 @@ impl Preview {
     }
 
     /// A click on the header: a tab shown, kept on a double-click, closed by a middle click or its ×; ⚙; File · Diff.
-    fn header_mouse(&mut self, m: &Mouse) {
+    pub(super) fn header_mouse(&mut self, m: &Mouse) {
         if !m.press || m.drag || (m.button != 0 && m.button != 1) {
             return;
         }

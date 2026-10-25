@@ -1,0 +1,13 @@
+# A tab with unsaved edits shows ● in the strip and the header; q in another tab asks about it.
+size 60 12
+file a.txt alpha\n
+file b.txt beta\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/a.txt
+env EXPLORER_ROOT=$ROOT/work
+env EXPLORER_TABS={"current":0,"list":[{"file":"$ROOT/work/a.txt","kept":true},{"file":"$ROOT/work/b.txt","kept":true}]}
+start
+keys i
+text more 
+text \e[6;5~
+keys q
