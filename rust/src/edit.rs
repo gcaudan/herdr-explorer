@@ -61,7 +61,7 @@ pub fn run(_args: &[String]) -> i32 {
     // The pane's folder, which new spaces, tabs and panes made from it start in (launch.rs); the file's without a
     // root.
     let dir = exec::env_var("EXPLORER_ROOT").or_else(|| file.as_deref().map(paths::dirname));
-    crate::launch::home(dir.as_deref());
+    crate::core::exec::home(dir.as_deref());
     let Some(file) = file else { return fail("No file.\r\n") };
     let Some((cmd, args)) = editor() else { return fail("No terminal editor found: set $EDITOR.\r\n") };
     // Node runs no batch file without a shell (EINVAL); Rust would, through cmd.

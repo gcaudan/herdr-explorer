@@ -24,6 +24,16 @@ pub fn env_var(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|s| !s.is_empty())
 }
 
+/// Herdr starts plugin panes in the plugin's folder and reads a pane's folder from its first process: in the space
+/// folder, a new space, tab or pane made from this one starts there instead of in the plugin's checkout. Done by the
+/// first process of every pane; `None` is EXPLORER_ROOT.
+pub fn home(dir: Option<&str>) {
+    let dir = dir.map(String::from).or_else(|| env_var("EXPLORER_ROOT"));
+    if let Some(dir) = dir.filter(|d| !d.is_empty()) {
+        let _ = std::env::set_current_dir(dir);
+    }
+}
+
 type Hook = Box<dyn FnOnce() + Send>;
 static EXIT_HOOKS: Mutex<Vec<Hook>> = Mutex::new(Vec::new());
 

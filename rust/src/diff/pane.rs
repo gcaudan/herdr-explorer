@@ -238,7 +238,7 @@ impl Pane {
             .or_else(|| (!file.is_empty()).then(|| paths::dirname(&file)))
             .unwrap_or_else(|| std::env::current_dir().map(|d| d.to_string_lossy().into_owned()).unwrap_or_default());
         // the pane's folder for new spaces, tabs and panes made from it
-        crate::launch::home(None);
+        crate::core::exec::home(None);
         let pane = exec::env_var("HERDR_PANE_ID").unwrap_or_default();
         let from = env("EXPLORER_PANE").unwrap_or_else(|| pane.clone());
         let screen = Screen::open(screen::Options { mouse: true, motion: true, focus: true })?;

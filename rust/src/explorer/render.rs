@@ -6,7 +6,7 @@ use crate::core::icons;
 use crate::core::js;
 use crate::core::paths;
 use crate::core::ui::{self, Seg, c, fg, g, line, seg, text_width};
-use crate::explorer::tree::{self, Entry};
+use crate::explorer::tree::Entry;
 
 pub(super) fn chevron(open: bool) -> &'static str {
     if open { g().open } else { g().closed }
@@ -312,7 +312,7 @@ impl Explorer {
             if b > js::utf16_len(&name) {
                 return None;
             }
-            Some((tree::unit_at(&name, a)?, tree::unit_at(&name, b)?))
+            Some((js::unit_at(&name, a)?, js::unit_at(&name, b)?))
         });
         let parts = match hit {
             Some((a, b)) => vec![

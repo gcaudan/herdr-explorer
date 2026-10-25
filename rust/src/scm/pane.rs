@@ -208,7 +208,7 @@ impl Pane {
     fn new(args: &[String]) -> std::io::Result<Pane> {
         let root = context::root(args);
         // the pane's folder for new spaces, tabs and panes made from it
-        crate::launch::home(None);
+        crate::core::exec::home(None);
         ui::init_theme();
         let settings = exec::read_settings();
         ui::use_glyphs(settings.get("glyphs").and_then(Value::as_str).unwrap_or(""));

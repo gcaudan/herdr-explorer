@@ -211,7 +211,7 @@ impl Search {
         ui::use_glyphs(settings.get("glyphs").and_then(Value::as_str).unwrap_or(""));
         let root = paths::resolve(&[&env("EXPLORER_ROOT").or_else(|| args.first().cloned()).unwrap_or_default()]);
         // the pane's folder for new spaces, tabs and panes made from it
-        crate::launch::home(None);
+        crate::core::exec::home(None);
         let save_file = exec::state_dir().map(|d| paths::join(&[&d, "search.json"]));
         let saved = save_file
             .as_deref()

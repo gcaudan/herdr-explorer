@@ -6,7 +6,6 @@ use crate::core::scope;
 use crate::core::tabs;
 use crate::core::ui::{self, Seg, bg, c, fg, g, seg, text_width};
 use crate::core::{js, paths};
-use crate::explorer::tree::unit_at;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -123,7 +122,7 @@ fn byte_of(text: &str, u: i64) -> usize {
     if u <= 0 {
         return 0;
     }
-    unit_at(text, u as usize).unwrap_or_else(|| {
+    js::unit_at(text, u as usize).unwrap_or_else(|| {
         // Inside a surrogate pair: at the character's start, as a slice of the JS would cut it.
         let mut n = 0;
         for (i, ch) in text.char_indices() {

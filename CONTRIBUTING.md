@@ -70,7 +70,9 @@ Keep the conventions of the existing code:
 
 herdr runs the shims of `src/` (the manifest names them, and the shim relaunches the binary on a self-restart); they
 start `bin/herdr-explorer` with a subcommand: `pane <id>` for the panes, `hook` for the events and actions, `peek`.
-The crate lives in `rust/`; each module's first lines say what it holds and which JS file it ports.
+The crate lives in `rust/`; each module's first lines say what it holds and which JS file it ports. Its modules form
+four layers (entries, panes, shared, base) that `rust/tests/layers.rs` checks: see
+[How it works](docs/architecture.md#how-it-works).
 
 | Path                  | Role                                                                                         |
 | --------------------- | -------------------------------------------------------------------------------------------- |
@@ -125,6 +127,7 @@ every push to `main`, on Linux (x86_64 and arm64), macOS and Windows, and checks
 | `shims.rs` | every script of the root and of `src/` passes `node --check` |
 | `smoke.rs` | the shims as herdr runs them (Linux): each pane started and quit, the hook and peek, the restart on code 75 and the folder announced through `EXPLORER_IPC_FILE` |
 | `docs.rs` | relative links and `#anchors` of `README.md`, `SECURITY.md`, `CONTRIBUTING.md` and `docs/*.md` |
+| `layers.rs` | imports follow the layers of [How it works](docs/architecture.md#how-it-works): never up a layer, never from one pane to another |
 | `show.rs` | a commit, stash or tag shown by the preview's Diff view |
 | `ui.rs` | terminal width of text (emoji, flags, wide characters), the segment helpers and the menus |
 | `editor.rs` | in-place editing (`core::buffer`) |

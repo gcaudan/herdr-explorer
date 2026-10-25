@@ -17,16 +17,6 @@ use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
 
-/// Herdr starts plugin panes in the plugin's folder and reads a pane's folder from its first process: in the space
-/// folder, a new space, tab or pane made from this one starts there instead of in the plugin's checkout. Done by the
-/// first process of every pane; `None` is EXPLORER_ROOT.
-pub fn home(dir: Option<&str>) {
-    let dir = dir.map(String::from).or_else(|| exec::env_var("EXPLORER_ROOT"));
-    if let Some(dir) = dir.filter(|d| !d.is_empty()) {
-        let _ = std::env::set_current_dir(dir);
-    }
-}
-
 /// The launcher's exit code, once its last child ended; `None` in the child, which goes on to run the pane.
 pub fn launch() -> Option<i32> {
     if let Some(ipc) = std::env::var_os("EXPLORER_IPC_FILE") {
@@ -41,7 +31,7 @@ pub fn launch() -> Option<i32> {
         watch_parent(launcher);
         return None;
     }
-    home(None);
+    exec::home(None);
     let Ok(exe) = std::env::current_exe() else { return Some(1) };
     let args: Vec<OsString> = std::env::args_os().skip(1).collect();
     Some(launcher(&exe, &args))
@@ -166,7 +156,7 @@ fn messages(ipc: &Path, seen: &mut usize, env: &mut Vec<(String, String)>) {
             }
         }
         if let Some(Value::Str(cwd)) = m.get("cwd").filter(|c| c.truthy()) {
-            home(Some(cwd));
+            exec::home(Some(cwd));
         }
     }
 }

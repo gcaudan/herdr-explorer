@@ -198,7 +198,7 @@ fn parse_into(git: &mut Status, status: &str, prefix: &str, base: &str) {
             i += 1;
         }
         // From the 4th UTF-16 unit, as slice(3); a cut inside a surrogate pair skips the line.
-        let Some(mut rel) = unit_at(p, 3).map(|at| &p[at..]) else { continue };
+        let Some(mut rel) = js::unit_at(p, 3).map(|at| &p[at..]) else { continue };
         if !prefix.is_empty() {
             let Some(r) = rel.strip_prefix(prefix).and_then(|r| r.strip_prefix('/')) else { continue };
             rel = r;
@@ -291,18 +291,6 @@ fn hit_of(name: &str, query: &str) -> Option<(usize, usize)> {
         name.len()
     };
     Some((byte(from), byte(to)))
-}
-
-/// The byte offset of the UTF-16 unit `units` of s (its length past the end); None inside a surrogate pair.
-pub(crate) fn unit_at(s: &str, units: usize) -> Option<usize> {
-    let mut n = 0;
-    for (i, c) in s.char_indices() {
-        if n >= units {
-            return (n == units).then_some(i);
-        }
-        n += c.len_utf16();
-    }
-    (n <= units).then_some(s.len())
 }
 
 impl Tree {

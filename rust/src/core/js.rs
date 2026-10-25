@@ -47,6 +47,18 @@ pub fn utf16_len(s: &str) -> usize {
     s.chars().map(char::len_utf16).sum()
 }
 
+/// The byte offset of the UTF-16 unit `units` of s (its length past the end); None inside a surrogate pair.
+pub fn unit_at(s: &str, units: usize) -> Option<usize> {
+    let mut n = 0;
+    for (i, c) in s.char_indices() {
+        if n >= units {
+            return (n == units).then_some(i);
+        }
+        n += c.len_utf16();
+    }
+    (n <= units).then_some(s.len())
+}
+
 pub use crate::unicode::locale_compare;
 
 /// `x === y` on fields of JSON values (None: undefined): an object or an array is never equal to another.

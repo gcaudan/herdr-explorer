@@ -33,6 +33,18 @@ parser and renderer that the preview's Diff view and source control use). Shared
 and state files, actions, terminal UI, the editing buffer, preview tabs, review notes, icons, updates, regular
 expressions, paths), `render/` (syntax highlighting, Markdown, images, branch graph), `codec/` (inflate, deflate,
 SHA-1, SHA-256, base64), `sys/` (the terminal, signals and file watching of each system), `unicode/` and `json.rs`.
+
+The modules form four layers, and an import only goes to the same layer or a lower one:
+
+| Layer   | Modules                                                   | May import                          |
+| ------- | --------------------------------------------------------- | ----------------------------------- |
+| entries | `cli`, `hook`, `peek`, `launch`, `edit`, `main`, `lib`    | everything                          |
+| panes   | `explorer`, `preview`, `search`, `scm`, `changes`         | shared and base, never another pane |
+| shared  | `core`, `render`, `diff` (the diff library)               | shared and base                     |
+| base    | `codec`, `unicode`, `json`, `sys`                         | base                                |
+
+`rust/tests/layers.rs` reads the `crate::…` paths of every file and fails on one that goes up a layer or across
+panes; it has no exception. What two panes need goes down to `core/`.
 The `*.js` files at the top of the repository only load their counterpart in `src/`, for panes and hooks started
 from a 0.5.x manifest until the installer is run again.
 
