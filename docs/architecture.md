@@ -1,10 +1,12 @@
 # How it works
 
 The plugin is one binary, `bin/herdr-explorer`, written in Rust with no crate beyond the standard library (`src/`).
-`herdr-plugin.toml` declares its commands to herdr as `node src/<script>.js`: each of those scripts is a small shim
-that starts the binary with the matching subcommand (`pane <id>`, `hook`, `peek`), downloading it first when it is
-missing or of another version ([The binary](installation.md#the-binary)). The manifest's `[[build]]` steps run
-`scripts/fetch-bin` for `herdr plugin install` and `update`.
+`herdr-plugin.toml` runs the explorer and preview panes as the binary itself (`bin/herdr-explorer pane tree`,
+`bin/herdr-explorer pane preview`; herdr resolves the relative path from the plugin's folder), so that no Node
+process stays in those long-lived panes. Its other commands are `node src/<script>.js`: each of those scripts is a
+small shim that starts the binary with the matching subcommand (`pane <id>`, `hook`, `peek`), downloading it first
+when it is missing or of another version ([The binary](installation.md#the-binary)). The manifest's `[[build]]`
+steps run `scripts/fetch-bin` for `herdr plugin install` and `update`.
 
 `herdr-explorer --version` (or `-V`) prints the version that `build.rs` embeds from the manifest; a command line it
 does not know prints the usage and exits with code 2. Each start of `hook`, `peek` or `pane` deletes the binaries
@@ -18,8 +20,8 @@ runs until a later start.
 | event     | `tab.closed`, `workspace.closed` | `node src/hook.js --closed` |        |
 | event     | `pane.agent_status_changed` | `node src/hook.js --agent` |              |
 | event     | `tab.focused` | `node src/hook.js --focused` |                         |
-| pane      | `tree`     | `node src/explorer.js`      | split                     |
-| pane      | `preview`  | `node src/preview.js`       | split                     |
+| pane      | `tree`     | `bin/herdr-explorer pane tree` | split                  |
+| pane      | `preview`  | `bin/herdr-explorer pane preview` | split               |
 | pane      | `search`   | `node src/search.js`        | tab                       |
 | pane      | `scm`      | `node src/scm.js`           | tab                       |
 | pane      | `diff`     | `node src/diff.js`          | split                     |
@@ -279,9 +281,9 @@ put back by the same pane, so that they are not moved twice (herdr resizes by a 
 
 ## Launcher and self-restart
 
-The explorer and preview panes run through a small launcher. The pane's first process, the shim `src/explorer.js`
-or `src/preview.js` (or the binary itself, started without one), stays as the launcher and runs the binary as a
-child process, with `EXPLORER_IPC_FILE` naming the file where the child writes its messages, a line of JSON each,
+The explorer and preview panes run through a small launcher. The pane's first process, the binary started by the
+manifest without `EXPLORER_IPC_FILE` (or, in a pane opened by an earlier manifest, the shim `src/explorer.js` or
+`src/preview.js`), stays as the launcher and runs the binary as a child process, with `EXPLORER_IPC_FILE` naming the file where the child writes its messages, a line of JSON each,
 and `EXPLORER_LAUNCHER` giving the launcher's pid. The file sits in a new folder of its own (mode 0700 on Unix), so
 that another user cannot write the messages first.
 
@@ -305,7 +307,8 @@ A process cannot replace itself on Windows, and one that only waited for its suc
 one more at each update. The launcher does nothing else, so it stays on the code it started with.
 
 The search, source control, changes and editor panes are short-lived and have no launcher: their shim runs the
-binary once and gives back its code. In a pane opened before the update to the binary, the launcher of 0.8.0 (Node)
+binary once and gives back its code. The shims `src/explorer.js` and `src/preview.js` stay for the panes opened
+under an earlier manifest: the one that ran them still runs them at a restart. In a pane opened before the update to the binary, the launcher of 0.8.0 (Node)
 still runs, and the shim is its child: it hands the binary's messages on to it and gives back the code, 75 included,
 so that the launcher starts the shim again. A pane
 started by a version without the launcher (0.4.0 and earlier) is the exception, see

@@ -420,6 +420,28 @@ fn the_shim_starts_the_preview_again_on_new_code_with_what_it_asked_for() {
 }
 
 #[test]
+fn the_binary_started_by_the_manifest_starts_the_preview_again_on_new_code() {
+    let Some(s) = Setup::new("restart-bin") else { return };
+    let file = s.work.join("a.txt").display().to_string();
+    let root = s.work.display().to_string();
+    // As the manifest runs it: no shim, the binary is its own launcher (no EXPLORER_IPC_FILE).
+    let bin = vec![s.plugin.join("bin/herdr-explorer").into(), "pane".into(), "preview".into()];
+    let mut p = s.start(&bin, &[("EXPLORER_FILE", &file), ("EXPLORER_ROOT", &root)]);
+    p.until("hello smoke");
+    assert_eq!(s.starts(), [format!("pane preview file={file} view= ipc=")]);
+    let mark = p.quiet();
+    let toml = s.plugin.join("herdr-plugin.toml");
+    let text = std::fs::read_to_string(&toml).unwrap();
+    std::fs::write(&toml, text.replacen("version = \"", "version = \"9.9.9-", 1)).unwrap();
+    // The launcher starts its own path again (bin/herdr-explorer.real here), which the wrapper does not log: the new
+    // screen, drawn in the same terminal, tells the restart.
+    p.until_after(mark, "hello smoke");
+    p.send(b"q");
+    assert_eq!(p.code(), Some(0), "{}", p.screen());
+    p.none_left();
+}
+
+#[test]
 fn the_explorers_shim_takes_the_folder_the_binary_announces() {
     let Some(s) = Setup::new("cwd") else { return };
     std::fs::create_dir_all(s.work.join("sub/deep")).unwrap();

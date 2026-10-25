@@ -10,7 +10,7 @@ the release of its version (see [The binary](#the-binary)).
 | Requirement | Used for |
 |---|---|
 | herdr 0.9.4 or later, as `herdr` on `PATH` (or its path in `HERDR_BIN_PATH`) | the host (`min_herdr_version` in `herdr-plugin.toml`) |
-| Node.js 20 or later, as `node` on the `PATH` herdr gives plugins | the manifest's commands, `node src/<script>.js` : small shims that start the binary |
+| Node.js 20 or later, as `node` on the `PATH` herdr gives plugins | the manifest's hooks, actions and short-lived panes, `node src/<script>.js` : small shims that start the binary (the explorer and preview panes run the binary directly) |
 | `curl`, and `sha256sum` or `shasum` (`curl.exe` and PowerShell on Windows, both built in on Windows 10 and later) | downloading the binary and checking it, at install and at each update |
 | Linux or macOS on x86_64 or arm64, or Windows on x86_64 or arm64 | the platforms with a release binary; elsewhere, build it with [dev-build](#building-the-binary) |
 | A [Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr | icons, chevrons and header icons; without one, choose emoji, Unicode or ASCII icons in the settings ([Without a Nerd Font](configuration.md#without-a-nerd-font)) |
@@ -146,7 +146,10 @@ manifest, `src/<script>.js`, only start it. `scripts/fetch-bin.sh` (`scripts\fet
 
 One fetch runs at a time (`bin/.fetch.lock`, taken over after 2 min). On any failure, no curl, no download, a hash
 that does not match, `bin/` is left as it was and the script says why. A shim that finds no binary, or one of
-another version, runs the same script before it starts the binary.
+another version, runs the same script before it starts the binary. The explorer and preview panes start the binary
+directly and fetch nothing: after a `git pull` of the clone, without `herdr plugin update`, the hook's shim fetches
+the new binary at the next tab event, but an explorer or preview that restarts first stays on the old one until
+it is reopened.
 
 ### Building the binary
 

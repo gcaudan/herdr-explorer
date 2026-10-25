@@ -6,6 +6,7 @@ description = "VS Code-style file explorer, preview, search and source control f
 platforms = ["linux", "macos", "windows"]
 
 # The binary, bin/herdr-explorer, fetched for herdr plugin install and update (the shims fetch it too when missing).
+# The explorer and the preview run it directly, as their own launcher: no Node process stays in those panes.
 [[build]]
 platforms = ["linux", "macos"]
 command = ["sh", "scripts/fetch-bin.sh"]
@@ -41,13 +42,13 @@ command = ["node", "src/hook.js", "--focused"]
 id = "tree"
 title = "Explorer"
 placement = "split"
-command = ["node", "src/explorer.js"]
+command = ["bin/herdr-explorer", "pane", "tree"]
 
 [[panes]]
 id = "preview"
 title = "Preview"
 placement = "split"
-command = ["node", "src/preview.js"]
+command = ["bin/herdr-explorer", "pane", "preview"]
 
 [[panes]]
 id = "search"

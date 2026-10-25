@@ -43,3 +43,14 @@ fn every_script_the_manifest_runs_exists() {
         assert!(root.join(s).is_file(), "herdr-plugin.toml runs {s}, which does not exist");
     }
 }
+
+#[test]
+fn the_manifest_runs_the_binary_for_the_explorer_and_the_preview() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let manifest = std::fs::read_to_string(root.join("herdr-plugin.toml")).unwrap();
+    // Their own launcher: no node process stays in these long-lived panes.
+    for id in ["tree", "preview"] {
+        let command = format!("command = [\"bin/herdr-explorer\", \"pane\", \"{id}\"]");
+        assert!(manifest.contains(&command), "herdr-plugin.toml does not run {command}");
+    }
+}
