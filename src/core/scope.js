@@ -93,11 +93,13 @@ function revKey(field, k) {
 
 // The branches of the repository holding cwd, local then remote, the latest commit first, for Branch….
 async function branches(cwd) {
-  const out = await run(GIT, ['for-each-ref', '--sort=-committerdate', '--format=%(refname)%00%(refname:short)', 'refs/heads', 'refs/remotes'],
+  const out = await run(GIT, ['for-each-ref', '--sort=-committerdate', '--format=%(refname)%00%(symref)%00%(refname:short)', 'refs/heads', 'refs/remotes'],
     { cwd, env: await gitEnv(cwd) }) || '';
-  // origin/HEAD, whose short name is origin, left out on its full name.
-  return out.split('\n').map(l => l.split('\0')).filter(([full, short]) => short && !/^refs\/remotes\/[^/]+\/HEAD$/.test(full))
-    .map(([, short]) => short.trim());
+  // origin/HEAD, whose short name is origin, left out: a remote's symbolic ref (whatever the remote's name), or its
+  // HEAD by name when not symbolic. A local symbolic ref (master as an alias of main) stays.
+  const remoteHead = (full, sym) => full.startsWith('refs/remotes/') && (sym || /^refs\/remotes\/[^/]+\/HEAD$/.test(full));
+  return out.split('\n').map(l => l.split('\0')).filter(([full, sym, short]) => short && !remoteHead(full, sym))
+    .map(([, , short]) => short.trim());
 }
 
 // --- the agent's last turn
@@ -128,20 +130,58 @@ async function worktree(top, env, keep = false, only = null) {
   const paths = ['--', only ? `:(literal)${only}` : '.', ...big.map(f => `:(exclude,literal)${f}`)];
   const kept = keep && keptIndex(path.resolve(top, index));
   if (kept) {
+    const gitDir = path.dirname(path.resolve(top, index));
+    if (!oldCopies.has(gitDir)) {
+      // The copy that versions before 0.8.0 kept in the git folder, beside the index, with its .from, and the
+      // .<pid> copies and git's .lock of a process that died.
+      oldCopies.add(gitDir);
+      let names = [];
+      try { names = fs.readdirSync(gitDir); } catch { }
+      for (const n of names.filter(n => /^herdr-explorer-index(\.from(\.\d+)?|\.lock|\.\d+)?$/.test(n))) {
+        try { fs.rmSync(path.join(gitDir, n), { force: true }); } catch { }
+      }
+    }
     const st = fs.statSync(path.resolve(top, index), { throwIfNoEntry: false });
     const from = st ? `${st.mtimeMs}:${st.size}` : 'none';
     try {
       if (fs.readFileSync(`${kept}.from`, 'utf8') !== from || !fs.existsSync(kept)) throw new Error('stale');
     } catch {
+      // Copied while holding git's own lock of the copy: a git add of another pane running on it would otherwise put
+      // back the old copy when it ends, while .from says it is fresh. Taken already: a copy of its own.
+      const lock = `${kept}.lock`, tmp = `${kept}.${process.pid}`;
       try {
         fs.mkdirSync(path.dirname(kept), { recursive: true });
-        if (st) { fs.copyFileSync(path.resolve(top, index), `${kept}.${process.pid}`); fs.renameSync(`${kept}.${process.pid}`, kept); }
-        else fs.rmSync(kept, { force: true });
-        if (!writeAtomic(`${kept}.from`, from)) throw new Error('not written');
-      } catch { try { fs.rmSync(`${kept}.${process.pid}`, { force: true }); } catch { } return worktree(top, env, false, only); }
+        fs.closeSync(fs.openSync(lock, 'wx'));
+      } catch {
+        // Never removed here, whatever its age: git add can hold it for minutes on a large repository, and nothing
+        // tells whose it is. One left by a process that died goes with the weekly sweep (sweepState).
+        return worktree(top, env, false, only);
+      }
+      try {
+        // Another pane may have copied it while this one waited: copied again, the files its git add hashed since
+        // would be hashed again.
+        // The index read again: it may have changed meanwhile, and .from must say what is copied.
+        const cur = fs.statSync(path.resolve(top, index), { throwIfNoEntry: false });
+        const curFrom = cur ? `${cur.mtimeMs}:${cur.size}` : 'none';
+        let fresh = false;
+        try { fresh = fs.readFileSync(`${kept}.from`, 'utf8') === curFrom && fs.existsSync(kept); } catch { }
+        if (!fresh) {
+          if (cur) copyIndex(path.resolve(top, index), kept, cur, tmp);
+          else fs.rmSync(kept, { force: true });
+          if (!writeAtomic(`${kept}.from`, curFrom)) throw new Error('not written');
+        }
+      } catch {
+        for (const f of [tmp, lock]) try { fs.rmSync(f, { force: true }); } catch { }
+        return worktree(top, env, false, only);
+      }
+      try { fs.rmSync(lock, { force: true }); } catch { }
     }
     if (await git(['add', '-A', ...paths], { GIT_INDEX_FILE: kept }) !== null) {
       const tree = (await git(['write-tree'], { GIT_INDEX_FILE: kept }) || '').trim();
+      // Marked used through .from (sweepState removes the copy a week after it): git rewrites neither file when
+      // nothing changed, and the copy's own mtime is git's to judge its racily clean entries.
+      const now = new Date();
+      try { fs.utimesSync(`${kept}.from`, now, now); } catch { }
       if (tree) return tree;
     }
     // Another pane updating it at the same time (its lock taken): a copy of its own.
@@ -151,7 +191,7 @@ async function worktree(top, env, keep = false, only = null) {
   try { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'herdr-explorer-index-')); } catch { return null; }
   const tmp = path.join(dir, 'index');
   try {
-    try { fs.copyFileSync(path.resolve(top, index), tmp); } catch { }
+    try { copyIndex(path.resolve(top, index), tmp); } catch { }
     if (await git(['add', '-A', ...paths], { GIT_INDEX_FILE: tmp }) === null) return null;
     return (await git(['write-tree'], { GIT_INDEX_FILE: tmp }) || '').trim() || null;
   } finally {
@@ -159,12 +199,27 @@ async function worktree(top, env, keep = false, only = null) {
   }
 }
 
+// Copies the index file src (st, its stat, read before) to dst through tmp, with its dates: git trusts the stat data
+// of the files changed in the same tick as the index was written (racily clean) only if they are older than it, not
+// the copy. Dated once renamed: sweepState judges a leftover tmp by its own date.
+function copyIndex(src, dst, st = fs.statSync(src), tmp = dst) {
+  fs.copyFileSync(src, tmp);
+  if (tmp !== dst) fs.renameSync(tmp, dst);
+  fs.utimesSync(dst, st.atime, st.mtime);
+}
+
 // The copy of an index file kept by worktree: index/<hash of its path> in the state folder, null without one. Those
 // not used for a week are removed by sweepState (core/exec.js).
 function keptIndex(index) {
   const dir = process.env.HERDR_PLUGIN_STATE_DIR;
-  return dir ? path.join(dir, 'index', crypto.createHash('sha1').update(realPath(index)).digest('hex')) : null;
+  if (!dir) return null;
+  const key = `${dir}\0${index}`;
+  if (!keptPaths.has(key)) keptPaths.set(key, path.join(dir, 'index', crypto.createHash('sha1').update(realPath(index)).digest('hex')));
+  return keptPaths.get(key);
 }
+const keptPaths = new Map();
+// The git folders whose old copy was removed by this process.
+const oldCopies = new Set();
 
 // What turn-<tab id>.json keeps: { pane, top, tree, t, ended }, the working tree of the repository of the pane whose
 // agent started working last, taken when it did (tree null while it is being taken); ended once that agent is idle

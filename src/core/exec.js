@@ -267,12 +267,15 @@ function sweepState(tabs, livePanes) {
   for (const f of staleState(dir, list(dir), list(path.join(dir, 'panes')), tabs, livePanes)) {
     try { if (fs.statSync(f).mtimeMs < since) fs.rmSync(f, { recursive: true, force: true }); } catch { }
   }
-  // The copies of indexes that the agent-turn snapshots keep (scope.js keptIndex), unused for a week.
+  // The copies of indexes that the agent-turn snapshots keep (scope.js keptIndex), unused for a week: a copy goes by
+  // the date of its .from, touched at each use. The same week for a lock left by a process that died (scope.js never
+  // removes one, git may be using it).
   const week = Date.now() - 7 * 24 * 3600 * 1000;
-  for (const n of list(path.join(dir, 'index'))) {
-    const f = path.join(dir, 'index', n);
-    try { if (fs.statSync(f).mtimeMs < week) fs.rmSync(f, { force: true }); } catch { }
-  }
+  const old = f => { try { return fs.statSync(f).mtimeMs < week; } catch { return false; } };
+  // All judged before any goes: a copy whose .from went first would be judged by its own date.
+  const names = list(path.join(dir, 'index')), has = new Set(names);
+  const stale = names.filter(n => old(path.join(dir, 'index', /^[0-9a-f]+$/.test(n) && has.has(`${n}.from`) ? `${n}.from` : n)));
+  for (const n of stale) try { fs.rmSync(path.join(dir, 'index', n), { force: true }); } catch { }
 }
 
 // Key bindings, editable by the user: keys.json in the plugin config folder, one object per pane (only the
