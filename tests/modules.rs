@@ -1,5 +1,7 @@
 //! The module fixtures recorded from the JS of 0.8.0 (tools/fixtures/gen.js, removed with the JS at the switch to
 //! Rust: see the git history before it), replayed against the Rust port.
+//! Recorded on Linux: their paths, links, sort order and fake trash tools are Linux's.
+#![cfg(target_os = "linux")]
 
 mod support;
 
