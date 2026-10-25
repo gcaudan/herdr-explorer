@@ -2,7 +2,7 @@
 
 ## Development loop
 
-The plugin is one Rust binary, `bin/herdr-explorer`, with no crate besides the standard library. The `shims/*.js`
+The plugin is one Rust binary, `bin/herdr-explorer`, with no crate besides the standard library. The `src/*.js`
 files herdr runs are shims that start it (Node 20 or later).
 
 1. Install Rust with [rustup](https://rustup.rs): `rust-toolchain.toml` pins the toolchain, its components and the
@@ -68,7 +68,7 @@ Keep the conventions of the existing code:
 
 ## Project structure
 
-herdr runs the shims of `shims/` (the manifest names them, and the shim relaunches the binary on a self-restart); they
+herdr runs the shims of `src/` (the manifest names them, and the shim relaunches the binary on a self-restart); they
 start `bin/herdr-explorer` with a subcommand: `pane <id>` for the panes, `hook` for the events and actions, `peek`.
 The crate is at the root (`Cargo.toml`, `src/`, `tests/`); each module's first lines say what it holds and which JS
 file it ports. Its modules form four layers (entries, panes, shared, base) that `tests/layers.rs` checks: see [How it
@@ -81,7 +81,7 @@ works](docs/architecture.md#how-it-works).
 | `scripts/fetch-bin.sh`, `.ps1` | download the release binary of the manifest's version, checked against `SHA256SUMS`, into `bin/` |
 | `scripts/dev-build.sh`, `.ps1` | build the binary into `bin/`, marked as a development one (`bin/.dev`) |
 | `scripts/check.sh`    | every check, see [Tests](#tests)                                                             |
-| `shims/*.js`          | shims: start the binary (fetching it if missing), relaunch it on exit code 75, relay its messages |
+| `src/*.js`            | shims: start the binary (fetching it if missing), relaunch it on exit code 75, relay its messages |
 | `src/cli.rs`, `main.rs` | the command line: subcommands, `--version`                                                 |
 | `src/hook.rs`         | startup restore, `tab.created`, and the toggle, search and source control actions. Opens and places the explorer |
 | `src/launch.rs`       | launcher that keeps the explorer and preview panes alive across self-restarts (exit code 75) |
@@ -126,7 +126,7 @@ every push to `main`, on Linux (x86_64 and arm64), macOS and Windows, and checks
 | --- | --- |
 | `modules.rs` | the module fixtures recorded from the JS of 0.8.0 (`tests/fixtures/modules/`     ), replayed against the port |
 | `screens.rs` | screen captures of the panes in a terminal, started directly and through their shim, against those recorded from the JS (Linux) |
-| `shims.rs` | every script of the root and of `shims/` passes `node --check` |
+| `shims.rs` | every script of `src/` passes `node --check` |
 | `smoke.rs` | the shims as herdr runs them (Linux): each pane started and quit, the hook and peek, the restart on code 75 and the folder announced through `EXPLORER_IPC_FILE` |
 | `docs.rs` | relative links and `#anchors` of `README.md`, `SECURITY.md`, `CONTRIBUTING.md` and `docs/*.md` |
 | `layers.rs` | imports follow the layers of [How it works](docs/architecture.md#how-it-works): never up a layer, never from one pane to another |

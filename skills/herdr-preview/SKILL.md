@@ -13,7 +13,7 @@ Only inside herdr: check that `HERDR_PANE_ID` is set, else skip this skill.
 
 ```sh
 dir=$(dirname "$(herdr plugin list --plugin gcaudan.explorer --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).result.plugins[0].manifest_path))')")
-node "$dir/shims/peek.js" src/app.js:42
+node "$dir/src/peek.js" src/app.js:42
 ```
 
 The argument is `file`, or `file:places`, the file relative to your working directory or absolute. Places are

@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       # A shim that fails to parse opens no pane; cargo test's tests/shims.rs checks them too, with the runner's node.
-      - run: for f in *.js shims/*.js; do node --check "$f"; done
+      - run: for f in src/*.js; do node --check "$f"; done
 
   cargo:
     strategy:

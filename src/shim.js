@@ -1,4 +1,4 @@
-// What every entry of the manifest runs (`node shims/<entry>.js`): the plugin's binary, bin/herdr-explorer, with the
+// What every entry of the manifest runs (`node src/<entry>.js`): the plugin's binary, bin/herdr-explorer, with the
 // entry's subcommand. The binary is fetched first (scripts/fetch-bin) when it is missing or of another version than
 // the manifest's, never over one of bin/.dev (scripts/dev-build).
 // A pane's shim is its first process, the one herdr reads the pane's folder from (home). The explorer's and the

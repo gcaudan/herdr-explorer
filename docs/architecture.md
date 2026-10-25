@@ -1,29 +1,29 @@
 # How it works
 
 The plugin is one binary, `bin/herdr-explorer`, written in Rust with no crate beyond the standard library (`src/`).
-`herdr-plugin.toml` declares its commands to herdr as `node shims/<script>.js`: each of those scripts is a small shim
+`herdr-plugin.toml` declares its commands to herdr as `node src/<script>.js`: each of those scripts is a small shim
 that starts the binary with the matching subcommand (`pane <id>`, `hook`, `peek`), downloading it first when it is
 missing or of another version ([The binary](installation.md#the-binary)). The manifest's `[[build]]` steps run
 `scripts/fetch-bin` for `herdr plugin install` and `update`.
 
 | Kind      | Id         | Command                       | Placement                 |
 | --------- | ---------- | ----------------------------- | ------------------------- |
-| startup   |            | `node shims/hook.js --restore` |                           |
-| event     | `tab.created` | `node shims/hook.js`       |                           |
-| event     | `tab.closed`, `workspace.closed` | `node shims/hook.js --closed` |        |
-| event     | `pane.agent_status_changed` | `node shims/hook.js --agent` |              |
-| event     | `tab.focused` | `node shims/hook.js --focused` |                         |
-| pane      | `tree`     | `node shims/explorer.js`      | split                     |
-| pane      | `preview`  | `node shims/preview.js`       | split                     |
-| pane      | `search`   | `node shims/search.js`        | tab                       |
-| pane      | `scm`      | `node shims/scm.js`           | tab                       |
-| pane      | `diff`     | `node shims/diff.js`          | split                     |
-| pane      | `edit`     | `node shims/edit.js`          | tab                       |
-| action    | `toggle`   | `node shims/hook.js --toggle` | tab context               |
-| action    | `search`   | `node shims/hook.js --search` | tab context               |
-| action    | `scm`      | `node shims/hook.js --scm`    | tab context               |
-| action    | `peek`     | `node shims/peek.js --last`   | tab context               |
-| action    | `open-link` | `node shims/peek.js --url`   | link handler `file`       |
+| startup   |            | `node src/hook.js --restore` |                           |
+| event     | `tab.created` | `node src/hook.js`       |                           |
+| event     | `tab.closed`, `workspace.closed` | `node src/hook.js --closed` |        |
+| event     | `pane.agent_status_changed` | `node src/hook.js --agent` |              |
+| event     | `tab.focused` | `node src/hook.js --focused` |                         |
+| pane      | `tree`     | `node src/explorer.js`      | split                     |
+| pane      | `preview`  | `node src/preview.js`       | split                     |
+| pane      | `search`   | `node src/search.js`        | tab                       |
+| pane      | `scm`      | `node src/scm.js`           | tab                       |
+| pane      | `diff`     | `node src/diff.js`          | split                     |
+| pane      | `edit`     | `node src/edit.js`          | tab                       |
+| action    | `toggle`   | `node src/hook.js --toggle` | tab context               |
+| action    | `search`   | `node src/hook.js --search` | tab context               |
+| action    | `scm`      | `node src/hook.js --scm`    | tab context               |
+| action    | `peek`     | `node src/peek.js --last`   | tab context               |
+| action    | `open-link` | `node src/peek.js --url`   | link handler `file`       |
 | link      | `file`     | `^file://` → `open-link`      | ctrl+click on a link      |
 
 In `src/`, `cli.rs` reads the subcommand; `hook.rs`, `peek.rs`, `launch.rs` (the launcher of the explorer and
@@ -46,8 +46,6 @@ The modules form four layers, and an import only goes to the same layer or a low
 
 `tests/layers.rs` reads the `crate::…` paths of every file and fails on one that goes up a layer or across
 panes; it has no exception. What two panes need goes down to `core/`.
-The `*.js` files at the top of the repository only load their counterpart in `shims/`, for panes and hooks started
-from a 0.5.x manifest until the installer is run again.
 
 The binary was ported from the plugin's JavaScript (0.8.0 and earlier): its state files, settings, screens and
 messages are the same, which the tests check against fixtures recorded from it ([CONTRIBUTING.md](../CONTRIBUTING.md#tests)).
