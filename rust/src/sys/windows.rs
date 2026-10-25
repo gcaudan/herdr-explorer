@@ -103,6 +103,19 @@ pub fn links(path: &str) -> u64 {
     info.links as u64
 }
 
+/// A file's volume serial number and index, the link itself when it is one (FILE_FLAG_OPEN_REPARSE_POINT), or None.
+pub fn file_id(path: &str) -> Option<(u64, u64)> {
+    use std::os::windows::fs::OpenOptionsExt;
+    use std::os::windows::io::AsRawHandle;
+    let f = std::fs::OpenOptions::new().access_mode(0).share_mode(7).custom_flags(0x0220_0000).open(path).ok()?;
+    let mut info = FileInfo::default();
+    // SAFETY: an open handle, and a struct of the size the call writes.
+    if unsafe { GetFileInformationByHandle(f.as_raw_handle() as Handle, &mut info) } == 0 {
+        return None;
+    }
+    Some((info.volume as u64, (info.index[0] as u64) << 32 | info.index[1] as u64))
+}
+
 /// The machine's name, as os.hostname() (libuv's GetHostNameW gives the DNS host name).
 pub fn hostname() -> String {
     const COMPUTER_NAME_DNS_HOSTNAME: u32 = 1;

@@ -14,7 +14,7 @@ mod windows;
 #[cfg(windows)]
 use windows as imp;
 #[cfg(windows)]
-pub use windows::{hostname, links};
+pub use windows::{file_id, hostname, links};
 
 #[cfg(target_os = "linux")]
 pub use unix::pty;
@@ -43,6 +43,14 @@ pub enum Event {
     Signal(Signal),
     /// A `Waker` was called.
     Wake,
+}
+
+/// A file's identity, its device and inode as lstat gives them (the link itself, not followed), or None when it
+/// cannot be read. On Windows, the volume's serial number and the file's index, as libuv's stat.
+#[cfg(unix)]
+pub fn file_id(path: &str) -> Option<(u64, u64)> {
+    use std::os::unix::fs::MetadataExt;
+    std::fs::symlink_metadata(path).ok().map(|m| (m.dev(), m.ino()))
 }
 
 /// Whether stdin is a terminal (`process.stdin.isTTY`).

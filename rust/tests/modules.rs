@@ -1487,3 +1487,81 @@ fn render_markdown() {
         Ok(herdr_explorer::obj! { "lines" => Value::Arr(lines.collect()), "anchors" => Value::Obj(anchors) })
     });
 }
+
+/// What a folder holds, as the fixture's tree(): each path, a folder ending with /, a file with its text, a link with
+/// its target.
+#[cfg(unix)]
+fn tree(dir: &str) -> Vec<String> {
+    fn walk(d: &std::path::Path, rel: &str, out: &mut Vec<String>) {
+        let mut names: Vec<String> =
+            std::fs::read_dir(d).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
+        names.sort();
+        for n in names {
+            let p = d.join(&n);
+            let r = if rel.is_empty() { n.clone() } else { format!("{rel}/{n}") };
+            let m = std::fs::symlink_metadata(&p).unwrap();
+            if m.file_type().is_symlink() {
+                out.push(format!("{r} -> {}", std::fs::read_link(&p).unwrap().display()));
+            } else if m.is_dir() {
+                out.push(format!("{r}/"));
+                walk(&p, &r, out);
+            } else {
+                out.push(format!("{r}: {}", std::fs::read_to_string(&p).unwrap()));
+            }
+        }
+    }
+    let mut out = Vec::new();
+    walk(std::path::Path::new(dir), "", &mut out);
+    out
+}
+
+#[cfg(unix)]
+#[test]
+fn core_actions() {
+    use herdr_explorer::core::actions;
+    const FAKES: &str = r#"mkdir -p ../bin ../trash
+printf '#!/bin/sh\n[ -e "%s/no-trash" ] && exit 1\n[ "$1" = trash ] && exec /bin/mv "$3" "%s/trash/"\nexit 1\n' "$PWD/.." "$PWD/.." > ../bin/gio
+printf '#!/bin/sh\nexit 1\n' > ../bin/trash-put
+chmod +x ../bin/gio ../bin/trash-put
+git init -q -b main . && git config user.name t && git config user.email t@t && git config commit.gpgsign false
+"#;
+    support::replay("core/actions", |name, args| {
+        let s = |i: usize| args.get(i).and_then(Value::as_str).unwrap_or("").to_string();
+        let opt = |v: Option<String>| v.map_or(Value::Null, Value::Str);
+        let made = |(p, e): actions::Made| Value::Arr(vec![opt(p), opt(e)]);
+        // The call's result, then what the folder holds; '@' in the path stands for the folder.
+        let after = |v: Value| Value::Arr(vec![v, str_arr(tree(&s(0)))]);
+        let at = |i: usize| s(i).replace('@', &s(0));
+        Ok(match name {
+            "quote" => Value::Str(actions::quote(&s(0))),
+            "target" => opt(actions::target(&s(0), &s(1))),
+            "webPage" => Value::Bool(actions::web_page(&s(0))),
+            "canPreview" => Value::Bool(actions::can_preview(&s(0))),
+            "canOpen" => Value::Bool(actions::can_open(&s(0))),
+            "relativeTo" => Value::Str(actions::relative_to(Some(&s(0)), &s(1))),
+            "create" => after(made(actions::create(&s(1), &s(2), args[3].truthy()))),
+            "rename" => after(made(actions::rename(&at(1), &s(2)))),
+            "duplicate" => after(made(actions::duplicate(&at(1)))),
+            "remove" => after(opt(actions::remove(&at(1)))),
+            "git" => {
+                let top = format!("{}/repo", s(1));
+                std::fs::create_dir(&top).unwrap();
+                sh(&format!("cd '{top}' && {FAKES}{}", s(2)));
+                let file = format!("{top}/{}", s(3));
+                let msg = match s(0).as_str() {
+                    "stage" => actions::stage(&file, &top),
+                    "unstage" => actions::unstage(&file, &top),
+                    _ => actions::discard(&file, &top),
+                };
+                let status = sh(&format!("cd '{top}' && git status --porcelain=v1 --untracked-files=all"));
+                let mut trash: Vec<String> = std::fs::read_dir(format!("{}/trash", s(1)))
+                    .unwrap()
+                    .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+                    .collect();
+                trash.sort();
+                Value::Arr(vec![Value::Str(msg), Value::Str(status), str_arr(trash)])
+            }
+            _ => return Err(format!("no function {name}")),
+        })
+    });
+}
