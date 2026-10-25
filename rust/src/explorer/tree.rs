@@ -82,16 +82,34 @@ impl Ordered<()> {
 
 /// The git status of the root's repository: its top folder (None outside one), the root's path in it, the changed
 /// files, each folder with the strongest change it holds, the untracked folders, the ignored entries, and the
-/// deleted files no longer on disk.
+/// deleted files no longer on disk. A root in no repository has instead the repositories of its folders (repos,
+/// their names), their statuses merged.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Git {
     pub top: Option<String>,
     pub prefix: String,
+    pub repos: Vec<String>,
     pub files: Ordered<char>,
     pub dirs: Ordered<char>,
     pub untracked: Ordered<()>,
     pub ignored: Ordered<()>,
     pub gone: Vec<String>,
+}
+
+impl Git {
+    /// Whether the tree has a git status: the root in a repository, or repositories in its folders.
+    pub fn on(&self) -> bool {
+        self.top.is_some() || !self.repos.is_empty()
+    }
+
+    /// The repository holding rel, as the folder of the root it is in: "" for the root's own, None outside any.
+    pub fn repo_of(&self, rel: &str) -> Option<&str> {
+        if self.top.is_some() {
+            return Some("");
+        }
+        let name = rel.split('/').next().unwrap_or("");
+        self.repos.iter().find(|r| *r == name).map(String::as_str)
+    }
 }
 
 /// What git status says, as parse_status reads it.
@@ -156,6 +174,13 @@ pub fn code(x: char, y: char) -> char {
 /// entries.
 pub fn parse_status(status: &str, prefix: &str) -> Status {
     let mut git = Status::default();
+    parse_into(&mut git, status, prefix, "");
+    git
+}
+
+/// parse_status into git, its paths put under the folder base ("" for none): the status of a repository in a folder
+/// of the root, the folders above its changes marked with those of the other repositories.
+fn parse_into(git: &mut Status, status: &str, prefix: &str, base: &str) {
     let parts: Vec<&str> = status.split('\0').collect();
     let mut i = 0;
     while i < parts.len() {
@@ -180,6 +205,8 @@ pub fn parse_status(status: &str, prefix: &str) -> Status {
         }
         let is_dir = rel.ends_with('/');
         let rel = if is_dir { &rel[..rel.len() - 1] } else { rel };
+        let full = if base.is_empty() { rel.to_string() } else { format!("{base}/{rel}") };
+        let rel = full.as_str();
         if c == '!' {
             git.ignored.add(rel);
             continue;
@@ -197,7 +224,6 @@ pub fn parse_status(status: &str, prefix: &str) -> Status {
             a = parent_of(dir);
         }
     }
-    git
 }
 
 /// Whether a comes before b in the tree; a_dir and b_dir: whether each is a folder.
@@ -515,7 +541,17 @@ impl Tree {
 
     /// A new git status (parse_status), and the deleted files no longer on disk.
     pub fn apply_status(&mut self, status: &str) {
-        let s = parse_status(status, &self.git.prefix);
+        self.apply_statuses(&[("", status)]);
+    }
+
+    /// The statuses of the repositories of the root's folders, each with its folder ("" for the root's own
+    /// repository), merged as apply_status applies one.
+    pub fn apply_statuses(&mut self, list: &[(&str, &str)]) {
+        let mut s = Status::default();
+        for (base, status) in list {
+            let prefix = if base.is_empty() { self.git.prefix.as_str() } else { "" };
+            parse_into(&mut s, status, prefix, base);
+        }
         self.git.files = s.files;
         self.git.dirs = s.dirs;
         self.git.untracked = s.untracked;

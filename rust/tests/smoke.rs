@@ -432,3 +432,56 @@ fn the_explorers_shim_takes_the_folder_the_binary_announces() {
     p.closed_by_herdr(&s);
     p.none_left();
 }
+
+#[test]
+fn the_explorer_outside_a_repository_marks_the_changes_of_those_in_its_folders() {
+    let Some(s) = Setup::new("repos") else { return };
+    let git = |dir: &Path, args: &[&str]| {
+        let ok = Command::new("git")
+            .args(["-c", "user.name=t", "-c", "user.email=t@t", "-c", "init.defaultBranch=main"])
+            .args(args)
+            .current_dir(dir)
+            .env_clear()
+            .envs(s.env())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .unwrap()
+            .success();
+        assert!(ok, "git {args:?}");
+    };
+    // one: a committed file changed since; two: a file never added; plain: no repository.
+    for name in ["one", "two", "plain"] {
+        std::fs::create_dir_all(s.work.join(name)).unwrap();
+        std::fs::write(s.work.join(name).join("f.txt"), "1\n").unwrap();
+    }
+    git(&s.work.join("one"), &["init", "-q"]);
+    git(&s.work.join("one"), &["add", "."]);
+    git(&s.work.join("one"), &["commit", "-qm", "f"]);
+    std::fs::write(s.work.join("one/f.txt"), "2\n").unwrap();
+    git(&s.work.join("two"), &["init", "-q"]);
+    // The badge of a folder holding changes, at the end of its row once the colors are left out (a file's icon can be
+    // one too).
+    let badged = |l: &str| {
+        let text: String = l.split('⟪').map(|p| p.split_once('⟫').map_or(p, |(_, t)| t)).collect();
+        text.trim_end().ends_with('●')
+    };
+    let marked = |screen: &str| screen.lines().filter(|l| badged(l)).count();
+    let root = s.work.display().to_string();
+    let mut p = s.start(&s.shim("explorer.js"), &[("EXPLORER_ROOT", &root)]);
+    p.until("plain");
+    wait_for("the repositories' folders never marked", || marked(&p.screen()) == 2);
+    let screen = p.screen();
+    assert!(!screen.lines().any(|l| l.contains("plain") && badged(l)), "{screen}");
+    // A repository made in a folder afterwards: found, its changes marked.
+    std::fs::create_dir_all(s.work.join("three")).unwrap();
+    std::fs::write(s.work.join("three/f.txt"), "1\n").unwrap();
+    git(&s.work.join("three"), &["init", "-q"]);
+    wait_for("the new repository never marked", || marked(&p.screen()) == 3);
+    // A folder whose repository is removed: no longer one, its marks gone.
+    std::fs::remove_dir_all(s.work.join("one/.git")).unwrap();
+    wait_for("the removed repository still marked", || marked(&p.screen()) == 2);
+    p.send(b"q");
+    p.closed_by_herdr(&s);
+    p.none_left();
+}

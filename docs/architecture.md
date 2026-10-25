@@ -232,8 +232,8 @@ restarting on the new code show it for a while. When the manifest, other than it
 | Pane            | What triggers a refresh                                                                     |
 | --------------- | ------------------------------------------------------------------------------------------- |
 | Explorer        | a watch on the root (`sys::watch`: inotify, FSEvents, ReadDirectoryChangesW), recursive unless the root is `$HOME`, a parent of it or the filesystem root (then top level only, or when the recursive watch fails). Changes inside `.git` or in collapsed ignored folders are skipped |
-| Explorer        | a watch on the git folder for `index` and `HEAD` (commit, stage, branch switch)          |
-| Explorer        | a 30 s safety rescan. A `.git` appearing later (`git init`, clone) is detected              |
+| Explorer        | a watch on the git folder for `index` and `HEAD` (commit, stage, branch switch); outside a repository, on that of each repository of the root's folders, whose status alone is read again, as after a change in its folder |
+| Explorer        | a 30 s safety rescan, every repository read again. A `.git` appearing later (`git init`, clone), in the root or one of its folders, is detected |
 | Explorer        | `settings.json`, `keys.json` and `update.json`, polled every second                         |
 | Explorer        | the folder of the neighbouring terminal, polled every 2 s when **Follow** is on             |
 | Preview         | the file's folder, the tab's request file every 200 ms, `settings.json` every second (Images) |

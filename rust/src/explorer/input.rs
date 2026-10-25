@@ -301,11 +301,10 @@ impl Explorer {
             }
             "sourceControl" => {
                 let file = abs.unwrap_or_default();
+                let rel = r.map(|r| r.rel).unwrap_or_default();
                 return self.run_action(|ex| {
-                    if ex.tree.git.top.is_none() {
-                        return Act::Now(not_git());
-                    }
-                    later(move || actions::scm(&root, &pane, &file, false))
+                    let Some(repo) = ex.repo_dir(&rel) else { return Act::Now(not_git()) };
+                    later(move || actions::scm(&repo, &pane, &file, false))
                 });
             }
             "settings" => return self.open_settings(),
@@ -370,9 +369,7 @@ impl Explorer {
             "changedOnly" => return self.show_changed(!self.state.changed),
             "viewChanges" => {
                 if let Some(r) = r {
-                    self.run_action(
-                        |ex| if ex.tree.git.top.is_some() { ex.view_changes(&r) } else { Act::Now(not_git()) },
-                    );
+                    self.run_action(|ex| ex.view_changes(&r));
                 }
                 return;
             }
@@ -380,11 +377,10 @@ impl Explorer {
             "previousChange" => return self.next_change(-1),
             "fileHistory" => {
                 if let (Some(abs), false) = (abs, r.as_ref().is_none_or(|r| r.dir)) {
+                    let rel = r.map(|r| r.rel).unwrap_or_default();
                     self.run_action(|ex| {
-                        if ex.tree.git.top.is_none() {
-                            return Act::Now(not_git());
-                        }
-                        later(move || actions::scm(&root, &pane, &abs, true))
+                        let Some(repo) = ex.repo_dir(&rel) else { return Act::Now(not_git()) };
+                        later(move || actions::scm(&repo, &pane, &abs, true))
                     });
                 }
                 return;

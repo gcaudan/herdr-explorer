@@ -217,6 +217,31 @@ fn decorations_a_file_a_folder_and_the_contents_of_untracked_and_ignored_folders
 }
 
 #[test]
+fn repositories_of_the_root_folders_their_statuses_merged_each_entry_with_its_repository() {
+    let dir = folder(&["one/a.js", "one/b.js", "two/c.js", "two/dist/out.js", "loose.txt"]);
+    let mut tree = Tree::new(&root(&dir), settings(false, true, false));
+    assert!(!tree.git.on());
+    tree.git.repos = set(&["one", "two"]);
+    assert!(tree.git.on());
+    tree.apply_statuses(&[("one", &status(&[" M a.js", " D gone.js"])), ("two", &status(&["?? c.js", "!! dist/"]))]);
+    let deco: Vec<Option<char>> = ["one", "one/a.js", "one/b.js", "two", "two/c.js", "two/dist/out.js", "loose.txt"]
+        .iter()
+        .map(|rel| tree.decoration(rel, dir.path.join(rel).is_dir()))
+        .collect();
+    assert_eq!(deco, [Some('D'), Some('M'), None, Some('U'), Some('U'), Some('!'), None]);
+    assert_eq!(tree.git.dirs.get(""), Some(&'D'));
+    assert_eq!(tree.git.gone, ["one/gone.js"]);
+    assert_eq!(tree.changed_files(), ["one/a.js", "one/gone.js", "two/c.js"]);
+    assert_eq!(
+        ["one/a.js", "two", "loose.txt", ""].map(|r| tree.git.repo_of(r)),
+        [Some("one"), Some("two"), None, None]
+    );
+    // The root in a repository: its own for every entry.
+    tree.git.top = Some(root(&dir));
+    assert_eq!(tree.git.repo_of("loose.txt"), Some(""));
+}
+
+#[test]
 fn changed_files_only_every_folder_unfolded_deleted_files_among_them_in_the_tree_order() {
     let dir = folder(&["a/", "a/x.js", "a/same.js", "b.js", "c.js"]);
     let mut tree = Tree::new(&root(&dir), settings(false, true, false));

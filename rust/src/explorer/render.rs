@@ -93,7 +93,7 @@ impl Explorer {
             let empty = if self.state.filter.is_some() {
                 ui::empty(w, lh, "No match", &[("esc", "clear")])
             } else if self.state.changed {
-                let text = if self.tree.git.top.is_some() { "No changes" } else { "Not a git repository" };
+                let text = if self.tree.git.on() { "No changes" } else { "Not a git repository" };
                 ui::empty(w, lh, text, &[("esc", "all files")])
             } else {
                 let pairs: Vec<(String, &str)> = [(first("newFile"), "new file"), (first("newFolder"), "folder")]

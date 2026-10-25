@@ -56,6 +56,11 @@ folder on its own row. Git decorations follow VS Code:
 | `●`   | on a folder: something inside changed (coloured by the most severe) |
 | grey  | git-ignored                                                        |
 
+A root that is in no repository, such as a folder holding several projects, shows the changes of the repositories
+of its folders (one level down, not in `$HOME`, its parents or `/`): each folder holding one gets its `●`, and every
+git action runs in the repository of its entry. A repository made in one of those folders later (`git init`,
+clone) is found as it appears.
+
 ### Keys (defaults)
 
 The last column is the action's name in [`keys.json`](configuration.md#config-folder-keysjson).
@@ -211,7 +216,7 @@ added since the last commit, and untracked files, go to the trash instead of bei
 ### Root menu (right-click below the rows)
 
 New file…, New folder…, Go to file…, Search in files…, Source control and Changed files only (or All files) in a
-repository, Open folder
+repository (outside one, Source control opens the repository of the selected entry), Open folder
 (Reveal in Explorer), Copy path, Up one level, Back to the space folder (after **Set as root**),
 Refresh, Settings….
 

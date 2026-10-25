@@ -347,6 +347,8 @@ pub struct Explorer {
     probing: bool,
     root_watcher: Option<Watcher>,
     git_watcher: Option<Watcher>,
+    /// The repositories of the root's folders, when the root is in none (tree.git.repos, their names).
+    repos: Vec<Repo>,
     /// A .git folder appeared: git looked for again 500 ms later, and again after the events seen meanwhile.
     git_at: Option<Instant>,
     git_more: Option<Instant>,
@@ -371,6 +373,37 @@ pub struct Explorer {
     requests: Option<(Watch, f64)>,
     keys_watch: Option<Watch>,
     settings_watch: Option<Watch>,
+}
+
+/// A repository in a folder of the root: its last status (None until read or when git failed), whether it changed
+/// since, and the watch on its index and HEAD.
+struct Repo {
+    name: String,
+    status: Option<String>,
+    dirty: bool,
+    _watcher: Option<Watcher>,
+}
+
+/// The folders of root holding a repository of their own (a .git in them), each with its git folder, by name.
+fn repos_in(root: &str) -> Vec<(String, String)> {
+    let Ok(dir) = std::fs::read_dir(root) else { return Vec::new() };
+    let mut names: Vec<String> = dir.flatten().filter_map(|e| e.file_name().into_string().ok()).collect();
+    names.sort_by(|a, b| tree::name_order(a, b));
+    names
+        .into_iter()
+        .filter_map(|name| {
+            let dir = paths::join(&[root, &name]);
+            if name == ".git" || !std::fs::metadata(&dir).is_ok_and(|m| m.is_dir()) {
+                return None;
+            }
+            std::fs::symlink_metadata(paths::join(&[&dir, ".git"])).ok()?;
+            // Its top folder: a .git deeper in a repository is not its own.
+            let res = git_run(&dir, &["rev-parse", "--absolute-git-dir", "--show-prefix"])?;
+            let mut lines = res.split('\n').map(|l| l.strip_suffix('\r').unwrap_or(l));
+            let gitdir = lines.next().filter(|g| !g.is_empty())?.to_string();
+            lines.next().unwrap_or("").is_empty().then_some((name, gitdir))
+        })
+        .collect()
 }
 
 /// The settings of the tree, from the explorer's.
@@ -518,6 +551,7 @@ impl Explorer {
             probing: false,
             root_watcher: None,
             git_watcher: None,
+            repos: Vec::new(),
             git_at: None,
             git_more: None,
             width,
@@ -858,6 +892,8 @@ impl Explorer {
         self.state.selected = None;
         self.load();
         self.tree.reset(&dir);
+        self.repos.clear();
+        self.git_watcher = None;
         // Going up: the folder left is selected.
         let back = rel_of(&self.root, &from);
         if !back.is_empty() && !back.starts_with("..") && !paths::is_absolute(&back) {
@@ -878,13 +914,23 @@ impl Explorer {
             return self.after_git(after);
         }
         self.probing = true;
-        let root = self.root.clone();
+        let (root, wide) = (self.root.clone(), big(&self.root));
         self.git_worker.send(Box::new(move || {
             let res = git_run(&root, &["rev-parse", "--show-toplevel", "--absolute-git-dir", "--show-prefix"]);
+            // Outside a repository, those of its folders; not in $HOME and above, with too many folders to look in.
+            let repos = if res.is_none() && !wide { repos_in(&root) } else { Vec::new() };
             Box::new(move |ex: &mut Explorer| {
                 ex.probing = false;
-                if let Some(res) = res.filter(|_| !ex.stopped && root == ex.root) {
-                    ex.found_git(&res);
+                if ex.stopped {
+                    return ex.after_git(after);
+                }
+                // Another root meanwhile (Set as root), whose look was skipped while this one ran: its own.
+                if root != ex.root {
+                    return ex.init_git(after);
+                }
+                match res {
+                    Some(res) => ex.found_git(&res),
+                    None => ex.found_repos(repos),
                 }
                 ex.after_git(after);
             })
@@ -896,32 +942,76 @@ impl Explorer {
         let (top, gitdir, prefix) = (parts.next().unwrap_or(""), parts.next(), parts.next().unwrap_or(""));
         self.tree.git.top = Some(top.to_string());
         self.tree.git.prefix = prefix.strip_suffix('/').unwrap_or(prefix).to_string();
-        // The repository changes without touching the working tree (commit, stage, branch switch).
-        self.git_watcher = None;
-        let (tx, waker) = (self.tx.clone(), self.waker.clone());
+        self.tree.git.repos.clear();
+        self.repos.clear();
         // The JS's fs.watch(undefined) threw, and was caught.
-        let Some(gitdir) = gitdir else { return };
-        self.git_watcher = Watcher::new(gitdir, false, move |f| {
+        self.git_watcher = gitdir.and_then(|gitdir| self.watch_git(gitdir, None));
+    }
+
+    /// The repositories of the root's folders, found again: the statuses of those already known kept until read
+    /// again, their git folders watched anew (a folder replaced by a clone of the same name).
+    fn found_repos(&mut self, list: Vec<(String, String)>) {
+        let mut old = std::mem::take(&mut self.repos);
+        for (name, gitdir) in list {
+            let status = old.iter().position(|r| r.name == name).and_then(|i| old.swap_remove(i).status);
+            let watcher = self.watch_git(&gitdir, Some(name.clone()));
+            self.repos.push(Repo { name, status, dirty: true, _watcher: watcher });
+        }
+        self.tree.git.repos = self.repos.iter().map(|r| r.name.clone()).collect();
+        // Those gone no longer marked.
+        if !old.is_empty() {
+            self.apply_repos();
+        }
+    }
+
+    /// The statuses of the repositories of the root's folders, to the tree.
+    fn apply_repos(&mut self) {
+        let list: Vec<(&str, &str)> =
+            self.repos.iter().filter_map(|r| Some((r.name.as_str(), r.status.as_deref()?))).collect();
+        self.tree.apply_statuses(&list);
+    }
+
+    /// The repository changes without touching the working tree (commit, stage, branch switch): its status read
+    /// again; repo: the folder of the root it is in, None for the root's own.
+    fn watch_git(&self, gitdir: &str, repo: Option<String>) -> Option<Watcher> {
+        let (tx, waker) = (self.tx.clone(), self.waker.clone());
+        Watcher::new(gitdir, false, move |f| {
             if matches!(f.as_deref(), Some("index" | "HEAD")) {
-                let _ = tx.send(Box::new(|ex: &mut Explorer| ex.schedule()));
+                let repo = repo.clone();
+                let _ = tx.send(Box::new(move |ex: &mut Explorer| match repo {
+                    Some(name) => ex.schedule_repo(&name),
+                    None => ex.schedule(),
+                }));
                 waker.wake();
             }
         })
-        .ok();
+        .ok()
     }
 
     fn after_git(&mut self, after: AfterGit) {
         match after {
             AfterGit::Refresh => self.refresh(),
-            AfterGit::ScheduleIfTop if self.tree.git.top.is_some() => self.schedule(),
+            AfterGit::ScheduleIfTop if self.tree.git.on() => self.arm(),
             AfterGit::ScheduleIfTop => {}
         }
     }
 
     // --- refresh
 
-    /// At most one refresh every 250 ms: a file written continuously (a log) must not postpone it forever.
+    /// A refresh, every repository of the root's folders read again.
     fn schedule(&mut self) {
+        self.repos.iter_mut().for_each(|r| r.dirty = true);
+        self.arm();
+    }
+
+    /// A refresh, only the repository of that folder of the root read again.
+    fn schedule_repo(&mut self, name: &str) {
+        self.repos.iter_mut().filter(|r| r.name == name).for_each(|r| r.dirty = true);
+        self.arm();
+    }
+
+    /// At most one refresh every 250 ms: a file written continuously (a log) must not postpone it forever.
+    fn arm(&mut self) {
         if self.refresh_at.is_none() && !self.stopped {
             self.refresh_at = Some(Instant::now() + Duration::from_millis(250));
         }
@@ -938,13 +1028,42 @@ impl Explorer {
         self.busy = true;
         self.tree.stale();
         if self.tree.git.top.is_none() {
-            return self.refreshed(None);
+            return self.refresh_repos();
         }
         let root = self.root.clone();
         self.git_worker.send(Box::new(move || {
             let args = ["status", "--porcelain=v1", "-z", "--ignored=matching", "--ignore-submodules=all", "--", "."];
             let status = git_run(&root, &args);
-            Box::new(move |ex: &mut Explorer| ex.refreshed(status))
+            Box::new(move |ex: &mut Explorer| ex.refreshed(status.filter(|_| root == ex.root)))
+        }));
+    }
+
+    /// The statuses of the repositories of the root's folders that changed, read again; outside any, the tree only.
+    fn refresh_repos(&mut self) {
+        let mut todo = Vec::new();
+        for r in self.repos.iter_mut().filter(|r| r.dirty) {
+            r.dirty = false;
+            todo.push((r.name.clone(), paths::join(&[&self.root, &r.name])));
+        }
+        if todo.is_empty() {
+            return self.refreshed(None);
+        }
+        let root = self.root.clone();
+        self.git_worker.send(Box::new(move || {
+            let args = ["status", "--porcelain=v1", "-z", "--ignored=matching", "--ignore-submodules=all", "--", "."];
+            let read: Vec<(String, Option<String>)> =
+                todo.into_iter().map(|(name, dir)| (name, git_run(&dir, &args))).collect();
+            Box::new(move |ex: &mut Explorer| {
+                if root == ex.root {
+                    for (name, status) in read {
+                        if let Some(r) = ex.repos.iter_mut().find(|r| r.name == name) {
+                            r.status = status;
+                        }
+                    }
+                    ex.apply_repos();
+                }
+                ex.refreshed(None);
+            })
         }));
     }
 
@@ -957,7 +1076,7 @@ impl Explorer {
         self.busy = false;
         if self.again {
             self.again = false;
-            self.schedule();
+            self.arm();
         }
     }
 
@@ -993,19 +1112,48 @@ impl Explorer {
         let rel = f.map_or_else(String::new, |f| if paths::SEP == '/' { f } else { f.replace(paths::SEP, "/") });
         if rel == ".git" || rel.starts_with(".git/") {
             if self.tree.git.top.is_none() {
-                let at = Instant::now() + Duration::from_millis(500);
-                if self.git_at.is_none() {
-                    self.git_at = Some(at);
-                } else {
-                    self.git_more = Some(at);
-                }
+                self.probe_later();
             }
             return;
+        }
+        // Outside a repository, a .git in one of its folders: a repository of its own there, once git finds it; a
+        // known one's .git or folder itself made, removed or moved, looked for again too.
+        let (name, rest) = rel.split_once('/').unwrap_or((&rel, ""));
+        if self.tree.git.top.is_none() && !name.is_empty() {
+            let known = self.tree.git.repos.iter().any(|r| r == name);
+            if rest == ".git" || rest.starts_with(".git/") {
+                if !known || rest == ".git" {
+                    self.probe_later();
+                }
+                return;
+            }
+            if rest.is_empty() && (known || std::fs::symlink_metadata(paths::join(&[&self.root, name, ".git"])).is_ok())
+            {
+                self.probe_later();
+            }
         }
         if rel.contains("/.git/") || self.tree.hidden(&rel, &self.state.expanded) {
             return;
         }
-        self.schedule();
+        match self.tree.git.repo_of(&rel) {
+            Some(name) if !name.is_empty() => {
+                let name = name.to_string();
+                self.schedule_repo(&name);
+            }
+            _ if rel.is_empty() => self.schedule(),
+            // The root's repository; outside any, the tree only.
+            _ => self.arm(),
+        }
+    }
+
+    /// git looked for again 500 ms later, and again after the events seen meanwhile.
+    fn probe_later(&mut self) {
+        let at = Instant::now() + Duration::from_millis(500);
+        if self.git_at.is_none() {
+            self.git_at = Some(at);
+        } else {
+            self.git_more = Some(at);
+        }
     }
 
     // --- pane width
@@ -1233,8 +1381,16 @@ impl Explorer {
     // --- opening
 
     /// The changes of an entry: a file's in the preview's Diff view, a folder's in the Changes pane (the whole tab).
+    /// The folder git runs in for the entry rel: the root in its repository, else the repository of the root's folder
+    /// holding it; None outside any.
+    fn repo_dir(&self, rel: &str) -> Option<String> {
+        let name = self.tree.git.repo_of(rel)?;
+        Some(if name.is_empty() { self.root.clone() } else { self.abs_of(name) })
+    }
+
     fn view_changes(&self, r: &Entry) -> Act {
-        let (abs, root, pane, dir) = (self.abs_of(&r.rel), self.root.clone(), self.pane.clone(), r.dir);
+        let Some(root) = self.repo_dir(&r.rel) else { return Act::Now(Some("Not a git repository".into())) };
+        let (abs, pane, dir) = (self.abs_of(&r.rel), self.pane.clone(), r.dir);
         later(move || {
             if dir {
                 actions::diff(&abs, &root, &pane)
@@ -1411,9 +1567,9 @@ impl Explorer {
     }
 
     /// Discard changes…: the question, then the entry back to its last commit.
-    fn discard_item(&self, abs: &str, title: &str, name: String, note: &str, action: &str) -> Option<It> {
+    fn discard_item(&self, abs: &str, repo: &str, title: &str, name: String, note: &str, action: &str) -> Option<It> {
         let (abs, root, title, note, action) =
-            (abs.to_string(), self.root.clone(), title.to_string(), note.to_string(), action.to_string());
+            (abs.to_string(), repo.to_string(), title.to_string(), note.to_string(), action.to_string());
         let where_ = Some(self.where_of(&rel_of(&self.root, &abs)));
         let run = now(move |ex| {
             let q = Confirm {
@@ -1441,6 +1597,7 @@ impl Explorer {
             // A deleted entry: its changes and history, or back with Discard.
             Some(r) if r.gone => {
                 let abs = self.abs_of(&r.rel);
+                let repo = self.repo_dir(&r.rel).unwrap_or_else(|| root.clone());
                 let e = r.clone();
                 items.push(It::new(
                     "View changes",
@@ -1448,16 +1605,17 @@ impl Explorer {
                     "viewChanges",
                 ));
                 if !r.dir {
-                    let (a, root, p) = (abs.clone(), root.clone(), pane.clone());
-                    items.push(It::new("File history", job(move || actions::scm(&root, &p, &a, true)), "fileHistory"));
+                    let (a, rt, p) = (abs.clone(), repo.clone(), pane.clone());
+                    items.push(It::new("File history", job(move || actions::scm(&rt, &p, &a, true)), "fileHistory"));
                 }
-                let (a, rt) = (abs.clone(), root.clone());
+                let (a, rt) = (abs.clone(), repo.clone());
                 let stage = job(move || Some(actions::stage(&a, &rt)));
-                let (a, rt) = (abs.clone(), root.clone());
+                let (a, rt) = (abs.clone(), repo.clone());
                 let unstage = job(move || Some(actions::unstage(&a, &rt)));
                 items.extend([None, It::new("Stage", stage, ""), It::new("Unstage", unstage, "")]);
                 let name = format!("{}{}", r.name, if r.dir { "/" } else { "" });
-                items.push(self.discard_item(&abs, "Restore it?", name, "Its changes are discarded.", "Restore"));
+                let note = "Its changes are discarded.";
+                items.push(self.discard_item(&abs, &repo, "Restore it?", name, note, "Restore"));
                 let rel = r.rel.clone();
                 let copy = job(move || Some(actions::copy(&rel, "Path copied")));
                 items.extend([None, It::new("Copy relative path", copy, "copyRelativePath")]);
@@ -1522,7 +1680,7 @@ impl Explorer {
                 let rel = r.rel.clone();
                 let copy = job(move || Some(actions::copy(&rel, "Path copied")));
                 items.push(It::new("Copy relative path", copy, "copyRelativePath"));
-                if self.tree.git.top.is_some() && deco != Some('!') {
+                if let Some(repo) = self.repo_dir(&r.rel).filter(|_| deco != Some('!')) {
                     let changed = deco.is_some();
                     items.push(None);
                     if changed {
@@ -1531,7 +1689,7 @@ impl Explorer {
                         items.push(It::new("View changes", run, "viewChanges"));
                     }
                     if !r.dir && deco != Some('U') {
-                        let (a, rt, p) = (abs.clone(), root.clone(), pane.clone());
+                        let (a, rt, p) = (abs.clone(), repo.clone(), pane.clone());
                         items.push(It::new(
                             "File history",
                             job(move || actions::scm(&rt, &p, &a, true)),
@@ -1539,14 +1697,14 @@ impl Explorer {
                         ));
                     }
                     if changed {
-                        let (a, rt) = (abs.clone(), root.clone());
+                        let (a, rt) = (abs.clone(), repo.clone());
                         items.push(It::new("Stage", job(move || Some(actions::stage(&a, &rt))), ""));
                     }
-                    let (a, rt) = (abs.clone(), root.clone());
+                    let (a, rt) = (abs.clone(), repo.clone());
                     items.push(It::new("Unstage", job(move || Some(actions::unstage(&a, &rt))), ""));
                     if changed {
-                        let note = "This cannot be undone.";
-                        items.push(self.discard_item(&abs, "Discard the changes?", r.name.clone(), note, "Discard"));
+                        let (title, note) = ("Discard the changes?", "This cannot be undone.");
+                        items.push(self.discard_item(&abs, &repo, title, r.name.clone(), note, "Discard"));
                     }
                 }
             }
@@ -1559,13 +1717,17 @@ impl Explorer {
                 let (rt, p) = (root.clone(), pane.clone());
                 let search = job(move || actions::search(&rt, &p, "content", ""));
                 items.push(It::new("Search in files…", search, "searchInFiles"));
-                if self.tree.git.top.is_some() {
-                    let (rt, p) = (root.clone(), pane.clone());
-                    items.push(It::new(
-                        "Source control",
-                        job(move || actions::scm(&rt, &p, "", false)),
-                        "sourceControl",
-                    ));
+                if self.tree.git.on() {
+                    // Outside a repository, that of the entry selected.
+                    let selected = self.state.selected.as_deref().unwrap_or("");
+                    if let Some(rt) = self.repo_dir(selected) {
+                        let p = pane.clone();
+                        items.push(It::new(
+                            "Source control",
+                            job(move || actions::scm(&rt, &p, "", false)),
+                            "sourceControl",
+                        ));
+                    }
                     let label = if self.state.changed { "All files" } else { "Changed files only" };
                     items.push(It::new(label, now(|ex| ex.show_changed(!ex.state.changed)), "changedOnly"));
                 }
@@ -1724,7 +1886,7 @@ impl Explorer {
 
     /// The changed files only, or the whole tree again with the selected entry shown.
     fn show_changed(&mut self, on: bool) {
-        if on && self.tree.git.top.is_none() {
+        if on && !self.tree.git.on() {
             return self.flash(Some("Not a git repository".into()));
         }
         let sel = self.state.selected.clone();
@@ -1743,7 +1905,7 @@ impl Explorer {
     /// ] and [: the next or previous changed file after the selected entry, unfolded, selected and previewed; past
     /// the last one, back to the first.
     fn next_change(&mut self, dir: i64) {
-        if self.tree.git.top.is_none() {
+        if !self.tree.git.on() {
             return self.flash(Some("Not a git repository".into()));
         }
         let list = self.tree.changed_files();
