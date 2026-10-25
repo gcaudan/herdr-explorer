@@ -1197,3 +1197,77 @@ fn core_buffer() {
         })
     });
 }
+
+#[test]
+fn core_icons() {
+    use herdr_explorer::core::{icons, ui};
+    use herdr_explorer::obj;
+
+    const ITEMS: &[(&str, bool, bool)] = &[
+        ("a.js", false, false),
+        ("b.TS", false, false),
+        ("README.md", false, false),
+        ("Dockerfile", false, false),
+        (".gitignore", false, false),
+        ("x.unknown", false, false),
+        ("noext", false, false),
+        ("constructor", false, false),
+        ("src", true, false),
+        ("src", true, true),
+        ("x.d.ts", false, false),
+        ("Makefile", false, false),
+        ("a.svg", false, false),
+        (".git", true, false),
+        ("Node_Modules", true, true),
+        ("docs", true, false),
+        ("icon.png", false, false),
+    ];
+    fn rgb(c: Option<[u8; 3]>) -> Value {
+        c.map_or(Value::Null, |c| Value::Arr(c.iter().map(|&x| Value::Num(x as f64)).collect()))
+    }
+    fn pair((code, c): (Option<u32>, Option<[u8; 3]>)) -> Value {
+        Value::Arr(vec![code.map_or(Value::Null, |g| Value::Num(g as f64)), rgb(c)])
+    }
+
+    support::replay("core/icons", |name, args| {
+        Ok(match name {
+            "iconsOf" => {
+                ui::use_glyphs(args[0].as_str().unwrap());
+                ui::use_theme(args[1].as_str().unwrap());
+                let loaded = if args[2].truthy() { icons::load(&args[2]) } else { None };
+                let out = ITEMS
+                    .iter()
+                    .map(|&(n, dir, open)| {
+                        let (text, c) = icons::icon(loaded.as_ref(), n, dir, open);
+                        Value::Arr(vec![Value::Str(text), rgb(Some(c))])
+                    })
+                    .collect();
+                ui::use_glyphs("nerd");
+                ui::use_theme("dark");
+                Value::Arr(out)
+            }
+            "themesIn" => Value::Arr(
+                icons::themes()
+                    .into_iter()
+                    .map(|t| {
+                        let mut fields =
+                            vec![("id".to_string(), Value::Str(t.id)), ("label".into(), Value::Str(t.label))];
+                        fields.extend(t.version.map(|v| ("version".to_string(), v)));
+                        fields.push(("file".into(), Value::Str(t.file)));
+                        Value::Obj(fields)
+                    })
+                    .collect(),
+            ),
+            "loadOf" => match icons::load(&args[0]) {
+                None => Value::Null,
+                Some(t) => {
+                    let folders: Vec<Value> = strs(&args[1]).iter().map(|n| pair(t.folder(n))).collect();
+                    let files: Vec<Value> =
+                        strs(&args[2]).iter().map(|n| t.file(n).map_or(Value::Arr(vec![]), pair)).collect();
+                    obj! { "entry" => t.entry.clone(), "folders" => folders, "files" => files }
+                }
+            },
+            other => panic!("core/icons: {other}"),
+        })
+    });
+}

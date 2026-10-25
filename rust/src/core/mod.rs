@@ -4,6 +4,7 @@
 pub mod actions;
 pub mod buffer;
 pub mod exec;
+pub mod icons;
 pub mod js;
 pub mod notes;
 pub mod paths;

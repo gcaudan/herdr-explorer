@@ -1,0 +1,3142 @@
+{
+ "module": "core/icons",
+ "cases": [
+  {
+   "fn": "iconsOf",
+   "args": [
+    "nerd",
+    "dark",
+    null
+   ],
+   "out": [
+    [
+     " ",
+     [
+      203,
+      203,
+      65
+     ]
+    ],
+    [
+     " ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     " ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     " ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     " ",
+     [
+      227,
+      121,
+      51
+     ]
+    ],
+    [
+     " ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     " ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     " ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     " ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     " ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     " ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     " ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     " ",
+     [
+      160,
+      116,
+      196
+     ]
+    ],
+    [
+     " ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     " ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     " ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     " ",
+     [
+      160,
+      116,
+      196
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "iconsOf",
+   "args": [
+    "nerd",
+    "light",
+    null
+   ],
+   "out": [
+    [
+     " ",
+     [
+      148,
+      116,
+      0
+     ]
+    ],
+    [
+     " ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     " ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     " ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     " ",
+     [
+      196,
+      90,
+      0
+     ]
+    ],
+    [
+     " ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     " ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     " ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     " ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     " ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     " ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     " ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     " ",
+     [
+      128,
+      60,
+      180
+     ]
+    ],
+    [
+     " ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     " ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     " ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     " ",
+     [
+      128,
+      60,
+      180
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "iconsOf",
+   "args": [
+    "emoji",
+    "dark",
+    null
+   ],
+   "out": [
+    [
+     "📜 ",
+     [
+      203,
+      203,
+      65
+     ]
+    ],
+    [
+     "📘 ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "📖 ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "🐳 ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "🔀 ",
+     [
+      227,
+      121,
+      51
+     ]
+    ],
+    [
+     "📄 ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "📄 ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "📄 ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "📁 ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "📂 ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "📘 ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "📄 ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "📷 ",
+     [
+      160,
+      116,
+      196
+     ]
+    ],
+    [
+     "📁 ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "📂 ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "📁 ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "📷 ",
+     [
+      160,
+      116,
+      196
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "iconsOf",
+   "args": [
+    "emoji",
+    "light",
+    null
+   ],
+   "out": [
+    [
+     "📜 ",
+     [
+      148,
+      116,
+      0
+     ]
+    ],
+    [
+     "📘 ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     "📖 ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     "🐳 ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     "🔀 ",
+     [
+      196,
+      90,
+      0
+     ]
+    ],
+    [
+     "📄 ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     "📄 ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     "📄 ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     "📁 ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     "📂 ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     "📘 ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     "📄 ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     "📷 ",
+     [
+      128,
+      60,
+      180
+     ]
+    ],
+    [
+     "📁 ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     "📂 ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     "📁 ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     "📷 ",
+     [
+      128,
+      60,
+      180
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "iconsOf",
+   "args": [
+    "unicode",
+    "dark",
+    null
+   ],
+   "out": [
+    [
+     "● ",
+     [
+      203,
+      203,
+      65
+     ]
+    ],
+    [
+     "● ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "● ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "● ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "● ",
+     [
+      227,
+      121,
+      51
+     ]
+    ],
+    [
+     "○ ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "○ ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "○ ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "■ ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "□ ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "● ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "○ ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "● ",
+     [
+      160,
+      116,
+      196
+     ]
+    ],
+    [
+     "■ ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "□ ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "■ ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "● ",
+     [
+      160,
+      116,
+      196
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "iconsOf",
+   "args": [
+    "unicode",
+    "light",
+    null
+   ],
+   "out": [
+    [
+     "● ",
+     [
+      148,
+      116,
+      0
+     ]
+    ],
+    [
+     "● ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     "● ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     "● ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     "● ",
+     [
+      196,
+      90,
+      0
+     ]
+    ],
+    [
+     "○ ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     "○ ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     "○ ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     "■ ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     "□ ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     "● ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     "○ ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     "● ",
+     [
+      128,
+      60,
+      180
+     ]
+    ],
+    [
+     "■ ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     "□ ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     "■ ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     "● ",
+     [
+      128,
+      60,
+      180
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "iconsOf",
+   "args": [
+    "ascii",
+    "dark",
+    null
+   ],
+   "out": [
+    [
+     "- ",
+     [
+      203,
+      203,
+      65
+     ]
+    ],
+    [
+     "- ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "- ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "- ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "- ",
+     [
+      227,
+      121,
+      51
+     ]
+    ],
+    [
+     "- ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "- ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "- ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "/ ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "/ ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "- ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "- ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "- ",
+     [
+      160,
+      116,
+      196
+     ]
+    ],
+    [
+     "/ ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "/ ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "/ ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "- ",
+     [
+      160,
+      116,
+      196
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "iconsOf",
+   "args": [
+    "ascii",
+    "light",
+    null
+   ],
+   "out": [
+    [
+     "- ",
+     [
+      148,
+      116,
+      0
+     ]
+    ],
+    [
+     "- ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     "- ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     "- ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     "- ",
+     [
+      196,
+      90,
+      0
+     ]
+    ],
+    [
+     "- ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     "- ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     "- ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     "/ ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     "/ ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     "- ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     "- ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     "- ",
+     [
+      128,
+      60,
+      180
+     ]
+    ],
+    [
+     "/ ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     "/ ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     "/ ",
+     [
+      184,
+      134,
+      60
+     ]
+    ],
+    [
+     "- ",
+     [
+      128,
+      60,
+      180
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "iconsOf",
+   "args": [
+    "nerd",
+    "dark",
+    {
+     "id": "pub.icons/material",
+     "label": "Material Icons",
+     "file": "$ROOT/home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json"
+    }
+   ],
+   "files": {
+    "home/.vscode/extensions/pub.icons-1.2.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.2.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"%theme.label%\",\"path\":\"./dist/theme.json\"},{\"id\":\"bad\"},null]}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/package.nls.json": "{\"theme.label\":{\"message\":\"Material Icons\",\"comment\":\"c\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json": "{\"iconDefinitions\":{\"_folder\":{\"iconPath\":\"./icons/folder.svg\"},\"folder-git\":{\"iconPath\":\"./icons/git.svg\"},\"folder-node\":{\"fontColor\":\"#8bc34a\"},\"_file\":{\"iconPath\":\"./icons/file.svg\"},\"react_ts\":{\"fontColor\":\"#0288D1ff\"},\"typescript\":{\"iconPath\":\"./icons/ts.SVG\"},\"makefile\":{\"fontColor\":\"#abc\"},\"javascript\":{\"iconPath\":\"./icons/js.svg\"},\"svg\":{\"iconPath\":\"./icons/missing.svg\"},\"image\":{\"iconPath\":\"./icons/image.png\"},\"tune\":{\"fontColor\":\"red\"}},\"folder\":\"_folder\",\"file\":\"_file\",\"folderNames\":{\".git\":\"folder-git\",\".GIT\":\"folder-github\",\"node_modules\":\"folder-node\",\"empty\":\"\"},\"fileNames\":{\"readme.md\":\"readme\",\"Makefile\":\"makefile\",\".env\":\"tune\"},\"fileExtensions\":{\"d.ts\":\"react_ts\",\"ts\":\"typescript\",\"png\":\"image\",\"svg\":\"svg\"},\"languageIds\":{\"javascript\":\"javascript\",\"undefined\":\"nolang\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/folder.svg": "<svg><path fill=\"#90A4AE\"/><path fill=\"#ff0000\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/git.svg": "<svg style=\"fill: #E64A19\"/>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/file.svg": "<svg><path fill=\"#999\"/><path fill='#4caf50'/><path FILL=\"#2196f3\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/ts.SVG": "<svg><path fill=\"#0288d1\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/js.svg": "<svg><path fill=\"#ffca28\"/><path fill=\"#ffca28x\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.1.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"Old\",\"path\":\"./old.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"Icons\",\"version\":\"1.10.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"MATERIAL\",\"label\":\"Newest\",\"path\":\"./dist/theme.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/dist/theme.json": "﻿{\n  // the folders\n  \"folder\": \"_folder\", /* default */\n  \"iconDefinitions\": { \"_folder\": { \"fontColor\": \"#123456\", }, },\n  \"fileExtensions\": { \"md\": \"_folder\", },\n}",
+    "home/.vscode/extensions/other/package.json": "{ \"iconThemes\": 1, // not a theme list\n \"name\": \"x\" }",
+    "home/.vscode/extensions/noversion/package.json": "{\"name\":\"nov\",\"contributes\":{\"iconThemes\":[{\"id\":\"t\",\"label\":5,\"path\":\"p.json\"}]}}",
+    "home/.vscode/extensions/plain/package.json": "{\"name\":\"plain\"}",
+    "home/.cursor/extensions/b.seti/package.json": "{\"publisher\":\"Pub\",\"name\":\"seti\",\"version\":\"0.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"seti\",\"label\":\"%missing%\",\"path\":\"seti.json\"},{\"id\":\"z\",\"label\":\"a\",\"path\":\"z.json\"}]}}",
+    "home/.cursor/extensions/b.seti/package.nls.json": "{ \"other\": \"x\", }",
+    "home/.cursor/extensions/b.seti/seti.json": "{\"iconDefinitions\":{\"_seti\":{\"fontColor\":\"#519aba\"}},\"file\":\"_seti\",\"languageIds\":{\"markdown\":\"_seti\"}}",
+    "app/bin/code": "#!/bin/sh\n",
+    "app/resources/app/extensions/theme-builtin/package.json": "{\"publisher\":\"Pub\",\"name\":\"builtin\",\"version\":\"1.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"vs-minimal\",\"label\":\"Minimal\",\"path\":\"m.json\"}]}}",
+    "app/1.90/resources/app/extensions/ver/package.json": "{\"publisher\":\"Pub\",\"name\":\"ver\",\"version\":\"2.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"v\",\"label\":\"Versioned\",\"path\":\"v.json\"}]}}",
+    "bin": null,
+    "bin/code": {
+     "link": "$ROOT/app/bin/code"
+    }
+   },
+   "env": {
+    "HOME": "$ROOT/home",
+    "PATH": "$ROOT/bin"
+   },
+   "out": [
+    [
+     " ",
+     [
+      255,
+      202,
+      40
+     ]
+    ],
+    [
+     " ",
+     [
+      2,
+      136,
+      209
+     ]
+    ],
+    [
+     " ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     " ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     " ",
+     [
+      227,
+      121,
+      51
+     ]
+    ],
+    [
+     " ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     " ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     " ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     " ",
+     [
+      144,
+      164,
+      174
+     ]
+    ],
+    [
+     " ",
+     [
+      144,
+      164,
+      174
+     ]
+    ],
+    [
+     " ",
+     [
+      2,
+      136,
+      209
+     ]
+    ],
+    [
+     " ",
+     [
+      170,
+      187,
+      204
+     ]
+    ],
+    [
+     " ",
+     [
+      160,
+      116,
+      196
+     ]
+    ],
+    [
+     " ",
+     [
+      230,
+      74,
+      25
+     ]
+    ],
+    [
+     " ",
+     [
+      139,
+      195,
+      74
+     ]
+    ],
+    [
+     " ",
+     [
+      144,
+      164,
+      174
+     ]
+    ],
+    [
+     " ",
+     [
+      160,
+      116,
+      196
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "iconsOf",
+   "args": [
+    "emoji",
+    "dark",
+    {
+     "id": "pub.icons/material",
+     "label": "Material Icons",
+     "file": "$ROOT/home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json"
+    }
+   ],
+   "files": {
+    "home/.vscode/extensions/pub.icons-1.2.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.2.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"%theme.label%\",\"path\":\"./dist/theme.json\"},{\"id\":\"bad\"},null]}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/package.nls.json": "{\"theme.label\":{\"message\":\"Material Icons\",\"comment\":\"c\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json": "{\"iconDefinitions\":{\"_folder\":{\"iconPath\":\"./icons/folder.svg\"},\"folder-git\":{\"iconPath\":\"./icons/git.svg\"},\"folder-node\":{\"fontColor\":\"#8bc34a\"},\"_file\":{\"iconPath\":\"./icons/file.svg\"},\"react_ts\":{\"fontColor\":\"#0288D1ff\"},\"typescript\":{\"iconPath\":\"./icons/ts.SVG\"},\"makefile\":{\"fontColor\":\"#abc\"},\"javascript\":{\"iconPath\":\"./icons/js.svg\"},\"svg\":{\"iconPath\":\"./icons/missing.svg\"},\"image\":{\"iconPath\":\"./icons/image.png\"},\"tune\":{\"fontColor\":\"red\"}},\"folder\":\"_folder\",\"file\":\"_file\",\"folderNames\":{\".git\":\"folder-git\",\".GIT\":\"folder-github\",\"node_modules\":\"folder-node\",\"empty\":\"\"},\"fileNames\":{\"readme.md\":\"readme\",\"Makefile\":\"makefile\",\".env\":\"tune\"},\"fileExtensions\":{\"d.ts\":\"react_ts\",\"ts\":\"typescript\",\"png\":\"image\",\"svg\":\"svg\"},\"languageIds\":{\"javascript\":\"javascript\",\"undefined\":\"nolang\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/folder.svg": "<svg><path fill=\"#90A4AE\"/><path fill=\"#ff0000\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/git.svg": "<svg style=\"fill: #E64A19\"/>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/file.svg": "<svg><path fill=\"#999\"/><path fill='#4caf50'/><path FILL=\"#2196f3\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/ts.SVG": "<svg><path fill=\"#0288d1\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/js.svg": "<svg><path fill=\"#ffca28\"/><path fill=\"#ffca28x\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.1.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"Old\",\"path\":\"./old.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"Icons\",\"version\":\"1.10.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"MATERIAL\",\"label\":\"Newest\",\"path\":\"./dist/theme.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/dist/theme.json": "﻿{\n  // the folders\n  \"folder\": \"_folder\", /* default */\n  \"iconDefinitions\": { \"_folder\": { \"fontColor\": \"#123456\", }, },\n  \"fileExtensions\": { \"md\": \"_folder\", },\n}",
+    "home/.vscode/extensions/other/package.json": "{ \"iconThemes\": 1, // not a theme list\n \"name\": \"x\" }",
+    "home/.vscode/extensions/noversion/package.json": "{\"name\":\"nov\",\"contributes\":{\"iconThemes\":[{\"id\":\"t\",\"label\":5,\"path\":\"p.json\"}]}}",
+    "home/.vscode/extensions/plain/package.json": "{\"name\":\"plain\"}",
+    "home/.cursor/extensions/b.seti/package.json": "{\"publisher\":\"Pub\",\"name\":\"seti\",\"version\":\"0.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"seti\",\"label\":\"%missing%\",\"path\":\"seti.json\"},{\"id\":\"z\",\"label\":\"a\",\"path\":\"z.json\"}]}}",
+    "home/.cursor/extensions/b.seti/package.nls.json": "{ \"other\": \"x\", }",
+    "home/.cursor/extensions/b.seti/seti.json": "{\"iconDefinitions\":{\"_seti\":{\"fontColor\":\"#519aba\"}},\"file\":\"_seti\",\"languageIds\":{\"markdown\":\"_seti\"}}",
+    "app/bin/code": "#!/bin/sh\n",
+    "app/resources/app/extensions/theme-builtin/package.json": "{\"publisher\":\"Pub\",\"name\":\"builtin\",\"version\":\"1.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"vs-minimal\",\"label\":\"Minimal\",\"path\":\"m.json\"}]}}",
+    "app/1.90/resources/app/extensions/ver/package.json": "{\"publisher\":\"Pub\",\"name\":\"ver\",\"version\":\"2.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"v\",\"label\":\"Versioned\",\"path\":\"v.json\"}]}}",
+    "bin": null,
+    "bin/code": {
+     "link": "$ROOT/app/bin/code"
+    }
+   },
+   "env": {
+    "HOME": "$ROOT/home",
+    "PATH": "$ROOT/bin"
+   },
+   "out": [
+    [
+     "📜 ",
+     [
+      203,
+      203,
+      65
+     ]
+    ],
+    [
+     "📘 ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "📖 ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "🐳 ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "🔀 ",
+     [
+      227,
+      121,
+      51
+     ]
+    ],
+    [
+     "📄 ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "📄 ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "📄 ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "📁 ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "📂 ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "📘 ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "📄 ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "📷 ",
+     [
+      160,
+      116,
+      196
+     ]
+    ],
+    [
+     "📁 ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "📂 ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "📁 ",
+     [
+      220,
+      182,
+      122
+     ]
+    ],
+    [
+     "📷 ",
+     [
+      160,
+      116,
+      196
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "iconsOf",
+   "args": [
+    "unicode",
+    "dark",
+    {
+     "id": "pub.icons/material",
+     "label": "Material Icons",
+     "file": "$ROOT/home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json"
+    }
+   ],
+   "files": {
+    "home/.vscode/extensions/pub.icons-1.2.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.2.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"%theme.label%\",\"path\":\"./dist/theme.json\"},{\"id\":\"bad\"},null]}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/package.nls.json": "{\"theme.label\":{\"message\":\"Material Icons\",\"comment\":\"c\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json": "{\"iconDefinitions\":{\"_folder\":{\"iconPath\":\"./icons/folder.svg\"},\"folder-git\":{\"iconPath\":\"./icons/git.svg\"},\"folder-node\":{\"fontColor\":\"#8bc34a\"},\"_file\":{\"iconPath\":\"./icons/file.svg\"},\"react_ts\":{\"fontColor\":\"#0288D1ff\"},\"typescript\":{\"iconPath\":\"./icons/ts.SVG\"},\"makefile\":{\"fontColor\":\"#abc\"},\"javascript\":{\"iconPath\":\"./icons/js.svg\"},\"svg\":{\"iconPath\":\"./icons/missing.svg\"},\"image\":{\"iconPath\":\"./icons/image.png\"},\"tune\":{\"fontColor\":\"red\"}},\"folder\":\"_folder\",\"file\":\"_file\",\"folderNames\":{\".git\":\"folder-git\",\".GIT\":\"folder-github\",\"node_modules\":\"folder-node\",\"empty\":\"\"},\"fileNames\":{\"readme.md\":\"readme\",\"Makefile\":\"makefile\",\".env\":\"tune\"},\"fileExtensions\":{\"d.ts\":\"react_ts\",\"ts\":\"typescript\",\"png\":\"image\",\"svg\":\"svg\"},\"languageIds\":{\"javascript\":\"javascript\",\"undefined\":\"nolang\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/folder.svg": "<svg><path fill=\"#90A4AE\"/><path fill=\"#ff0000\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/git.svg": "<svg style=\"fill: #E64A19\"/>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/file.svg": "<svg><path fill=\"#999\"/><path fill='#4caf50'/><path FILL=\"#2196f3\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/ts.SVG": "<svg><path fill=\"#0288d1\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/js.svg": "<svg><path fill=\"#ffca28\"/><path fill=\"#ffca28x\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.1.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"Old\",\"path\":\"./old.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"Icons\",\"version\":\"1.10.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"MATERIAL\",\"label\":\"Newest\",\"path\":\"./dist/theme.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/dist/theme.json": "﻿{\n  // the folders\n  \"folder\": \"_folder\", /* default */\n  \"iconDefinitions\": { \"_folder\": { \"fontColor\": \"#123456\", }, },\n  \"fileExtensions\": { \"md\": \"_folder\", },\n}",
+    "home/.vscode/extensions/other/package.json": "{ \"iconThemes\": 1, // not a theme list\n \"name\": \"x\" }",
+    "home/.vscode/extensions/noversion/package.json": "{\"name\":\"nov\",\"contributes\":{\"iconThemes\":[{\"id\":\"t\",\"label\":5,\"path\":\"p.json\"}]}}",
+    "home/.vscode/extensions/plain/package.json": "{\"name\":\"plain\"}",
+    "home/.cursor/extensions/b.seti/package.json": "{\"publisher\":\"Pub\",\"name\":\"seti\",\"version\":\"0.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"seti\",\"label\":\"%missing%\",\"path\":\"seti.json\"},{\"id\":\"z\",\"label\":\"a\",\"path\":\"z.json\"}]}}",
+    "home/.cursor/extensions/b.seti/package.nls.json": "{ \"other\": \"x\", }",
+    "home/.cursor/extensions/b.seti/seti.json": "{\"iconDefinitions\":{\"_seti\":{\"fontColor\":\"#519aba\"}},\"file\":\"_seti\",\"languageIds\":{\"markdown\":\"_seti\"}}",
+    "app/bin/code": "#!/bin/sh\n",
+    "app/resources/app/extensions/theme-builtin/package.json": "{\"publisher\":\"Pub\",\"name\":\"builtin\",\"version\":\"1.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"vs-minimal\",\"label\":\"Minimal\",\"path\":\"m.json\"}]}}",
+    "app/1.90/resources/app/extensions/ver/package.json": "{\"publisher\":\"Pub\",\"name\":\"ver\",\"version\":\"2.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"v\",\"label\":\"Versioned\",\"path\":\"v.json\"}]}}",
+    "bin": null,
+    "bin/code": {
+     "link": "$ROOT/app/bin/code"
+    }
+   },
+   "env": {
+    "HOME": "$ROOT/home",
+    "PATH": "$ROOT/bin"
+   },
+   "out": [
+    [
+     "● ",
+     [
+      255,
+      202,
+      40
+     ]
+    ],
+    [
+     "● ",
+     [
+      2,
+      136,
+      209
+     ]
+    ],
+    [
+     "● ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "● ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "● ",
+     [
+      227,
+      121,
+      51
+     ]
+    ],
+    [
+     "○ ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "○ ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "○ ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "■ ",
+     [
+      144,
+      164,
+      174
+     ]
+    ],
+    [
+     "□ ",
+     [
+      144,
+      164,
+      174
+     ]
+    ],
+    [
+     "● ",
+     [
+      2,
+      136,
+      209
+     ]
+    ],
+    [
+     "● ",
+     [
+      170,
+      187,
+      204
+     ]
+    ],
+    [
+     "● ",
+     [
+      160,
+      116,
+      196
+     ]
+    ],
+    [
+     "■ ",
+     [
+      230,
+      74,
+      25
+     ]
+    ],
+    [
+     "□ ",
+     [
+      139,
+      195,
+      74
+     ]
+    ],
+    [
+     "■ ",
+     [
+      144,
+      164,
+      174
+     ]
+    ],
+    [
+     "● ",
+     [
+      160,
+      116,
+      196
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "iconsOf",
+   "args": [
+    "ascii",
+    "dark",
+    {
+     "id": "pub.icons/material",
+     "label": "Material Icons",
+     "file": "$ROOT/home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json"
+    }
+   ],
+   "files": {
+    "home/.vscode/extensions/pub.icons-1.2.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.2.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"%theme.label%\",\"path\":\"./dist/theme.json\"},{\"id\":\"bad\"},null]}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/package.nls.json": "{\"theme.label\":{\"message\":\"Material Icons\",\"comment\":\"c\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json": "{\"iconDefinitions\":{\"_folder\":{\"iconPath\":\"./icons/folder.svg\"},\"folder-git\":{\"iconPath\":\"./icons/git.svg\"},\"folder-node\":{\"fontColor\":\"#8bc34a\"},\"_file\":{\"iconPath\":\"./icons/file.svg\"},\"react_ts\":{\"fontColor\":\"#0288D1ff\"},\"typescript\":{\"iconPath\":\"./icons/ts.SVG\"},\"makefile\":{\"fontColor\":\"#abc\"},\"javascript\":{\"iconPath\":\"./icons/js.svg\"},\"svg\":{\"iconPath\":\"./icons/missing.svg\"},\"image\":{\"iconPath\":\"./icons/image.png\"},\"tune\":{\"fontColor\":\"red\"}},\"folder\":\"_folder\",\"file\":\"_file\",\"folderNames\":{\".git\":\"folder-git\",\".GIT\":\"folder-github\",\"node_modules\":\"folder-node\",\"empty\":\"\"},\"fileNames\":{\"readme.md\":\"readme\",\"Makefile\":\"makefile\",\".env\":\"tune\"},\"fileExtensions\":{\"d.ts\":\"react_ts\",\"ts\":\"typescript\",\"png\":\"image\",\"svg\":\"svg\"},\"languageIds\":{\"javascript\":\"javascript\",\"undefined\":\"nolang\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/folder.svg": "<svg><path fill=\"#90A4AE\"/><path fill=\"#ff0000\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/git.svg": "<svg style=\"fill: #E64A19\"/>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/file.svg": "<svg><path fill=\"#999\"/><path fill='#4caf50'/><path FILL=\"#2196f3\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/ts.SVG": "<svg><path fill=\"#0288d1\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/js.svg": "<svg><path fill=\"#ffca28\"/><path fill=\"#ffca28x\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.1.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"Old\",\"path\":\"./old.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"Icons\",\"version\":\"1.10.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"MATERIAL\",\"label\":\"Newest\",\"path\":\"./dist/theme.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/dist/theme.json": "﻿{\n  // the folders\n  \"folder\": \"_folder\", /* default */\n  \"iconDefinitions\": { \"_folder\": { \"fontColor\": \"#123456\", }, },\n  \"fileExtensions\": { \"md\": \"_folder\", },\n}",
+    "home/.vscode/extensions/other/package.json": "{ \"iconThemes\": 1, // not a theme list\n \"name\": \"x\" }",
+    "home/.vscode/extensions/noversion/package.json": "{\"name\":\"nov\",\"contributes\":{\"iconThemes\":[{\"id\":\"t\",\"label\":5,\"path\":\"p.json\"}]}}",
+    "home/.vscode/extensions/plain/package.json": "{\"name\":\"plain\"}",
+    "home/.cursor/extensions/b.seti/package.json": "{\"publisher\":\"Pub\",\"name\":\"seti\",\"version\":\"0.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"seti\",\"label\":\"%missing%\",\"path\":\"seti.json\"},{\"id\":\"z\",\"label\":\"a\",\"path\":\"z.json\"}]}}",
+    "home/.cursor/extensions/b.seti/package.nls.json": "{ \"other\": \"x\", }",
+    "home/.cursor/extensions/b.seti/seti.json": "{\"iconDefinitions\":{\"_seti\":{\"fontColor\":\"#519aba\"}},\"file\":\"_seti\",\"languageIds\":{\"markdown\":\"_seti\"}}",
+    "app/bin/code": "#!/bin/sh\n",
+    "app/resources/app/extensions/theme-builtin/package.json": "{\"publisher\":\"Pub\",\"name\":\"builtin\",\"version\":\"1.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"vs-minimal\",\"label\":\"Minimal\",\"path\":\"m.json\"}]}}",
+    "app/1.90/resources/app/extensions/ver/package.json": "{\"publisher\":\"Pub\",\"name\":\"ver\",\"version\":\"2.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"v\",\"label\":\"Versioned\",\"path\":\"v.json\"}]}}",
+    "bin": null,
+    "bin/code": {
+     "link": "$ROOT/app/bin/code"
+    }
+   },
+   "env": {
+    "HOME": "$ROOT/home",
+    "PATH": "$ROOT/bin"
+   },
+   "out": [
+    [
+     "- ",
+     [
+      255,
+      202,
+      40
+     ]
+    ],
+    [
+     "- ",
+     [
+      2,
+      136,
+      209
+     ]
+    ],
+    [
+     "- ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "- ",
+     [
+      81,
+      154,
+      186
+     ]
+    ],
+    [
+     "- ",
+     [
+      227,
+      121,
+      51
+     ]
+    ],
+    [
+     "- ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "- ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "- ",
+     [
+      109,
+      128,
+      134
+     ]
+    ],
+    [
+     "/ ",
+     [
+      144,
+      164,
+      174
+     ]
+    ],
+    [
+     "/ ",
+     [
+      144,
+      164,
+      174
+     ]
+    ],
+    [
+     "- ",
+     [
+      2,
+      136,
+      209
+     ]
+    ],
+    [
+     "- ",
+     [
+      170,
+      187,
+      204
+     ]
+    ],
+    [
+     "- ",
+     [
+      160,
+      116,
+      196
+     ]
+    ],
+    [
+     "/ ",
+     [
+      230,
+      74,
+      25
+     ]
+    ],
+    [
+     "/ ",
+     [
+      139,
+      195,
+      74
+     ]
+    ],
+    [
+     "/ ",
+     [
+      144,
+      164,
+      174
+     ]
+    ],
+    [
+     "- ",
+     [
+      160,
+      116,
+      196
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "iconsOf",
+   "args": [
+    "nerd",
+    "light",
+    {
+     "id": "pub.icons/material",
+     "label": "Material Icons",
+     "file": "$ROOT/home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json"
+    }
+   ],
+   "files": {
+    "home/.vscode/extensions/pub.icons-1.2.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.2.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"%theme.label%\",\"path\":\"./dist/theme.json\"},{\"id\":\"bad\"},null]}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/package.nls.json": "{\"theme.label\":{\"message\":\"Material Icons\",\"comment\":\"c\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json": "{\"iconDefinitions\":{\"_folder\":{\"iconPath\":\"./icons/folder.svg\"},\"folder-git\":{\"iconPath\":\"./icons/git.svg\"},\"folder-node\":{\"fontColor\":\"#8bc34a\"},\"_file\":{\"iconPath\":\"./icons/file.svg\"},\"react_ts\":{\"fontColor\":\"#0288D1ff\"},\"typescript\":{\"iconPath\":\"./icons/ts.SVG\"},\"makefile\":{\"fontColor\":\"#abc\"},\"javascript\":{\"iconPath\":\"./icons/js.svg\"},\"svg\":{\"iconPath\":\"./icons/missing.svg\"},\"image\":{\"iconPath\":\"./icons/image.png\"},\"tune\":{\"fontColor\":\"red\"}},\"folder\":\"_folder\",\"file\":\"_file\",\"folderNames\":{\".git\":\"folder-git\",\".GIT\":\"folder-github\",\"node_modules\":\"folder-node\",\"empty\":\"\"},\"fileNames\":{\"readme.md\":\"readme\",\"Makefile\":\"makefile\",\".env\":\"tune\"},\"fileExtensions\":{\"d.ts\":\"react_ts\",\"ts\":\"typescript\",\"png\":\"image\",\"svg\":\"svg\"},\"languageIds\":{\"javascript\":\"javascript\",\"undefined\":\"nolang\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/folder.svg": "<svg><path fill=\"#90A4AE\"/><path fill=\"#ff0000\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/git.svg": "<svg style=\"fill: #E64A19\"/>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/file.svg": "<svg><path fill=\"#999\"/><path fill='#4caf50'/><path FILL=\"#2196f3\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/ts.SVG": "<svg><path fill=\"#0288d1\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/js.svg": "<svg><path fill=\"#ffca28\"/><path fill=\"#ffca28x\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.1.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"Old\",\"path\":\"./old.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"Icons\",\"version\":\"1.10.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"MATERIAL\",\"label\":\"Newest\",\"path\":\"./dist/theme.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/dist/theme.json": "﻿{\n  // the folders\n  \"folder\": \"_folder\", /* default */\n  \"iconDefinitions\": { \"_folder\": { \"fontColor\": \"#123456\", }, },\n  \"fileExtensions\": { \"md\": \"_folder\", },\n}",
+    "home/.vscode/extensions/other/package.json": "{ \"iconThemes\": 1, // not a theme list\n \"name\": \"x\" }",
+    "home/.vscode/extensions/noversion/package.json": "{\"name\":\"nov\",\"contributes\":{\"iconThemes\":[{\"id\":\"t\",\"label\":5,\"path\":\"p.json\"}]}}",
+    "home/.vscode/extensions/plain/package.json": "{\"name\":\"plain\"}",
+    "home/.cursor/extensions/b.seti/package.json": "{\"publisher\":\"Pub\",\"name\":\"seti\",\"version\":\"0.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"seti\",\"label\":\"%missing%\",\"path\":\"seti.json\"},{\"id\":\"z\",\"label\":\"a\",\"path\":\"z.json\"}]}}",
+    "home/.cursor/extensions/b.seti/package.nls.json": "{ \"other\": \"x\", }",
+    "home/.cursor/extensions/b.seti/seti.json": "{\"iconDefinitions\":{\"_seti\":{\"fontColor\":\"#519aba\"}},\"file\":\"_seti\",\"languageIds\":{\"markdown\":\"_seti\"}}",
+    "app/bin/code": "#!/bin/sh\n",
+    "app/resources/app/extensions/theme-builtin/package.json": "{\"publisher\":\"Pub\",\"name\":\"builtin\",\"version\":\"1.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"vs-minimal\",\"label\":\"Minimal\",\"path\":\"m.json\"}]}}",
+    "app/1.90/resources/app/extensions/ver/package.json": "{\"publisher\":\"Pub\",\"name\":\"ver\",\"version\":\"2.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"v\",\"label\":\"Versioned\",\"path\":\"v.json\"}]}}",
+    "bin": null,
+    "bin/code": {
+     "link": "$ROOT/app/bin/code"
+    }
+   },
+   "env": {
+    "HOME": "$ROOT/home",
+    "PATH": "$ROOT/bin"
+   },
+   "out": [
+    [
+     " ",
+     [
+      255,
+      202,
+      40
+     ]
+    ],
+    [
+     " ",
+     [
+      2,
+      136,
+      209
+     ]
+    ],
+    [
+     " ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     " ",
+     [
+      0,
+      106,
+      177
+     ]
+    ],
+    [
+     " ",
+     [
+      196,
+      90,
+      0
+     ]
+    ],
+    [
+     " ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     " ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     " ",
+     [
+      110,
+      120,
+      125
+     ]
+    ],
+    [
+     " ",
+     [
+      144,
+      164,
+      174
+     ]
+    ],
+    [
+     " ",
+     [
+      144,
+      164,
+      174
+     ]
+    ],
+    [
+     " ",
+     [
+      2,
+      136,
+      209
+     ]
+    ],
+    [
+     " ",
+     [
+      170,
+      187,
+      204
+     ]
+    ],
+    [
+     " ",
+     [
+      128,
+      60,
+      180
+     ]
+    ],
+    [
+     " ",
+     [
+      230,
+      74,
+      25
+     ]
+    ],
+    [
+     " ",
+     [
+      139,
+      195,
+      74
+     ]
+    ],
+    [
+     " ",
+     [
+      144,
+      164,
+      174
+     ]
+    ],
+    [
+     " ",
+     [
+      128,
+      60,
+      180
+     ]
+    ]
+   ]
+  },
+  {
+   "fn": "themesIn",
+   "args": [],
+   "files": {
+    "home/.vscode/extensions/pub.icons-1.2.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.2.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"%theme.label%\",\"path\":\"./dist/theme.json\"},{\"id\":\"bad\"},null]}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/package.nls.json": "{\"theme.label\":{\"message\":\"Material Icons\",\"comment\":\"c\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json": "{\"iconDefinitions\":{\"_folder\":{\"iconPath\":\"./icons/folder.svg\"},\"folder-git\":{\"iconPath\":\"./icons/git.svg\"},\"folder-node\":{\"fontColor\":\"#8bc34a\"},\"_file\":{\"iconPath\":\"./icons/file.svg\"},\"react_ts\":{\"fontColor\":\"#0288D1ff\"},\"typescript\":{\"iconPath\":\"./icons/ts.SVG\"},\"makefile\":{\"fontColor\":\"#abc\"},\"javascript\":{\"iconPath\":\"./icons/js.svg\"},\"svg\":{\"iconPath\":\"./icons/missing.svg\"},\"image\":{\"iconPath\":\"./icons/image.png\"},\"tune\":{\"fontColor\":\"red\"}},\"folder\":\"_folder\",\"file\":\"_file\",\"folderNames\":{\".git\":\"folder-git\",\".GIT\":\"folder-github\",\"node_modules\":\"folder-node\",\"empty\":\"\"},\"fileNames\":{\"readme.md\":\"readme\",\"Makefile\":\"makefile\",\".env\":\"tune\"},\"fileExtensions\":{\"d.ts\":\"react_ts\",\"ts\":\"typescript\",\"png\":\"image\",\"svg\":\"svg\"},\"languageIds\":{\"javascript\":\"javascript\",\"undefined\":\"nolang\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/folder.svg": "<svg><path fill=\"#90A4AE\"/><path fill=\"#ff0000\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/git.svg": "<svg style=\"fill: #E64A19\"/>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/file.svg": "<svg><path fill=\"#999\"/><path fill='#4caf50'/><path FILL=\"#2196f3\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/ts.SVG": "<svg><path fill=\"#0288d1\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/js.svg": "<svg><path fill=\"#ffca28\"/><path fill=\"#ffca28x\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.1.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"Old\",\"path\":\"./old.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"Icons\",\"version\":\"1.10.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"MATERIAL\",\"label\":\"Newest\",\"path\":\"./dist/theme.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/dist/theme.json": "﻿{\n  // the folders\n  \"folder\": \"_folder\", /* default */\n  \"iconDefinitions\": { \"_folder\": { \"fontColor\": \"#123456\", }, },\n  \"fileExtensions\": { \"md\": \"_folder\", },\n}",
+    "home/.vscode/extensions/other/package.json": "{ \"iconThemes\": 1, // not a theme list\n \"name\": \"x\" }",
+    "home/.vscode/extensions/noversion/package.json": "{\"name\":\"nov\",\"contributes\":{\"iconThemes\":[{\"id\":\"t\",\"label\":5,\"path\":\"p.json\"}]}}",
+    "home/.vscode/extensions/plain/package.json": "{\"name\":\"plain\"}",
+    "home/.cursor/extensions/b.seti/package.json": "{\"publisher\":\"Pub\",\"name\":\"seti\",\"version\":\"0.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"seti\",\"label\":\"%missing%\",\"path\":\"seti.json\"},{\"id\":\"z\",\"label\":\"a\",\"path\":\"z.json\"}]}}",
+    "home/.cursor/extensions/b.seti/package.nls.json": "{ \"other\": \"x\", }",
+    "home/.cursor/extensions/b.seti/seti.json": "{\"iconDefinitions\":{\"_seti\":{\"fontColor\":\"#519aba\"}},\"file\":\"_seti\",\"languageIds\":{\"markdown\":\"_seti\"}}",
+    "app/bin/code": "#!/bin/sh\n",
+    "app/resources/app/extensions/theme-builtin/package.json": "{\"publisher\":\"Pub\",\"name\":\"builtin\",\"version\":\"1.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"vs-minimal\",\"label\":\"Minimal\",\"path\":\"m.json\"}]}}",
+    "app/1.90/resources/app/extensions/ver/package.json": "{\"publisher\":\"Pub\",\"name\":\"ver\",\"version\":\"2.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"v\",\"label\":\"Versioned\",\"path\":\"v.json\"}]}}",
+    "bin": null,
+    "bin/code": {
+     "link": "$ROOT/app/bin/code"
+    }
+   },
+   "env": {
+    "HOME": "$ROOT/home",
+    "PATH": "$ROOT/bin"
+   },
+   "out": [
+    {
+     "id": "pub.seti/seti",
+     "label": "%missing%",
+     "version": "0.1.0",
+     "file": "$ROOT/home/.cursor/extensions/b.seti/seti.json"
+    },
+    {
+     "id": "undefined.nov/t",
+     "label": "5",
+     "file": "$ROOT/home/.vscode/extensions/noversion/p.json"
+    },
+    {
+     "id": "pub.seti/z",
+     "label": "a",
+     "version": "0.1.0",
+     "file": "$ROOT/home/.cursor/extensions/b.seti/z.json"
+    },
+    {
+     "id": "pub.builtin/vs-minimal",
+     "label": "Minimal",
+     "version": "1.0.0",
+     "file": "$ROOT/app/resources/app/extensions/theme-builtin/m.json"
+    },
+    {
+     "id": "pub.icons/material",
+     "label": "Newest",
+     "version": "1.10.0",
+     "file": "$ROOT/home/.vscode/extensions/pub.icons-1.10.0/dist/theme.json"
+    },
+    {
+     "id": "pub.ver/v",
+     "label": "Versioned",
+     "version": "2.0.0",
+     "file": "$ROOT/app/1.90/resources/app/extensions/ver/v.json"
+    }
+   ]
+  },
+  {
+   "fn": "themesIn",
+   "args": [],
+   "env": {
+    "HOME": "$ROOT/home",
+    "PATH": "$ROOT/bin"
+   },
+   "out": []
+  },
+  {
+   "fn": "loadOf",
+   "args": [
+    {
+     "id": "pub.icons/material",
+     "label": "Material Icons",
+     "file": "$ROOT/home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json"
+    },
+    [
+     ".git",
+     ".Git",
+     "node_modules",
+     "empty",
+     "src",
+     "SRC"
+    ],
+    [
+     "README.md",
+     "makefile",
+     "x.d.ts",
+     "a.TS",
+     "a.js",
+     "b.mjs",
+     "a.svg",
+     "p.png",
+     "x.unknown",
+     "noext",
+     ".env",
+     "javascript",
+     "a.b.c"
+    ]
+   ],
+   "files": {
+    "home/.vscode/extensions/pub.icons-1.2.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.2.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"%theme.label%\",\"path\":\"./dist/theme.json\"},{\"id\":\"bad\"},null]}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/package.nls.json": "{\"theme.label\":{\"message\":\"Material Icons\",\"comment\":\"c\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json": "{\"iconDefinitions\":{\"_folder\":{\"iconPath\":\"./icons/folder.svg\"},\"folder-git\":{\"iconPath\":\"./icons/git.svg\"},\"folder-node\":{\"fontColor\":\"#8bc34a\"},\"_file\":{\"iconPath\":\"./icons/file.svg\"},\"react_ts\":{\"fontColor\":\"#0288D1ff\"},\"typescript\":{\"iconPath\":\"./icons/ts.SVG\"},\"makefile\":{\"fontColor\":\"#abc\"},\"javascript\":{\"iconPath\":\"./icons/js.svg\"},\"svg\":{\"iconPath\":\"./icons/missing.svg\"},\"image\":{\"iconPath\":\"./icons/image.png\"},\"tune\":{\"fontColor\":\"red\"}},\"folder\":\"_folder\",\"file\":\"_file\",\"folderNames\":{\".git\":\"folder-git\",\".GIT\":\"folder-github\",\"node_modules\":\"folder-node\",\"empty\":\"\"},\"fileNames\":{\"readme.md\":\"readme\",\"Makefile\":\"makefile\",\".env\":\"tune\"},\"fileExtensions\":{\"d.ts\":\"react_ts\",\"ts\":\"typescript\",\"png\":\"image\",\"svg\":\"svg\"},\"languageIds\":{\"javascript\":\"javascript\",\"undefined\":\"nolang\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/folder.svg": "<svg><path fill=\"#90A4AE\"/><path fill=\"#ff0000\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/git.svg": "<svg style=\"fill: #E64A19\"/>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/file.svg": "<svg><path fill=\"#999\"/><path fill='#4caf50'/><path FILL=\"#2196f3\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/ts.SVG": "<svg><path fill=\"#0288d1\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/js.svg": "<svg><path fill=\"#ffca28\"/><path fill=\"#ffca28x\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.1.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"Old\",\"path\":\"./old.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"Icons\",\"version\":\"1.10.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"MATERIAL\",\"label\":\"Newest\",\"path\":\"./dist/theme.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/dist/theme.json": "﻿{\n  // the folders\n  \"folder\": \"_folder\", /* default */\n  \"iconDefinitions\": { \"_folder\": { \"fontColor\": \"#123456\", }, },\n  \"fileExtensions\": { \"md\": \"_folder\", },\n}",
+    "home/.vscode/extensions/other/package.json": "{ \"iconThemes\": 1, // not a theme list\n \"name\": \"x\" }",
+    "home/.vscode/extensions/noversion/package.json": "{\"name\":\"nov\",\"contributes\":{\"iconThemes\":[{\"id\":\"t\",\"label\":5,\"path\":\"p.json\"}]}}",
+    "home/.vscode/extensions/plain/package.json": "{\"name\":\"plain\"}",
+    "home/.cursor/extensions/b.seti/package.json": "{\"publisher\":\"Pub\",\"name\":\"seti\",\"version\":\"0.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"seti\",\"label\":\"%missing%\",\"path\":\"seti.json\"},{\"id\":\"z\",\"label\":\"a\",\"path\":\"z.json\"}]}}",
+    "home/.cursor/extensions/b.seti/package.nls.json": "{ \"other\": \"x\", }",
+    "home/.cursor/extensions/b.seti/seti.json": "{\"iconDefinitions\":{\"_seti\":{\"fontColor\":\"#519aba\"}},\"file\":\"_seti\",\"languageIds\":{\"markdown\":\"_seti\"}}",
+    "app/bin/code": "#!/bin/sh\n",
+    "app/resources/app/extensions/theme-builtin/package.json": "{\"publisher\":\"Pub\",\"name\":\"builtin\",\"version\":\"1.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"vs-minimal\",\"label\":\"Minimal\",\"path\":\"m.json\"}]}}",
+    "app/1.90/resources/app/extensions/ver/package.json": "{\"publisher\":\"Pub\",\"name\":\"ver\",\"version\":\"2.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"v\",\"label\":\"Versioned\",\"path\":\"v.json\"}]}}",
+    "bin": null,
+    "bin/code": {
+     "link": "$ROOT/app/bin/code"
+    }
+   },
+   "env": {
+    "HOME": "$ROOT/home",
+    "PATH": "$ROOT/bin"
+   },
+   "out": {
+    "entry": {
+     "id": "pub.icons/material",
+     "label": "Material Icons",
+     "file": "$ROOT/home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json"
+    },
+    "folders": [
+     [
+      58875,
+      [
+       230,
+       74,
+       25
+      ]
+     ],
+     [
+      58875,
+      [
+       230,
+       74,
+       25
+      ]
+     ],
+     [
+      58874,
+      [
+       139,
+       195,
+       74
+      ]
+     ],
+     [
+      null,
+      [
+       144,
+       164,
+       174
+      ]
+     ],
+     [
+      null,
+      [
+       144,
+       164,
+       174
+      ]
+     ],
+     [
+      null,
+      [
+       144,
+       164,
+       174
+      ]
+     ]
+    ],
+    "files": [
+     [
+      62469,
+      null
+     ],
+     [
+      58995,
+      [
+       170,
+       187,
+       204
+      ]
+     ],
+     [
+      58917,
+      [
+       2,
+       136,
+       209
+      ]
+     ],
+     [
+      null,
+      [
+       2,
+       136,
+       209
+      ]
+     ],
+     [
+      null,
+      [
+       255,
+       202,
+       40
+      ]
+     ],
+     [
+      null,
+      [
+       255,
+       202,
+       40
+      ]
+     ],
+     [
+      59032,
+      null
+     ],
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ],
+     [
+      984622,
+      null
+     ],
+     [
+      null,
+      null
+     ],
+     []
+    ]
+   }
+  },
+  {
+   "fn": "loadOf",
+   "args": [
+    {
+     "id": "pub.icons/material",
+     "label": "Material Icons",
+     "file": "$ROOT/gone.json"
+    },
+    [
+     ".git",
+     ".Git",
+     "node_modules",
+     "empty",
+     "src",
+     "SRC"
+    ],
+    [
+     "README.md",
+     "makefile",
+     "x.d.ts",
+     "a.TS",
+     "a.js",
+     "b.mjs",
+     "a.svg",
+     "p.png",
+     "x.unknown",
+     "noext",
+     ".env",
+     "javascript",
+     "a.b.c"
+    ]
+   ],
+   "files": {
+    "home/.vscode/extensions/pub.icons-1.2.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.2.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"%theme.label%\",\"path\":\"./dist/theme.json\"},{\"id\":\"bad\"},null]}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/package.nls.json": "{\"theme.label\":{\"message\":\"Material Icons\",\"comment\":\"c\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json": "{\"iconDefinitions\":{\"_folder\":{\"iconPath\":\"./icons/folder.svg\"},\"folder-git\":{\"iconPath\":\"./icons/git.svg\"},\"folder-node\":{\"fontColor\":\"#8bc34a\"},\"_file\":{\"iconPath\":\"./icons/file.svg\"},\"react_ts\":{\"fontColor\":\"#0288D1ff\"},\"typescript\":{\"iconPath\":\"./icons/ts.SVG\"},\"makefile\":{\"fontColor\":\"#abc\"},\"javascript\":{\"iconPath\":\"./icons/js.svg\"},\"svg\":{\"iconPath\":\"./icons/missing.svg\"},\"image\":{\"iconPath\":\"./icons/image.png\"},\"tune\":{\"fontColor\":\"red\"}},\"folder\":\"_folder\",\"file\":\"_file\",\"folderNames\":{\".git\":\"folder-git\",\".GIT\":\"folder-github\",\"node_modules\":\"folder-node\",\"empty\":\"\"},\"fileNames\":{\"readme.md\":\"readme\",\"Makefile\":\"makefile\",\".env\":\"tune\"},\"fileExtensions\":{\"d.ts\":\"react_ts\",\"ts\":\"typescript\",\"png\":\"image\",\"svg\":\"svg\"},\"languageIds\":{\"javascript\":\"javascript\",\"undefined\":\"nolang\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/folder.svg": "<svg><path fill=\"#90A4AE\"/><path fill=\"#ff0000\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/git.svg": "<svg style=\"fill: #E64A19\"/>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/file.svg": "<svg><path fill=\"#999\"/><path fill='#4caf50'/><path FILL=\"#2196f3\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/ts.SVG": "<svg><path fill=\"#0288d1\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/js.svg": "<svg><path fill=\"#ffca28\"/><path fill=\"#ffca28x\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.1.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"Old\",\"path\":\"./old.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"Icons\",\"version\":\"1.10.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"MATERIAL\",\"label\":\"Newest\",\"path\":\"./dist/theme.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/dist/theme.json": "﻿{\n  // the folders\n  \"folder\": \"_folder\", /* default */\n  \"iconDefinitions\": { \"_folder\": { \"fontColor\": \"#123456\", }, },\n  \"fileExtensions\": { \"md\": \"_folder\", },\n}",
+    "home/.vscode/extensions/other/package.json": "{ \"iconThemes\": 1, // not a theme list\n \"name\": \"x\" }",
+    "home/.vscode/extensions/noversion/package.json": "{\"name\":\"nov\",\"contributes\":{\"iconThemes\":[{\"id\":\"t\",\"label\":5,\"path\":\"p.json\"}]}}",
+    "home/.vscode/extensions/plain/package.json": "{\"name\":\"plain\"}",
+    "home/.cursor/extensions/b.seti/package.json": "{\"publisher\":\"Pub\",\"name\":\"seti\",\"version\":\"0.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"seti\",\"label\":\"%missing%\",\"path\":\"seti.json\"},{\"id\":\"z\",\"label\":\"a\",\"path\":\"z.json\"}]}}",
+    "home/.cursor/extensions/b.seti/package.nls.json": "{ \"other\": \"x\", }",
+    "home/.cursor/extensions/b.seti/seti.json": "{\"iconDefinitions\":{\"_seti\":{\"fontColor\":\"#519aba\"}},\"file\":\"_seti\",\"languageIds\":{\"markdown\":\"_seti\"}}",
+    "app/bin/code": "#!/bin/sh\n",
+    "app/resources/app/extensions/theme-builtin/package.json": "{\"publisher\":\"Pub\",\"name\":\"builtin\",\"version\":\"1.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"vs-minimal\",\"label\":\"Minimal\",\"path\":\"m.json\"}]}}",
+    "app/1.90/resources/app/extensions/ver/package.json": "{\"publisher\":\"Pub\",\"name\":\"ver\",\"version\":\"2.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"v\",\"label\":\"Versioned\",\"path\":\"v.json\"}]}}",
+    "bin": null,
+    "bin/code": {
+     "link": "$ROOT/app/bin/code"
+    }
+   },
+   "env": {
+    "HOME": "$ROOT/home",
+    "PATH": "$ROOT/bin"
+   },
+   "out": {
+    "entry": {
+     "id": "pub.icons/material",
+     "label": "Newest",
+     "file": "$ROOT/home/.vscode/extensions/pub.icons-1.10.0/dist/theme.json"
+    },
+    "folders": [
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ]
+    ],
+    "files": [
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     []
+    ]
+   }
+  },
+  {
+   "fn": "loadOf",
+   "args": [
+    {
+     "id": "pub.icons/material"
+    },
+    [
+     ".git",
+     ".Git",
+     "node_modules",
+     "empty",
+     "src",
+     "SRC"
+    ],
+    [
+     "README.md",
+     "makefile",
+     "x.d.ts",
+     "a.TS",
+     "a.js",
+     "b.mjs",
+     "a.svg",
+     "p.png",
+     "x.unknown",
+     "noext",
+     ".env",
+     "javascript",
+     "a.b.c"
+    ]
+   ],
+   "files": {
+    "home/.vscode/extensions/pub.icons-1.2.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.2.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"%theme.label%\",\"path\":\"./dist/theme.json\"},{\"id\":\"bad\"},null]}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/package.nls.json": "{\"theme.label\":{\"message\":\"Material Icons\",\"comment\":\"c\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json": "{\"iconDefinitions\":{\"_folder\":{\"iconPath\":\"./icons/folder.svg\"},\"folder-git\":{\"iconPath\":\"./icons/git.svg\"},\"folder-node\":{\"fontColor\":\"#8bc34a\"},\"_file\":{\"iconPath\":\"./icons/file.svg\"},\"react_ts\":{\"fontColor\":\"#0288D1ff\"},\"typescript\":{\"iconPath\":\"./icons/ts.SVG\"},\"makefile\":{\"fontColor\":\"#abc\"},\"javascript\":{\"iconPath\":\"./icons/js.svg\"},\"svg\":{\"iconPath\":\"./icons/missing.svg\"},\"image\":{\"iconPath\":\"./icons/image.png\"},\"tune\":{\"fontColor\":\"red\"}},\"folder\":\"_folder\",\"file\":\"_file\",\"folderNames\":{\".git\":\"folder-git\",\".GIT\":\"folder-github\",\"node_modules\":\"folder-node\",\"empty\":\"\"},\"fileNames\":{\"readme.md\":\"readme\",\"Makefile\":\"makefile\",\".env\":\"tune\"},\"fileExtensions\":{\"d.ts\":\"react_ts\",\"ts\":\"typescript\",\"png\":\"image\",\"svg\":\"svg\"},\"languageIds\":{\"javascript\":\"javascript\",\"undefined\":\"nolang\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/folder.svg": "<svg><path fill=\"#90A4AE\"/><path fill=\"#ff0000\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/git.svg": "<svg style=\"fill: #E64A19\"/>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/file.svg": "<svg><path fill=\"#999\"/><path fill='#4caf50'/><path FILL=\"#2196f3\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/ts.SVG": "<svg><path fill=\"#0288d1\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/js.svg": "<svg><path fill=\"#ffca28\"/><path fill=\"#ffca28x\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.1.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"Old\",\"path\":\"./old.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"Icons\",\"version\":\"1.10.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"MATERIAL\",\"label\":\"Newest\",\"path\":\"./dist/theme.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/dist/theme.json": "﻿{\n  // the folders\n  \"folder\": \"_folder\", /* default */\n  \"iconDefinitions\": { \"_folder\": { \"fontColor\": \"#123456\", }, },\n  \"fileExtensions\": { \"md\": \"_folder\", },\n}",
+    "home/.vscode/extensions/other/package.json": "{ \"iconThemes\": 1, // not a theme list\n \"name\": \"x\" }",
+    "home/.vscode/extensions/noversion/package.json": "{\"name\":\"nov\",\"contributes\":{\"iconThemes\":[{\"id\":\"t\",\"label\":5,\"path\":\"p.json\"}]}}",
+    "home/.vscode/extensions/plain/package.json": "{\"name\":\"plain\"}",
+    "home/.cursor/extensions/b.seti/package.json": "{\"publisher\":\"Pub\",\"name\":\"seti\",\"version\":\"0.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"seti\",\"label\":\"%missing%\",\"path\":\"seti.json\"},{\"id\":\"z\",\"label\":\"a\",\"path\":\"z.json\"}]}}",
+    "home/.cursor/extensions/b.seti/package.nls.json": "{ \"other\": \"x\", }",
+    "home/.cursor/extensions/b.seti/seti.json": "{\"iconDefinitions\":{\"_seti\":{\"fontColor\":\"#519aba\"}},\"file\":\"_seti\",\"languageIds\":{\"markdown\":\"_seti\"}}",
+    "app/bin/code": "#!/bin/sh\n",
+    "app/resources/app/extensions/theme-builtin/package.json": "{\"publisher\":\"Pub\",\"name\":\"builtin\",\"version\":\"1.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"vs-minimal\",\"label\":\"Minimal\",\"path\":\"m.json\"}]}}",
+    "app/1.90/resources/app/extensions/ver/package.json": "{\"publisher\":\"Pub\",\"name\":\"ver\",\"version\":\"2.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"v\",\"label\":\"Versioned\",\"path\":\"v.json\"}]}}",
+    "bin": null,
+    "bin/code": {
+     "link": "$ROOT/app/bin/code"
+    }
+   },
+   "env": {
+    "HOME": "$ROOT/home",
+    "PATH": "$ROOT/bin"
+   },
+   "out": {
+    "entry": {
+     "id": "pub.icons/material",
+     "label": "Newest",
+     "file": "$ROOT/home/.vscode/extensions/pub.icons-1.10.0/dist/theme.json"
+    },
+    "folders": [
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ]
+    ],
+    "files": [
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     []
+    ]
+   }
+  },
+  {
+   "fn": "loadOf",
+   "args": [
+    {
+     "id": "b.seti/seti",
+     "file": 7
+    },
+    [
+     ".git",
+     ".Git",
+     "node_modules",
+     "empty",
+     "src",
+     "SRC"
+    ],
+    [
+     "README.md",
+     "makefile",
+     "x.d.ts",
+     "a.TS",
+     "a.js",
+     "b.mjs",
+     "a.svg",
+     "p.png",
+     "x.unknown",
+     "noext",
+     ".env",
+     "javascript",
+     "a.b.c"
+    ]
+   ],
+   "files": {
+    "home/.vscode/extensions/pub.icons-1.2.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.2.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"%theme.label%\",\"path\":\"./dist/theme.json\"},{\"id\":\"bad\"},null]}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/package.nls.json": "{\"theme.label\":{\"message\":\"Material Icons\",\"comment\":\"c\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json": "{\"iconDefinitions\":{\"_folder\":{\"iconPath\":\"./icons/folder.svg\"},\"folder-git\":{\"iconPath\":\"./icons/git.svg\"},\"folder-node\":{\"fontColor\":\"#8bc34a\"},\"_file\":{\"iconPath\":\"./icons/file.svg\"},\"react_ts\":{\"fontColor\":\"#0288D1ff\"},\"typescript\":{\"iconPath\":\"./icons/ts.SVG\"},\"makefile\":{\"fontColor\":\"#abc\"},\"javascript\":{\"iconPath\":\"./icons/js.svg\"},\"svg\":{\"iconPath\":\"./icons/missing.svg\"},\"image\":{\"iconPath\":\"./icons/image.png\"},\"tune\":{\"fontColor\":\"red\"}},\"folder\":\"_folder\",\"file\":\"_file\",\"folderNames\":{\".git\":\"folder-git\",\".GIT\":\"folder-github\",\"node_modules\":\"folder-node\",\"empty\":\"\"},\"fileNames\":{\"readme.md\":\"readme\",\"Makefile\":\"makefile\",\".env\":\"tune\"},\"fileExtensions\":{\"d.ts\":\"react_ts\",\"ts\":\"typescript\",\"png\":\"image\",\"svg\":\"svg\"},\"languageIds\":{\"javascript\":\"javascript\",\"undefined\":\"nolang\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/folder.svg": "<svg><path fill=\"#90A4AE\"/><path fill=\"#ff0000\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/git.svg": "<svg style=\"fill: #E64A19\"/>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/file.svg": "<svg><path fill=\"#999\"/><path fill='#4caf50'/><path FILL=\"#2196f3\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/ts.SVG": "<svg><path fill=\"#0288d1\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/js.svg": "<svg><path fill=\"#ffca28\"/><path fill=\"#ffca28x\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.1.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"Old\",\"path\":\"./old.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"Icons\",\"version\":\"1.10.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"MATERIAL\",\"label\":\"Newest\",\"path\":\"./dist/theme.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/dist/theme.json": "﻿{\n  // the folders\n  \"folder\": \"_folder\", /* default */\n  \"iconDefinitions\": { \"_folder\": { \"fontColor\": \"#123456\", }, },\n  \"fileExtensions\": { \"md\": \"_folder\", },\n}",
+    "home/.vscode/extensions/other/package.json": "{ \"iconThemes\": 1, // not a theme list\n \"name\": \"x\" }",
+    "home/.vscode/extensions/noversion/package.json": "{\"name\":\"nov\",\"contributes\":{\"iconThemes\":[{\"id\":\"t\",\"label\":5,\"path\":\"p.json\"}]}}",
+    "home/.vscode/extensions/plain/package.json": "{\"name\":\"plain\"}",
+    "home/.cursor/extensions/b.seti/package.json": "{\"publisher\":\"Pub\",\"name\":\"seti\",\"version\":\"0.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"seti\",\"label\":\"%missing%\",\"path\":\"seti.json\"},{\"id\":\"z\",\"label\":\"a\",\"path\":\"z.json\"}]}}",
+    "home/.cursor/extensions/b.seti/package.nls.json": "{ \"other\": \"x\", }",
+    "home/.cursor/extensions/b.seti/seti.json": "{\"iconDefinitions\":{\"_seti\":{\"fontColor\":\"#519aba\"}},\"file\":\"_seti\",\"languageIds\":{\"markdown\":\"_seti\"}}",
+    "app/bin/code": "#!/bin/sh\n",
+    "app/resources/app/extensions/theme-builtin/package.json": "{\"publisher\":\"Pub\",\"name\":\"builtin\",\"version\":\"1.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"vs-minimal\",\"label\":\"Minimal\",\"path\":\"m.json\"}]}}",
+    "app/1.90/resources/app/extensions/ver/package.json": "{\"publisher\":\"Pub\",\"name\":\"ver\",\"version\":\"2.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"v\",\"label\":\"Versioned\",\"path\":\"v.json\"}]}}",
+    "bin": null,
+    "bin/code": {
+     "link": "$ROOT/app/bin/code"
+    }
+   },
+   "env": {
+    "HOME": "$ROOT/home",
+    "PATH": "$ROOT/bin"
+   },
+   "out": null
+  },
+  {
+   "fn": "loadOf",
+   "args": [
+    {
+     "id": "nope/none",
+     "file": "$ROOT/gone.json"
+    },
+    [
+     ".git",
+     ".Git",
+     "node_modules",
+     "empty",
+     "src",
+     "SRC"
+    ],
+    [
+     "README.md",
+     "makefile",
+     "x.d.ts",
+     "a.TS",
+     "a.js",
+     "b.mjs",
+     "a.svg",
+     "p.png",
+     "x.unknown",
+     "noext",
+     ".env",
+     "javascript",
+     "a.b.c"
+    ]
+   ],
+   "files": {
+    "home/.vscode/extensions/pub.icons-1.2.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.2.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"%theme.label%\",\"path\":\"./dist/theme.json\"},{\"id\":\"bad\"},null]}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/package.nls.json": "{\"theme.label\":{\"message\":\"Material Icons\",\"comment\":\"c\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json": "{\"iconDefinitions\":{\"_folder\":{\"iconPath\":\"./icons/folder.svg\"},\"folder-git\":{\"iconPath\":\"./icons/git.svg\"},\"folder-node\":{\"fontColor\":\"#8bc34a\"},\"_file\":{\"iconPath\":\"./icons/file.svg\"},\"react_ts\":{\"fontColor\":\"#0288D1ff\"},\"typescript\":{\"iconPath\":\"./icons/ts.SVG\"},\"makefile\":{\"fontColor\":\"#abc\"},\"javascript\":{\"iconPath\":\"./icons/js.svg\"},\"svg\":{\"iconPath\":\"./icons/missing.svg\"},\"image\":{\"iconPath\":\"./icons/image.png\"},\"tune\":{\"fontColor\":\"red\"}},\"folder\":\"_folder\",\"file\":\"_file\",\"folderNames\":{\".git\":\"folder-git\",\".GIT\":\"folder-github\",\"node_modules\":\"folder-node\",\"empty\":\"\"},\"fileNames\":{\"readme.md\":\"readme\",\"Makefile\":\"makefile\",\".env\":\"tune\"},\"fileExtensions\":{\"d.ts\":\"react_ts\",\"ts\":\"typescript\",\"png\":\"image\",\"svg\":\"svg\"},\"languageIds\":{\"javascript\":\"javascript\",\"undefined\":\"nolang\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/folder.svg": "<svg><path fill=\"#90A4AE\"/><path fill=\"#ff0000\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/git.svg": "<svg style=\"fill: #E64A19\"/>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/file.svg": "<svg><path fill=\"#999\"/><path fill='#4caf50'/><path FILL=\"#2196f3\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/ts.SVG": "<svg><path fill=\"#0288d1\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/js.svg": "<svg><path fill=\"#ffca28\"/><path fill=\"#ffca28x\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.1.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"Old\",\"path\":\"./old.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"Icons\",\"version\":\"1.10.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"MATERIAL\",\"label\":\"Newest\",\"path\":\"./dist/theme.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/dist/theme.json": "﻿{\n  // the folders\n  \"folder\": \"_folder\", /* default */\n  \"iconDefinitions\": { \"_folder\": { \"fontColor\": \"#123456\", }, },\n  \"fileExtensions\": { \"md\": \"_folder\", },\n}",
+    "home/.vscode/extensions/other/package.json": "{ \"iconThemes\": 1, // not a theme list\n \"name\": \"x\" }",
+    "home/.vscode/extensions/noversion/package.json": "{\"name\":\"nov\",\"contributes\":{\"iconThemes\":[{\"id\":\"t\",\"label\":5,\"path\":\"p.json\"}]}}",
+    "home/.vscode/extensions/plain/package.json": "{\"name\":\"plain\"}",
+    "home/.cursor/extensions/b.seti/package.json": "{\"publisher\":\"Pub\",\"name\":\"seti\",\"version\":\"0.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"seti\",\"label\":\"%missing%\",\"path\":\"seti.json\"},{\"id\":\"z\",\"label\":\"a\",\"path\":\"z.json\"}]}}",
+    "home/.cursor/extensions/b.seti/package.nls.json": "{ \"other\": \"x\", }",
+    "home/.cursor/extensions/b.seti/seti.json": "{\"iconDefinitions\":{\"_seti\":{\"fontColor\":\"#519aba\"}},\"file\":\"_seti\",\"languageIds\":{\"markdown\":\"_seti\"}}",
+    "app/bin/code": "#!/bin/sh\n",
+    "app/resources/app/extensions/theme-builtin/package.json": "{\"publisher\":\"Pub\",\"name\":\"builtin\",\"version\":\"1.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"vs-minimal\",\"label\":\"Minimal\",\"path\":\"m.json\"}]}}",
+    "app/1.90/resources/app/extensions/ver/package.json": "{\"publisher\":\"Pub\",\"name\":\"ver\",\"version\":\"2.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"v\",\"label\":\"Versioned\",\"path\":\"v.json\"}]}}",
+    "bin": null,
+    "bin/code": {
+     "link": "$ROOT/app/bin/code"
+    }
+   },
+   "env": {
+    "HOME": "$ROOT/home",
+    "PATH": "$ROOT/bin"
+   },
+   "out": null
+  },
+  {
+   "fn": "loadOf",
+   "args": [
+    {
+     "file": "$ROOT/home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json"
+    },
+    [
+     ".git",
+     ".Git",
+     "node_modules",
+     "empty",
+     "src",
+     "SRC"
+    ],
+    [
+     "README.md",
+     "makefile",
+     "x.d.ts",
+     "a.TS",
+     "a.js",
+     "b.mjs",
+     "a.svg",
+     "p.png",
+     "x.unknown",
+     "noext",
+     ".env",
+     "javascript",
+     "a.b.c"
+    ]
+   ],
+   "files": {
+    "home/.vscode/extensions/pub.icons-1.2.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.2.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"%theme.label%\",\"path\":\"./dist/theme.json\"},{\"id\":\"bad\"},null]}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/package.nls.json": "{\"theme.label\":{\"message\":\"Material Icons\",\"comment\":\"c\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/theme.json": "{\"iconDefinitions\":{\"_folder\":{\"iconPath\":\"./icons/folder.svg\"},\"folder-git\":{\"iconPath\":\"./icons/git.svg\"},\"folder-node\":{\"fontColor\":\"#8bc34a\"},\"_file\":{\"iconPath\":\"./icons/file.svg\"},\"react_ts\":{\"fontColor\":\"#0288D1ff\"},\"typescript\":{\"iconPath\":\"./icons/ts.SVG\"},\"makefile\":{\"fontColor\":\"#abc\"},\"javascript\":{\"iconPath\":\"./icons/js.svg\"},\"svg\":{\"iconPath\":\"./icons/missing.svg\"},\"image\":{\"iconPath\":\"./icons/image.png\"},\"tune\":{\"fontColor\":\"red\"}},\"folder\":\"_folder\",\"file\":\"_file\",\"folderNames\":{\".git\":\"folder-git\",\".GIT\":\"folder-github\",\"node_modules\":\"folder-node\",\"empty\":\"\"},\"fileNames\":{\"readme.md\":\"readme\",\"Makefile\":\"makefile\",\".env\":\"tune\"},\"fileExtensions\":{\"d.ts\":\"react_ts\",\"ts\":\"typescript\",\"png\":\"image\",\"svg\":\"svg\"},\"languageIds\":{\"javascript\":\"javascript\",\"undefined\":\"nolang\"}}",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/folder.svg": "<svg><path fill=\"#90A4AE\"/><path fill=\"#ff0000\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/git.svg": "<svg style=\"fill: #E64A19\"/>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/file.svg": "<svg><path fill=\"#999\"/><path fill='#4caf50'/><path FILL=\"#2196f3\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/ts.SVG": "<svg><path fill=\"#0288d1\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.2.0/dist/icons/js.svg": "<svg><path fill=\"#ffca28\"/><path fill=\"#ffca28x\"/></svg>",
+    "home/.vscode/extensions/pub.icons-1.1.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"icons\",\"version\":\"1.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"material\",\"label\":\"Old\",\"path\":\"./old.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/package.json": "{\"publisher\":\"Pub\",\"name\":\"Icons\",\"version\":\"1.10.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"MATERIAL\",\"label\":\"Newest\",\"path\":\"./dist/theme.json\"}]}}",
+    "home/.vscode/extensions/pub.icons-1.10.0/dist/theme.json": "﻿{\n  // the folders\n  \"folder\": \"_folder\", /* default */\n  \"iconDefinitions\": { \"_folder\": { \"fontColor\": \"#123456\", }, },\n  \"fileExtensions\": { \"md\": \"_folder\", },\n}",
+    "home/.vscode/extensions/other/package.json": "{ \"iconThemes\": 1, // not a theme list\n \"name\": \"x\" }",
+    "home/.vscode/extensions/noversion/package.json": "{\"name\":\"nov\",\"contributes\":{\"iconThemes\":[{\"id\":\"t\",\"label\":5,\"path\":\"p.json\"}]}}",
+    "home/.vscode/extensions/plain/package.json": "{\"name\":\"plain\"}",
+    "home/.cursor/extensions/b.seti/package.json": "{\"publisher\":\"Pub\",\"name\":\"seti\",\"version\":\"0.1.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"seti\",\"label\":\"%missing%\",\"path\":\"seti.json\"},{\"id\":\"z\",\"label\":\"a\",\"path\":\"z.json\"}]}}",
+    "home/.cursor/extensions/b.seti/package.nls.json": "{ \"other\": \"x\", }",
+    "home/.cursor/extensions/b.seti/seti.json": "{\"iconDefinitions\":{\"_seti\":{\"fontColor\":\"#519aba\"}},\"file\":\"_seti\",\"languageIds\":{\"markdown\":\"_seti\"}}",
+    "app/bin/code": "#!/bin/sh\n",
+    "app/resources/app/extensions/theme-builtin/package.json": "{\"publisher\":\"Pub\",\"name\":\"builtin\",\"version\":\"1.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"vs-minimal\",\"label\":\"Minimal\",\"path\":\"m.json\"}]}}",
+    "app/1.90/resources/app/extensions/ver/package.json": "{\"publisher\":\"Pub\",\"name\":\"ver\",\"version\":\"2.0.0\",\"contributes\":{\"iconThemes\":[{\"id\":\"v\",\"label\":\"Versioned\",\"path\":\"v.json\"}]}}",
+    "bin": null,
+    "bin/code": {
+     "link": "$ROOT/app/bin/code"
+    }
+   },
+   "env": {
+    "HOME": "$ROOT/home",
+    "PATH": "$ROOT/bin"
+   },
+   "out": null
+  },
+  {
+   "fn": "loadOf",
+   "args": [
+    null,
+    [
+     ".git",
+     ".Git",
+     "node_modules",
+     "empty",
+     "src",
+     "SRC"
+    ],
+    [
+     "README.md",
+     "makefile",
+     "x.d.ts",
+     "a.TS",
+     "a.js",
+     "b.mjs",
+     "a.svg",
+     "p.png",
+     "x.unknown",
+     "noext",
+     ".env",
+     "javascript",
+     "a.b.c"
+    ]
+   ],
+   "out": null
+  },
+  {
+   "fn": "loadOf",
+   "args": [
+    {
+     "id": "x",
+     "label": null,
+     "file": "$ROOT/t.json",
+     "extra": 1
+    },
+    [
+     ".git",
+     ".Git",
+     "node_modules",
+     "empty",
+     "src",
+     "SRC"
+    ],
+    [
+     "README.md",
+     "makefile",
+     "x.d.ts",
+     "a.TS",
+     "a.js",
+     "b.mjs",
+     "a.svg",
+     "p.png",
+     "x.unknown",
+     "noext",
+     ".env",
+     "javascript",
+     "a.b.c"
+    ]
+   ],
+   "files": {
+    "t.json": "﻿{\n  // the folders\n  \"folder\": \"_folder\", /* default */\n  \"iconDefinitions\": { \"_folder\": { \"fontColor\": \"#123456\", }, },\n  \"fileExtensions\": { \"md\": \"_folder\", },\n}"
+   },
+   "out": {
+    "entry": {
+     "id": "x",
+     "label": null,
+     "file": "$ROOT/t.json"
+    },
+    "folders": [
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ]
+    ],
+    "files": [
+     [
+      null,
+      [
+       18,
+       52,
+       86
+      ]
+     ],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     []
+    ]
+   }
+  },
+  {
+   "fn": "loadOf",
+   "args": [
+    {
+     "id": "x",
+     "file": "$ROOT/t.json"
+    },
+    [
+     "md"
+    ],
+    [
+     "a.md"
+    ]
+   ],
+   "files": {
+    "t.json": "{\"a\": \"//not a comment\", \"b\": \"/* nor this */\", \"folder\": \"f\", \"iconDefinitions\": {\"f\": {\"fontColor\": \"#f00\"},},}"
+   },
+   "out": {
+    "entry": {
+     "id": "x",
+     "file": "$ROOT/t.json"
+    },
+    "folders": [
+     [
+      null,
+      [
+       255,
+       0,
+       0
+      ]
+     ]
+    ],
+    "files": [
+     []
+    ]
+   }
+  },
+  {
+   "fn": "loadOf",
+   "args": [
+    {
+     "id": "x",
+     "file": "$ROOT/t.json"
+    },
+    [
+     "md"
+    ],
+    [
+     "a.md"
+    ]
+   ],
+   "files": {
+    "t.json": "{\"folder\": \"x\\\"// y\", // z\n\"iconDefinitions\": {\"x\\\"// y\": {\"fontColor\": \"#0f0\"}}}"
+   },
+   "out": {
+    "entry": {
+     "id": "x",
+     "file": "$ROOT/t.json"
+    },
+    "folders": [
+     [
+      null,
+      [
+       0,
+       255,
+       0
+      ]
+     ]
+    ],
+    "files": [
+     []
+    ]
+   }
+  },
+  {
+   "fn": "loadOf",
+   "args": [
+    {
+     "id": "x",
+     "file": "$ROOT/t.json"
+    },
+    [
+     "md"
+    ],
+    [
+     "a.md"
+    ]
+   ],
+   "files": {
+    "t.json": "{ /* unended"
+   },
+   "out": null
+  },
+  {
+   "fn": "loadOf",
+   "args": [
+    {
+     "id": "x",
+     "file": "$ROOT/t.json"
+    },
+    [
+     "md"
+    ],
+    [
+     "a.md"
+    ]
+   ],
+   "files": {
+    "t.json": "[1, , ]"
+   },
+   "out": null
+  },
+  {
+   "fn": "loadOf",
+   "args": [
+    {
+     "id": "x",
+     "file": "$ROOT/t.json"
+    },
+    [
+     "md"
+    ],
+    [
+     "a.md"
+    ]
+   ],
+   "files": {
+    "t.json": "{\"folder\": \"f\" , \n \"iconDefinitions\": {\"f\": {\"fontColor\": \"#00f\" }\t,\n} }"
+   },
+   "out": {
+    "entry": {
+     "id": "x",
+     "file": "$ROOT/t.json"
+    },
+    "folders": [
+     [
+      null,
+      [
+       0,
+       0,
+       255
+      ]
+     ]
+    ],
+    "files": [
+     []
+    ]
+   }
+  },
+  {
+   "fn": "loadOf",
+   "args": [
+    {
+     "id": "x",
+     "file": "$ROOT/t.json"
+    },
+    [
+     "md"
+    ],
+    [
+     "a.md"
+    ]
+   ],
+   "files": {
+    "t.json": "\"str\""
+   },
+   "out": {
+    "entry": {
+     "id": "x",
+     "file": "$ROOT/t.json"
+    },
+    "folders": [
+     [
+      null,
+      null
+     ]
+    ],
+    "files": [
+     []
+    ]
+   }
+  }
+ ]
+}
