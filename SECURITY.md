@@ -167,7 +167,7 @@ Files are untrusted input:
 - Only regular files are read: a named pipe or a device would block the pane.
 - The preview reads at most 8 MB, highlights files up to 1 MB and lines up to 2,000 characters, and dumps the first
   64 KB of a binary file.
-- Images are decoded in JavaScript, with their size checked before anything is allocated (50 MB, 50 megapixels,
+- Images are decoded by the plugin's own code (Rust, no library), with their size checked before anything is allocated (50 MB, 50 megapixels,
   256 MB of inflated PNG or TIFF data), and every loop bounded. WebP is decoded by `dwebp` (libwebp), run on the
   absolute path of the file, for 20 s at most; its output is checked to be a PNG and decoded like one.
 - Images in rendered Markdown are only local files inside the project (or the Markdown file's folder when it is
@@ -185,10 +185,18 @@ Files are untrusted input:
 - The check is a single HTTPS request to the GitHub releases API (3 s timeout), at most once a day, from the hooks
   only, for the repository of the clone's `origin` (the plugin's when it is not on GitHub), and only a version number made of digits and dots is kept: nothing it returns reaches a command. Turn it off
   with *Check for updates*.
-- The update only runs `git pull --ff-only --no-rebase` in the plugin's own clone (its git top level must be the
-  plugin folder, not a dotfiles repository holding a copy), on its remote's default branch, with no operation in progress and no local
-  changes, under the same no-prompt rules (`GIT_TERMINAL_PROMPT=0`, `GCM_INTERACTIVE=never`, detached, ssh in
-  `BatchMode` unless you set your own ssh command).
+- The update only works on the plugin's own clone (its git top level must be the plugin folder, not a dotfiles
+  repository holding a copy), with no operation in progress and no local changes. It first downloads the release's
+  binary with `curl` over HTTPS into `bin/`, and refuses the update unless it matches its line of the release's
+  `SHA256SUMS` (computed by the plugin, no tool run). Only then does it run `git fetch --tags` and `git merge
+  --ff-only v<version>` (or `git checkout --detach v<version>`) in the clone, under the same no-prompt rules
+  (`GIT_TERMINAL_PROMPT=0`, `GCM_INTERACTIVE=never`, detached, ssh in `BatchMode` unless you set your own ssh
+  command), and puts the binary in place by renaming. A binary you built (`bin/.dev`) is never replaced.
+- `scripts/fetch-bin.sh` and `scripts/fetch-bin.ps1`, run by the installers, herdr's build step and the shims,
+  follow the same rule: the asset of the manifest's version, from the clone's GitHub `origin` (else
+  `gcaudan/herdr-explorer`), checked against `SHA256SUMS` before it replaces anything. The release workflow builds
+  the binaries on GitHub's runners and writes `SHA256SUMS` from them; the checksums come from the same release as
+  the binary, so they guard against a corrupted or truncated download, not against a compromised release.
 - A checkout installed by `herdr plugin install` is never pulled: the plugin copies herdr's update command instead.
 - The installer is never run by the update. When an update changes the manifest or the install scripts, the plugin
   only copies the command for you to run.

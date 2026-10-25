@@ -184,7 +184,7 @@ folders. See [installation.md](installation.md#key-bindings).
 
 | Variable | Effect |
 |---|---|
-| `PATH` | where `node`, `git`, `code`, `claude`, the editors and the clipboard and trash tools are found (absolute entries only) |
+| `PATH` | where `node`, `git`, `curl`, `code`, `claude`, the editors and the clipboard and trash tools are found (absolute entries only, except for `curl` in `scripts/fetch-bin.sh`) |
 | `VISUAL`, `EDITOR` | the Editor pane's terminal editor, after one set in **Editor** |
 | `GIT_SSH_COMMAND`, `GIT_SSH` | when set, or `core.sshCommand`, updates leave ssh alone; otherwise they run it in batch mode |
 | `WAYLAND_DISPLAY`, `DISPLAY` | on Linux, the preview's paste reads the clipboard with `wl-paste` when `WAYLAND_DISPLAY` is set, else with `xclip` when `DISPLAY` is; with neither (over SSH), only the terminal's own paste reaches the pane |

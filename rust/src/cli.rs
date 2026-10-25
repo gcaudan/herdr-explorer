@@ -79,8 +79,11 @@ pub fn run(args: Vec<OsString>) -> ExitCode {
         Ok(Command::Hook(args)) => done(crate::hook::run(&strings(args))),
         Ok(Command::Peek(args)) => done(crate::peek::run(strings(args))),
         Ok(cmd @ Command::Pane(..)) => {
-            // The pane's first process stays as its launcher; the child runs the pane.
-            if let Some(code) = crate::launch::launch() {
+            // The explorer's and the preview's first process stays as their launcher; the child runs the pane. The
+            // other panes are short-lived and ran without one in the JS.
+            if matches!(cmd, Command::Pane("tree" | "preview", _))
+                && let Some(code) = crate::launch::launch()
+            {
                 return ExitCode::from(u8::try_from(code).unwrap_or(1));
             }
             match cmd {

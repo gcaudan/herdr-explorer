@@ -50,8 +50,11 @@
   `&`, `|`, `<`, `>`, `^` or `%` could still run a command once `Enter` is pressed.
 - ***Open in app*** opens HTML and SVG files in the browser, and Office documents in Office, which asks before
   enabling macros.
-- **Updates** from the explorer need a git clone on its remote's default branch (`main`) without changes to tracked files (see
-  [Refusals](installation.md#refusals)).
+- **Updates** from the explorer need a git clone without changes to tracked files and, unless `bin/.dev` marks a
+  binary of your own, a release binary for the platform and `curl` (see [Refusals](installation.md#refusals)). They move the clone to the release's tag: work of
+  your own on the branch is never merged.
+- **Platforms**: release binaries exist for Linux and macOS on x86_64 and arm64, and Windows on x86_64 (arm64 runs
+  it in emulation). Elsewhere (32-bit, armv7, BSD…), build the binary with `scripts/dev-build.sh`, which needs Rust.
 - **Old panes**: an explorer or preview started by a version without the launcher (0.4.0 and earlier) keeps its old
   waiting `node` processes after updating, until it is closed. Close and reopen it (`prefix+f` twice for the
   explorer) to start from the launcher.
@@ -59,7 +62,8 @@
 ## Common problems
 
 - **Nothing opens at all, or a pane closes right after opening**: `node` is not on the `PATH` that herdr gives
-  plugins. The hooks also exit silently when they cannot find `herdr` in an absolute folder of `PATH` (set
+  plugins, or `bin/herdr-explorer` is missing and could not be downloaded: run `scripts/fetch-bin.sh` (or
+  `scripts\fetch-bin.ps1`) in the plugin folder to see why (see [Installation](#installation)). The hooks also exit silently when they cannot find `herdr` in an absolute folder of `PATH` (set
   `HERDR_BIN_PATH` to its path).
 - **No git colours, no source control**: `git` is not on `PATH`, or the folder is not inside a repository.
 - **The explorer does not open in new tabs**: it opens only in a tab that has a single pane, and only when *Open
@@ -107,6 +111,13 @@
 | --------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `herdr not found`                                   | `herdr` is not on `PATH`. Install it, or add it to `PATH`                            |
 | `skill <path> exists and is not a link: left alone` | `~/.claude/skills/herdr-preview` is a real folder. Remove or rename it, then run the script again |
+| `fetch-bin: no release binary for <system> <machine>: build one with scripts/dev-build.sh (Rust needed)` | no release binary for this platform: see [Building the binary](installation.md#building-the-binary) |
+| `fetch-bin: curl not found: install it, then run scripts/fetch-bin.sh again`, `fetch-bin: neither sha256sum nor shasum found` | install the tool, then run the script again |
+| `fetch-bin: cannot download <url>`                  | offline, or no release of that version (a clone of `main` between two releases, or a fork without releases): clone a release tag, or build the binary |
+| `fetch-bin: <asset> is not in SHA256SUMS`, `fetch-bin: <asset> does not match its SHA256SUMS: not installed` | the download is incomplete or the release is broken: nothing was replaced. Run the script again later |
+| `fetch-bin: cannot create <folder>/bin/.fetch.lock` | `bin/` cannot be written: fix its rights                                            |
+| `fetch-bin: no version in <folder>/herdr-plugin.toml` | the manifest is missing or damaged: restore it with git                           |
+| `dev-build: cargo not found: install Rust (https://rustup.rs)` | install Rust, then run `scripts/dev-build.sh` again                         |
 
 ### Explorer and preview
 
@@ -136,6 +147,7 @@
 | `N untracked files kept: no trash`               | **Discard changes** (or `D`, deleting for good declined) could not trash untracked files. Install a trash tool |
 | `Cannot stage` / `Cannot unstage` / `Cannot discard` | the git command failed. Try in a terminal to see git's error                   |
 | `Staged N lines; cannot stage <file>: …`, `Discarded N lines; cannot delete <file>: <code>` | part of the selection went through, the rest failed (git error, or file system error such as `EACCES`). Nothing is undone |
+| `Cannot delete <file>: outside the repository` / `through a symbolic link` / `no longer a file` / `no longer a folder` / `a folder, never deleted for good` | (discard) the file changed since the diff was read: a folder on its path became a link (to outside the repository or elsewhere in it), or it became a folder. It is left alone; a folder is never deleted for good, only trashed |
 | `Busy…`                                          | `s`, `u` or `D` pressed again before the last one ended                            |
 | `<theme>: not found`                             | the icon theme was uninstalled. Choose another one                                 |
 | `<key>: already bound`, `<key> taken from <action>` | (Key bindings) the key already had that action, or moved from another one |
@@ -160,7 +172,8 @@
 | Message                                     | Meaning and fix                                                           |
 | ------------------------------------------- | ------------------------------------------------------------------------- |
 | `Update command copied`                     | installed by herdr: run `herdr plugin update gcaudan.explorer`            |
-| `<git error>: update command copied`        | the pull failed (`Update failed` when git said nothing). Run the copied `git … pull` in a terminal |
+| `<git error>: update command copied`        | git's fetch or move failed (`Update failed` when git said nothing). Run the copied commands in a terminal: the git step, then `scripts/fetch-bin` |
+| `The X.Y.Z binary could not be put in bin: update command copied` | the binary was downloaded but could not replace the old one (a locked file, rights on `bin/`): the clone was moved back. Run the copied commands |
 | `Already up to date`, `Updated to X.Y.Z`    | done; the explorer and preview restart on the new code                   |
 | `Updated to X.Y.Z: rerun the installer`     | click the `!` (or **! Finish the update**) and run the copied command     |
 | `Installer command copied`                  | run it in a terminal                                                      |

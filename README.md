@@ -8,7 +8,7 @@
 herdr gives you tabs of terminals and agents; this plugin adds the side bar you miss from an editor. It docks a file
 tree with live git status next to the terminal of each new tab, so you can follow what an agent changes, read the
 file it just wrote, drop a path into the shell or into a Claude Code prompt, then stage and commit, without leaving
-herdr. Plain Node.js, with no dependencies and no build step.
+herdr. One binary, written in Rust with no dependencies, downloaded from the release of the version you install.
 
 ```
 ┌──────────────┬───────────────────────────┬──────────────────────┐
@@ -49,16 +49,21 @@ Plugin id `gcaudan.explorer` · herdr 0.9.4 or later · Linux, macOS and Windows
   application for documents and media. Executables and scripts are never run.
 - **Icons**: Nerd Font icons, or the colours of any VS Code icon theme you have installed; emoji, Unicode or ASCII
   icons without a Nerd Font.
-- **Restored after a herdr restart**, at the same folder and file, and **updated** from GitHub releases in place.
+- **Restored after a herdr restart**, at the same folder and file, and **updated** from GitHub releases in place,
+  the binary checked against the release's `SHA256SUMS`.
 - **Safe on untrusted repositories**: no shell, hardened git calls and sanitized terminal output (see
   [SECURITY.md](SECURITY.md)).
 
 ## Requirements
 
-herdr 0.9.4 or later, Node.js 20 or later (`node` on the `PATH` that herdr gives plugins), and a
+herdr 0.9.4 or later, Node.js 20 or later (`node` on the `PATH` that herdr gives plugins, for the small scripts that
+start the binary), `curl` to download the binary, and a
 [Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr, or emoji, Unicode or ASCII icons. git, a graphical editor, a clipboard and
 a trash tool, and the [Claude Code](https://claude.com/claude-code) CLI are optional: see
 [Requirements](docs/installation.md#requirements) for what each one adds.
+
+Release binaries exist for Linux and macOS (x86_64, arm64) and Windows (x86_64, arm64 in emulation); elsewhere,
+build one with Rust (see [Building the binary](docs/installation.md#building-the-binary)).
 
 Tested with herdr 0.9.3 on Linux (Fedora, Wayland), every pane included. Version 0.1 of the explorer was also tested
 on Windows 11; the other panes are not verified on Windows or macOS, and opening in VS Code was not tested.
@@ -71,22 +76,24 @@ on Windows 11; the other panes are not verified on Windows or macOS, and opening
 herdr plugin install gcaudan/herdr-explorer
 ```
 
-herdr manages this checkout and its updates (`herdr plugin update gcaudan.explorer`), but adds no key bindings:
+herdr downloads the binary (the manifest's build step) and manages this checkout and its updates (`herdr plugin
+update gcaudan.explorer`), but adds no key bindings:
 append the three blocks of [Key bindings](docs/installation.md#key-bindings) to herdr's `config.toml`, then run
 `herdr server reload-config`.
 
 ### From a git clone
 
-The install script links the clone to herdr, adds the key bindings and, when Claude Code is installed, links the
-`herdr-preview` skill; the explorer can then update itself.
+The install script downloads the binary, links the clone to herdr, adds the key bindings and, when Claude Code is
+installed, links the `herdr-preview` skill; the explorer can then update itself. Clone the latest release's tag
+(`v<X.Y.Z>`, from the [releases page](https://github.com/gcaudan/herdr-explorer/releases/latest)):
 
 ```sh
-git clone https://github.com/gcaudan/herdr-explorer.git
+git clone --branch v<X.Y.Z> https://github.com/gcaudan/herdr-explorer.git
 cd herdr-explorer
 ./install.sh            # Windows (PowerShell): powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-Keep the clone where it is, on `main`: herdr runs the plugin from that folder, and updates pull into it. See
+Keep the clone where it is: herdr runs the plugin from that folder, and updates move it to each new release. See
 [docs/installation.md](docs/installation.md) for what the script does, updates and uninstalling.
 
 ## Quick start
@@ -120,7 +127,8 @@ See [docs/usage.md](docs/usage.md) for every pane, key, mouse action and menu it
 
 ## Contributing
 
-There is no build step: clone, run the install script, edit, and reopen the pane. Commits follow
+Install Rust, clone, run the install script, then `scripts/dev-build.sh` after each change and reopen the pane; the
+checks are `bash scripts/check.sh`. Commits follow
 [Conventional Commits](https://www.conventionalcommits.org/), and releases are cut by release-please. See
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
