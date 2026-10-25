@@ -48,9 +48,22 @@ fn every_script_the_manifest_runs_exists() {
 fn the_manifest_runs_the_binary_for_the_explorer_and_the_preview() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let manifest = std::fs::read_to_string(root.join("herdr-plugin.toml")).unwrap();
+    // Each [[panes]] block's id and command, its spaces left out: the command checked in the block of its own pane.
+    let panes: Vec<(String, String)> = manifest
+        .split("[[")
+        .filter(|b| b.starts_with("panes]]"))
+        .map(|b| {
+            let value = |key: &str| {
+                let line = b.lines().find(|l| l.split('=').next().is_some_and(|k| k.trim() == key)).unwrap_or("");
+                line.split_once('=').map_or("", |(_, v)| v).chars().filter(|c| !c.is_whitespace()).collect()
+            };
+            (value("id"), value("command"))
+        })
+        .collect();
     // Their own launcher: no node process stays in these long-lived panes.
     for id in ["tree", "preview"] {
-        let command = format!("command = [\"bin/herdr-explorer\", \"pane\", \"{id}\"]");
-        assert!(manifest.contains(&command), "herdr-plugin.toml does not run {command}");
+        let command = panes.iter().find(|(i, _)| *i == format!("\"{id}\"")).map(|(_, c)| c.as_str());
+        let want = format!("[\"bin/herdr-explorer\",\"pane\",\"{id}\"]");
+        assert_eq!(command, Some(want.as_str()), "the {id} pane of herdr-plugin.toml: {panes:?}");
     }
 }
