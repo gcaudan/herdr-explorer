@@ -283,9 +283,9 @@ put back by the same pane, so that they are not moved twice (herdr resizes by a 
 
 The explorer and preview panes run through a small launcher. The pane's first process, the binary started by the
 manifest without `EXPLORER_IPC_FILE` (or, in a pane opened by an earlier manifest, the shim `src/explorer.js` or
-`src/preview.js`), stays as the launcher and runs the binary as a child process, with `EXPLORER_IPC_FILE` naming the file where the child writes its messages, a line of JSON each,
-and `EXPLORER_LAUNCHER` giving the launcher's pid. The file sits in a new folder of its own (mode 0700 on Unix), so
-that another user cannot write the messages first.
+`src/preview.js`), stays as the launcher and runs the binary as a child process, with `EXPLORER_IPC_FILE` naming the
+file where the child writes its messages, a line of JSON each, and `EXPLORER_LAUNCHER` giving the launcher's pid.
+The file sits in a new folder of its own (mode 0700 on Unix), so that another user cannot write the messages first.
 
 - The launcher keeps the terminal in raw mode between children, so a `ctrl+c` typed during a restart
   cannot kill the pane, and forwards `SIGTERM`, `SIGHUP` and `SIGINT` to the child. If it is killed, the child
@@ -299,6 +299,11 @@ that another user cannot write the messages first.
   **75**. The launcher starts the binary again with that environment, in the same terminal, so the pane keeps its
   id, place and width. It starts `bin/herdr-explorer` by its path, which after an update is the new binary (the old
   one renamed aside).
+- Before that restart, as the shims do, the launcher runs `scripts/fetch-bin` when the binary's `--version` is not
+  the manifest's (never with `bin/.dev`): `herdr plugin update` and the plugin's update change the manifest before
+  they put the binary, and fetch-bin waits for their `bin/.fetch.lock`, then fetches only what is still missing.
+  When fetch-bin fails, the binary there starts all the same. A restart that cannot start the binary (being renamed
+  into place) tries again 5 times, 1 s apart, before it ends the pane.
 - A `{cwd}` message (after *Set as root*) has the launcher move to that folder, since herdr reads a pane's folder
   from its first process.
 - Any other exit code ends the launcher, and the pane with it.
@@ -308,8 +313,7 @@ one more at each update. The launcher does nothing else, so it stays on the code
 
 The search, source control, changes and editor panes are short-lived and have no launcher: their shim runs the
 binary once and gives back its code. The shims `src/explorer.js` and `src/preview.js` stay for the panes opened
-under an earlier manifest: the one that ran them still runs them at a restart. In a pane opened before the update to the binary, the launcher of 0.8.0 (Node)
-still runs, and the shim is its child: it hands the binary's messages on to it and gives back the code, 75 included,
-so that the launcher starts the shim again. A pane
-started by a version without the launcher (0.4.0 and earlier) is the exception, see
-[Limitations](troubleshooting.md#limitations).
+under an earlier manifest: the one that ran them still runs them at a restart. In a pane opened before the update to
+the binary, the launcher of 0.8.0 (Node) still runs, and the shim is its child: it hands the binary's messages on to
+it and gives back the code, 75 included, so that the launcher starts the shim again. A pane started by a version
+without the launcher (0.4.0 and earlier) is the exception, see [Limitations](troubleshooting.md#limitations).

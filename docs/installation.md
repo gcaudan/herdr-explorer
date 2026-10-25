@@ -147,9 +147,10 @@ manifest, `src/<script>.js`, only start it. `scripts/fetch-bin.sh` (`scripts\fet
 One fetch runs at a time (`bin/.fetch.lock`, taken over after 2 min). On any failure, no curl, no download, a hash
 that does not match, `bin/` is left as it was and the script says why. A shim that finds no binary, or one of
 another version, runs the same script before it starts the binary. The explorer and preview panes start the binary
-directly and fetch nothing: after a `git pull` of the clone, without `herdr plugin update`, the hook's shim fetches
-the new binary at the next tab event, but an explorer or preview that restarts first stays on the old one until
-it is reopened.
+directly, as their own launcher, which runs the same script before it restarts on new code
+([Launcher and self-restart](architecture.md#launcher-and-self-restart)). A pane that herdr opens while the binary
+is missing (a clone made by hand, without `herdr plugin install`) cannot start: the toggle action and the hooks,
+which go through a shim, fetch it first.
 
 ### Building the binary
 
