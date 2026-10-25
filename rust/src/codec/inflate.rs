@@ -95,6 +95,10 @@ impl Huffman {
             count[l as usize] += 1;
         }
         count[0] = 0;
+        // A code of code lengths without any code is taken, as zlib takes it: every length reads as 0, on 1 bit.
+        if bits == 0 && kind == Kind::CodeLengths {
+            return Ok(Huffman { table: vec![1; 2], bits: 1 });
+        }
         // Over-subscribed codes are refused, as zlib does, and incomplete ones as it does (Kind).
         let mut left: i64 = 1;
         for &c in &count[1..] {

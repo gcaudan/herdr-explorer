@@ -448,6 +448,38 @@
   {
    "fn": "inflate",
    "args": [
+    "eJydEgAAABYAEwAAAA==",
+    1048576
+   ],
+   "out": ""
+  },
+  {
+   "fn": "inflate",
+   "args": [
+    "eJx8YAA=",
+    1048576
+   ],
+   "out": ""
+  },
+  {
+   "fn": "inflate",
+   "args": [
+    "eJwNAAAAAAAAAAAAAAAA",
+    1048576
+   ],
+   "out": ""
+  },
+  {
+   "fn": "inflate",
+   "args": [
+    "eJwNAA==",
+    1048576
+   ],
+   "out": ""
+  },
+  {
+   "fn": "inflate",
+   "args": [
     "eLs=",
     1048576
    ],

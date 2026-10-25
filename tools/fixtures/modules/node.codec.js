@@ -67,6 +67,8 @@ module.exports = {
     { fn: 'inflate', args: [z(big), big.length - 1] },
     { fn: 'inflate', args: [z(big), 16384] },
     { fn: 'inflate', args: [z(big), 16383] },
+    // A code of code lengths without any code: zlib reads each length as 0 on 1 bit.
+    ...['789c9d12000000160013000000', '789c7c6000', '789c0d000000000000000000000000', '789c0d00'].map(h => ({ fn: 'inflate', args: [Buffer.from(h, 'hex').toString('base64'), 1 << 20] })),
     // A preset dictionary, its id cut short or not.
     { fn: 'inflate', args: [Buffer.from([0x78, 0xbb]).toString('base64'), 1 << 20] },
     { fn: 'inflate', args: [Buffer.from([0x78, 0xbb, 1, 2, 3]).toString('base64'), 1 << 20] },

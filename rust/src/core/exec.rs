@@ -325,7 +325,7 @@ pub fn words(s: &str) -> Vec<String> {
 }
 
 /// What a child is given: its folder, environment (the whole of it), standard input, time limit, a session of its own
-/// (detached) and a shell to run it.
+/// (detached), a shell to run it, and how much output it may write (execFile's maxBuffer, 64 MiB by default).
 #[derive(Default, Clone)]
 pub struct Opts {
     pub cwd: Option<String>,
@@ -334,6 +334,7 @@ pub struct Opts {
     pub timeout: Option<Duration>,
     pub detached: bool,
     pub shell: bool,
+    pub max_buffer: Option<usize>,
 }
 
 const MAX_OUT: usize = 64 << 20;
@@ -518,7 +519,7 @@ fn command(cmd: &str, args: &[&str], opts: &Opts) -> Command {
     c
 }
 
-/// Runs a child to its end, its outputs read as they come (beyond MAX_OUT dropped, or the child killed when
+/// Runs a child to its end, its outputs read as they come (beyond the maximum dropped, or the child killed when
 /// `kill_on_overflow`).
 fn spawn(cmd: &str, args: &[&str], opts: &Opts, kill_on_overflow: bool) -> Outcome {
     let mut c = command(cmd, args, opts);
@@ -538,6 +539,7 @@ fn spawn(cmd: &str, args: &[&str], opts: &Opts, kill_on_overflow: bool) -> Outco
     };
     let pid = child.id();
     let overflow = Arc::new(Mutex::new(false));
+    let max = opts.max_buffer.unwrap_or(MAX_OUT);
     let reader = |mut r: Box<dyn Read + Send>| {
         let buf = Arc::new(Mutex::new(Vec::new()));
         let (b, over) = (buf.clone(), overflow.clone());
@@ -549,7 +551,7 @@ fn spawn(cmd: &str, args: &[&str], opts: &Opts, kill_on_overflow: bool) -> Outco
                     Ok(0) | Err(_) => break,
                     Ok(n) => {
                         size += n;
-                        if size <= MAX_OUT {
+                        if size <= max {
                             b.lock().unwrap_or_else(|p| p.into_inner()).extend_from_slice(&chunk[..n]);
                         } else {
                             *over.lock().unwrap_or_else(|p| p.into_inner()) = true;
@@ -646,6 +648,13 @@ pub fn run(cmd: Option<&str>, args: &[&str], opts: &Opts) -> Option<String> {
     let o = spawn(cmd, args, opts, true);
     (o.failed.is_none() && !o.overflow && !o.timed_out && o.code == Some(0))
         .then(|| String::from_utf8_lossy(&o.out).into_owned())
+}
+
+/// run() for a program writing bytes: its stdout as written.
+pub fn run_bytes(cmd: Option<&str>, args: &[&str], opts: &Opts) -> Option<Vec<u8>> {
+    let cmd = cmd?;
+    let o = spawn(cmd, args, opts, true);
+    (o.failed.is_none() && !o.overflow && !o.timed_out && o.code == Some(0)).then_some(o.out)
 }
 
 /// What `exec` gives: the exit code (None when the program could not start, was killed or timed out), stdout and

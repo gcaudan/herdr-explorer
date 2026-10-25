@@ -1342,6 +1342,37 @@ fn render_graph() {
     });
 }
 
+/// render/image: headers of every format, pixels of PNG, GIF, BMP and ICO files built byte by byte
+/// (tools/fixtures/modules/render.image.js).
+#[test]
+fn render_image() {
+    use herdr_explorer::codec::base64;
+    use herdr_explorer::render::image;
+    support::replay("render/image", |name, args| {
+        let buf = base64::decode(args[0].as_str().unwrap());
+        let hex = |b: &[u8]| b.iter().map(|x| format!("{x:02x}")).collect::<String>();
+        Ok(match name {
+            "info" => image::info(&buf).map_or(Value::Null, |m| {
+                let mut o = herdr_explorer::obj! { "format" => Value::Str(m.format.into()), "width" => Value::Num(m.width), "height" => Value::Num(m.height) };
+                if let (Some(note), Value::Obj(o)) = (m.note, &mut o) {
+                    o.push(("note".into(), Value::Str(note)));
+                }
+                o
+            }),
+            "decode" => image::decode(&buf).map_or(Value::Null, |img| {
+                let data = if img.data.len() <= 512 {
+                    Value::Str(hex(&img.data))
+                } else {
+                    let fnv = img.data.iter().fold(0x811c9dc5u32, |h, &x| (h ^ x as u32).wrapping_mul(0x01000193));
+                    herdr_explorer::obj! { "size" => Value::Num(img.data.len() as f64), "fnv" => Value::Str(format!("{fnv:x}")), "head" => Value::Str(hex(&img.data[..64])) }
+                };
+                herdr_explorer::obj! { "width" => Value::Num(img.width as f64), "height" => Value::Num(img.height as f64), "data" => data }
+            }),
+            _ => return Err(format!("no function {name}")),
+        })
+    });
+}
+
 /// render/highlight: samples of each language in both themes, languages of file names
 /// (tools/fixtures/modules/render.highlight.js).
 #[test]
