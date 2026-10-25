@@ -312,6 +312,48 @@ pub fn format(list: &[Value], dir: Option<&str>, prefix: &str) -> String {
     format!("{prefix}Review notes: {} ", items(list, dir).join("; "))
 }
 
+/// The tab's notes to the clipboard, as a list under "Review notes:".
+pub fn copy(tab: &str, dir: Option<&str>) -> String {
+    let list = current(tab, None);
+    if list.is_empty() {
+        return "No note to copy".into();
+    }
+    let lines: String = items(&list, dir).iter().map(|i| format!("- {i}\n")).collect();
+    let n = list.len();
+    super::actions::copy(
+        &format!("Review notes:\n{lines}"),
+        &format!("{n} note{} copied", if n > 1 { "s" } else { "" }),
+    )
+}
+
+/// Types every note of the tab into the terminal next to the explorer, then clears them.
+pub fn send(tab: &str, pane: &str) -> String {
+    let list = current(tab, None);
+    if list.is_empty() {
+        return "No note to send".into();
+    }
+    let settings = super::exec::read_settings();
+    let prefix = settings.get("reviewPrefix").filter(|p| p.truthy()).map_or(String::new(), js::string);
+    let text = |dir: Option<&str>| format(&list, dir, &prefix);
+    if let Some(err) = super::actions::type_text(super::actions::Line::Of(&text), pane) {
+        return err;
+    }
+    // Notes taken while sending are kept.
+    let sent: Vec<Option<&Value>> = list.iter().map(|n| n.get("t")).collect();
+    let kept: Vec<Value> = read(tab).into_iter().filter(|n| !sent.iter().any(|t| same_value(*t, n.get("t")))).collect();
+    write(tab, &kept);
+    let n = list.len();
+    format!("{n} note{} sent", if n > 1 { "s" } else { "" })
+}
+
+/// `Set.has`: SameValueZero (NaN equal to itself), an object read again never the same.
+fn same_value(a: Option<&Value>, b: Option<&Value>) -> bool {
+    match (a, b) {
+        (Some(Value::Num(x)), Some(Value::Num(y))) => x == y || (x.is_nan() && y.is_nan()),
+        _ => js::strict_eq(a, b),
+    }
+}
+
 /// Watches the tab's notes (another pane took or sent one); None without a state folder.
 pub fn watch(tab: &str) -> Option<super::watch::Watch> {
     file_of(tab).map(|f| super::watch::Watch::new(&f, Duration::from_millis(500)))

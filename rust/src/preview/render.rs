@@ -202,6 +202,7 @@ impl Preview {
                 figures.push(f.pic.id);
             }
         }
+        let list = self.with_notes(list, width);
         let rows = Rc::new(Rows { list, width, height: h, figures });
         self.state.rows = Some(rows.clone());
         rows
@@ -261,7 +262,11 @@ impl Preview {
             let mut num: Vec<Seg> = Vec::new();
             if gw > 1 {
                 let n = if r.first { (r.src + 1).to_string() } else { String::new() };
-                let style = fg(if (r.src + 1) as f64 == s.line { c().text } else { c().dim });
+                let style = if r.src >= 0 && self.noted(r.src) {
+                    Self::noted_style()
+                } else {
+                    fg(if (r.src + 1) as f64 == s.line { c().text } else { c().dim })
+                };
                 num.push(seg(format!("{n:>width$} ", width = gw - 1), style));
             }
             if signs {
@@ -513,6 +518,10 @@ impl Preview {
             segs.push(seg(count, fg(c().dim)));
             return ui::line(&segs, w, Some(c().header));
         }
+        if let Some(line) = self.note_footer(w) {
+            return line;
+        }
+        let s = &self.state;
         if let Some(text) = &s.flash {
             return ui::line(&ui::message(text, None), w, Some(c().header));
         }
@@ -524,9 +533,14 @@ impl Preview {
         } else {
             String::new()
         };
-        // TODO(case 13): A, the notes to send.
+        let all = s.note_count;
+        let send: Vec<(String, String)> = if all > 0 {
+            vec![("A".into(), format!("send {all} note{}", if all > 1 { "s" } else { "" }))]
+        } else {
+            vec![]
+        };
         let n = s.marks.len();
-        let mut marks: Vec<(String, String)> = Vec::new();
+        let mut marks: Vec<(String, String)> = send.clone();
         if n > 1 {
             marks.push(("n N".into(), format!("{n} marks")));
         }
@@ -539,13 +553,14 @@ impl Preview {
             pairs = self.show_pairs();
         } else if s.kind == Kind::Image && !s.diff {
             let sharp = if self.sharp() { "pixelated" } else { "sharp" };
-            pairs = vec![
+            pairs = send;
+            pairs.extend([
                 pair("p", sharp),
                 pair("o", "open"),
                 pair("y", "copy path"),
                 pair("q", "close"),
                 pair("?", "keys"),
-            ];
+            ]);
         } else if s.diff {
             if n <= 1 {
                 pairs.push(pair("n N", "hunks"));

@@ -220,6 +220,7 @@ impl Preview {
         s.find = None;
         s.matches.clear();
         s.menu = None;
+        s.note = None;
         self.keep_tab(self.tabs.current);
         self.reveal_cursor();
         if mixed {

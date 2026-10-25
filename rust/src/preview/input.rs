@@ -84,6 +84,8 @@ impl Preview {
                 if let Some(f) = &mut self.state.rev_prompt {
                     f.insert(&text);
                     self.render();
+                } else if self.state.note.is_some() {
+                    self.note_paste(&text);
                 } else if let Some(f) = self.state.find.as_mut().filter(|f| f.active) {
                     f.field.insert(&text);
                     self.search(true);
@@ -124,6 +126,9 @@ impl Preview {
     pub(super) fn key(&mut self, k: &str) {
         if self.state.ask.is_some() {
             return self.ask_key(k);
+        }
+        if self.state.note.is_some() {
+            return self.note_key(k);
         }
         if self.state.rev_prompt.is_some() {
             return self.rev_key(k);
@@ -312,11 +317,18 @@ impl Preview {
                 let (dir, pane, file) = (self.dir(), self.pane.clone(), self.state.file.clone());
                 self.act(move || actions::scm(&dir, &pane, &file, true))
             }
-            // TODO(case 13): the review notes (a, A, C, U).
-            "a" => {
-                if self.tab.is_empty() {
-                    self.flash(Some("Notes need the explorer".into()))
-                }
+            "a" => self.start_note(),
+            "A" => {
+                let (tab, pane) = (self.tab.clone(), self.pane.clone());
+                self.act(move || Some(crate::core::notes::send(&tab, &pane)))
+            }
+            "C" => {
+                let (tab, dir) = (self.tab.clone(), self.dir());
+                self.act(move || Some(crate::core::notes::copy(&tab, Some(&dir))))
+            }
+            "U" => {
+                let tab = self.tab.clone();
+                self.act(move || Some(crate::core::notes::undo(&tab)))
             }
             "z" => {
                 let pane = self.pane.clone();
@@ -858,7 +870,7 @@ impl Preview {
     // --- references
 
     /// The file's lines under the selection, else the highlighted line: (from, to), 1-based; None when none.
-    fn selected_lines(&mut self) -> Option<(i64, i64)> {
+    pub(super) fn selected_lines(&mut self) -> Option<(i64, i64)> {
         if self.state.diff {
             return self.diff_lines().map(|(a, b, _)| (a, b));
         }

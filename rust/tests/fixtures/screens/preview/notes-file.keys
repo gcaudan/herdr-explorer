@@ -1,0 +1,10 @@
+# a with no line: a note on the whole file, at the top; shift+tab goes back through the kinds.
+size 60 10
+file a.txt one\ntwo\nthree\nfour\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/a.txt
+env EXPLORER_TAB=t1
+start
+keys a
+text all of it
+keys shift+tab enter

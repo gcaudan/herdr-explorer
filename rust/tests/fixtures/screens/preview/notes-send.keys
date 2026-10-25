@@ -1,0 +1,12 @@
+# A: the tab's notes typed into the terminal next to the explorer, then cleared (read again once the file changed).
+size 70 12
+file a.txt one\ntwo\nthree\nfour\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+state notes-t1.json [{"file":"$ROOT/work/a.txt","from":2,"to":3,"kind":"fix","text":"rename these","t":1},{"file":"$ROOT/work/a.txt","from":0,"to":0,"kind":"","text":"whole file remark","t":2},{"file":"$ROOT/work/a.txt","from":5,"to":5,"kind":"","text":"gone line","t":3,"stale":true},{"file":"$ROOT/work/other.txt","from":1,"to":1,"kind":"nit","text":"elsewhere","t":4}]
+herdr pane neighbor {"result":{"neighbor":{"neighbor_pane_id":"w1:p1"}}}
+herdr pane get {"result":{"pane":{"label":"shell","cwd":"$ROOT/work"}}}
+env EXPLORER_FILE=$ROOT/work/a.txt
+env EXPLORER_TAB=t1
+start
+keys A
+wait 1200

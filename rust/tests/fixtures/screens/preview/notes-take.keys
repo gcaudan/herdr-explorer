@@ -1,0 +1,9 @@
+# a on the highlighted line: the note typed in the footer, tab choosing its kind.
+size 60 10
+file a.txt one\ntwo\nthree\nfour\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/a.txt
+env EXPLORER_LINE=2
+env EXPLORER_TAB=t1
+start
+keys a c h e c k tab

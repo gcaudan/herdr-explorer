@@ -1,0 +1,6 @@
+pane	layout	--pane	w1:p2
+pane	neighbor	--direction	right	--pane	w1:p2
+pane	get	w1:p1
+pane	get	w1:p1
+pane	send-text	w1:p1	Review notes: a.txt: whole file remark; a.txt:2-3 (fix): rename these; a.txt:5 (stale): gone line; other.txt:1 (nit): elsewhere 
+pane	focus	--direction	right	--pane	w1:p2

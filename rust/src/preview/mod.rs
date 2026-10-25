@@ -1,12 +1,12 @@
 //! File preview of a tab (src/preview.js), opened next to the terminal by the explorer and the search:
-//! syntax-highlighted text, a hex dump for binary files; or the file's git changes (Diff view, d). Reloads by itself
-//! when the file changes on disk, and shows the next file the explorer asks for (request file, see actions.preview),
-//! in tabs (core::tabs).
+//! syntax-highlighted text, rendered Markdown, images (in pixels with the Kitty graphics protocol, else drawn with half
+//! blocks), a hex dump for other binary files; or the file's git changes (Diff view, d). Reloads by itself when the
+//! file changes on disk, and shows the next file the explorer asks for (request file, see actions.preview), in tabs
+//! (core::tabs); the tab's review notes show in the text.
 //!
 //! As in the explorer, the herdr and clipboard calls run on a worker thread and their results come back to the
 //! pane's loop; the JS's timers are deadlines of that loop.
 //!
-//! TODO(case 13): the review notes.
 //! TODO(case 20): the update watched, the preview restarted on the new code.
 
 mod diff;
@@ -14,6 +14,7 @@ mod edit;
 mod input;
 mod media;
 mod render;
+mod review;
 
 use crate::core::actions::{self, Kept};
 use crate::core::exec;
@@ -234,6 +235,10 @@ pub struct State {
     edit: Option<edit::Shared>,
     /// A question in a card (ui::ask).
     ask: Option<edit::Question>,
+    /// The tab's review notes on this file (core::notes), its notes on every file, and the note typed.
+    notes: Vec<Value>,
+    note_count: usize,
+    note: Option<review::Draft>,
 }
 
 /// The width kept: None at first, the width herdr gave the pane.
@@ -289,6 +294,8 @@ pub struct Preview {
     editing: bool,
     /// The tab's scope file, chosen in another pane.
     scope_watch: Option<Watch>,
+    /// The tab's notes, taken or sent in another pane.
+    notes_watch: Option<Watch>,
     // width
     width: Arc<Mutex<Option<f64>>>,
     keeper: Arc<Mutex<actions::WidthKeeper>>,
@@ -472,6 +479,9 @@ impl Preview {
                 hints: None,
                 edit: None,
                 ask: None,
+                notes: Vec::new(),
+                note_count: 0,
+                note: None,
             },
             settings_watch: exec::settings_file().map(|f| Watch::new(&f, Duration::from_millis(1000))),
             layout_seen: json::stringify(exec::read_settings().get("diffLayout").unwrap_or(&Value::Null)),
@@ -496,6 +506,7 @@ impl Preview {
             change_marks: None,
             editing: false,
             scope_watch: if tab.is_empty() { None } else { scope::watch(&tab) },
+            notes_watch: if tab.is_empty() { None } else { crate::core::notes::watch(&tab) },
             width: Arc::new(Mutex::new(None)),
             keeper: Arc::new(Mutex::new(actions::WidthKeeper::new(&pane, None))),
             keeper_busy: false,
@@ -562,6 +573,7 @@ impl Preview {
         if self.state.file.is_empty() {
             self.set_error("No file");
         } else {
+            self.read_notes(true);
             self.watch();
             self.load(restored);
             self.show_marks();
@@ -625,7 +637,10 @@ impl Preview {
     fn next_deadline(&self) -> Option<Instant> {
         let mut all = vec![self.flash_at, self.settle_at, self.reload_at, self.scrollbar.due()];
         all.extend(
-            [&self.requests, &self.settings_watch, &self.scope_watch].into_iter().flatten().map(|w| Some(w.due())),
+            [&self.requests, &self.settings_watch, &self.scope_watch, &self.notes_watch]
+                .into_iter()
+                .flatten()
+                .map(|w| Some(w.due())),
         );
         if !self.keeper_busy {
             all.push(self.keeper.try_lock().ok().and_then(|k| k.due()));
@@ -646,6 +661,8 @@ impl Preview {
             self.render();
         }
         if due(&mut self.reload_at) {
+            // The notes follow their lines (notes::current), the file's own reloaded with it.
+            self.read_notes(true);
             self.load(true);
         }
         if let Some(top) = self.scrollbar.tick(now) {
@@ -667,6 +684,9 @@ impl Preview {
         }
         if self.scope_watch.as_mut().is_some_and(Watch::poll) {
             self.follow_scope();
+        }
+        if self.notes_watch.as_mut().is_some_and(Watch::poll) {
+            self.load_notes();
         }
     }
 
@@ -733,12 +753,14 @@ impl Preview {
         s.diff_data = None;
         s.find = None;
         s.matches.clear();
+        s.note = None;
         s.select = None;
         s.menu = None;
         if s.diff {
             s.want_top = Some(s.top);
         }
         self.watch();
+        self.read_notes(true);
         self.load(true);
         self.save_file();
     }
@@ -876,9 +898,11 @@ impl Preview {
         }
         if other {
             s.find = None;
+            s.note = None;
             s.select = None;
             s.menu = None;
             self.watch();
+            self.read_notes(true);
         }
         if keep && diff && self.state.diff_data.is_none() {
             self.state.want_top = Some(self.state.top);
