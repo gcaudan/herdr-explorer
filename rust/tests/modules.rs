@@ -505,53 +505,152 @@ fn core_notes() {
 
 #[test]
 fn diff_parse() {
+    use herdr_explorer::core::{js, ui};
     use herdr_explorer::diff;
     let opt = |s: &Option<String>| s.clone().map_or(Value::Null, Value::Str);
     let num = |n: Option<i64>| n.map_or(Value::Null, |n| Value::Num(n as f64));
     let obj = |fields: Vec<(&str, Value)>| Value::Obj(fields.into_iter().map(|(k, v)| (k.to_string(), v)).collect());
+    let diff_val = |d: &diff::Diff| {
+        let line = |l: &diff::Line| {
+            let mut items = vec![Value::Str(l.sign.to_string()), Value::Str(l.text.clone()), num(l.old), num(l.new)];
+            if l.sign != '\\' {
+                items.extend([Value::Num(l.at as f64), Value::Bool(l.cr)]);
+            }
+            Value::Arr(items)
+        };
+        let hunk = |h: &diff::Hunk| {
+            obj(vec![
+                ("head", Value::Str(h.head.clone())),
+                ("context", Value::Str(h.context.clone())),
+                ("lines", Value::Arr(h.lines.iter().map(line).collect())),
+            ])
+        };
+        let file = |f: &diff::File| {
+            obj(vec![
+                ("from", opt(&f.from)),
+                ("to", opt(&f.to)),
+                ("status", Value::Str(f.status.clone())),
+                ("notes", str_arr(f.notes.clone())),
+                ("hunks", Value::Arr(f.hunks.iter().map(hunk).collect())),
+                ("add", Value::Num(f.add as f64)),
+                ("del", Value::Num(f.del as f64)),
+                ("mode", opt(&f.mode)),
+                ("oldMode", opt(&f.old_mode)),
+                ("newMode", opt(&f.new_mode)),
+            ])
+        };
+        obj(vec![
+            ("pre", str_arr(d.pre.clone())),
+            ("files", Value::Arr(d.files.iter().map(file).collect())),
+            ("add", Value::Num(d.add as f64)),
+            ("del", Value::Num(d.del as f64)),
+        ])
+    };
+    // A diff given as text (parse) or as { staged, text } (changes_of, the sections apart).
+    let parsed = |v: &Value| match v.as_str() {
+        Some(t) => diff::parse(t),
+        None => diff::changes_of(&diff::Collected {
+            text: v.get("text").map(js::string).unwrap_or_default(),
+            staged: v.get("staged").map(js::string),
+            ..diff::Collected::default()
+        }),
+    };
+    let ref_of = |v: &Value| diff::Ref {
+        file: v.get("file").map(js::string).unwrap_or_default(),
+        from: v.get("from").and_then(Value::as_f64).unwrap_or(0.0) as i64,
+        to: v.get("to").and_then(Value::as_f64).unwrap_or(0.0) as i64,
+        sec: v.get("sec").map(js::string).unwrap_or_default(),
+    };
+    let ref_val = |r: &diff::Ref| {
+        obj(vec![
+            ("file", Value::Str(r.file.clone())),
+            ("from", Value::Num(r.from as f64)),
+            ("to", Value::Num(r.to as f64)),
+            ("sec", Value::Str(r.sec.clone())),
+        ])
+    };
     support::replay("diff", |name, args| {
         let s = args[0].as_str().unwrap_or("");
         Ok(match name {
             "unquote" => Value::Str(diff::unquote(s)),
             "strip" => opt(&diff::strip(s)),
-            "parse" => {
-                let d = diff::parse(s);
-                let line = |l: &diff::Line| {
-                    let mut items =
-                        vec![Value::Str(l.sign.to_string()), Value::Str(l.text.clone()), num(l.old), num(l.new)];
-                    if l.sign != '\\' {
-                        items.extend([Value::Num(l.at as f64), Value::Bool(l.cr)]);
-                    }
-                    Value::Arr(items)
+            "parse" => diff_val(&diff::parse(s)),
+            "render" => {
+                let d = parsed(&args[0]);
+                let (width, mode) = (args[1].as_f64().unwrap_or(0.0) as usize, args[2].as_str().unwrap_or(""));
+                let view = &args[4];
+                let names: Vec<String> = view
+                    .get("viewed")
+                    .and_then(Value::as_array)
+                    .map_or(Vec::new(), |a| a.iter().map(js::string).collect());
+                let viewed =
+                    |f: &diff::File| names.contains(&f.to.clone().or_else(|| f.from.clone()).unwrap_or_default());
+                let v = diff::View {
+                    wrap: view.get("wrap").is_some_and(Value::truthy),
+                    left: view.get("left").and_then(Value::as_f64).unwrap_or(0.0) as usize,
+                    viewed: (!names.is_empty()).then_some(&viewed as &dyn Fn(&diff::File) -> bool),
                 };
-                let hunk = |h: &diff::Hunk| {
-                    obj(vec![
-                        ("head", Value::Str(h.head.clone())),
-                        ("context", Value::Str(h.context.clone())),
-                        ("lines", Value::Arr(h.lines.iter().map(line).collect())),
-                    ])
+                let rows = diff::render(&d, width, mode, args[3].truthy(), &v);
+                // The JS throws there (String.prototype.repeat of -1): the Rust lays the rows out without failing.
+                if width == 0 && mode == "split" {
+                    return Err("Invalid count value: -1".into());
+                }
+                let n = |x: usize| Value::Num(x as f64);
+                let segs = |v: &[ui::Seg]| {
+                    Value::Arr(v.iter().map(|p| Value::Arr(vec![p.0.clone().into(), p.1.clone().into()])).collect())
                 };
-                let file = |f: &diff::File| {
-                    obj(vec![
-                        ("from", opt(&f.from)),
-                        ("to", opt(&f.to)),
-                        ("status", Value::Str(f.status.clone())),
-                        ("notes", str_arr(f.notes.clone())),
-                        ("hunks", Value::Arr(f.hunks.iter().map(hunk).collect())),
-                        ("add", Value::Num(f.add as f64)),
-                        ("del", Value::Num(f.del as f64)),
-                        ("mode", opt(&f.mode)),
-                        ("oldMode", opt(&f.old_mode)),
-                        ("newMode", opt(&f.new_mode)),
-                    ])
-                };
-                obj(vec![
-                    ("pre", str_arr(d.pre.clone())),
-                    ("files", Value::Arr(d.files.iter().map(file).collect())),
-                    ("add", Value::Num(d.add as f64)),
-                    ("del", Value::Num(d.del as f64)),
-                ])
+                Value::Arr(
+                    rows.iter()
+                        .map(|r| {
+                            obj(vec![
+                                ("segs", segs(&r.segs)),
+                                (
+                                    "back",
+                                    r.back.map_or(Value::Null, |c| {
+                                        Value::Arr(c.iter().map(|&x| n(x as usize)).collect())
+                                    }),
+                                ),
+                                ("hunk", Value::Bool(r.hunk)),
+                                ("file", Value::Bool(r.file)),
+                                ("more", Value::Bool(r.more)),
+                                ("place", Value::Num(r.place as f64)),
+                                ("ref", r.r#ref.as_ref().map_or(Value::Null, ref_val)),
+                                ("f", r.f.map_or(Value::Null, n)),
+                                ("h", r.h.map_or(Value::Null, |(a, b)| Value::Arr(vec![n(a), n(b)]))),
+                                (
+                                    "lines",
+                                    Value::Arr(
+                                        r.lines.iter().map(|&(a, b, c)| Value::Arr(vec![n(a), n(b), n(c)])).collect(),
+                                    ),
+                                ),
+                                ("redo", r.redo.as_ref().map_or(Value::Null, |redo| segs(&redo(7)))),
+                            ])
+                        })
+                        .collect(),
+                )
             }
+            "changesOf" => {
+                let d = parsed(&args[0]);
+                let mut v = diff_val(&d);
+                // sec, only with the sections apart (undefined in the JS otherwise).
+                if let (true, Value::Obj(fields)) = (args[0].get("staged").is_some(), &mut v) {
+                    for (k, val) in fields.iter_mut() {
+                        if let (true, Value::Arr(files)) = (k == "files", val) {
+                            for (f, file) in files.iter_mut().zip(&d.files) {
+                                f.set("sec", Value::Str(file.sec.clone()));
+                            }
+                        }
+                    }
+                }
+                v
+            }
+            "shownLines" => diff::shown_lines(&parsed(&args[0]), &ref_of(&args[1])).map_or(Value::Null, str_arr),
+            "diskLines" => diff::disk_lines(&parsed(&args[0]), &ref_of(&args[1])).map_or(Value::Null, |(from, to)| {
+                obj(vec![("from", Value::Num(from as f64)), ("to", Value::Num(to as f64))])
+            }),
+            "widestOf" => Value::Num(diff::widest_of(&parsed(&args[0])) as f64),
+            "defaultMode" => Value::Str(diff::default_mode(args[0].as_f64().unwrap_or(0.0) as usize).into()),
+            "showArgs" => diff::show_args(&args[0]).map_or(Value::Null, str_arr),
             _ => return Err(format!("no function {name}")),
         })
     });

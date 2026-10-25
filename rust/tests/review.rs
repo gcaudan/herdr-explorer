@@ -1,11 +1,13 @@
 //! test/review.test.js: the terminal's replies kept apart from the keys, the line a note set sends, notes following
-//! their lines, the files viewed. The diff rows and the image decoders wait for the steps that port them.
+//! their lines, the files viewed, the diff rows. The image decoders wait for the step that ports them.
 
 mod support;
 
 use herdr_explorer::core::notes::{self, Lines};
+use herdr_explorer::core::scope::{self, Scope};
 use herdr_explorer::core::ui::{self, Event};
 use herdr_explorer::core::{exec, paths, viewed};
+use herdr_explorer::diff::{self, Collected, Ref, Row, View};
 use herdr_explorer::json::Value;
 use herdr_explorer::obj;
 
@@ -117,20 +119,106 @@ fn notes_stay_relative_from_a_folder_reached_through_a_link() {
 }
 
 #[test]
-#[ignore = "case 15"]
-fn untracked_files_of_a_subfolder_are_named_from_the_repository() {}
+fn untracked_files_of_a_subfolder_are_named_from_the_repository() {
+    let t = support::TempDir::new("diff");
+    if !git_in(&t.path, &["init", "-q"]).status.success() {
+        return;
+    }
+    std::fs::create_dir_all(t.path.join("app/src")).unwrap();
+    std::fs::write(t.path.join("app/src/new.js"), "x\n").unwrap();
+    let res = diff::collect(&t.path.join("app").to_string_lossy(), "", "head", None, None);
+    assert_eq!(names(&res.text), ["app/src/new.js"]);
+}
 
 #[test]
-#[ignore = "case 15"]
-fn diff_scopes_a_commit_a_range_a_branch_the_last_agent_turn() {}
+fn diff_scopes_a_commit_a_range_a_branch_the_last_agent_turn() {
+    let t = support::TempDir::new("scope");
+    let top = t.path.to_string_lossy().into_owned();
+    let git = |args: &[&str]| git_in(&t.path, args);
+    if !git(&["init", "-q", "-b", "main"]).status.success() {
+        return;
+    }
+    let write = |f: &str, text: &str| std::fs::write(t.path.join(f), text).unwrap();
+    let commit = |f: &str, text: &str| {
+        write(f, text);
+        git(&["add", "-A"]);
+        git(&["commit", "-q", "-m", f]);
+    };
+    commit("a.txt", "one\n");
+    commit("b.txt", "two\n");
+    git(&["switch", "-q", "-c", "feature"]);
+    commit("c.txt", "three\n");
+    let collect = |file: &str, sc: Scope, turn: Option<&Value>| diff::collect(&top, file, "head", Some(&sc), turn);
+    let names_of = |kind: &str, rev: &str| names(&collect("", Scope::new(kind, Some(rev)), None).text);
+    assert_eq!(names_of("rev", "main"), ["b.txt"]);
+    assert_eq!(names_of("rev", "main...feature"), ["c.txt"]);
+    assert_eq!(names_of("rev", "HEAD~2..HEAD"), ["b.txt", "c.txt"]);
+    write("new.txt", "x\n");
+    assert_eq!(names_of("ref", "main"), ["c.txt", "new.txt"]);
+    assert!(collect("", Scope::new("rev", Some("nope")), None).error.is_some());
+    // The turn: what changed since its snapshot, untracked files included; the index stays as it was.
+    let tree = scope::worktree(&top, &exec::process_env(), false, None).expect("tree");
+    assert_eq!(String::from_utf8_lossy(&git(&["status", "--porcelain"]).stdout), "?? new.txt\n");
+    write("a.txt", "one!\n");
+    write("other.txt", "y\n");
+    let turn = obj! { "top" => top.clone(), "tree" => tree };
+    let res = collect("", Scope::new("turn", None), Some(&turn));
+    assert_eq!(names(&res.text), ["a.txt", "other.txt"]);
+    // Limited to one file, which alone is added again: a new one untracked too.
+    write("third.txt", "z\n");
+    let file = |f: &str| t.path.join(f).to_string_lossy().into_owned();
+    let one = collect(&file("third.txt"), Scope::new("turn", None), Some(&turn));
+    assert_eq!(names(&one.text), ["third.txt"]);
+    write("a.txt", "one!!\n");
+    let again = collect(&file("a.txt"), Scope::new("turn", None), Some(&turn));
+    assert!(again.text.split('\n').any(|l| l == "+one!!"), "{}", again.text);
+    assert!(collect("", Scope::new("turn", None), None).error.is_some());
+}
 
 #[test]
-#[ignore = "case 15"]
-fn diff_rows_know_the_lines_they_show() {}
+fn diff_rows_know_the_lines_they_show() {
+    let text =
+        ["diff --git a/x.js b/x.js", "--- a/x.js", "+++ b/x.js", "@@ -1,3 +1,3 @@", " one", "-two", "+2", " three", ""];
+    let parsed = diff::parse(&text.join("\n"));
+    for mode in ["inline", "split"] {
+        let refs: Vec<String> = diff::render(&parsed, 100, mode, false, &View::default())
+            .iter()
+            .filter_map(|r| r.r#ref.as_ref().map(|x| format!("{}-{}", x.from, x.to)))
+            .collect();
+        // The file, the hunk, then its lines: the removed line is at the place of the added one.
+        let want: &[&str] = if mode == "inline" {
+            &["0-0", "1-3", "1-1", "2-2", "2-2", "3-3"]
+        } else {
+            &["0-0", "1-3", "1-1", "2-2", "3-3"]
+        };
+        assert_eq!(refs, want, "{mode}");
+    }
+}
 
 #[test]
-#[ignore = "case 15"]
-fn diff_rows_wrap_long_lines_or_scroll_them_from_a_column() {}
+fn diff_rows_wrap_long_lines_or_scroll_them_from_a_column() {
+    let long = "abcdefghij".repeat(6);
+    let (del, add) = (format!("-{long}"), format!("+{long}!"));
+    let text = ["diff --git a/x.js b/x.js", "--- a/x.js", "+++ b/x.js", "@@ -1,2 +1,2 @@", " short", &del, &add, ""];
+    let parsed = diff::parse(&text.join("\n"));
+    for mode in ["inline", "split"] {
+        let rows = diff::render(&parsed, 40, mode, true, &View { wrap: true, ..View::default() });
+        // Every row fills the width; a wrapped line goes on with rows marked more, at the same place.
+        assert!(rows.iter().filter(|r| r.place != 0).all(|r| ui::seg_width(&r.segs) == 40), "{mode}");
+        let more: Vec<&Row> = rows.iter().filter(|r| r.more).collect();
+        assert!(more.len() >= 2 && more.iter().all(|r| r.place == 2), "{mode}");
+        assert_eq!(
+            diff::render(&parsed, 40, mode, true, &View::default()).iter().filter(|r| r.more).count(),
+            0,
+            "{mode}"
+        );
+    }
+    let cut = diff::render(&parsed, 40, "inline", true, &View { left: 10, ..View::default() });
+    // The hunk's header, then the lines: the gutter stays, the text starts at its 11th column.
+    assert!(!plain(&cut[1]).contains("short"), "the short line scrolled out");
+    assert!(plain(&cut[2]).contains(&format!(" {}", &long[10..30])));
+    assert!(cut.iter().filter(|r| r.place != 0).all(|r| ui::seg_width(&r.segs) == 40));
+}
 
 #[test]
 #[ignore = "case 9"]
@@ -145,13 +233,71 @@ fn images_scale_to_fit_never_above_their_size() {}
 fn progressive_jpeg_decodes() {}
 
 #[test]
-#[ignore = "case 15"]
-fn the_lines_a_note_takes_from_a_diff_are_those_of_the_version_shown() {}
+fn the_lines_a_note_takes_from_a_diff_are_those_of_the_version_shown() {
+    let staged = "diff --git a/f b/f\n--- a/f\n+++ b/f\n@@ -1,3 +1,3 @@\n a\n-b\n+B\n c\n";
+    let parsed = diff::changes_of(&Collected { staged: Some(staged.into()), ..Collected::default() });
+    assert_eq!(diff::shown_lines(&parsed, &note_ref("f", "staged", 2, 3)), Some(vec!["B".into(), "c".into()]));
+    assert_eq!(diff::shown_lines(&parsed, &note_ref("f", "staged", 3, 5)), None, "past the hunk");
+    assert_eq!(diff::shown_lines(&parsed, &note_ref("f", "unstaged", 2, 2)), None, "another section");
+}
 
 #[test]
-#[ignore = "case 15"]
-fn a_diff_row_cut_from_another_column_is_made_again_alike_redo() {}
+fn a_diff_row_cut_from_another_column_is_made_again_alike_redo() {
+    let text = format!(
+        "diff --git a/f b/f\n--- a/f\n+++ b/f\n@@ -1,2 +1,2 @@\n {}\n-{}\n+{}\n",
+        "x".repeat(90),
+        "old ".repeat(30),
+        "new ".repeat(30)
+    );
+    let parsed = diff::parse(&text);
+    for mode in ["inline", "split"] {
+        let at0 = diff::render(&parsed, 80, mode, false, &View::default());
+        let at16 = diff::render(&parsed, 80, mode, false, &View { left: 16, ..View::default() });
+        assert_eq!(at0.len(), at16.len());
+        for (i, r) in at0.iter().enumerate() {
+            if let Some(redo) = &r.redo {
+                assert_eq!(redo(16), at16[i].segs, "{mode} row {i}");
+            }
+        }
+        assert!(at0.iter().any(|r| r.redo.is_some()));
+    }
+}
 
 #[test]
-#[ignore = "case 15"]
-fn a_staged_note_is_placed_where_its_lines_are_on_disk() {}
+fn a_staged_note_is_placed_where_its_lines_are_on_disk() {
+    let staged = ["diff --git a/x b/x", "--- a/x", "+++ b/x", "@@ -1,2 +1,2 @@", " one", "-two", "+2", ""].join("\n");
+    // On disk: a line added at the top, and line 2 of the index (2) changed.
+    let unstaged =
+        ["diff --git a/x b/x", "--- a/x", "+++ b/x", "@@ -0,0 +1 @@", "+zero", "@@ -2 +3 @@", "-2", "+deux", ""]
+            .join("\n");
+    let both = |text: &str| {
+        diff::changes_of(&Collected { staged: Some(staged.clone()), text: text.into(), ..Collected::default() })
+    };
+    let parsed = both(&unstaged);
+    assert_eq!(diff::disk_lines(&parsed, &note_ref("x", "staged", 1, 1)), Some((2, 2)));
+    assert_eq!(diff::disk_lines(&parsed, &note_ref("x", "staged", 2, 2)), None);
+    assert_eq!(diff::disk_lines(&parsed, &note_ref("x", "staged", 1, 2)), None);
+    // No unstaged change: the same lines.
+    assert_eq!(diff::disk_lines(&both(""), &note_ref("x", "staged", 2, 2)), Some((2, 2)));
+}
+
+fn git_in(top: &std::path::Path, args: &[&str]) -> std::process::Output {
+    std::process::Command::new("git")
+        .args(["-c", "user.name=t", "-c", "user.email=t@t"])
+        .args(args)
+        .current_dir(top)
+        .output()
+        .expect("git")
+}
+
+fn names(text: &str) -> Vec<String> {
+    diff::parse(text).files.into_iter().map(|f| f.to.unwrap_or_default()).collect()
+}
+
+fn plain(r: &Row) -> String {
+    r.segs.iter().map(|s| s.0.as_str()).collect()
+}
+
+fn note_ref(file: &str, sec: &str, from: i64, to: i64) -> Ref {
+    Ref { file: file.into(), from, to, sec: sec.into() }
+}

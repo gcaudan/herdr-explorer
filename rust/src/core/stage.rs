@@ -54,6 +54,18 @@ pub struct Sel {
     pub lines: HashSet<(usize, usize, usize)>,
 }
 
+/// What rows select (diff::render): whole files from their name's row (f), whole hunks from their @@ row (h), lines
+/// from theirs (lines, both sides of a side by side row).
+pub fn picked<'a>(rows: impl IntoIterator<Item = &'a diff::Row>) -> Sel {
+    let mut sel = Sel::default();
+    for r in rows {
+        sel.files.extend(r.f);
+        sel.hunks.extend(r.h);
+        sel.lines.extend(r.lines.iter().copied());
+    }
+    sel
+}
+
 fn is_change(l: &Line) -> bool {
     l.sign == '+' || l.sign == '-'
 }
