@@ -97,22 +97,29 @@ fn emulator_plays_moves_styles_and_wide_characters() {
     assert_eq!(s.text(), "size 10x1\nx⟪fg=#010203 bg=4 b⟫A⟪fg=#050607⟫B⟪⟫\n");
 }
 
+/// The panes ported (ready), then those still to port, with the case that ports them (pending).
 macro_rules! panes {
-    ($($name:ident: $pane:literal, $case:literal;)*) => {
+    (ready { $($r:ident: $rp:literal;)* } pending { $($name:ident: $pane:literal, $case:literal;)* }) => {
         mod js_captures {
+            $(#[test] fn $r() { super::js($rp) })*
             $(#[test] fn $name() { super::js($pane) })*
         }
         mod rust_captures {
+            $(#[test] fn $r() { super::rust($rp) })*
             $(#[test] #[ignore = $case] fn $name() { super::rust($pane) })*
         }
     };
 }
 
 panes! {
-    tree: "tree", "case 11";
-    preview: "preview", "case 12";
-    search: "search", "case 14";
-    scm: "scm", "case 17";
-    diff: "diff", "case 15";
-    edit: "edit", "case 18";
+    ready {
+        tree: "tree";
+    }
+    pending {
+        preview: "preview", "case 12";
+        search: "search", "case 14";
+        scm: "scm", "case 17";
+        diff: "diff", "case 15";
+        edit: "edit", "case 18";
+    }
 }

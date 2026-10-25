@@ -268,7 +268,7 @@ fn hit_of(name: &str, query: &str) -> Option<(usize, usize)> {
 }
 
 /// The byte offset of the UTF-16 unit `units` of s (its length past the end); None inside a surrogate pair.
-fn unit_at(s: &str, units: usize) -> Option<usize> {
+pub(crate) fn unit_at(s: &str, units: usize) -> Option<usize> {
     let mut n = 0;
     for (i, c) in s.char_indices() {
         if n >= units {

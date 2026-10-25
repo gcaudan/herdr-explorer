@@ -17,6 +17,8 @@
 //!   keys <key>…                 keys typed (names: up, enter, ctrl+c, space…; else the characters), then a settle
 //!   text <text>                 text typed as it is (escapes as for file), then a settle
 //!   wait <ms>                   a pause
+//!   until <ms>                  a pause until ms after the start, then a settle: the pane's timers due by then
+//!                               (its width checked at 300, 1000 and 2500 ms) have run, whatever the keys took
 //!   resize <cols> <rows>        the terminal resized, then a settle
 //!
 //! The pane runs with a cleaned environment: no HERDR_* of the session,
@@ -108,6 +110,8 @@ struct Running {
     output: Arc<Mutex<(Vec<u8>, Option<Instant>)>>,
     /// When the last keys were sent: the pane's answer comes after.
     sent: Instant,
+    /// When the pane started.
+    started: Instant,
 }
 
 impl Drop for Running {
@@ -265,6 +269,13 @@ pub fn run(scenario: &Path, command: &[OsString], root: &Path) -> Capture {
                 r.settle();
             }
             "wait" => std::thread::sleep(Duration::from_millis(rest.parse().unwrap())),
+            "until" => {
+                need(&running);
+                let r = running.as_ref().unwrap();
+                let at = r.started + Duration::from_millis(rest.parse().unwrap());
+                std::thread::sleep(at.saturating_duration_since(Instant::now()));
+                r.settle();
+            }
             "resize" => {
                 need(&running);
                 let r = running.as_ref().unwrap();
@@ -333,5 +344,5 @@ fn start(command: &[OsString], args: &[String], env: &[(String, String)], cwd: &
             o.1 = Some(Instant::now());
         }
     });
-    Running { master, child, output, sent: Instant::now() }
+    Running { master, child, output, sent: Instant::now(), started: Instant::now() }
 }

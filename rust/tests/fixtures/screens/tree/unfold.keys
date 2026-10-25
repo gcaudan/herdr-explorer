@@ -1,0 +1,11 @@
+# A folder unfolded with the keyboard, folded, unfolded again, and its first file selected.
+size 60 16
+file README.md # Hello\n
+file src/main.rs fn main() {}\n
+file src/lib.rs pub fn f() {}\n
+dir docs
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false,"follow":false}
+start
+keys down right left right down
+# The width checked at 300, 1000 and 2500 ms, whatever the keys took.
+until 2800

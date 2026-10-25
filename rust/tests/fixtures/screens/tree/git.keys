@@ -1,0 +1,19 @@
+# A git repository: a file changed, one added, the folder unfolded; then the changed files only.
+size 60 16
+file README.md # Hello\n
+file src/main.rs fn main() {}\n
+file src/lib.rs pub fn f() {}\n
+dir docs
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false,"follow":false}
+file .gitignore target/\n
+dir target
+git init -q
+git add .
+git commit -q -m first
+file src/main.rs fn main() { println!(); }\n
+file notes.txt new\n
+start
+keys down down down right
+keys c
+# The width checked at 300, 1000 and 2500 ms, whatever the keys took.
+until 2800

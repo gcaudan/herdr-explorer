@@ -1,0 +1,9 @@
+pane	get	w1:p2
+pane	input	w1:p2	--right-click	pane
+pane	list	--workspace	undefined
+pane	layout	--pane	w1:p2
+pane	layout	--pane	w1:p2
+pane	neighbor	--direction	right	--pane	w1:p2
+pane	get	w1:p1
+pane	get	w1:p1
+pane	layout	--pane	w1:p2

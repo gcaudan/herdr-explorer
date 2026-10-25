@@ -463,10 +463,20 @@ fn list(v: Value, key: &str) -> Vec<Value> {
 }
 
 pub fn tab_of(pane: &str) -> Option<Tab> {
-    let me = ask(&["pane", "get", pane]).get("pane").filter(|p| p.truthy()).cloned()?;
+    Some(tab_with(pane_of(pane)?))
+}
+
+/// tabOf's first await: the pane itself. Apart for a caller whose other herdr calls go between the two, as the JS's
+/// own did while it waited.
+pub fn pane_of(pane: &str) -> Option<Value> {
+    ask(&["pane", "get", pane]).get("pane").filter(|p| p.truthy()).cloned()
+}
+
+/// tabOf's second await: the panes of the tab of me (pane_of).
+pub fn tab_with(me: Value) -> Tab {
     let all = list(ask(&["pane", "list", "--workspace", &str_of(&me, "workspace_id")]), "panes");
     let panes = all.into_iter().filter(|p| js::strict_eq(p.get("tab_id"), me.get("tab_id"))).collect();
-    Some(Tab { me, panes })
+    Tab { me, panes }
 }
 
 /// The preview of a tab reads its requests from a file of the state folder, so that the explorer and the search reuse
