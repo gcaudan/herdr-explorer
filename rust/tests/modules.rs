@@ -290,6 +290,45 @@ fn node_codec() {
     });
 }
 
+/// Node's regular expressions, as the modules use them (tools/fixtures/modules/node.regexp.js).
+#[test]
+fn node_regexp() {
+    use herdr_explorer::core::{js, regex::Regex};
+    let opt = |g: Option<&str>| g.map_or(Value::Null, |g| Value::Str(g.into()));
+    support::replay("node/regexp", |name, args| {
+        let s = |k: usize| args[k].as_str().unwrap_or("");
+        let text = s(2);
+        let Ok(re) = Regex::new(s(0), s(1)) else { return Ok(Value::Str("SyntaxError".into())) };
+        // Positions in UTF-16 units, as the JS counts them.
+        let at = |i: usize| Value::Num(js::utf16_len(&text[..i]) as f64);
+        Ok(match name {
+            "exec" => {
+                // From a position in UTF-16 units, as a byte offset.
+                let units = args[3].as_f64().unwrap() as usize;
+                let from = text
+                    .char_indices()
+                    .map(|(i, _)| i)
+                    .chain([text.len()])
+                    .find(|&i| js::utf16_len(&text[..i]) >= units);
+                match from.and_then(|from| re.exec_at(text, from)) {
+                    None => Value::Null,
+                    Some(m) => {
+                        Value::Arr([at(m.start())].into_iter().chain((0..m.len()).map(|n| opt(m.get(n)))).collect())
+                    }
+                }
+            }
+            "split" => Value::Arr(re.split(text).into_iter().map(opt).collect()),
+            "all" => Value::Arr(
+                re.matches(text)
+                    .iter()
+                    .map(|m| Value::Arr(vec![at(m.start()), Value::Str(m.as_str().into())]))
+                    .collect(),
+            ),
+            _ => return Err(format!("no function {name}")),
+        })
+    });
+}
+
 /// Node's path module, posix and win32 (tools/fixtures/modules/node.path.js).
 #[cfg(unix)]
 #[test]
@@ -1269,5 +1308,127 @@ fn core_icons() {
             },
             other => panic!("core/icons: {other}"),
         })
+    });
+}
+
+/// render/graph: the lanes of histories (tools/fixtures/modules/render.graph.js).
+#[test]
+fn render_graph() {
+    use herdr_explorer::render::graph;
+    support::replay("render/graph", |name, args| {
+        let commits: Vec<(String, Vec<String>)> = args[0]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| {
+                let s = |v: &Value| v.as_str().unwrap().to_string();
+                (s(c.get("hash").unwrap()), c.get("parents").and_then(Value::as_array).unwrap().iter().map(s).collect())
+            })
+            .collect();
+        let base = args.get(1).and_then(Value::as_str);
+        let num = |n: usize| Value::Num(n as f64);
+        Ok(match name {
+            "layout" => Value::Arr(
+                graph::layout(&commits, base)
+                    .into_iter()
+                    .map(|r| {
+                        let cells = r.cells.iter().map(|&(ch, k)| Value::Arr(vec![Value::Str(ch.to_string()), k.map_or(Value::Null, num)]));
+                        herdr_explorer::obj! { "cells" => Value::Arr(cells.collect()), "color" => num(r.color), "above" => Value::Bool(r.above), "below" => Value::Bool(r.below) }
+                    })
+                    .collect(),
+            ),
+            _ => return Err(format!("no function {name}")),
+        })
+    });
+}
+
+/// render/highlight: samples of each language in both themes, languages of file names
+/// (tools/fixtures/modules/render.highlight.js).
+#[test]
+fn render_highlight() {
+    use herdr_explorer::core::ui;
+    use herdr_explorer::render::highlight;
+    let segs = |lines: Vec<Vec<(String, String)>>| {
+        Value::Arr(
+            lines
+                .into_iter()
+                .map(|l| {
+                    Value::Arr(l.into_iter().map(|(t, s)| Value::Arr(vec![Value::Str(t), Value::Str(s)])).collect())
+                })
+                .collect(),
+        )
+    };
+    support::replay("render/highlight", |name, args| {
+        let s = |k: usize| args[k].as_str().unwrap_or("");
+        Ok(match name {
+            "highlight" => {
+                ui::use_theme(s(0));
+                let out = highlight::highlight(s(1), args[2].as_str());
+                ui::use_theme("dark");
+                segs(out)
+            }
+            "language" => highlight::language(s(0)).map_or(Value::Null, |id| Value::Str(id.into())),
+            "styles" => {
+                ui::use_theme(s(0));
+                let all =
+                    highlight::styles().all().iter().map(|(k, v)| (k.to_string(), Value::Str(v.clone()))).collect();
+                ui::use_theme("dark");
+                Value::Obj(all)
+            }
+            _ => return Err(format!("no function {name}")),
+        })
+    });
+}
+
+/// render/markdown: documents at several widths, both themes, with and without highlighting, images drawn by the
+/// caller (tools/fixtures/modules/render.markdown.js).
+#[test]
+fn render_markdown() {
+    use herdr_explorer::core::ui;
+    use herdr_explorer::render::markdown::{self, Line, Options};
+    use std::rc::Rc;
+    // An image of 2 rows for a.png, none for none.png, a failure (none) for throw.png.
+    let mut image = |url: &str, width: usize| -> Option<Vec<Line>> {
+        (url == "a.png").then(|| {
+            (0..2usize)
+                .map(|row| Line {
+                    segs: vec![(" ".into(), String::new()), (" ".repeat(width.min(4)), String::new())],
+                    anchor: None,
+                    figure: Some(Rc::new((url.to_string(), row))),
+                })
+                .collect()
+        })
+    };
+    let image = std::cell::RefCell::new(&mut image);
+    support::replay("render/markdown", |name, args| {
+        if name != "render" {
+            return Err(format!("no function {name}"));
+        }
+        let opts = args.get(3);
+        let flag = |k: &str| opts.and_then(|o| o.get(k)).is_some_and(|v| v.truthy());
+        ui::use_theme(args[0].as_str().unwrap_or(""));
+        let mut image = image.borrow_mut();
+        let res = markdown::render(
+            args[1].as_str().unwrap_or(""),
+            args[2].as_f64().unwrap_or(0.0),
+            Options { highlight: !flag("plain"), image: if flag("image") { Some(&mut **image) } else { None } },
+        )
+        .expect("nested too deep");
+        ui::use_theme("dark");
+        let lines = res.lines.iter().map(|l| {
+            let segs = l.segs.iter().map(|(t, s)| Value::Arr(vec![Value::Str(t.clone()), Value::Str(s.clone())]));
+            let figure = l
+                .figure
+                .as_ref()
+                .and_then(|f| f.downcast_ref::<(String, usize)>())
+                .map_or(Value::Null, |(u, r)| Value::Arr(vec![Value::Str(u.clone()), Value::Num(*r as f64)]));
+            herdr_explorer::obj! {
+                "segs" => Value::Arr(segs.collect()),
+                "anchor" => l.anchor.clone().map_or(Value::Null, Value::Str),
+                "figure" => figure,
+            }
+        });
+        let anchors = res.anchors.into_iter().map(|(a, k)| (a, Value::Num(k as f64))).collect();
+        Ok(herdr_explorer::obj! { "lines" => Value::Arr(lines.collect()), "anchors" => Value::Obj(anchors) })
     });
 }

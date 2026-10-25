@@ -424,7 +424,7 @@
   {
    "fn": "worktreeOf",
    "args": [
-    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'b\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'bb\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
     "$ROOT/repo",
     false,
     null
@@ -444,7 +444,7 @@
    },
    "out": {
     "trees": [
-     "35f3002944a71850a17ded302fbac1af0291d3d9"
+     "f33fb7d438c0c56e7dda9f03c464d51be307464c"
     ],
     "state": ""
    }
@@ -452,7 +452,7 @@
   {
    "fn": "worktreeOf",
    "args": [
-    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'b\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'bb\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
     "$ROOT/repo",
     false,
     "d"
@@ -480,7 +480,7 @@
   {
    "fn": "worktreeOf",
    "args": [
-    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'b\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'bb\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
     "$ROOT/repo",
     true,
     null,
@@ -501,8 +501,8 @@
    },
    "out": {
     "trees": [
-     "35f3002944a71850a17ded302fbac1af0291d3d9",
-     "35f3002944a71850a17ded302fbac1af0291d3d9"
+     "f33fb7d438c0c56e7dda9f03c464d51be307464c",
+     "f33fb7d438c0c56e7dda9f03c464d51be307464c"
     ],
     "state": "./index/HASH\n./index/HASH.from\n"
    }
@@ -510,7 +510,7 @@
   {
    "fn": "worktreeOf",
    "args": [
-    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'b\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'bb\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
     "$ROOT/repo/d",
     false,
     null
@@ -566,7 +566,7 @@
   {
    "fn": "worktreeOf",
    "args": [
-    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'b\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'bb\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
     "$ROOT/repo",
     true,
     null
@@ -586,7 +586,7 @@
    },
    "out": {
     "trees": [
-     "35f3002944a71850a17ded302fbac1af0291d3d9"
+     "f33fb7d438c0c56e7dda9f03c464d51be307464c"
     ],
     "state": ""
    }
@@ -594,7 +594,7 @@
   {
    "fn": "agentStatusIn",
    "args": [
-    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'b\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'bb\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
     [
      [
       "w1:t1",
@@ -659,7 +659,7 @@
      {
       "pane": "p1",
       "top": "$ROOT/repo",
-      "tree": "35f3002944a71850a17ded302fbac1af0291d3d9",
+      "tree": "f33fb7d438c0c56e7dda9f03c464d51be307464c",
       "t": "number",
       "ended": false
      }
@@ -669,7 +669,7 @@
      {
       "pane": "p1",
       "top": "$ROOT/repo",
-      "tree": "35f3002944a71850a17ded302fbac1af0291d3d9",
+      "tree": "f33fb7d438c0c56e7dda9f03c464d51be307464c",
       "t": "number",
       "ended": false
      }
@@ -679,7 +679,7 @@
      {
       "pane": "p1",
       "top": "$ROOT/repo",
-      "tree": "35f3002944a71850a17ded302fbac1af0291d3d9",
+      "tree": "f33fb7d438c0c56e7dda9f03c464d51be307464c",
       "t": "number",
       "ended": false
      }
@@ -689,7 +689,7 @@
      {
       "pane": "p1",
       "top": "$ROOT/repo",
-      "tree": "35f3002944a71850a17ded302fbac1af0291d3d9",
+      "tree": "f33fb7d438c0c56e7dda9f03c464d51be307464c",
       "t": "number",
       "ended": true
      }
@@ -699,7 +699,7 @@
      {
       "pane": "p1",
       "top": "$ROOT/repo",
-      "tree": "35f3002944a71850a17ded302fbac1af0291d3d9",
+      "tree": "f33fb7d438c0c56e7dda9f03c464d51be307464c",
       "t": "number",
       "ended": true
      }
@@ -709,7 +709,7 @@
      {
       "pane": "p1",
       "top": "$ROOT/repo",
-      "tree": "35f3002944a71850a17ded302fbac1af0291d3d9",
+      "tree": "f33fb7d438c0c56e7dda9f03c464d51be307464c",
       "t": "number",
       "ended": true
      }
@@ -719,7 +719,7 @@
      {
       "pane": "p2",
       "top": "$ROOT/repo",
-      "tree": "35f3002944a71850a17ded302fbac1af0291d3d9",
+      "tree": "f33fb7d438c0c56e7dda9f03c464d51be307464c",
       "t": "number",
       "ended": false
      }

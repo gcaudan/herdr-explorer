@@ -1,0 +1,9454 @@
+{
+ "module": "render/graph",
+ "cases": [
+  {
+   "fn": "layout",
+   "args": [
+    []
+   ],
+   "out": []
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ]
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "a"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ]
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "b"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "a"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "f2",
+      "parents": [
+       "f1"
+      ]
+     },
+     {
+      "hash": "m2",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "f1",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "m1",
+      "parents": [
+       "m0"
+      ]
+     },
+     {
+      "hash": "m0",
+      "parents": []
+     }
+    ]
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "f2",
+      "parents": [
+       "f1"
+      ]
+     },
+     {
+      "hash": "m2",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "f1",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "m1",
+      "parents": [
+       "m0"
+      ]
+     },
+     {
+      "hash": "m0",
+      "parents": []
+     }
+    ],
+    "f2"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "f2",
+      "parents": [
+       "f1"
+      ]
+     },
+     {
+      "hash": "m2",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "f1",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "m1",
+      "parents": [
+       "m0"
+      ]
+     },
+     {
+      "hash": "m0",
+      "parents": []
+     }
+    ],
+    "m2"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "f2",
+      "parents": [
+       "f1"
+      ]
+     },
+     {
+      "hash": "m2",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "f1",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "m1",
+      "parents": [
+       "m0"
+      ]
+     },
+     {
+      "hash": "m0",
+      "parents": []
+     }
+    ],
+    "f1"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "f2",
+      "parents": [
+       "f1"
+      ]
+     },
+     {
+      "hash": "m2",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "f1",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "m1",
+      "parents": [
+       "m0"
+      ]
+     },
+     {
+      "hash": "m0",
+      "parents": []
+     }
+    ],
+    "m1"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       1
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "M",
+      "parents": [
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ]
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "M",
+      "parents": [
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "M"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "M",
+      "parents": [
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "b"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "M",
+      "parents": [
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "a"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       1
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ]
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "b"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "c"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "a"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       1
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "M",
+      "parents": [
+       "a",
+       "b",
+       "c"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ]
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╮",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "M",
+      "parents": [
+       "a",
+       "b",
+       "c"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "M"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╮",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "M",
+      "parents": [
+       "a",
+       "b",
+       "c"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "c"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╮",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       3
+      ]
+     ],
+     "color": 3,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╯",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "M",
+      "parents": [
+       "a",
+       "b",
+       "c"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "b"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╮",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       3
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 3,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╯",
+       3
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "M",
+      "parents": [
+       "a",
+       "b",
+       "c"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "a"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╮",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       1
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "x",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "y",
+      "parents": [
+       "b"
+      ]
+     },
+     {
+      "hash": "z",
+      "parents": [
+       "c"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "r",
+      "parents": []
+     }
+    ]
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "x",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "y",
+      "parents": [
+       "b"
+      ]
+     },
+     {
+      "hash": "z",
+      "parents": [
+       "c"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "r",
+      "parents": []
+     }
+    ],
+    "x"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "x",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "y",
+      "parents": [
+       "b"
+      ]
+     },
+     {
+      "hash": "z",
+      "parents": [
+       "c"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "r",
+      "parents": []
+     }
+    ],
+    "y"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "x",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "y",
+      "parents": [
+       "b"
+      ]
+     },
+     {
+      "hash": "z",
+      "parents": [
+       "c"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "r",
+      "parents": []
+     }
+    ],
+    "z"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "x",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "y",
+      "parents": [
+       "b"
+      ]
+     },
+     {
+      "hash": "z",
+      "parents": [
+       "c"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "r",
+      "parents": []
+     }
+    ],
+    "a"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       3
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 3,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       3
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       3
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       3
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 3,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "M",
+      "parents": [
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "N",
+      "parents": [
+       "c",
+       "d"
+      ]
+     },
+     {
+      "hash": "d",
+      "parents": [
+       "c"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "r",
+      "parents": []
+     }
+    ]
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╮",
+       3
+      ]
+     ],
+     "color": 2,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       3
+      ]
+     ],
+     "color": 3,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╯",
+       3
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "M",
+      "parents": [
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "N",
+      "parents": [
+       "c",
+       "d"
+      ]
+     },
+     {
+      "hash": "d",
+      "parents": [
+       "c"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "r",
+      "parents": []
+     }
+    ],
+    "M"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╮",
+       3
+      ]
+     ],
+     "color": 2,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       3
+      ]
+     ],
+     "color": 3,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╯",
+       3
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "M",
+      "parents": [
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "N",
+      "parents": [
+       "c",
+       "d"
+      ]
+     },
+     {
+      "hash": "d",
+      "parents": [
+       "c"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "r",
+      "parents": []
+     }
+    ],
+    "N"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╮",
+       3
+      ]
+     ],
+     "color": 2,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       3
+      ]
+     ],
+     "color": 3,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╯",
+       3
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "M",
+      "parents": [
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "N",
+      "parents": [
+       "c",
+       "d"
+      ]
+     },
+     {
+      "hash": "d",
+      "parents": [
+       "c"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "r",
+      "parents": []
+     }
+    ],
+    "d"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╮",
+       3
+      ]
+     ],
+     "color": 2,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       4
+      ]
+     ],
+     "color": 4,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       4
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       4
+      ],
+      [
+       "╯",
+       4
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "M",
+      "parents": [
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "N",
+      "parents": [
+       "c",
+       "d"
+      ]
+     },
+     {
+      "hash": "d",
+      "parents": [
+       "c"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": [
+       "r"
+      ]
+     },
+     {
+      "hash": "r",
+      "parents": []
+     }
+    ],
+    "b"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╮",
+       3
+      ]
+     ],
+     "color": 2,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       3
+      ]
+     ],
+     "color": 3,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       4
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 4,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       4
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╯",
+       3
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       4
+      ],
+      [
+       "╯",
+       4
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "m3",
+      "parents": [
+       "m2",
+       "f2"
+      ]
+     },
+     {
+      "hash": "f2",
+      "parents": [
+       "f1"
+      ]
+     },
+     {
+      "hash": "m2",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "f1",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "m1",
+      "parents": [
+       "m0"
+      ]
+     },
+     {
+      "hash": "m0",
+      "parents": []
+     }
+    ]
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "m3",
+      "parents": [
+       "m2",
+       "f2"
+      ]
+     },
+     {
+      "hash": "f2",
+      "parents": [
+       "f1"
+      ]
+     },
+     {
+      "hash": "m2",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "f1",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "m1",
+      "parents": [
+       "m0"
+      ]
+     },
+     {
+      "hash": "m0",
+      "parents": []
+     }
+    ],
+    "m3"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "m3",
+      "parents": [
+       "m2",
+       "f2"
+      ]
+     },
+     {
+      "hash": "f2",
+      "parents": [
+       "f1"
+      ]
+     },
+     {
+      "hash": "m2",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "f1",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "m1",
+      "parents": [
+       "m0"
+      ]
+     },
+     {
+      "hash": "m0",
+      "parents": []
+     }
+    ],
+    "f2"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "m3",
+      "parents": [
+       "m2",
+       "f2"
+      ]
+     },
+     {
+      "hash": "f2",
+      "parents": [
+       "f1"
+      ]
+     },
+     {
+      "hash": "m2",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "f1",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "m1",
+      "parents": [
+       "m0"
+      ]
+     },
+     {
+      "hash": "m0",
+      "parents": []
+     }
+    ],
+    "m2"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "m3",
+      "parents": [
+       "m2",
+       "f2"
+      ]
+     },
+     {
+      "hash": "f2",
+      "parents": [
+       "f1"
+      ]
+     },
+     {
+      "hash": "m2",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "f1",
+      "parents": [
+       "m1"
+      ]
+     },
+     {
+      "hash": "m1",
+      "parents": [
+       "m0"
+      ]
+     },
+     {
+      "hash": "m0",
+      "parents": []
+     }
+    ],
+    "f1"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "a",
+      "parents": [
+       "b",
+       "c"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "d"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "d"
+      ]
+     },
+     {
+      "hash": "d",
+      "parents": [
+       "e",
+       "f"
+      ]
+     },
+     {
+      "hash": "f",
+      "parents": []
+     },
+     {
+      "hash": "e",
+      "parents": []
+     }
+    ]
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": false
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "a",
+      "parents": [
+       "b",
+       "c"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "d"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "d"
+      ]
+     },
+     {
+      "hash": "d",
+      "parents": [
+       "e",
+       "f"
+      ]
+     },
+     {
+      "hash": "f",
+      "parents": []
+     },
+     {
+      "hash": "e",
+      "parents": []
+     }
+    ],
+    "a"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": false
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "a",
+      "parents": [
+       "b",
+       "c"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "d"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "d"
+      ]
+     },
+     {
+      "hash": "d",
+      "parents": [
+       "e",
+       "f"
+      ]
+     },
+     {
+      "hash": "f",
+      "parents": []
+     },
+     {
+      "hash": "e",
+      "parents": []
+     }
+    ],
+    "c"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       3
+      ]
+     ],
+     "color": 3,
+     "above": true,
+     "below": false
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "a",
+      "parents": [
+       "b",
+       "c"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "d"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "d"
+      ]
+     },
+     {
+      "hash": "d",
+      "parents": [
+       "e",
+       "f"
+      ]
+     },
+     {
+      "hash": "f",
+      "parents": []
+     },
+     {
+      "hash": "e",
+      "parents": []
+     }
+    ],
+    "b"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       3
+      ]
+     ],
+     "color": 3,
+     "above": true,
+     "below": false
+    },
+    {
+     "cells": [
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "a",
+      "parents": [
+       "b",
+       "c"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "d"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "d"
+      ]
+     },
+     {
+      "hash": "d",
+      "parents": [
+       "e",
+       "f"
+      ]
+     },
+     {
+      "hash": "f",
+      "parents": []
+     },
+     {
+      "hash": "e",
+      "parents": []
+     }
+    ],
+    "d"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       1
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": false
+    },
+    {
+     "cells": [
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "p",
+      "parents": [
+       "q",
+       "r",
+       "s",
+       "t"
+      ]
+     },
+     {
+      "hash": "t",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "s",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "r",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "q",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "u",
+      "parents": []
+     }
+    ]
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╮",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╮",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       3
+      ]
+     ],
+     "color": 3,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╯",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "p",
+      "parents": [
+       "q",
+       "r",
+       "s",
+       "t"
+      ]
+     },
+     {
+      "hash": "t",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "s",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "r",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "q",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "u",
+      "parents": []
+     }
+    ],
+    "p"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╮",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╮",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       3
+      ]
+     ],
+     "color": 3,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╯",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "p",
+      "parents": [
+       "q",
+       "r",
+       "s",
+       "t"
+      ]
+     },
+     {
+      "hash": "t",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "s",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "r",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "q",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "u",
+      "parents": []
+     }
+    ],
+    "t"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╮",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╮",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       4
+      ]
+     ],
+     "color": 4,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       4
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       4
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       4
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ],
+      [
+       "─",
+       4
+      ],
+      [
+       "╯",
+       4
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "p",
+      "parents": [
+       "q",
+       "r",
+       "s",
+       "t"
+      ]
+     },
+     {
+      "hash": "t",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "s",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "r",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "q",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "u",
+      "parents": []
+     }
+    ],
+    "s"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╮",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╮",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       3
+      ]
+     ],
+     "color": 3,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       4
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 4,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       4
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       4
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       "─",
+       4
+      ],
+      [
+       "╯",
+       4
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╯",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "p",
+      "parents": [
+       "q",
+       "r",
+       "s",
+       "t"
+      ]
+     },
+     {
+      "hash": "t",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "s",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "r",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "q",
+      "parents": [
+       "u"
+      ]
+     },
+     {
+      "hash": "u",
+      "parents": []
+     }
+    ],
+    "r"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╮",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╮",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       3
+      ]
+     ],
+     "color": 3,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       4
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 4,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       4
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       4
+      ],
+      [
+       "╯",
+       4
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╯",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "k1",
+      "parents": [
+       "k0"
+      ]
+     },
+     {
+      "hash": "j1",
+      "parents": [
+       "j0"
+      ]
+     },
+     {
+      "hash": "k0",
+      "parents": []
+     },
+     {
+      "hash": "j0",
+      "parents": []
+     }
+    ]
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    },
+    {
+     "cells": [
+      [
+       " ",
+       null
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "k1",
+      "parents": [
+       "k0"
+      ]
+     },
+     {
+      "hash": "j1",
+      "parents": [
+       "j0"
+      ]
+     },
+     {
+      "hash": "k0",
+      "parents": []
+     },
+     {
+      "hash": "j0",
+      "parents": []
+     }
+    ],
+    "k1"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    },
+    {
+     "cells": [
+      [
+       " ",
+       null
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "k1",
+      "parents": [
+       "k0"
+      ]
+     },
+     {
+      "hash": "j1",
+      "parents": [
+       "j0"
+      ]
+     },
+     {
+      "hash": "k0",
+      "parents": []
+     },
+     {
+      "hash": "j0",
+      "parents": []
+     }
+    ],
+    "j1"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    },
+    {
+     "cells": [
+      [
+       " ",
+       null
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "k1",
+      "parents": [
+       "k0"
+      ]
+     },
+     {
+      "hash": "j1",
+      "parents": [
+       "j0"
+      ]
+     },
+     {
+      "hash": "k0",
+      "parents": []
+     },
+     {
+      "hash": "j0",
+      "parents": []
+     }
+    ],
+    "k0"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": false
+    },
+    {
+     "cells": [
+      [
+       " ",
+       null
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "k1",
+      "parents": [
+       "k0"
+      ]
+     },
+     {
+      "hash": "j1",
+      "parents": [
+       "j0"
+      ]
+     },
+     {
+      "hash": "k0",
+      "parents": []
+     },
+     {
+      "hash": "j0",
+      "parents": []
+     }
+    ],
+    "j0"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    },
+    {
+     "cells": [
+      [
+       " ",
+       null
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "a",
+      "parents": [
+       "z"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "z"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "z",
+      "parents": []
+     }
+    ]
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╮",
+       3
+      ]
+     ],
+     "color": 2,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "a",
+      "parents": [
+       "z"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "z"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "z",
+      "parents": []
+     }
+    ],
+    "a"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╮",
+       3
+      ]
+     ],
+     "color": 2,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "a",
+      "parents": [
+       "z"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "z"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "z",
+      "parents": []
+     }
+    ],
+    "b"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╮",
+       3
+      ]
+     ],
+     "color": 2,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "a",
+      "parents": [
+       "z"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "z"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "z",
+      "parents": []
+     }
+    ],
+    "c"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╮",
+       3
+      ]
+     ],
+     "color": 2,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "a",
+      "parents": [
+       "z"
+      ]
+     },
+     {
+      "hash": "b",
+      "parents": [
+       "z"
+      ]
+     },
+     {
+      "hash": "c",
+      "parents": [
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "z",
+      "parents": []
+     }
+    ],
+    "z"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ],
+      [
+       "─",
+       3
+      ],
+      [
+       "╮",
+       3
+      ]
+     ],
+     "color": 2,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       1
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       3
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "top",
+      "parents": [
+       "mid"
+      ]
+     },
+     {
+      "hash": "mid",
+      "parents": [
+       "low",
+       "side"
+      ]
+     },
+     {
+      "hash": "side",
+      "parents": [
+       "low"
+      ]
+     },
+     {
+      "hash": "low",
+      "parents": []
+     }
+    ]
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "top",
+      "parents": [
+       "mid"
+      ]
+     },
+     {
+      "hash": "mid",
+      "parents": [
+       "low",
+       "side"
+      ]
+     },
+     {
+      "hash": "side",
+      "parents": [
+       "low"
+      ]
+     },
+     {
+      "hash": "low",
+      "parents": []
+     }
+    ],
+    "top"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "top",
+      "parents": [
+       "mid"
+      ]
+     },
+     {
+      "hash": "mid",
+      "parents": [
+       "low",
+       "side"
+      ]
+     },
+     {
+      "hash": "side",
+      "parents": [
+       "low"
+      ]
+     },
+     {
+      "hash": "low",
+      "parents": []
+     }
+    ],
+    "mid"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╮",
+       2
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "top",
+      "parents": [
+       "mid"
+      ]
+     },
+     {
+      "hash": "mid",
+      "parents": [
+       "low",
+       "side"
+      ]
+     },
+     {
+      "hash": "side",
+      "parents": [
+       "low"
+      ]
+     },
+     {
+      "hash": "low",
+      "parents": []
+     }
+    ],
+    "side"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       2
+      ]
+     ],
+     "color": 2,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╯",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "top",
+      "parents": [
+       "mid"
+      ]
+     },
+     {
+      "hash": "mid",
+      "parents": [
+       "low",
+       "side"
+      ]
+     },
+     {
+      "hash": "side",
+      "parents": [
+       "low"
+      ]
+     },
+     {
+      "hash": "low",
+      "parents": []
+     }
+    ],
+    "low"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╮",
+       1
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "│",
+       0
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       1
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "m",
+      "parents": [
+       "a",
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ]
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "m",
+      "parents": [
+       "a",
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "m"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "m",
+      "parents": [
+       "a",
+       "a"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "a"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       1
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "m",
+      "parents": [
+       "a",
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ]
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "├",
+       0
+      ],
+      [
+       "─",
+       0
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╮",
+       2
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "m",
+      "parents": [
+       "a",
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "b"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "├",
+       0
+      ],
+      [
+       "─",
+       0
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╮",
+       2
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "m",
+      "parents": [
+       "a",
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "m"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "├",
+       0
+      ],
+      [
+       "─",
+       0
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╮",
+       2
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 0,
+     "above": true,
+     "below": false
+    }
+   ]
+  },
+  {
+   "fn": "layout",
+   "args": [
+    [
+     {
+      "hash": "b",
+      "parents": [
+       "a"
+      ]
+     },
+     {
+      "hash": "m",
+      "parents": [
+       "a",
+       "a",
+       "b"
+      ]
+     },
+     {
+      "hash": "a",
+      "parents": []
+     }
+    ],
+    "a"
+   ],
+   "out": [
+    {
+     "cells": [
+      [
+       "●",
+       0
+      ]
+     ],
+     "color": 0,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "├",
+       0
+      ],
+      [
+       "─",
+       0
+      ],
+      [
+       "●",
+       1
+      ],
+      [
+       "─",
+       2
+      ],
+      [
+       "╮",
+       2
+      ]
+     ],
+     "color": 1,
+     "above": false,
+     "below": true
+    },
+    {
+     "cells": [
+      [
+       "●",
+       1
+      ],
+      [
+       "─",
+       1
+      ],
+      [
+       "╯",
+       1
+      ],
+      [
+       " ",
+       null
+      ],
+      [
+       "│",
+       2
+      ]
+     ],
+     "color": 1,
+     "above": true,
+     "below": false
+    }
+   ]
+  }
+ ]
+}

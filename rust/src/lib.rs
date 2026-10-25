@@ -5,6 +5,7 @@ pub mod codec;
 pub mod core;
 pub mod diff;
 pub mod json;
+pub mod render;
 pub mod sys;
 pub mod unicode;
 

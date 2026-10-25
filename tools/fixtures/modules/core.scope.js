@@ -42,7 +42,7 @@ const branchy = repo(`git branch old; GIT_COMMITTER_DATE=2024-02-01T00:00:00Z gi
   git checkout -q -b feature; GIT_COMMITTER_DATE=2024-03-01T00:00:00Z git commit -q --allow-empty -m three; git checkout -q main;
   git update-ref refs/remotes/origin/main old; git update-ref refs/remotes/up/x/HEAD old;
   git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main;`);
-const dirty = repo(`printf 'b\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;
+const dirty = repo(`printf 'bb\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;
   truncate -s 11M big.bin;`);
 const turn = (t, more = {}) => JSON.stringify({ pane: 'p1', top: '$ROOT/repo', tree: null, t, ended: false, ...more });
 const read = (text, tab = 'w1:t1') => ({ fn: 'read', args: [tab], env, ...(text !== undefined ? { files: { 'scope-w1_t1.json': text } } : {}) });

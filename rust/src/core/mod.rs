@@ -9,6 +9,7 @@ pub mod js;
 pub mod notes;
 pub mod paths;
 pub mod places;
+pub mod regex;
 pub mod scope;
 pub mod screen;
 pub mod stage;
