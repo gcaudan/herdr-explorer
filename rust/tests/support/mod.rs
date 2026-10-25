@@ -1,5 +1,6 @@
 //! What the integration tests share: temporary folders, and the replay of the module fixtures that
-//! tools/fixtures/gen.js recorded from the JS (see its header for the format).
+//! tools/fixtures/gen.js recorded from the JS (removed with it at the switch to Rust; its header in the git history
+//! gives the format).
 
 #![allow(dead_code)]
 

@@ -1,5 +1,5 @@
-//! The module fixtures recorded from the JS (tools/fixtures/gen.js), replayed against the Rust port. A module not
-//! ported yet is ignored with the step that ports it.
+//! The module fixtures recorded from the JS of 0.8.0 (tools/fixtures/gen.js, removed with the JS at the switch to
+//! Rust: see the git history before it), replayed against the Rust port.
 
 mod support;
 

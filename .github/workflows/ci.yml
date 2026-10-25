@@ -1,4 +1,4 @@
-# Quick checks on every pull request and push to main: scripts parse, terminal width helpers, doc links; the Rust
+# Quick checks on every pull request and push to main: the shims parse on the Node versions the docs give; the Rust
 # crate's format, lints (host and the 5 release targets) and tests.
 name: ci
 
@@ -11,19 +11,23 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  shims:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         node: [20, 24] # 20 is the minimum the docs give
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node }}
-      - run: node --test
+      # A shim that fails to parse opens no pane; cargo test's tests/shims.rs checks them too, with the runner's node.
+      - run: for f in *.js src/*.js; do node --check "$f"; done
 
   cargo:
     strategy:

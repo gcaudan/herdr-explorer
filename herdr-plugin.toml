@@ -5,6 +5,15 @@ min_herdr_version = "0.9.4"
 description = "VS Code-style file explorer, preview, search and source control for every tab"
 platforms = ["linux", "macos", "windows"]
 
+# The binary, bin/herdr-explorer, fetched for herdr plugin install and update (the shims fetch it too when missing).
+[[build]]
+platforms = ["linux", "macos"]
+command = ["sh", "scripts/fetch-bin.sh"]
+
+[[build]]
+platforms = ["windows"]
+command = ["powershell", "-ExecutionPolicy", "Bypass", "-File", "scripts/fetch-bin.ps1"]
+
 [[startup]]
 command = ["node", "src/hook.js", "--restore"]
 

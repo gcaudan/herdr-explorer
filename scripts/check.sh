@@ -1,6 +1,6 @@
 #!/bin/sh
 # Every check, in order, stopping at the first failure: format, lints (host and the 5 release targets, compiled
-# without linking), cargo tests, then the node tests while the JS is still shipped.
+# without linking), then the cargo tests.
 set -eu
 cd "$(dirname "$0")/.."
 CARGO=${CARGO:-$HOME/.cargo/bin/cargo}
@@ -12,4 +12,3 @@ for t in x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-apple-darwi
   "$CARGO" clippy --manifest-path $M --target $t -- -D warnings
 done
 "$CARGO" test --manifest-path $M
-node --test

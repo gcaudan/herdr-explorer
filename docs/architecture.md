@@ -283,6 +283,9 @@ child process, with `EXPLORER_IPC_FILE` naming the file where the child writes i
 A process cannot replace itself on Windows, and one that only waited for its successor would keep its memory,
 one more at each update. The launcher does nothing else, so it stays on the code it started with.
 
-The search, source control, changes and editor panes are short-lived and have no launcher. A pane
+The search, source control, changes and editor panes are short-lived and have no launcher: their shim runs the
+binary once and gives back its code. In a pane opened before the update to the binary, the launcher of 0.8.0 (Node)
+still runs, and the shim is its child: it hands the binary's messages on to it and gives back the code, 75 included,
+so that the launcher starts the shim again. A pane
 started by a version without the launcher (0.4.0 and earlier) is the exception, see
 [Limitations](troubleshooting.md#limitations).

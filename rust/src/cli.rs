@@ -80,8 +80,9 @@ pub fn run(args: Vec<OsString>) -> ExitCode {
         Ok(Command::Peek(args)) => done(crate::peek::run(strings(args))),
         Ok(cmd @ Command::Pane(..)) => {
             // The explorer's and the preview's first process stays as their launcher; the child runs the pane. The
-            // other panes are short-lived and ran without one in the JS.
-            if matches!(cmd, Command::Pane("tree" | "preview", _))
+            // other panes are short-lived and ran without one in the JS; under a shim (EXPLORER_IPC_FILE), every
+            // pane is the child of the shim.
+            if (matches!(cmd, Command::Pane("tree" | "preview", _)) || std::env::var_os("EXPLORER_IPC_FILE").is_some())
                 && let Some(code) = crate::launch::launch()
             {
                 return ExitCode::from(u8::try_from(code).unwrap_or(1));

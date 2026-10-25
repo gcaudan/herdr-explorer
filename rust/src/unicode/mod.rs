@@ -1,6 +1,7 @@
 //! The Unicode classes of the JS's regular expressions (`\p{L}`, `\p{N}`, `\p{M}`, `\p{Emoji}`,
 //! `\p{Emoji_Presentation}`, `\p{Regional_Indicator}`, `\s`), from tables generated with the node the JS ran on
-//! (tools/unicode/gen.js), so that both agree on every character.
+//! (tools/unicode/gen.js, removed at the switch to Rust: see the git history before it), so that both agree on every
+//! character.
 
 #[rustfmt::skip]
 mod tables;

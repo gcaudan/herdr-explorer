@@ -117,6 +117,7 @@
 | `fetch-bin: <asset> is not in SHA256SUMS`, `fetch-bin: <asset> does not match its SHA256SUMS: not installed` | the download is incomplete or the release is broken: nothing was replaced. Run the script again later |
 | `fetch-bin: cannot create <folder>/bin/.fetch.lock` | `bin/` cannot be written: fix its rights                                            |
 | `fetch-bin: no version in <folder>/herdr-plugin.toml` | the manifest is missing or damaged: restore it with git                           |
+| `herdr-explorer: no binary of version X.Y.Z in <folder>/bin: run scripts/fetch-bin to see why` | a shim found no binary of the manifest's version and could not fetch one, or `bin/.dev` is there without a binary: run `scripts/fetch-bin.sh` (or `scripts/dev-build.sh`) |
 | `dev-build: cargo not found: install Rust (https://rustup.rs)` | install Rust, then run `scripts/dev-build.sh` again                         |
 
 ### Explorer and preview
