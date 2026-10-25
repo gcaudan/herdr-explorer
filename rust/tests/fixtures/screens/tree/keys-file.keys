@@ -1,0 +1,13 @@
+# The key bindings: Open keys.json, which herdr (fake) cannot open in an editor pane.
+size 60 20
+file README.md # Hello\n
+file notes.md text\n
+dir src
+file src/main.rs fn main() {}\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false,"follow":false}
+start
+keys , end up enter
+# After the last width check (2500 ms): the editor's calls do not mix with its pane layout ones.
+until 2600
+keys end enter
+until 2900

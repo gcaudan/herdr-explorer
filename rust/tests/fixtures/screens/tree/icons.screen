@@ -1,0 +1,21 @@
+size 60x20
+⟪fg=#8c8c8c⟫ ‹ ⟪b⟫Icon theme⟪⟫
+  Nerd Font (default)                                     ⟪fg=#8dc149⟫✓⟪⟫
+⟪bg=#04395e⟫  Acme Icons                                                ⟪⟫
+⟪fg=#8c8c8c⟫───────────────────────────────────────────────────────────⟪⟫
+⟪fg=#8c8c8c⟫ ▾ ⟪fg=#00ff00⟫□ ⟪⟫src
+⟪fg=#8c8c8c⟫   ▸ ⟪fg=#00ff00⟫■ ⟪⟫components
+⟪fg=#8c8c8c⟫     ⟪fg=#519aba⟫● ⟪⟫App.tsx
+⟪fg=#8c8c8c⟫     ⟪fg=#519aba⟫● ⟪⟫main.py
+⟪fg=#8c8c8c⟫     ⟪fg=#519aba⟫● ⟪⟫styles.css
+⟪fg=#8c8c8c⟫ ▸ ⟪fg=#00ff00⟫■ ⟪⟫.github
+⟪fg=#8c8c8c⟫ ▸ ⟪fg=#00ff00⟫■ ⟪⟫docs
+⟪fg=#8c8c8c⟫   ⟪fg=#e37933⟫● ⟪⟫.gitignore
+⟪fg=#8c8c8c⟫   ⟪fg=#519aba⟫● ⟪⟫Dockerfile
+⟪fg=#8c8c8c⟫   ⟪fg=#a074c4⟫● ⟪⟫logo.png
+⟪fg=#8c8c8c⟫   ⟪fg=#8dc149⟫● ⟪⟫package.json
+⟪fg=#8c8c8c⟫   ⟪fg=#0000ff⟫● ⟪⟫README.md
+
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ ↑↓⟪fg=#8c8c8c bg=#252526⟫ move⟪fg=#d4d4d4 bg=#252526 b⟫   ⏎⟪fg=#8c8c8c bg=#252526⟫ choose⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ back⟪bg=#252526⟫                              ⟪⟫

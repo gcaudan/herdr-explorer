@@ -8,7 +8,7 @@ use crate::core::paths;
 use crate::core::ui::{self, Seg, c, fg, g, line, seg, text_width};
 use crate::explorer::tree::{self, Entry};
 
-fn chevron(open: bool) -> &'static str {
+pub(super) fn chevron(open: bool) -> &'static str {
     if open { g().open } else { g().closed }
 }
 
@@ -30,10 +30,10 @@ fn count(n: usize, one: &str, many: &str) -> String {
 }
 
 impl Explorer {
-    /// The tree, or a page in its place (case 11d), and a question over it.
+    /// The tree, or a settings page in its place, and a question over it.
     pub(super) fn render(&mut self) {
         let (w, h) = self.size();
-        let mut lines = self.tree_view(w, h);
+        let mut lines = if self.state.settings.is_some() { self.settings_view(w, h) } else { self.tree_view(w, h) };
         if self.state.help.is_some() {
             let groups = self.help_groups();
             if let Some(help) = &mut self.state.help {
@@ -175,7 +175,7 @@ impl Explorer {
     }
 
     /// A prompt at the bottom.
-    fn prompt_line(&self, w: usize) -> String {
+    pub(super) fn prompt_line(&self, w: usize) -> String {
         let Some(p) = &self.state.prompt else { return String::new() };
         let label = format!(" {}: ", p.label);
         let room = w as i64 - text_width(&label) as i64;

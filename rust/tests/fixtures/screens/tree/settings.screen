@@ -1,0 +1,21 @@
+size 60x20
+⟪fg=#8c8c8c⟫ ‹ ⟪b⟫Settings⟪⟫
+⟪fg=#8c8c8c bg=#252526⟫ ⌕ ⟪bg=#252526⟫comp⟪bg=#252526 r⟫ ⟪fg=#8c8c8c bg=#252526⟫                                                   1⟪⟫
+⟪fg=#8c8c8c b⟫ TREE⟪⟫
+⟪bg=#04395e⟫  Compact folders                                      ⟪fg=#8dc149 bg=#04395e⟫● on⟪bg=#04395e⟫ ⟪⟫
+
+
+
+
+
+
+
+
+
+
+⟪fg=#8c8c8c⟫───────────────────────────────────────────────────────────⟪⟫
+⟪fg=#8c8c8c⟫ Show a folder whose only entry is a folder on one row⟪⟫
+⟪fg=#8c8c8c⟫ with it (src/main/java). Not while filtering.⟪⟫
+⟪fg=#8c8c8c⟫ ⟪⟫
+⟪fg=#8c8c8c⟫ ⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ←→⟪fg=#8c8c8c bg=#252526⟫ change⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ back⟪bg=#252526⟫                              ⟪⟫

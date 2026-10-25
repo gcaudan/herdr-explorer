@@ -1,0 +1,12 @@
+# The key bindings: x added to Down (taken from the action that had it), shown changed with its default keys.
+size 60 20
+file README.md # Hello\n
+file notes.md text\n
+dir src
+file src/main.rs fn main() {}\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false,"follow":false}
+start
+keys , end up enter
+keys down enter
+keys x
+until 2800

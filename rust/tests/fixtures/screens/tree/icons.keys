@@ -1,0 +1,13 @@
+# The icon themes: the default icons and one installed for VS Code, the sample drawn in the theme selected.
+size 60 20
+file README.md # Hello\n
+file notes.md text\n
+dir src
+file src/main.rs fn main() {}\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false,"follow":false}
+home .vscode/extensions/acme.icons-1.0.0/package.json {"publisher":"acme","name":"icons","version":"1.0.0","contributes":{"iconThemes":[{"id":"acme","label":"Acme Icons","path":"./theme.json"}]}}
+home .vscode/extensions/acme.icons-1.0.0/theme.json {"iconDefinitions":{"_f":{"fontCharacter":"F","fontColor":"#ff0000"},"_d":{"fontCharacter":"D","fontColor":"#00ff00"},"_md":{"fontCharacter":"M","fontColor":"#0000ff"}},"file":"_f","folder":"_d","folderExpanded":"_d","fileExtensions":{"md":"_md"}}
+start
+keys , down down enter
+keys down
+until 2800

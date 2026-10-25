@@ -8,6 +8,7 @@
 
 mod input;
 mod render;
+mod settings;
 pub mod tree;
 
 use crate::core::actions::{self, Kept};
@@ -284,7 +285,8 @@ pub struct State {
     focused: bool,
     menu: Option<Menu<Item>>,
     help: Option<HelpState>,
-    // TODO(case 11d): the settings view in place of the tree, and its pages.
+    /// The settings view in place of the tree, and the page opened from it.
+    settings: Option<settings::View>,
     flash: Option<String>,
     /// The last click, to detect double-clicks: its row and when.
     last_click: Option<(i64, Instant)>,
@@ -507,6 +509,7 @@ impl Explorer {
                 focused: true,
                 menu: None,
                 help: None,
+                settings: None,
                 flash: None,
                 last_click: None,
                 filter: None,
@@ -1121,6 +1124,7 @@ impl Explorer {
         // Retried once the menu, the settings, the filter or the prompt is closed.
         let busy = s.filter.is_some()
             || s.menu.is_some()
+            || s.settings.is_some()
             || s.help.is_some()
             || s.prompt.is_some()
             || s.confirm.is_some()
@@ -1681,12 +1685,6 @@ impl Explorer {
             self.forced = true;
             self.follow();
         }
-    }
-
-    /// The settings view in place of the tree.
-    fn open_settings(&mut self) {
-        // TODO(case 11d): the settings page (src/explorer/settings.js).
-        self.render();
     }
 
     // --- key help

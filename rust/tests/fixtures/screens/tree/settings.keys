@@ -1,0 +1,13 @@
+# The settings view (,): Hidden files turned off with Enter, the theme changed with ←, then a find.
+size 60 20
+file README.md # Hello\n
+file notes.md text\n
+dir src
+file src/main.rs fn main() {}\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false,"follow":false}
+start
+keys ,
+keys down down down enter
+keys up up up left
+text /comp
+until 2800

@@ -1,0 +1,21 @@
+size 60x20
+⟪fg=#8c8c8c⟫ ‹ ⟪b⟫Settings⟪⟫
+⟪fg=#8c8c8c b⟫ APPEARANCE⟪⟫
+  Theme                                                ⟪fg=#519aba⟫dark⟪⟫
+  Icon set                                          ⟪fg=#519aba⟫Unicode⟪⟫
+  Icon theme                                      ⟪fg=#519aba⟫Nerd Font⟪⟫
+⟪fg=#8c8c8c b⟫ TREE⟪⟫
+  Hidden files                                        ⟪fg=#8c8c8c⟫○ off⟪⟫
+  Git-ignored files                                    ⟪fg=#8dc149⟫● on⟪⟫
+  Compact folders                                      ⟪fg=#8dc149⟫● on⟪⟫
+  Follow terminal                                     ⟪fg=#8c8c8c⟫○ off⟪⟫
+⟪fg=#8c8c8c b⟫ OPENING⟪⟫
+⟪bg=#04395e⟫  Enter opens                                       ⟪fg=#519aba bg=#04395e⟫preview⟪bg=#04395e⟫ ⟪⟫
+  Preview follows selection                           ⟪fg=#8c8c8c⟫○ off⟪⟫
+  Editor                                            ⟪fg=#519aba⟫default⟪⟫
+⟪fg=#8c8c8c⟫──────────────────────────────────────────────────────────▾⟪⟫
+⟪fg=#8c8c8c⟫ Enter and double-click on a text file: show it in the⟪⟫
+⟪fg=#8c8c8c⟫ preview or in the editor.⟪⟫
+⟪fg=#8c8c8c⟫ ⟪⟫
+⟪fg=#8c8c8c⟫ ⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ←→⟪fg=#8c8c8c bg=#252526⟫ change⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ back⟪bg=#252526⟫                              ⟪⟫

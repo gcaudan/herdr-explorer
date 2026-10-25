@@ -184,7 +184,9 @@ impl Explorer {
         if s.menu.is_some() {
             return self.menu_key(k);
         }
-        // TODO(case 11d): the settings page's keys.
+        if self.state.settings.is_some() {
+            return self.settings_key(k);
+        }
         if let Some(help) = &mut self.state.help {
             if !ui::help_key(k, help) {
                 self.state.help = None;
@@ -420,7 +422,9 @@ impl Explorer {
             menu.move_by(m.wheel, h);
             return self.render();
         }
-        // TODO(case 11d): the settings page's mouse.
+        if self.state.settings.is_some() {
+            return self.settings_mouse(m);
+        }
         if let Some(help) = &mut self.state.help {
             if !ui::help_mouse(m, help) {
                 self.state.help = None;

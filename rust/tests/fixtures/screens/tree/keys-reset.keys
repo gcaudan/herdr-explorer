@@ -1,0 +1,15 @@
+# The key bindings: a key added, the last one removed, then the defaults given back with r; a find.
+size 60 20
+file README.md # Hello\n
+file notes.md text\n
+dir src
+file src/main.rs fn main() {}\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false,"follow":false}
+start
+keys , end up enter
+keys down enter
+keys z
+keys delete delete
+keys r
+text /fold
+until 2800

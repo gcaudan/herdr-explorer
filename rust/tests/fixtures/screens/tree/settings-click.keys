@@ -1,0 +1,14 @@
+# The settings view: a click on a setting changes it, the find closed by Escape keeps the selection, the title goes back.
+size 60 20
+file README.md # Hello\n
+file notes.md text\n
+dir src
+file src/main.rs fn main() {}\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false,"follow":false}
+start
+keys ,
+text \e[<0;5;7M\e[<0;5;7m
+text /foll
+keys escape
+keys down
+until 2800

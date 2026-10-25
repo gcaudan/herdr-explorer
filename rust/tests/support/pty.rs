@@ -9,6 +9,7 @@
 //!   dir <path>                  a folder of the working folder
 //!   state <path> <text>         a file of the plugin's state folder
 //!   config <path> <text>        a file of the plugin's config folder
+//!   home <path> <text>          a file of the pane's home folder (VS Code icon themes)
 //!   herdr <a> <b> <text>        the fake herdr's answer to `herdr <a> <b> …`
 //!   env <NAME>=<value>          a variable for the pane ($ROOT: the scenario's folder)
 //!   git <args>                  git run in the working folder (fixed author and dates), before start
@@ -218,6 +219,7 @@ pub fn run(scenario: &Path, command: &[OsString], root: &Path) -> Capture {
             "dir" => std::fs::create_dir_all(work.join(rest)).unwrap(),
             "state" => write(&root.join("state"), rest),
             "config" => write(&root.join("config"), rest),
+            "home" => write(&root.join("home"), rest),
             "herdr" => {
                 let mut it = rest.splitn(3, ' ');
                 let (a, b, answer) = (it.next().unwrap(), it.next().unwrap(), it.next().unwrap_or(""));

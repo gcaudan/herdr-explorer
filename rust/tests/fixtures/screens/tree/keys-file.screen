@@ -1,0 +1,21 @@
+size 60x20
+⟪fg=#cc3e44⟫ ✕ Cannot open the editor⟪⟫
+  Search in files                                    ⟪fg=#519aba⟫ctrl+f⟪⟫
+  Source control                                          ⟪fg=#519aba⟫s⟪⟫
+  Settings                                                ⟪fg=#519aba⟫,⟪⟫
+  Narrower                                        ⟪fg=#519aba⟫> shift+←⟪⟫
+  Wider                                           ⟪fg=#519aba⟫< shift+→⟪⟫
+  Hidden files                                            ⟪fg=#519aba⟫.⟪⟫
+  Git-ignored files                                       ⟪fg=#519aba⟫i⟪⟫
+  Parent as root                                  ⟪fg=#519aba⟫backspace⟪⟫
+  Refresh                                                 ⟪fg=#519aba⟫r⟪⟫
+  Keys                                                 ⟪fg=#519aba⟫? f1⟪⟫
+  Close                                               ⟪fg=#519aba⟫esc q⟪⟫
+⟪fg=#8c8c8c b⟫ FILE⟪⟫
+⟪bg=#04395e⟫  Open keys.json                                      ⟪fg=#519aba bg=#04395e⟫edit…⟪bg=#04395e⟫ ⟪⟫
+⟪fg=#8c8c8c⟫──────────────────────────────────────────────────────────▴⟪⟫
+⟪b⟫ keys.json⟪⟫
+⟪fg=#8c8c8c⟫ Opened in the editor⟪⟫
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ ⏎⟪fg=#8c8c8c bg=#252526⟫ add⟪fg=#d4d4d4 bg=#252526 b⟫   del⟪fg=#8c8c8c bg=#252526⟫ remove⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪bg=#252526⟫                                ⟪⟫
