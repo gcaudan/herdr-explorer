@@ -90,7 +90,8 @@ four layers (entries, panes, shared, base) that `rust/tests/layers.rs` checks: s
 | `rust/src/preview/`   | preview pane: text, Markdown, images, hex dump, Diff view; find, selection, edit mode, review notes, live reload |
 | `rust/src/search/`    | Go to file (fuzzy) and Search in files (text/regex, globs)                                   |
 | `rust/src/scm/`       | source control pane: git output parsers (pure), state and loaders, operations, drawing, keys and mouse |
-| `rust/src/diff/`      | diff collection, parser and layout (inline, side by side, word highlights), shared with the preview; the Changes pane |
+| `rust/src/changes/`   | Changes pane: a file's or folder's changes against the tab's scope, staged by line, with review notes |
+| `rust/src/diff/`      | diff collection, parser and layout (inline, side by side, word highlights), shared by the Changes pane, the preview and source control |
 | `rust/src/edit.rs`    | Editor pane: runs the terminal editor on a file                                              |
 | `rust/src/core/`      | shared core: actions, text buffer, tabs, notes, scopes, staging, icons, terminal helpers (`ui`, `screen`), safe program execution (`exec`, `which`), places, viewed files, updates, workers, JS behaviours (`js`, `regex`, `paths`) |
 | `rust/src/render/`    | syntax highlighter, Markdown, image decoders and rendering, branch graph                     |

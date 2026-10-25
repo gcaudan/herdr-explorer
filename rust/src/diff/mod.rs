@@ -1,7 +1,7 @@
-//! The Changes pane, as the JS's src/diff.js: git's diff read (parse), then laid out and shown.
+//! The diff library of src/diff.js: git's changes collected (collect), read (parse), then laid out (render). The
+//! Changes pane (changes/), the preview's Diff view and source control show them.
 
 mod collect;
-pub mod pane;
 mod parse;
 mod render;
 

@@ -28,11 +28,12 @@ missing or of another version ([The binary](installation.md#the-binary)). The ma
 
 In `rust/src/`, `cli.rs` reads the subcommand; `hook.rs`, `peek.rs`, `launch.rs` (the launcher of the explorer and
 preview, see [Launcher and self-restart](#launcher-and-self-restart)) and `edit.rs` are entries of their own, and each
-pane has its folder: `explorer/`, `preview/`, `search/`, `scm/` and `diff/` (the Changes pane, and also the diff
-parser and renderer that the preview's Diff view and source control use). Shared modules are in `core/` (programs
-and state files, actions, terminal UI, the editing buffer, preview tabs, review notes, icons, updates, regular
-expressions, paths), `render/` (syntax highlighting, Markdown, images, branch graph), `codec/` (inflate, deflate,
-SHA-1, SHA-256, base64), `sys/` (the terminal, signals and file watching of each system), `unicode/` and `json.rs`.
+pane has its folder: `explorer/`, `preview/`, `search/`, `scm/` and `changes/`. Shared modules are in `diff/` (the
+diff collection, parser and layout that the Changes pane, the preview's Diff view and source control use), `core/`
+(programs and state files, actions, terminal UI, the editing buffer, preview tabs, review notes, icons, updates,
+regular expressions, paths), `render/` (syntax highlighting, Markdown, images, branch graph), `codec/` (inflate,
+deflate, SHA-1, SHA-256, base64), `sys/` (the terminal, signals and file watching of each system), `unicode/` and
+`json.rs`.
 
 The modules form four layers, and an import only goes to the same layer or a lower one:
 
