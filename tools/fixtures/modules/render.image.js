@@ -1,8 +1,9 @@
 'use strict';
 // Images built here, byte by byte: the header read (info) of every format, and the pixels decoded (decode) of PNG
 // (each colour type and depth, interlaced, transparency, truncated or broken streams), GIF (palettes, transparency,
-// interlacing, broken LZW), BMP (each depth, bit fields, OS/2, top-down) and ICO / CUR. The files go in base64, the
-// pixels come out in hex (a hash and their first bytes when large).
+// interlacing, broken LZW), BMP (each depth, bit fields, OS/2, top-down) and ICO / CUR; JPEG and TIFF from the samples
+// of tools/fixtures/images, whole, cut short, altered. Then the half blocks (render) and the Kitty pixels (pixels) of
+// some of them, and crop. The files go in base64, the pixels come out in hex (a hash and their first bytes when large).
 const zlib = require('zlib');
 const image = require('../../../src/render/image');
 
@@ -13,6 +14,12 @@ const pixels = img => (img ? { width: img.width, height: img.height, data: img.d
 const impl = {
   info: b64 => image.info(Buffer.from(b64, 'base64')),
   decode: b64 => pixels(image.decode(Buffer.from(b64, 'base64'))),
+  render: (b64, cols, rows, background) => image.render(Buffer.from(b64, 'base64'), cols, rows, { background }),
+  pixels: (b64, w, h) => {
+    const p = image.pixels(Buffer.from(b64, 'base64'), w, h);
+    return p.info === undefined ? { ...p, data: pixels(p).data } : p;
+  },
+  crop: (...args) => image.crop(...args),
 };
 
 // Deterministic bytes.
@@ -320,11 +327,87 @@ const HEADERS = [
   Buffer.from([0xff, 0xd8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 ];
 
+// --- JPEG and TIFF: the samples of tools/fixtures/images (made by its make.sh), and copies of them cut short, with
+// bytes changed, or with a segment or tag rewritten.
+
+const fs = require('fs');
+const path = require('path');
+const DIR = path.join(__dirname, '..', 'images');
+const NAMES = fs.readdirSync(DIR).filter(f => /\.(jpg|tif)$/.test(f)).sort();
+const file = name => fs.readFileSync(path.join(DIR, name));
+const SAMPLES = NAMES.map(file);
+const JPEGS = SAMPLES.filter(b => b[0] === 0xff), TIFFS = SAMPLES.filter(b => b[0] !== 0xff);
+
+// The position of a JPEG's first segment of marker m (its FF), or -1.
+const marker = (b, m) => { for (let i = 2; i + 1 < b.length; i++) if (b[i] === 0xff && b[i + 1] === m) return i; return -1; };
+// Copies with n bytes changed at random between from and to.
+const flipped = (b, from, to, n) => { const c = Buffer.from(b); for (let k = 0; k < n; k++) c[from + rand(Math.max(1, to - from))] ^= 1 + rand(255); return c; };
+const cuts = b => [0.2, 0.45, 0.7, 0.9].map(f => b.subarray(0, Math.floor(b.length * f))).concat([b.subarray(0, b.length - 2)]);
+
+const MUTANTS = [];
+for (const b of JPEGS) {
+  MUTANTS.push(...cuts(b));
+  const sos = marker(b, 0xda);
+  if (sos > 0) for (let k = 0; k < 4; k++) MUTANTS.push(flipped(b, sos + 14, b.length - 2, 1 + k));
+}
+for (const b of TIFFS) {
+  MUTANTS.push(...cuts(b));
+  for (let k = 0; k < 3; k++) MUTANTS.push(flipped(b, 8, Math.min(b.length, 8 + 600), 1 + k));
+}
+
+// Rewritten JPEG segments: the components named R, G, B; an Adobe segment (its transform); restart markers lost.
+const named = file('base444.jpg');
+{
+  const s = marker(named, 0xc0) + 4;
+  const ids = [named[s + 6], named[s + 9], named[s + 12]];
+  [82, 71, 66].forEach((v, k) => { named[s + 6 + 3 * k] = v; });
+  const scan = marker(named, 0xda) + 4;
+  for (let k = 0; k < named[scan]; k++) named[scan + 1 + 2 * k] = [82, 71, 66][ids.indexOf(named[scan + 1 + 2 * k])];
+}
+const adobe = (b, transform, cut = 0) => {
+  const body = Buffer.concat([Buffer.from('Adobe', 'latin1'), Buffer.from([0, 100, 0, 0, 0, 0, transform])]);
+  return Buffer.concat([b.subarray(0, 2), seg(0xee, cut ? body.subarray(0, body.length - cut) : body), b.subarray(2)]);
+};
+const base = file('base444.jpg'), cmyk = file('cmyk.jpg'), restartFile = file('restart1.jpg');
+const noRst = b => Buffer.from(b.toString('latin1').replace(/\xff[\xd0-\xd7]/g, '\xff\x00'), 'latin1');
+const REWRITTEN = [named, adobe(base, 0), adobe(base, 2), adobe(cmyk, 2), adobe(cmyk, 1), adobe(base, 0, 1),
+  noRst(restartFile), restartFile.subarray(0, marker(restartFile, 0xda) + 9)];
+
+// Rewritten TIFF tags (of none.tif): one tag's value changed.
+const none = file('none.tif');
+const retag = (b, tag, value) => {
+  const c = Buffer.from(b), le = c[0] === 0x49;
+  const r16 = i => (le ? c.readUInt16LE(i) : c.readUInt16BE(i)), r32 = i => (le ? c.readUInt32LE(i) : c.readUInt32BE(i));
+  const dir = r32(4);
+  for (let k = 0; k < r16(dir); k++) {
+    const e = dir + 2 + k * 12;
+    if (r16(e) !== tag) continue;
+    if (r16(e + 2) === 3) { if (le) c.writeUInt16LE(value, e + 8); else c.writeUInt16BE(value, e + 8); } else if (le) c.writeUInt32LE(value, e + 8); else c.writeUInt32BE(value, e + 8);
+  }
+  return c;
+};
+const RETAGGED = [[259, 2], [259, 7], [262, 4], [262, 0], [277, 6], [258, 3], [284, 2], [317, 2], [278, 0], [278, 5], [338, 1],
+  [256, 0], [256, 22], [257, 40], [273, 999999]].map(([tag, v]) => retag(none, tag, v));
+
+// Half blocks and Kitty pixels at several sizes, over two backgrounds; what shows instead when an image cannot be.
+const SHOWN = [file('base420.jpg'), file('alpha.tif'), file('palette.tif'), file('prog420.jpg')];
+const UNSHOWN = [Buffer.alloc(0), file('arith.jpg'), Buffer.from('not an image at all'), svg('<svg width="10.5" height="1e2">'),
+  jpeg(sof(0xc0, 65535, 65535)), jpeg(seg(0xc0, Buffer.from([8, 0, 4, 0, 4, 3]))), Buffer.concat([file('base444.jpg').subarray(0, 300)])];
+const SIZES = [[10, 4], [40, 20], [3, 1], [0, 0], [200, 100], [7.9, 2.5], [-3, 2], [21, 7]];
+
 const cases = [];
 for (const b of [...PNGS, ...GIFS, ...BMPS, ...ICOS]) {
   cases.push({ fn: 'info', args: [b64(b)] }, { fn: 'decode', args: [b64(b)] });
 }
 for (const b of HEADERS) cases.push({ fn: 'info', args: [b64(b)] });
 for (const b of HEADERS.slice(-6)) cases.push({ fn: 'decode', args: [b64(b)] });
+
+for (const b of [...SAMPLES, ...MUTANTS, ...REWRITTEN, ...RETAGGED]) cases.push({ fn: 'info', args: [b64(b)] }, { fn: 'decode', args: [b64(b)] });
+for (const b of [...SHOWN, PNGS[0], GIFS[0]]) {
+  for (const [c, r] of SIZES) for (const bg of [[30, 30, 30], [255, 255, 255]]) cases.push({ fn: 'render', args: [b64(b), c, r, bg] });
+}
+for (const b of [...SHOWN, ...UNSHOWN]) for (const [c, r] of SIZES) cases.push({ fn: 'pixels', args: [b64(b), c * 4, r * 8] });
+for (const b of UNSHOWN) cases.push({ fn: 'render', args: [b64(b), 10, 4, [30, 30, 30]] });
+for (let k = 0; k < 300; k++) cases.push({ fn: 'crop', args: [rand(30) - 5, rand(12) - 1, rand(200), rand(40) - 5, rand(15)] });
 
 module.exports = { module: 'render/image', impl, cases };

@@ -1349,8 +1349,22 @@ fn render_image() {
     use herdr_explorer::codec::base64;
     use herdr_explorer::render::image;
     support::replay("render/image", |name, args| {
+        if name == "crop" {
+            let n = |k: usize| args[k].as_f64().unwrap() as i64;
+            return Ok(image::crop(n(0), n(1), n(2), n(3), n(4)).map_or(Value::Null, |p| {
+                herdr_explorer::obj! { "at" => Value::Num(p.at as f64), "from" => Value::Num(p.from as f64), "count" => Value::Num(p.count as f64), "y" => Value::Num(p.y as f64), "h" => Value::Num(p.h as f64) }
+            }));
+        }
         let buf = base64::decode(args[0].as_str().unwrap());
         let hex = |b: &[u8]| b.iter().map(|x| format!("{x:02x}")).collect::<String>();
+        let data = |d: &[u8]| {
+            if d.len() <= 512 {
+                Value::Str(hex(d))
+            } else {
+                let fnv = d.iter().fold(0x811c9dc5u32, |h, &x| (h ^ x as u32).wrapping_mul(0x01000193));
+                herdr_explorer::obj! { "size" => Value::Num(d.len() as f64), "fnv" => Value::Str(format!("{fnv:x}")), "head" => Value::Str(hex(&d[..64])) }
+            }
+        };
         Ok(match name {
             "info" => image::info(&buf).map_or(Value::Null, |m| {
                 let mut o = herdr_explorer::obj! { "format" => Value::Str(m.format.into()), "width" => Value::Num(m.width), "height" => Value::Num(m.height) };
@@ -1360,14 +1374,24 @@ fn render_image() {
                 o
             }),
             "decode" => image::decode(&buf).map_or(Value::Null, |img| {
-                let data = if img.data.len() <= 512 {
-                    Value::Str(hex(&img.data))
-                } else {
-                    let fnv = img.data.iter().fold(0x811c9dc5u32, |h, &x| (h ^ x as u32).wrapping_mul(0x01000193));
-                    herdr_explorer::obj! { "size" => Value::Num(img.data.len() as f64), "fnv" => Value::Str(format!("{fnv:x}")), "head" => Value::Str(hex(&img.data[..64])) }
-                };
-                herdr_explorer::obj! { "width" => Value::Num(img.width as f64), "height" => Value::Num(img.height as f64), "data" => data }
+                herdr_explorer::obj! { "width" => Value::Num(img.width as f64), "height" => Value::Num(img.height as f64), "data" => data(&img.data) }
             }),
+            "render" => {
+                let bg = args[3].as_array().unwrap().iter().map(|v| v.as_f64().unwrap() as u8).collect::<Vec<_>>();
+                let num = |k: usize| args[k].as_f64().unwrap();
+                match image::render(&buf, num(1), num(2), Some([bg[0], bg[1], bg[2]])) {
+                    Err(info) => herdr_explorer::obj! { "info" => Value::Str(info) },
+                    Ok(r) => {
+                        let seg = |(t, s): &(String, String)| Value::Arr(vec![Value::Str(t.clone()), Value::Str(s.clone())]);
+                        let lines = r.lines.iter().map(|l| Value::Arr(l.iter().map(seg).collect())).collect();
+                        herdr_explorer::obj! { "lines" => Value::Arr(lines), "width" => Value::Num(r.width as f64), "height" => Value::Num(r.height as f64), "imageWidth" => Value::Num(r.image_width as f64), "imageHeight" => Value::Num(r.image_height as f64), "format" => Value::Str(r.format.into()) }
+                    }
+                }
+            }
+            "pixels" => match image::pixels(&buf, args[1].as_f64().unwrap(), args[2].as_f64().unwrap()) {
+                Err(info) => herdr_explorer::obj! { "info" => Value::Str(info) },
+                Ok(p) => herdr_explorer::obj! { "width" => Value::Num(p.width as f64), "height" => Value::Num(p.height as f64), "data" => data(&p.data), "imageWidth" => Value::Num(p.image_width as f64), "imageHeight" => Value::Num(p.image_height as f64) },
+            },
             _ => return Err(format!("no function {name}")),
         })
     });
