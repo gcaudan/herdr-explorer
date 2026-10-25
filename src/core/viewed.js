@@ -15,14 +15,16 @@ function read(tab) {
 }
 
 // What the file holds now, in short: a hash of its content, 'gone' once deleted. Hashed again only when its size or
-// times change, as git does: the Changes pane asks at each reload.
-const signs = new Map(); // file → { stat: 'size mtime ctime', sign }
+// times change, as git does: the Changes pane asks at each reload. Nor trusted for a file changed less than RACY
+// before it was hashed: changed again in the same tick (a coarse clock, as on Windows), its times would not show it.
+const RACY = 2000;
+const signs = new Map(); // file → { stat: 'size mtime ctime', sign, at: when hashed }
 function sign(file) {
   try {
     const st = fs.statSync(file), stat = `${st.size} ${st.mtimeMs} ${st.ctimeMs}`, known = signs.get(file);
-    if (known && known.stat === stat) return known.sign;
-    const sign = crypto.createHash('sha1').update(fs.readFileSync(file)).digest('hex');
-    signs.set(file, { stat, sign });
+    if (known && known.stat === stat && known.at - st.mtimeMs > RACY) return known.sign;
+    const at = Date.now(), sign = crypto.createHash('sha1').update(fs.readFileSync(file)).digest('hex');
+    signs.set(file, { stat, sign, at });
     return sign;
   } catch { signs.delete(file); return 'gone'; }
 }
