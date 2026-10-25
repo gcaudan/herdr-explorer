@@ -1,0 +1,13 @@
+size 60x12
+⟪bg=#252526 b i⟫ a.txt⟪fg=#8c8c8c bg=#252526⟫  30 lines · 230 B⟪bg=#252526⟫                    ⟪fg=#d4d4d4 bg=#04395e b⟫ File ⟪fg=#8c8c8c bg=#3a3a3e⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+ ⟪fg=#8c8c8c⟫ 9 ⟪⟫line 9                                                 ⟪fg=#8c8c8c⟫▴⟪⟫
+ ⟪fg=#8c8c8c⟫10 ⟪⟫line 10                                                ⟪fg=#3c3c3c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫11 ⟪⟫line 11                                                ⟪fg=#519aba⟫│⟪⟫
+⟪fg=#cc3e44 bg=#37373d⟫▔⟪fg=#d4d4d4 bg=#37373d⟫12 ⟪bg=#37373d⟫line 13                                                ⟪fg=#cc3e44⟫┃⟪⟫
+ ⟪fg=#8c8c8c⟫13 ⟪⟫line 14                                                ⟪fg=#828282⟫┃⟪⟫
+ ⟪fg=#8c8c8c⟫14 ⟪⟫line 15                                                ⟪fg=#828282⟫┃⟪⟫
+ ⟪fg=#8c8c8c⟫15 ⟪⟫line 16                                                ⟪fg=#8dc149⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫16 ⟪⟫line 17                                                ⟪fg=#3c3c3c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫17 ⟪⟫line 18                                                ⟪fg=#3c3c3c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫18 ⟪⟫line 19                                                ⟪fg=#8c8c8c⟫▾⟪⟫
+⟪fg=#8dc149 bg=#252526⟫ ✓ ⟪bg=#252526⟫Change 2/3                                               ⟪⟫

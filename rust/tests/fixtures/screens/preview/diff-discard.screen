@@ -1,0 +1,17 @@
+size 80x16
+⟪bg=#252526 b i⟫ a.txt⟪fg=#8c8c8c bg=#252526⟫  +2 −2⟪bg=#252526⟫                                            ⟪fg=#d4d4d4 bg=#04395e b⟫ HEAD ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#3a3a3e⟫ File ⟪fg=#d4d4d4 bg=#04395e b⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+⟪fg=#519aba bg=#252526⟫ ⟪bg=#252526 b⟫ a.txt⟪fg=#8c8c8c bg=#252526⟫  unstaged⟪bg=#252526⟫                                                       ⟪fg=#8dc149 bg=#252526⟫ +2⟪fg=#c74e39 bg=#252526⟫ −2 ⟪bg=#252526⟫ ⟪⟫
+               ⟪fg=#8c8c8c⟫╭────────────────────────────────────────────────╮⟪⟫
+               ⟪fg=#8c8c8c⟫│⟪b⟫ Discard from the working tree?⟪⟫                 ⟪fg=#8c8c8c⟫│⟪⟫
+               ⟪fg=#8c8c8c⟫│⟪⟫                                                ⟪fg=#8c8c8c⟫│⟪⟫
+               ⟪fg=#8c8c8c⟫│⟪⟫ 4 lines                                        ⟪fg=#8c8c8c⟫│⟪⟫
+               ⟪fg=#8c8c8c⟫│ a.txt⟪⟫                                          ⟪fg=#8c8c8c⟫│⟪⟫
+               ⟪fg=#8c8c8c⟫│⟪⟫                                                ⟪fg=#8c8c8c⟫│⟪⟫
+               ⟪fg=#8c8c8c⟫│⟪⟫  ⟪fg=#ffffff bg=#8a2f2a b⟫ d Discard ⟪⟫  ⟪fg=#8c8c8c bg=#2d2d2d⟫ esc Cancel ⟪⟫                     ⟪fg=#8c8c8c⟫│⟪⟫
+               ⟪fg=#8c8c8c⟫╰────────────────────────────────────────────────╯⟪⟫
+
+
+
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ n N⟪fg=#8c8c8c bg=#252526⟫ hunks⟪fg=#d4d4d4 bg=#252526 b⟫   a⟪fg=#8c8c8c bg=#252526⟫ note⟪fg=#d4d4d4 bg=#252526 b⟫   z⟪fg=#8c8c8c bg=#252526⟫ zoom⟪fg=#d4d4d4 bg=#252526 b⟫   q⟪fg=#8c8c8c bg=#252526⟫ close⟪fg=#d4d4d4 bg=#252526 b⟫   ?⟪fg=#8c8c8c bg=#252526⟫ keys                                 ⟪⟫

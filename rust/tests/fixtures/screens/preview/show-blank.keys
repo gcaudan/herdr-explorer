@@ -1,0 +1,17 @@
+# Nothing with changes selected in source control: its text, centred.
+size 60 10
+file a.txt one\nthree\n
+git init -q -b main
+git add a.txt
+git commit -q -m first
+file a.txt one\ntwo\nthree\n
+file b.txt bee\n
+git add .
+git commit -q -m second
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/a.txt
+env EXPLORER_ROOT=$ROOT/work
+env EXPLORER_TAB=t1
+env EXPLORER_SHOW={"blank":true,"cwd":"$ROOT/work"}
+start
+until 1000

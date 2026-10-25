@@ -1,0 +1,21 @@
+# A tab in the Diff view shown again: at its scroll once its changes are loaded.
+size 80 12
+file a.txt line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\nline 21\nline 22\nline 23\nline 24\nline 25\nline 26\nline 27\nline 28\nline 29\nline 30\n
+file b.txt bee\n
+git init -q -b main
+git add .
+git commit -q -m first
+file a.txt line 1\nline 2\nline 3 changed\nline 4\nline 5\nline 6 changed\nline 7\nline 8\nline 9 changed\nline 10\nline 11\nline 12 changed\nline 13\nline 14\nline 15 changed\nline 16\nline 17\nline 18 changed\nline 19\nline 20\nline 21 changed\nline 22\nline 23\nline 24 changed\nline 25\nline 26\nline 27 changed\nline 28\nline 29\nline 30 changed\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/a.txt
+env EXPLORER_ROOT=$ROOT/work
+env EXPLORER_TAB=t1
+env EXPLORER_VIEW=diff
+env EXPLORER_KEEP=1
+start
+wait 600
+keys j j j j j j j
+state preview-t1.json {"file":"$ROOT/work/b.txt","keep":true}
+wait 800
+keys tab
+until 2500

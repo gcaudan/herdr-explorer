@@ -4,6 +4,7 @@
 use super::{Find, Kind, Opt, Pos, Preview, Rows, Select};
 use crate::core::actions;
 use crate::core::regex::Regex;
+use crate::core::stage::Mode;
 use crate::core::tabs;
 use crate::core::ui::{self, BarHit, Choice, Event, Field, HelpState, Menu, MenuItem, Mouse};
 use crate::core::{js, paths};
@@ -31,7 +32,7 @@ fn before(a: Pos, b: Pos) -> bool {
 }
 
 /// The ends of a selection, in order.
-fn ordered(sel: &Select) -> (Pos, Pos) {
+pub(super) fn ordered(sel: &Select) -> (Pos, Pos) {
     if before(sel.from, sel.to) { (sel.from, sel.to) } else { (sel.to, sel.from) }
 }
 
@@ -58,10 +59,12 @@ impl Preview {
         match e {
             Event::Key(k) => self.key(&k),
             Event::Mouse(m) => self.mouse(&m),
-            // Back to the pane: TODO(case 13), a commit made meanwhile changes what is changed since HEAD.
+            // Back to the pane: a commit made meanwhile changes what is changed since HEAD.
             Event::Focus(f) => {
                 self.state.focused = f;
-                if !f {
+                if f {
+                    self.load_changes();
+                } else {
                     self.scrollbar.stop();
                     self.end_selection();
                     let pane = self.pane.clone();
@@ -78,7 +81,10 @@ impl Preview {
                 if self.state.edit.is_some() {
                     return self.edit_paste(&text, Some(&raw));
                 }
-                if let Some(f) = self.state.find.as_mut().filter(|f| f.active) {
+                if let Some(f) = &mut self.state.rev_prompt {
+                    f.insert(&text);
+                    self.render();
+                } else if let Some(f) = self.state.find.as_mut().filter(|f| f.active) {
                     f.field.insert(&text);
                     self.search(true);
                 }
@@ -119,10 +125,13 @@ impl Preview {
         if self.state.ask.is_some() {
             return self.ask_key(k);
         }
+        if self.state.rev_prompt.is_some() {
+            return self.rev_key(k);
+        }
         if self.state.menu.is_some() {
             return self.menu_key(k);
         }
-        if self.state.edit.is_some() && self.state.help.is_none() {
+        if self.state.edit.is_some() && self.state.help.is_none() && self.state.show.is_none() {
             return self.edit_key(k);
         }
         if let Some(f) = self.state.find.as_mut().filter(|f| f.active) {
@@ -157,6 +166,14 @@ impl Preview {
                 self.state.help = None;
             }
             return self.render();
+        }
+        if self.state.show.is_some() {
+            if k == "q" || k == "escape" {
+                return self.leave_show();
+            }
+            if !Preview::show_key(k) {
+                return;
+            }
         }
         let wrap = self.on("wrap");
         let s = &mut self.state;
@@ -216,14 +233,13 @@ impl Preview {
             }
             "n" | "N" => {
                 let dir = if k == "n" { 1 } else { -1 };
+                if s.show.is_some() {
+                    return self.next_hunk(dir);
+                }
                 if !s.marks.is_empty() && s.matches.is_empty() {
                     return self.next_mark(dir);
                 }
-                // TODO(case 13): in the Diff view, the next or previous hunk.
-                if s.diff {
-                    return;
-                }
-                self.next(dir, false)
+                if s.diff { self.next_hunk(dir) } else { self.next(dir, false) }
             }
             "d" => self.toggle_view(),
             "tab" | "ctrl+pagedown" => self.show_tab(tabs::step(&self.tabs, 1).current),
@@ -238,18 +254,33 @@ impl Preview {
             }
             "x" => self.close_tab(self.tabs.current),
             "," => self.open_menu(0),
+            "b" => {
+                if s.diff {
+                    self.open_scopes()
+                }
+            }
+            "v" => {
+                if s.diff || s.show.is_some() {
+                    self.switch_layout()
+                }
+            }
+            "s" | "u" | "D" => {
+                if s.diff {
+                    self.edit_diff(match k {
+                        "s" => Mode::Stage,
+                        "u" => Mode::Unstage,
+                        _ => Mode::Discard,
+                    })
+                }
+            }
             "w" => self.toggle("wrap"),
             "L" => self.toggle("lineNumbers"),
-            // TODO(case 13): the changes loaded again.
-            "c" => self.toggle("changes"),
+            "c" => {
+                self.toggle("changes");
+                self.load_changes()
+            }
             "]" | "[" => {
-                // TODO(case 13): the next or previous block of changes, once they are loaded.
-                let text = if s.diff || self.markdown_view() {
-                    "Changes show in the file's source"
-                } else {
-                    "No changes since HEAD"
-                };
-                self.flash(Some(text.into()));
+                self.next_change(if k == "]" { 1 } else { -1 });
                 self.render()
             }
             "m" => {
@@ -326,8 +357,9 @@ impl Preview {
         s.select = None;
         s.find = None;
         s.matches.clear();
-        // TODO(case 13): the file's changes loaded (loadDiff).
-        if !s.diff && s.line != 0.0 {
+        if s.diff {
+            self.load_diff(false, false);
+        } else if s.line != 0.0 {
             let line = s.line;
             self.state.top = (self.row_of(line - 1.0) - self.third()).max(0);
         }
@@ -399,8 +431,9 @@ impl Preview {
             Some(MenuItem { label: label.into(), key: key.into(), value: Some(value), danger: false, keep, run })
         };
         let mut items = Vec::new();
-        // TODO(case 13): the Diff view's options (layout, wrap, compare with).
-        if !s.diff {
+        if s.show.is_some() || s.diff {
+            items = self.diff_items();
+        } else {
             let editing = s.edit.is_some();
             if !editing && (s.kind == Kind::Text || (s.kind == Kind::Markdown && s.raw)) {
                 items.push(item("Wrap lines", "w", ui::on_off(self.on("wrap")), Opt::Wrap, true));
@@ -434,8 +467,13 @@ impl Preview {
                 match run {
                     Opt::Wrap => self.toggle("wrap"),
                     Opt::LineNumbers => self.toggle("lineNumbers"),
-                    // TODO(case 13): the changes loaded again.
-                    Opt::Changes => self.toggle("changes"),
+                    Opt::Changes => {
+                        self.toggle("changes");
+                        self.load_changes()
+                    }
+                    Opt::Layout => self.switch_layout(),
+                    Opt::Compare => self.open_scopes(),
+                    Opt::Scope(pick) => self.scope_item(pick),
                     Opt::Edit => {
                         if self.state.edit.is_some() {
                             self.stop_edit()
@@ -486,8 +524,19 @@ impl Preview {
         {
             return self.key(&k);
         }
-        if self.state.edit.is_some() {
+        if self.state.edit.is_some() && self.state.show.is_none() {
             return self.edit_mouse(m);
+        }
+        // A commit shown: the wheel and the scrollbar only.
+        if self.state.show.is_some() {
+            if m.wheel != 0 {
+                return self.scroll(m.wheel * 3);
+            }
+            if let BarHit::Scroll(top) = self.scrollbar.mouse(m, m.y - 2, m.x == w as i64, Instant::now()) {
+                self.state.top = top;
+                self.render();
+            }
+            return;
         }
         // The wheel scrolls under a selection, which may still be dragged: the button state is unknown here.
         if m.wheel != 0 {
@@ -539,8 +588,7 @@ impl Preview {
                 self.show_tab(tab)
             }
             "menu" => self.open_menu(0),
-            // TODO(case 13): b's menu of the scopes.
-            "scope" => {}
+            "scope" => self.open_scopes(),
             id => {
                 if (id == "diff") != self.state.diff {
                     self.toggle_view();
@@ -631,7 +679,7 @@ impl Preview {
     /// The position under a screen cell of the body.
     fn position_at(&self, rows: &Rows, row: usize, x: i64) -> Pos {
         let r = &rows.list[row];
-        let text = ui::seg_text(&r.segs);
+        let text = ui::seg_text(&self.segs_of(r));
         let shift = if !self.on("wrap") && r.src >= 0 { self.state.left } else { 0 };
         let col = x.saturating_sub(1 + self.gutter() as i64).saturating_add(shift);
         let (mut w, mut prev, mut prev_at) = (0i64, None, 0);
@@ -656,7 +704,7 @@ impl Preview {
         if i < a.row || i > b.row {
             return None;
         }
-        let text = ui::seg_text(&rows.list.get(i)?.segs);
+        let text = ui::seg_text(&self.segs_of(rows.list.get(i)?));
         let start = if i == a.row { a.at } else { 0 };
         let end = if i == b.row { char_end(&text, b.at) } else { text.len() };
         let next = rows.list.get(i + 1);
@@ -674,7 +722,7 @@ impl Preview {
             // The rows built again shorter (a resize not yet seen): the rows left.
             let Some(r) = rows.list.get(i) else { break };
             let Some((start, end, _)) = self.selected_range(rows, i) else { continue };
-            let row = ui::seg_text(&r.segs);
+            let row = ui::seg_text(&self.segs_of(r));
             let from = start.max(r.pad);
             let mut part = row.get(from..end.max(from)).unwrap_or("").to_string();
             if r.src < 0 {
@@ -721,7 +769,7 @@ impl Preview {
 
     /// The word, run of spaces or punctuation character under a position: its first and last characters.
     fn word_at(&self, rows: &Rows, p: Pos) -> Option<Select> {
-        let text = ui::seg_text(&rows.list.get(p.row)?.segs);
+        let text = ui::seg_text(&self.segs_of(rows.list.get(p.row)?));
         let chars: Vec<(usize, u8)> = text
             .char_indices()
             .map(|(i, ch)| {
@@ -765,7 +813,7 @@ impl Preview {
                 b += 1;
             }
         }
-        let end = ui::seg_text(&list[b].segs).len();
+        let end = ui::seg_text(&self.segs_of(&list[b])).len();
         Some(Select { from: Pos { row: a, at: 0 }, to: Pos { row: b, at: end }, moved: true, fixed: true, done: false })
     }
 
@@ -773,7 +821,9 @@ impl Preview {
 
     /// The file's lines under the selection, else the highlighted line: (from, to), 1-based; None when none.
     fn selected_lines(&mut self) -> Option<(i64, i64)> {
-        // TODO(case 13): in the Diff view, the new version's lines of the rows selected, or of the top row.
+        if self.state.diff {
+            return self.diff_lines().map(|(a, b, _)| (a, b));
+        }
         if let Some(sel) = self.state.select.filter(|s| s.moved) {
             let (a, b) = ordered(&sel);
             let rows = self.rows();

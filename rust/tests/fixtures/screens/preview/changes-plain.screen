@@ -1,0 +1,13 @@
+size 60x12
+⟪bg=#252526 b i⟫ a.txt⟪fg=#8c8c8c bg=#252526⟫  30 lines · 230 B⟪bg=#252526⟫                    ⟪fg=#d4d4d4 bg=#04395e b⟫ File ⟪fg=#8c8c8c bg=#3a3a3e⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+ line 1                                                    ⟪fg=#8c8c8c⟫▴⟪⟫
+ line 2                                                    ⟪fg=#828282⟫┃⟪⟫
+ line 3                                                    ⟪fg=#519aba⟫┃⟪⟫
+ line 4                                                    ⟪fg=#cc3e44⟫┃⟪⟫
+⟪fg=#519aba⟫▎⟪⟫line five                                                 ⟪fg=#3c3c3c⟫│⟪⟫
+ line 6                                                    ⟪fg=#3c3c3c⟫│⟪⟫
+ line 7                                                    ⟪fg=#8dc149⟫│⟪⟫
+ line 8                                                    ⟪fg=#3c3c3c⟫│⟪⟫
+ line 9                                                    ⟪fg=#3c3c3c⟫│⟪⟫
+ line 10                                                   ⟪fg=#8c8c8c⟫▾⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   a⟪fg=#8c8c8c bg=#252526⟫ note⟪fg=#d4d4d4 bg=#252526 b⟫   e⟪fg=#8c8c8c bg=#252526⟫ editor⟪fg=#d4d4d4 bg=#252526 b⟫   o⟪fg=#8c8c8c bg=#252526⟫ app⟪fg=#d4d4d4 bg=#252526 b⟫   z⟪fg=#8c8c8c bg=#252526⟫ zoom⟪fg=#d4d4d4 bg=#252526 b⟫   q⟪fg=#8c8c8c bg=#252526⟫ close   33%⟪⟫

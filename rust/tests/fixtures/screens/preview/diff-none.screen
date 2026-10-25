@@ -1,0 +1,13 @@
+size 80x12
+⟪bg=#252526 b i⟫ a.txt⟪fg=#8c8c8c bg=#252526⟫  +0 −0⟪bg=#252526⟫                                            ⟪fg=#d4d4d4 bg=#04395e b⟫ HEAD ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#3a3a3e⟫ File ⟪fg=#d4d4d4 bg=#04395e b⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+
+
+                                   ⟪fg=#8c8c8c⟫No changes⟪⟫
+
+                       ⟪fg=#d4d4d4 b⟫ d⟪fg=#8c8c8c⟫ file⟪fg=#d4d4d4 b⟫   b⟪fg=#8c8c8c⟫ compare with⟪fg=#d4d4d4 b⟫   q⟪fg=#8c8c8c⟫ close⟪⟫
+
+
+
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ n N⟪fg=#8c8c8c bg=#252526⟫ hunks⟪fg=#d4d4d4 bg=#252526 b⟫   a⟪fg=#8c8c8c bg=#252526⟫ note⟪fg=#d4d4d4 bg=#252526 b⟫   z⟪fg=#8c8c8c bg=#252526⟫ zoom⟪fg=#d4d4d4 bg=#252526 b⟫   q⟪fg=#8c8c8c bg=#252526⟫ close⟪fg=#d4d4d4 bg=#252526 b⟫   ?⟪fg=#8c8c8c bg=#252526⟫ keys                                 ⟪⟫

@@ -1,0 +1,13 @@
+size 80x12
+⟪bg=#252526 b⟫ first⟪fg=#8c8c8c bg=#252526⟫  +2 −0⟪bg=#252526⟫                                                                ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+⟪fg=#519aba⟫ ⟪fg=#cbcb41⟫commit e90dfce6ec603f614897c09db49b7c6438a59499⟪⟫                               ⟪fg=#8c8c8c⟫▴⟪⟫
+⟪fg=#519aba⟫ ⟪fg=#8c8c8c⟫Author:     Ada <ada@example.com>⟪⟫                                             ⟪fg=#828282⟫┃⟪⟫
+⟪fg=#519aba⟫ ⟪fg=#8c8c8c⟫AuthorDate: Fri Jan 2 03:04:05 2026 +0000⟪⟫                                     ⟪fg=#828282⟫┃⟪⟫
+⟪fg=#519aba⟫ ⟪fg=#8c8c8c⟫Commit:     Ada <ada@example.com>⟪⟫                                             ⟪fg=#828282⟫┃⟪⟫
+⟪fg=#519aba⟫ ⟪fg=#8c8c8c⟫CommitDate: Fri Jan 2 03:04:05 2026 +0000⟪⟫                                     ⟪fg=#828282⟫┃⟪⟫
+⟪fg=#519aba⟫ ⟪⟫                                                                              ⟪fg=#828282⟫┃⟪⟫
+⟪fg=#519aba⟫ ⟪⟫    first                                                                     ⟪fg=#3c3c3c⟫│⟪⟫
+⟪fg=#519aba⟫ ⟪⟫---                                                                           ⟪fg=#3c3c3c⟫│⟪⟫
+⟪fg=#519aba⟫ ⟪⟫ a.txt | 2 ⟪fg=#8dc149⟫++⟪⟫                                                                 ⟪fg=#3c3c3c⟫│⟪⟫
+⟪fg=#519aba⟫ ⟪⟫ 1 file changed, 2 insertions(+)                                              ⟪fg=#8c8c8c⟫▾⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ n N⟪fg=#8c8c8c bg=#252526⟫ hunks⟪fg=#d4d4d4 bg=#252526 b⟫   v⟪fg=#8c8c8c bg=#252526⟫ layout⟪fg=#d4d4d4 bg=#252526 b⟫   z⟪fg=#8c8c8c bg=#252526⟫ zoom⟪fg=#d4d4d4 bg=#252526 b⟫   q⟪fg=#8c8c8c bg=#252526⟫ close⟪fg=#d4d4d4 bg=#252526 b⟫   ?⟪fg=#8c8c8c bg=#252526⟫ keys                            63%⟪⟫

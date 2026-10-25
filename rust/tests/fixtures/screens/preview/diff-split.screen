@@ -1,0 +1,15 @@
+size 130x14
+⟪bg=#252526 b i⟫ a.txt⟪fg=#8c8c8c bg=#252526⟫  +2 −2⟪bg=#252526⟫                                                                                              ⟪fg=#d4d4d4 bg=#04395e b⟫ HEAD ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#3a3a3e⟫ File ⟪fg=#d4d4d4 bg=#04395e b⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+⟪fg=#519aba bg=#252526⟫ ⟪bg=#252526 b⟫ a.txt⟪fg=#8c8c8c bg=#252526⟫  unstaged⟪bg=#252526⟫                                                                                                         ⟪fg=#8dc149 bg=#252526⟫ +2⟪fg=#c74e39 bg=#252526⟫ −2 ⟪bg=#252526⟫ ⟪⟫
+⟪fg=#519aba bg=#1e242c⟫▌ @@ -1,5 +1,5 @@⟪bg=#1e242c⟫                                                                                                                 ⟪⟫
+⟪fg=#519aba⟫ ⟪fg=#8c8c8c⟫1 ⟪⟫one                                                          ⟪fg=#8c8c8c⟫│1 ⟪⟫one
+⟪fg=#519aba⟫ ⟪bg=#1e1e1e⟫                                                               ⟪fg=#8c8c8c⟫│⟪fg=#8c8c8c bg=#233c24⟫2 ⟪bg=#233c24⟫two                                                           ⟪⟫
+⟪fg=#519aba⟫ ⟪fg=#8c8c8c⟫2 ⟪⟫three                                                        ⟪fg=#8c8c8c⟫│3 ⟪⟫three
+⟪fg=#519aba⟫ ⟪fg=#8c8c8c bg=#481e1e⟫3 ⟪bg=#481e1e⟫four                                                         ⟪fg=#8c8c8c⟫│⟪bg=#1e1e1e⟫                                                                ⟪⟫
+⟪fg=#519aba⟫ ⟪fg=#8c8c8c⟫4 ⟪⟫five                                                         ⟪fg=#8c8c8c⟫│4 ⟪⟫five
+⟪fg=#519aba⟫ ⟪fg=#8c8c8c bg=#481e1e⟫5 ⟪bg=#481e1e⟫six                                                          ⟪fg=#8c8c8c⟫│⟪fg=#8c8c8c bg=#233c24⟫5 ⟪bg=#233c24⟫six⟪bg=#2e6934⟫!⟪bg=#233c24⟫                                                          ⟪⟫
+
+
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ n N⟪fg=#8c8c8c bg=#252526⟫ hunks⟪fg=#d4d4d4 bg=#252526 b⟫   a⟪fg=#8c8c8c bg=#252526⟫ note⟪fg=#d4d4d4 bg=#252526 b⟫   z⟪fg=#8c8c8c bg=#252526⟫ zoom⟪fg=#d4d4d4 bg=#252526 b⟫   q⟪fg=#8c8c8c bg=#252526⟫ close⟪fg=#d4d4d4 bg=#252526 b⟫   ?⟪fg=#8c8c8c bg=#252526⟫ keys                                                                                   ⟪⟫

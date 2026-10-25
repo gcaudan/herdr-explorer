@@ -1,0 +1,16 @@
+# The Diff view side by side on a wide pane, n marking the next hunk.
+size 130 14
+file a.txt one\nthree\nfour\nfive\nsix\n
+git init -q -b main
+git add a.txt
+git commit -q -m first
+file a.txt one\ntwo\nthree\nfive\nsix!\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/a.txt
+env EXPLORER_ROOT=$ROOT/work
+env EXPLORER_TAB=t1
+start
+keys d
+wait 800
+keys n
+until 1500

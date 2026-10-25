@@ -1,0 +1,13 @@
+size 80x12
+⟪fg=#d4d4d4 bg=#37373d b⟫ a.txt ⟪fg=#8c8c8c bg=#37373d⟫× ⟪fg=#8c8c8c bg=#252526⟫ b.txt ×   +10 −10⟪bg=#252526⟫                              ⟪fg=#d4d4d4 bg=#04395e b⟫ HEAD ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#3a3a3e⟫ File ⟪fg=#d4d4d4 bg=#04395e b⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+⟪fg=#519aba bg=#481e1e⟫ ⟪fg=#8c8c8c bg=#481e1e⟫ 6    ⟪fg=#c74e39 bg=#481e1e⟫-⟪bg=#481e1e⟫ line 6                                                                ⟪fg=#8c8c8c⟫▴⟪⟫
+⟪fg=#519aba bg=#233c24⟫ ⟪fg=#8c8c8c bg=#233c24⟫    6 ⟪fg=#8dc149 bg=#233c24⟫+⟪bg=#233c24⟫ line 6 changed                                                        ⟪fg=#3c3c3c⟫│⟪⟫
+⟪fg=#519aba⟫ ⟪fg=#8c8c8c⟫ 7  7  ⟪⟫ line 7                                                                ⟪fg=#3c3c3c⟫│⟪⟫
+⟪fg=#519aba⟫ ⟪fg=#8c8c8c⟫ 8  8  ⟪⟫ line 8                                                                ⟪fg=#828282⟫┃⟪⟫
+⟪fg=#519aba bg=#481e1e⟫ ⟪fg=#8c8c8c bg=#481e1e⟫ 9    ⟪fg=#c74e39 bg=#481e1e⟫-⟪bg=#481e1e⟫ line 9                                                                ⟪fg=#828282⟫┃⟪⟫
+⟪fg=#519aba bg=#233c24⟫ ⟪fg=#8c8c8c bg=#233c24⟫    9 ⟪fg=#8dc149 bg=#233c24⟫+⟪bg=#233c24⟫ line 9 changed                                                        ⟪fg=#3c3c3c⟫│⟪⟫
+⟪fg=#519aba⟫ ⟪fg=#8c8c8c⟫10 10  ⟪⟫ line 10                                                               ⟪fg=#3c3c3c⟫│⟪⟫
+⟪fg=#519aba⟫ ⟪fg=#8c8c8c⟫11 11  ⟪⟫ line 11                                                               ⟪fg=#3c3c3c⟫│⟪⟫
+⟪fg=#519aba bg=#481e1e⟫ ⟪fg=#8c8c8c bg=#481e1e⟫12    ⟪fg=#c74e39 bg=#481e1e⟫-⟪bg=#481e1e⟫ line 12                                                               ⟪fg=#3c3c3c⟫│⟪⟫
+⟪fg=#519aba bg=#233c24⟫ ⟪fg=#8c8c8c bg=#233c24⟫   12 ⟪fg=#8dc149 bg=#233c24⟫+⟪bg=#233c24⟫ line 12⟪bg=#2e6934⟫ changed⟪bg=#233c24⟫                                                       ⟪fg=#8c8c8c⟫▾⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ n N⟪fg=#8c8c8c bg=#252526⟫ hunks⟪fg=#d4d4d4 bg=#252526 b⟫   a⟪fg=#8c8c8c bg=#252526⟫ note⟪fg=#d4d4d4 bg=#252526 b⟫   z⟪fg=#8c8c8c bg=#252526⟫ zoom⟪fg=#d4d4d4 bg=#252526 b⟫   q⟪fg=#8c8c8c bg=#252526⟫ close⟪fg=#d4d4d4 bg=#252526 b⟫   ?⟪fg=#8c8c8c bg=#252526⟫ keys                              43%⟪⟫

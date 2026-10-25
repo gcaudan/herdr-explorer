@@ -6,10 +6,10 @@
 //! As in the explorer, the herdr and clipboard calls run on a worker thread and their results come back to the
 //! pane's loop; the JS's timers are deadlines of that loop.
 //!
-//! TODO(case 13): rendered Markdown, images (Kitty graphics and half blocks), the Diff view's changes, a commit shown
-//! over the tabs (enterShow), the review notes and the lines changed since HEAD.
+//! TODO(case 13): rendered Markdown, images (Kitty graphics and half blocks), the review notes.
 //! TODO(case 20): the update watched, the preview restarted on the new code.
 
+mod diff;
 mod edit;
 mod input;
 mod render;
@@ -102,6 +102,8 @@ pub struct Row {
     pub empty: Option<(String, Vec<(String, String)>)>,
     pub pad: usize,
     pub back: Option<ui::Rgb>,
+    /// A row of the Diff view: what it shows, for n, s, u, D and the references.
+    pub diff: Option<crate::diff::Row>,
 }
 
 impl Row {
@@ -150,13 +152,16 @@ pub struct Chip {
     tab: Option<usize>,
 }
 
-/// An option of the view's menu.
-#[derive(Clone, Copy, Debug, PartialEq)]
+/// An option of the view's menu, or an item of the scope menus (b).
+#[derive(Clone, Debug, PartialEq)]
 pub enum Opt {
     Wrap,
     LineNumbers,
     Changes,
     Edit,
+    Layout,
+    Compare,
+    Scope(scope::Pick),
 }
 
 pub struct State {
@@ -188,7 +193,20 @@ pub struct State {
     mark: usize,
     /// The Diff view, rather than the file.
     diff: bool,
+    /// The Diff view's changes; None until asked for, or once another file shows.
+    diff_data: Option<diff::DiffData>,
+    /// What the Diff view compares with: the tab's scope (core::scope, b).
     scope: Scope,
+    /// The field of a commit or range typed for the scope (b, Commit or range…).
+    rev_prompt: Option<Field>,
+    /// The hunk n or N went to in the Diff view, which s, u and D take without a selection.
+    hunk: Option<(usize, usize)>,
+    /// The scroll of a tab shown again in the Diff view, for once its changes are loaded.
+    want_top: Option<i64>,
+    /// A commit, stash or tag shown over the tabs (source control's review), see enter_show.
+    show: Option<diff::Show>,
+    /// The file's lines changed since HEAD; None outside git.
+    changes: Option<diff::Changes>,
     menu: Option<Menu<Opt>>,
     help: Option<HelpState>,
     /// The footer's keys, for clicks: none while the find or a message takes the line.
@@ -241,6 +259,23 @@ pub struct Preview {
     rx: Receiver<Then>,
     waker: sys::Waker,
     herdr: Worker,
+    /// git's diffs and line changes, apart from herdr's calls.
+    git: Worker,
+    /// Beside a review's source control: q closes, whatever it shows.
+    review: bool,
+    // the JS's run counters: an answer of git that another call took the place of is dropped
+    diff_run: u64,
+    changes_run: u64,
+    show_run: u64,
+    /// The commits shown so far, each one's id.
+    shows: u64,
+    /// The changes set so far, for the scrollbar's marks kept (change_marks).
+    changes_seen: u64,
+    change_marks: Option<(Rc<Rows>, u64, Vec<ui::BarMark>)>,
+    /// While stage::apply runs: a second s, u or D would apply the same rows again.
+    editing: bool,
+    /// The tab's scope file, chosen in another pane.
+    scope_watch: Option<Watch>,
     // width
     width: Arc<Mutex<Option<f64>>>,
     keeper: Arc<Mutex<actions::WidthKeeper>>,
@@ -382,6 +417,7 @@ impl Preview {
         let waker = screen.waker();
         let (tx, rx) = channel();
         let herdr = Worker::new(tx.clone(), waker.clone());
+        let git = Worker::new(tx.clone(), waker.clone());
         let mut p = Preview {
             restored: false,
             state: State {
@@ -407,7 +443,13 @@ impl Preview {
                 marks: clean_marks(marks.ok().as_ref()),
                 mark: 0,
                 diff: env("EXPLORER_VIEW").as_deref() == Some("diff"),
+                diff_data: None,
                 scope: if tab.is_empty() { Scope::head() } else { scope::read(&tab) },
+                rev_prompt: None,
+                hunk: None,
+                want_top: None,
+                show: None,
+                changes: None,
                 menu: None,
                 help: None,
                 hints: None,
@@ -426,6 +468,16 @@ impl Preview {
             rx,
             waker,
             herdr,
+            git,
+            review: env("EXPLORER_REVIEW").is_some_and(|r| !r.is_empty()),
+            diff_run: 0,
+            changes_run: 0,
+            show_run: 0,
+            shows: 0,
+            changes_seen: 0,
+            change_marks: None,
+            editing: false,
+            scope_watch: if tab.is_empty() { None } else { scope::watch(&tab) },
             width: Arc::new(Mutex::new(None)),
             keeper: Arc::new(Mutex::new(actions::WidthKeeper::new(&pane, None))),
             keeper_busy: false,
@@ -447,6 +499,9 @@ impl Preview {
             p.state.top = r.top;
             p.state.left = r.left;
             p.state.raw = r.raw;
+            if p.state.diff {
+                p.state.want_top = Some(r.top);
+            }
         }
         p.restored = restored.is_some();
         Ok(p)
@@ -493,6 +548,10 @@ impl Preview {
                 self.state.top = (self.row_of(self.state.line - 1.0) - self.third()).max(0);
                 self.render();
             }
+        }
+        // Opened, or restarted, on a commit of source control.
+        if let Some(show) = exec::env_var("EXPLORER_SHOW").and_then(|t| json::parse(&t).ok()) {
+            self.enter_show(Some(&show));
         }
         // setImmediate: the request of a pane that changed hands, taken once the file it showed is loaded.
         if handed.is_some() && request.as_deref().is_some_and(|f| std::fs::metadata(f).is_ok()) {
@@ -543,7 +602,9 @@ impl Preview {
 
     fn next_deadline(&self) -> Option<Instant> {
         let mut all = vec![self.flash_at, self.settle_at, self.reload_at, self.scrollbar.due()];
-        all.extend([&self.requests, &self.settings_watch].into_iter().flatten().map(|w| Some(w.due())));
+        all.extend(
+            [&self.requests, &self.settings_watch, &self.scope_watch].into_iter().flatten().map(|w| Some(w.due())),
+        );
         if !self.keeper_busy {
             all.push(self.keeper.try_lock().ok().and_then(|k| k.due()));
         }
@@ -581,6 +642,9 @@ impl Preview {
         }
         if self.settings_watch.as_mut().is_some_and(Watch::poll) {
             self.settings_changed();
+        }
+        if self.scope_watch.as_mut().is_some_and(Watch::poll) {
+            self.follow_scope();
         }
     }
 
@@ -644,10 +708,14 @@ impl Preview {
     fn enter_tab(&mut self) {
         self.unstash();
         let s = &mut self.state;
+        s.diff_data = None;
         s.find = None;
         s.matches.clear();
         s.select = None;
         s.menu = None;
+        if s.diff {
+            s.want_top = Some(s.top);
+        }
         self.watch();
         self.load(true);
         self.save_file();
@@ -738,14 +806,14 @@ impl Preview {
         }
         self.seen = t;
         let Some(req) = exec::read_text(&file).ok().and_then(|t| json::parse(&t).ok()) else { return };
-        // TODO(case 13): req.show, a commit shown over the tabs.
-        if req.get("show").is_some_and(Value::truthy) {
-            return;
+        if let Some(show) = req.get("show").filter(|s| s.truthy()) {
+            return self.enter_show(Some(show));
         }
         // A file that is not a string: left alone, where the JS would read a file descriptor.
         let Some(asked) = req.get("file").filter(|f| f.truthy()).and_then(Value::as_str).map(String::from) else {
             return;
         };
+        self.drop_show();
         // same: a tab that already showed the file, as it was left; other: the pane shows another file than before.
         // A question of the tab shown is dropped, as canceled: its answer would go to another tab.
         self.drop_ask();
@@ -770,6 +838,7 @@ impl Preview {
         s.marks = clean_marks(req.get("marks"));
         s.raw = same && s.raw;
         if other || diff != s.diff {
+            s.diff_data = None;
             s.find = None;
             s.matches.clear();
         }
@@ -788,6 +857,9 @@ impl Preview {
             s.select = None;
             s.menu = None;
             self.watch();
+        }
+        if keep && diff && self.state.diff_data.is_none() {
+            self.state.want_top = Some(self.state.top);
         }
         let keep_scroll = keep && self.state.line == 0.0 && self.state.marks.is_empty();
         self.load(keep_scroll);
@@ -933,9 +1005,13 @@ impl Preview {
         if self.state.find.as_ref().is_some_and(|f| !f.field.value.is_empty()) {
             self.search(false);
         }
+        if self.state.diff {
+            self.load_diff(keep_scroll, false);
+        }
         if self.state.edit.is_some() {
             self.disk_changed();
         }
+        self.load_changes();
         self.render();
     }
 
@@ -948,6 +1024,10 @@ impl Preview {
         s.source.clear();
         if self.state.edit.is_some() {
             self.disk_changed();
+        }
+        // A deleted file still has its changes.
+        if self.state.diff && !self.state.file.is_empty() {
+            self.load_diff(false, false);
         }
         self.render();
     }
@@ -964,8 +1044,7 @@ impl Preview {
         let n = self.state.marks.len() as i64;
         self.state.mark = (self.state.mark as i64 + dir).rem_euclid(n) as usize;
         let from = self.state.marks[self.state.mark].from;
-        // TODO(case 13): in the Diff view, the row of the line (diffRow).
-        let row = self.row_of(from as f64 - 1.0);
+        let row = if self.state.diff { self.diff_row(from as f64) } else { self.row_of(from as f64 - 1.0) };
         self.state.top = (row - self.third()).max(0);
         self.flash(Some(format!("Mark {}/{}", self.state.mark + 1, n)));
     }

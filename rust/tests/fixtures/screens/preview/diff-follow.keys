@@ -1,0 +1,18 @@
+# The tab's scope chosen in another pane: the Diff view compares with it.
+size 80 14
+file a.txt one\nthree\nfour\n
+git init -q -b main
+git add a.txt
+git commit -q -m first
+file a.txt one\nthree\nfour\nfive\n
+git commit -q -am second
+file a.txt one\nthree\nfour\nfive\nsix\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/a.txt
+env EXPLORER_ROOT=$ROOT/work
+env EXPLORER_TAB=t1
+env EXPLORER_VIEW=diff
+start
+wait 600
+state scope-t1.json {"kind":"rev","rev":"HEAD~1"}
+until 2500

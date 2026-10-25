@@ -38,6 +38,21 @@ impl<P: 'static> Worker<P> {
     }
 }
 
+/// A job on a thread of its own, its result sent to the loop: one that waits on the pane (a question asked midway)
+/// without holding up the worker's other jobs. Whether the thread started.
+pub fn spawn<P: 'static>(tx: Sender<Then<P>>, waker: sys::Waker, job: Job<P>) -> bool {
+    std::thread::Builder::new()
+        .name(NAME.into())
+        .spawn(move || {
+            if let Ok(then) = std::panic::catch_unwind(AssertUnwindSafe(job))
+                && tx.send(then).is_ok()
+            {
+                waker.wake();
+            }
+        })
+        .is_ok()
+}
+
 /// A job that panicked is an action that failed: not printed over the pane.
 pub fn quiet_panics() {
     let default = std::panic::take_hook();

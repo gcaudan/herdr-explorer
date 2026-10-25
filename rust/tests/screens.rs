@@ -1,6 +1,7 @@
 //! Screen captures of the panes (Linux): each scenario of rust/tests/fixtures/screens/<pane>/ runs the JS pane and
 //! the Rust one in a pty (support/pty.rs) and compares their screens and herdr calls with the capture recorded from
-//! the JS. `HX_RECORD=1 cargo test --test screens` records the JS captures again (node needed).
+//! the JS. `HX_RECORD=1 cargo test --test screens` records the JS captures again (node needed); `HX_ONLY=<prefix>`
+//! keeps the scenarios whose name starts with it.
 #![cfg(target_os = "linux")]
 
 mod support;
@@ -29,6 +30,11 @@ fn scenarios(pane: &str) -> Vec<PathBuf> {
             d.filter_map(|e| e.ok().map(|e| e.path())).filter(|p| p.extension().is_some_and(|x| x == "keys")).collect()
         })
         .unwrap_or_default();
+    // HX_ONLY=<prefix>: the scenarios whose name starts with it, while working on them.
+    if let Some(only) = std::env::var_os("HX_ONLY") {
+        let only = only.to_string_lossy().into_owned();
+        list.retain(|p| p.file_stem().is_some_and(|s| s.to_string_lossy().starts_with(&only)));
+    }
     list.sort();
     list
 }

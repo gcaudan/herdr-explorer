@@ -144,13 +144,14 @@ impl Preview {
         false
     }
 
-    /// The line numbers; TODO(case 13): without them, a column of its own for the changes when the file has some.
+    /// The line numbers, the first of their columns taking the changes' signs; without them, a column of its own for
+    /// the changes, only when the file has some.
     pub(super) fn gutter(&self) -> usize {
         let s = &self.state;
-        if !s.diff && self.on("lineNumbers") && !self.markdown_view() && s.kind != Kind::Binary {
+        if !s.diff && s.show.is_none() && self.on("lineNumbers") && !self.markdown_view() && s.kind != Kind::Binary {
             s.source.len().to_string().len() + 2
         } else {
-            0
+            usize::from(self.changes_shown())
         }
     }
 
@@ -169,9 +170,8 @@ impl Preview {
         self.state.select = None;
         let s = &self.state;
         let mut list = Vec::new();
-        if s.diff {
-            // TODO(case 13): the file's changes (diffRows).
-            list.push(Row::empty("Loading…", &[("d", "file")]));
+        if s.diff || s.show.is_some() {
+            list = self.diff_rows(w);
         } else if s.kind == Kind::Error {
             list.push(Row::empty(&s.info, &[("r", "reload"), ("q", "close")]));
         } else if self.on("wrap") {
@@ -206,7 +206,7 @@ impl Preview {
     // --- rendering
 
     pub(super) fn render(&mut self) {
-        if self.state.edit.is_some() {
+        if self.state.edit.is_some() && self.state.show.is_none() {
             return self.render_edit();
         }
         let (w, h) = self.size();
@@ -221,11 +221,14 @@ impl Preview {
         let current =
             s.find.as_ref().filter(|_| s.matched >= 0).and_then(|_| s.matches.get(s.matched as usize).copied());
         // Wrapped rows leave the last column free for the scrollbar.
-        let bw = self.scrollbar.set(list.len() as i64, body_h, s.top, &[]);
+        let marks = self.change_marks(&rows);
+        let s = &self.state;
+        let bw = self.scrollbar.set(list.len() as i64, body_h, s.top, &marks);
+        let signs = self.changes_shown();
         // Nothing to show (an error, an empty file): why, centred, and what to do.
         let none = if list.len() == 1 && list[0].empty.is_some() {
             list[0].empty.clone()
-        } else if !s.diff && matches!(s.kind, Kind::Text | Kind::Markdown) && s.text.is_empty() {
+        } else if !s.diff && s.show.is_none() && matches!(s.kind, Kind::Text | Kind::Markdown) && s.text.is_empty() {
             Some((
                 "Empty file".into(),
                 [("i", "edit here"), ("e", "editor"), ("q", "close")].map(|(k, a)| (k.into(), a.into())).to_vec(),
@@ -250,9 +253,16 @@ impl Preview {
                 let style = fg(if (r.src + 1) as f64 == s.line { c().text } else { c().dim });
                 num.push(seg(format!("{n:>width$} ", width = gw - 1), style));
             }
+            if signs {
+                let sign = self.change_sign(list, i as usize);
+                num = match num.pop() {
+                    Some((text, style)) => vec![sign, (text.chars().skip(1).collect(), style)],
+                    None => vec![sign],
+                };
+            }
             // The find's matches: every one marked, the current one brighter.
             let off = r.off;
-            let mut segs = r.segs.clone();
+            let mut segs = self.segs_of(r);
             if r.src >= 0
                 && let Some(rs) = ranges.get(&(r.src as usize))
             {
@@ -337,6 +347,9 @@ impl Preview {
     /// Diff view compares with, the File · Diff switch and ⚙, which opens the view's options (,). A narrow pane drops
     /// the reminder, then the switch, then the details, then the tabs out of reach of the one shown (tab_strip).
     pub(super) fn header(&mut self, w: usize) -> String {
+        if self.state.show.is_some() {
+            return self.show_header(w);
+        }
         let wi = w as i64;
         let s = &self.state;
         let one = self.tabs.list.len() < 2;
@@ -351,8 +364,7 @@ impl Preview {
         let sw = (!s.file.is_empty())
             .then(|| ui::segmented(&[("file", "File"), ("diff", "Diff")], if s.diff { "diff" } else { "file" }));
         // What the Diff view compares with, as in the Changes pane: the only option that does not show in the content.
-        // TODO(case 13): the default branch the merge base is with (branchName).
-        let mut note = if s.diff { scope::label(&s.scope, "main") } else { String::new() };
+        let mut note = if s.diff { scope::label(&s.scope, &self.branch_name()) } else { String::new() };
         let sw_w = sw.as_ref().map_or(0, |x| x.1 as i64 + 1);
         let note_w = |n: &str| if n.is_empty() { 0 } else { text_width(n) as i64 + 3 };
         let room = |n: &str| wi - GEAR - sw_w - note_w(n);
@@ -378,13 +390,16 @@ impl Preview {
             lw = sw;
             chips.extend(strip_chips);
         }
-        // The details whole, else their first part (the lines), else none.
-        // TODO(case 13): in the Diff view, the added and removed lines.
+        // The details whole, else their first part (the lines), else none; in the Diff view, the added and removed
+        // lines.
         let s = &self.state;
-        let details = match self.edit_info() {
-            Some(info) => info,
-            None if s.diff => String::new(),
-            None => s.info.clone(),
+        let details = match (self.edit_info(), &s.diff_data) {
+            (Some(info), _) => info,
+            (None, Some(super::diff::DiffData::Done { parsed, .. })) if s.diff => {
+                format!("+{} −{}", parsed.add, parsed.del)
+            }
+            (None, _) if s.diff => String::new(),
+            (None, _) => s.info.clone(),
         };
         let first = details.split(" · ").next().unwrap_or("").to_string();
         let info = [format!("  {details}"), format!("  {first}"), String::new()]
@@ -469,6 +484,9 @@ impl Preview {
     fn footer(&mut self, w: usize) -> String {
         // The keys shown, for clicks: none while the find or a message takes the line.
         self.state.hints = None;
+        if let Some(line) = self.rev_footer(w) {
+            return line;
+        }
         let s = &self.state;
         if let Some(f) = s.find.as_ref().filter(|f| f.active) {
             let count = if f.field.value.is_empty() {
@@ -503,7 +521,9 @@ impl Preview {
         }
         let pair = |k: &str, a: &str| (k.to_string(), a.to_string());
         let mut pairs = marks;
-        if s.diff {
+        if s.show.is_some() {
+            pairs = self.show_pairs();
+        } else if s.diff {
             if n <= 1 {
                 pairs.push(pair("n N", "hunks"));
             }

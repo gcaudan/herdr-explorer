@@ -7,7 +7,7 @@
 //!   size <cols> <rows>          the terminal's size at start (default 80 24)
 //!   file <path> <text>          a file of the working folder; \n, \t, \e and \\ escaped in text
 //!   dir <path>                  a folder of the working folder
-//!   state <path> <text>         a file of the plugin's state folder
+//!   state <path> <text>         a file of the plugin's state folder ($ROOT: the scenario's folder)
 //!   config <path> <text>        a file of the plugin's config folder
 //!   home <path> <text>          a file of the pane's home folder (VS Code icon themes)
 //!   herdr <a> <b> <text>        the fake herdr's answer to `herdr <a> <b> …`
@@ -222,7 +222,7 @@ pub fn run(scenario: &Path, command: &[OsString], root: &Path) -> Capture {
             }
             "file" => write(&work, rest),
             "dir" => std::fs::create_dir_all(work.join(rest)).unwrap(),
-            "state" => write(&root.join("state"), rest),
+            "state" => write(&root.join("state"), &rest.replace("$ROOT", rootstr)),
             "config" => write(&root.join("config"), rest),
             "home" => write(&root.join("home"), rest),
             "herdr" => {

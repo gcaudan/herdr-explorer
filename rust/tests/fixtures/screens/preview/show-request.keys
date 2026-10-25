@@ -1,0 +1,20 @@
+# A commit asked for through the request file, then n and v.
+size 80 20
+file a.txt one\nthree\n
+git init -q -b main
+git add a.txt
+git commit -q -m first
+file a.txt one\ntwo\nthree\n
+file b.txt bee\n
+git add .
+git commit -q -m second
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/a.txt
+env EXPLORER_ROOT=$ROOT/work
+env EXPLORER_TAB=t1
+start
+wait 300
+state preview-t1.json {"show":{"kind":"commit","ref":"HEAD","cwd":"$ROOT/work","title":"second"}}
+wait 800
+keys n v
+until 2000

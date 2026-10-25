@@ -1,0 +1,18 @@
+# Branch…: the menu of the repository's branches.
+size 80 14
+file a.txt one\nthree\nfour\nfive\nsix\n
+git init -q -b main
+git add a.txt
+git commit -q -m first
+file a.txt one\ntwo\nthree\nfive\nsix!\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/a.txt
+env EXPLORER_ROOT=$ROOT/work
+env EXPLORER_TAB=t1
+git branch feature
+start
+keys d
+wait 800
+keys b
+keys down down down down enter
+until 1800
