@@ -105,8 +105,20 @@ fn rows_a_folded_compact_folder_is_chained_only_through_folders_already_read() {
 }
 
 fn age(p: &Path, secs: u64) {
-    let old = std::time::SystemTime::now() - std::time::Duration::from_secs(secs);
-    std::fs::File::open(p).unwrap().set_modified(old).unwrap();
+    set_time(p, std::time::SystemTime::now() - std::time::Duration::from_secs(secs));
+}
+
+/// A folder's modification time; Windows opens a folder only with backup semantics.
+fn set_time(p: &Path, time: std::time::SystemTime) {
+    #[cfg(windows)]
+    let f = {
+        use std::os::windows::fs::OpenOptionsExt;
+        const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
+        std::fs::File::options().write(true).custom_flags(FILE_FLAG_BACKUP_SEMANTICS).open(p).unwrap()
+    };
+    #[cfg(not(windows))]
+    let f = std::fs::File::open(p).unwrap();
+    f.set_modified(time).unwrap();
 }
 
 #[test]
@@ -120,7 +132,7 @@ fn stale_a_folder_is_read_again_only_when_its_modification_time_moved() {
     // A file added behind the folder's back, its time put back: still the list read.
     let time = std::fs::metadata(&dir.path).unwrap().modified().unwrap();
     std::fs::write(dir.path.join("hidden.txt"), "").unwrap();
-    std::fs::File::open(&dir.path).unwrap().set_modified(time).unwrap();
+    set_time(&dir.path, time);
     tree.stale();
     assert_eq!(tree.read_dir(""), first, "same time: not read again");
     std::fs::write(dir.path.join("b.txt"), "").unwrap();

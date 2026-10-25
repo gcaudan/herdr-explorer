@@ -50,7 +50,8 @@ jobs:
             x86_64-pc-windows-msvc; do
             cargo clippy --target $t -- -D warnings
           done
-      - run: cargo test
+      # Every failing test binary, not just the first: some fail on one system only.
+      - run: cargo test --no-fail-fast
       # The shell scripts parse: scripts/ as POSIX sh (dash on Ubuntu), the installer as bash; fetch-bin
       # itself runs in cargo test's tests/fetch_bin.rs.
       - name: Parse the shell scripts

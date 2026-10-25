@@ -40,7 +40,8 @@ fn a_rename_through_a_file_says_why() {
     assert_eq!(std::fs::read_to_string(&f).unwrap(), "F");
 }
 
-#[cfg(unix)]
+// Linux: xdg-open and wl-copy, where macOS has open and pbcopy.
+#[cfg(target_os = "linux")]
 #[test]
 fn the_actions_start_their_programs_with_the_path_as_an_argument() {
     use std::os::unix::fs::PermissionsExt;
