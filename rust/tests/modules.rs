@@ -1573,3 +1573,76 @@ git init -q -b main . && git config user.name t && git config user.email t@t && 
         })
     });
 }
+
+#[cfg(unix)]
+#[test]
+fn explorer_tree() {
+    use herdr_explorer::explorer::tree::{self, Entry, Ordered, Settings, Tree};
+    fn pairs(m: &Ordered<char>) -> Value {
+        Value::Arr(m.iter().map(|(k, c)| Value::Arr(vec![Value::Str(k.into()), Value::Str(c.to_string())])).collect())
+    }
+    fn keys(m: &Ordered<()>) -> Value {
+        Value::Arr(m.iter().map(|(k, _)| Value::Str(k.into())).collect())
+    }
+    fn row(r: &Entry) -> Value {
+        let opt = |o: &Option<String>| o.clone().map_or(Value::Null, Value::Str);
+        // The match as the JS gives it: offsets in UTF-16 units.
+        let units = |b: usize| Value::Num(r.name[..b].encode_utf16().count() as f64);
+        let hit = r.hit.map_or(Value::Null, |(a, b)| Value::Arr(vec![units(a), units(b)]));
+        herdr_explorer::obj! {
+            "name" => Value::Str(r.name.clone()), "dir" => Value::Bool(r.dir), "rel" => Value::Str(r.rel.clone()),
+            "link" => Value::Bool(r.link), "gone" => Value::Bool(r.gone), "from" => opt(&r.from),
+            "chain" => opt(&r.chain), "depth" => Value::Num(r.depth as f64), "hit" => hit, "open" => Value::Bool(r.open)
+        }
+    }
+    fn entry(v: &Value) -> Entry {
+        let s = |k: &str| v.get(k).and_then(Value::as_str).map(String::from);
+        Entry {
+            name: s("name").unwrap_or_default(),
+            dir: v.get("dir").and_then(Value::as_bool).unwrap_or(false),
+            rel: s("rel").unwrap_or_default(),
+            from: s("from"),
+            ..Entry::default()
+        }
+    }
+    support::replay("explorer/tree", |name, args| {
+        let s = |i: usize| args.get(i).and_then(Value::as_str).unwrap_or("").to_string();
+        let b = |i: usize| args.get(i).and_then(Value::as_bool).unwrap_or(false);
+        let ch = |i: usize| s(i).chars().next().unwrap_or('\0');
+        Ok(match name {
+            "code" => Value::Str(tree::code(ch(0), ch(1)).to_string()),
+            "parseStatus" => {
+                let git = tree::parse_status(&s(0), &s(1));
+                herdr_explorer::obj! {
+                    "files" => pairs(&git.files), "dirs" => pairs(&git.dirs),
+                    "untracked" => keys(&git.untracked), "ignored" => keys(&git.ignored)
+                }
+            }
+            "treeBefore" => Value::Bool(tree::tree_before(&s(0), b(1), &s(2), b(3))),
+            "parentOf" => tree::parent_of(&s(0)).map_or(Value::Null, |p| Value::Str(p.into())),
+            "holds" => Value::Bool(tree::holds(&entry(&args[0]), &s(1))),
+            "entryOrder" => {
+                let mut list: Vec<Entry> = args[0].as_array().unwrap().iter().map(entry).collect();
+                list.sort_by(tree::entry_order);
+                str_arr(list.into_iter().map(|e| e.name).collect())
+            }
+            "rows" => {
+                let flag = |k: &str| args[1].get(k).and_then(Value::as_bool).unwrap_or(false);
+                let settings = Settings { hidden: flag("hidden"), ignored: flag("ignored"), compact: flag("compact") };
+                let mut tree = Tree::new(&s(0), settings);
+                tree.apply_status(&s(2));
+                let view = &args[3];
+                let query = view.get("query").and_then(Value::as_str);
+                let changed = view.get("changed").and_then(Value::as_bool).unwrap_or(false);
+                let expanded = strs(view.get("expanded").unwrap_or(&Value::Null));
+                Value::Arr(tree.rows(query, changed, &expanded).iter().map(row).collect())
+            }
+            "changedFiles" => {
+                let mut tree = Tree::new(&s(0), Settings { hidden: false, ignored: true, compact: false });
+                tree.apply_status(&s(1));
+                str_arr(tree.changed_files())
+            }
+            _ => return Err(format!("no function {name}")),
+        })
+    });
+}

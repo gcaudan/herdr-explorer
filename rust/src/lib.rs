@@ -4,6 +4,7 @@ pub mod cli;
 pub mod codec;
 pub mod core;
 pub mod diff;
+pub mod explorer;
 pub mod hook;
 pub mod json;
 pub mod launch;
