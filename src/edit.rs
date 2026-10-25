@@ -63,6 +63,10 @@ pub fn run(_args: &[String]) -> i32 {
     let dir = exec::env_var("EXPLORER_ROOT").or_else(|| file.as_deref().map(paths::dirname));
     crate::core::exec::home(dir.as_deref());
     let Some(file) = file else { return fail("No file.\r\n") };
+    // A tab named "(Editor 2)", focused, handing over to the tab it was opened from at the exit, as source control's.
+    if let Some(origin) = exec::env_var("EXPLORER_ORIGIN").filter(|o| !o.is_empty()) {
+        crate::core::actions::hold_tab("edit", &origin, "Editor");
+    }
     let Some((cmd, args)) = editor() else { return fail("No terminal editor found: set $EDITOR.\r\n") };
     // Node runs no batch file without a shell (EINVAL); Rust would, through cmd.
     let ext = paths::extname(&cmd).to_lowercase();

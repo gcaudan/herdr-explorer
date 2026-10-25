@@ -118,7 +118,8 @@ fn the_actions_start_their_programs_with_the_path_as_an_argument() {
     assert_eq!(std::fs::read_to_string(format!("{log}/wl-copy")).unwrap(), "héllo 'x'");
     assert_eq!(actions::clipboard().as_deref(), Some("a\nb\nc"));
 
-    // The editor of the settings, its arguments first; a terminal one goes to the editor pane (herdr refusing here).
+    // The editor of the settings, its arguments first; a terminal one goes to the editor pane (herdr refusing here),
+    // after the pane is asked for its tab twice: for a tab of its own it would be in (origin_of), then for the origin.
     settings("myedit --wait");
     assert_eq!(actions::editor(&format!("{dir}/x.txt"), "p").as_deref(), Some("myedit: x.txt"));
     assert_eq!(given("myedit"), format!("--wait\n{dir}/x.txt\n"));
@@ -126,7 +127,7 @@ fn the_actions_start_their_programs_with_the_path_as_an_argument() {
     assert_eq!(actions::editor(&format!("{dir}/x.txt"), "p").as_deref(), Some("nowhere-editor not found"));
     settings("vim -u NONE");
     assert_eq!(actions::editor(&format!("{dir}/x.txt"), "p").as_deref(), Some("Cannot open the editor"));
-    assert_eq!(given("herdr"), "pane\nget\np\n");
+    assert_eq!(given("herdr"), "pane\nget\np\n".repeat(3));
 }
 
 #[cfg(unix)]

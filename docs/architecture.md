@@ -94,7 +94,8 @@ in a tab of its own (`actions::scm`, `EXPLORER_REVIEW`: the tab reviewed), renam
 the review's exit, whatever its cause, removes the record and closes the review's previews, so its tab. The selection there shows in
 a preview on the right of source control (`beside`, which also tells it that `q` closes it; a commit as a `show`
 request, `diff::show_args`; another line as a blank one), opened by the first selection and then by `Enter` only, which keeps its share of the width (`keep_share`,
-`reviewShare` setting). The editor opens in a tab of its own, in the explorer's workspace; closing it closes the tab. `z` zooms the preview,
+`reviewShare` setting). The editor opens in a tab of its own, in the explorer's workspace, renamed `(Editor <label>)` and recorded in
+`edit-<tab id>.json` as the search (`EXPLORER_ORIGIN`, `actions::hold_tab`); closing it closes the tab. `z` zooms the preview,
 source control and the changes pane, which take the zoom off when they lose the focus (focus reports,
 `actions::unzoom`): herdr's zoom belongs to the tab and follows the focus, so a zoom left on would show the agent alone
 once the focus comes back to it, the explorer hidden. `--search` and `--scm` use the

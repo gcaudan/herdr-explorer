@@ -4,3 +4,5 @@ pane	layout	--pane	w1:p2
 pane	layout	--pane	w1:p2
 pane	layout	--pane	w1:p2
 pane	get	w1:p2
+pane	get	w1:p2
+pane	get	w1:p2

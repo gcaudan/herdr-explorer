@@ -62,7 +62,8 @@ ln -s "$dir/skills/herdr-preview" ~/.claude/skills/herdr-preview
 
 ## Editor pane
 
-The Editor pane runs a terminal editor on the file and closes when the editor exits. The editor is
+The Editor pane opens in a tab of its own, named after the tab it was opened from (`(Editor 2)`), and takes the focus.
+It runs a terminal editor on the file and closes when the editor exits, handing back to that tab. The editor is
 the settings' editor command when it is a terminal editor, else `$VISUAL`, else `$EDITOR`, else the
 first of `nano`, `nvim`, `vim`, `vi` found (`edit`, `nvim`, `vim`, `nano` on Windows).
 

@@ -422,16 +422,24 @@ pub fn open_pane(entry: &str, placement: &str, target: &str, env: &[(&str, &str)
     ask(&args)
 }
 
-/// The file in the editor pane, a tab of its own; command: the terminal editor to run there (None: the plugin's).
+/// The file in the editor pane, a tab of its own named and focused as source control's and the search's (hold_tab),
+/// from the tab they were opened from when asked within one; command: the terminal editor to run there (None: the
+/// plugin's).
 pub fn edit(abs: &str, pane: &str, command: Option<&str>) -> Option<String> {
     if remote_link(abs, "") {
         return Some(NETWORK.into());
     }
-    let mut env = vec![("EXPLORER_FILE", abs)];
+    let from = origin_of(pane);
+    let pane = from.as_ref().map_or(pane, |f| f.0.as_str());
+    let origin = match &from {
+        Some(f) => f.1.clone(),
+        None => pane_of(pane).map_or_else(String::new, |p| str_of(&p, "tab_id")),
+    };
+    let mut env = vec![("EXPLORER_FILE", abs), ("EXPLORER_ORIGIN", &origin)];
     if let Some(c) = command.filter(|c| !c.is_empty()) {
         env.push(("EXPLORER_EDITOR", c));
     }
-    (!open_pane("edit", "tab", pane, &env, &[]).truthy()).then(|| "Cannot open the editor".into())
+    (!open_pane("edit", "tab", pane, &env, &["--focus"]).truthy()).then(|| "Cannot open the editor".into())
 }
 
 /// The panes of the tab holding a pane, with their labels, and that pane's own record.
@@ -694,14 +702,14 @@ pub fn scm(root: &str, pane: &str, file: &str, history: bool) -> Option<String> 
     (!open_pane("scm", "tab", pane, &env, &["--focus"]).truthy()).then(|| "Cannot open source control".into())
 }
 
-// --- tabs of their own: the review (source control) and the search
+// --- tabs of their own: the review (source control), the search and the editor
 
 fn saved_pane(kind: &str, tab: &str) -> Option<Value> {
     let text = exec::read_text(exec::tab_file(kind, tab)?).ok()?;
     crate::json::parse(&text).ok()?.get("pane").cloned()
 }
 
-/// For a pane of a tab of its own (source control, the search), the tab it was opened from: its explorer, else its
+/// For a pane of a tab of its own (source control, the search, the editor), the tab it was opened from: its explorer, else its
 /// first terminal, else its first pane, (pane id, tab id); None for any other pane. Source control and the search open
 /// from there, so that each never opens from the other's tab, one tab leading to the next.
 pub fn origin_of(pane: &str) -> Option<(String, String)> {
@@ -714,7 +722,7 @@ pub fn origin_of(pane: &str) -> Option<(String, String)> {
             continue;
         }
         let t_id = str_of(t, "tab_id");
-        for kind in ["review", "search"] {
+        for kind in ["review", "search", "edit"] {
             let Some(saved) = saved_pane(kind, &t_id) else { continue };
             if !mine.iter().any(|m| js::strict_eq(Some(m), Some(&saved))) {
                 continue;

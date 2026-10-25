@@ -1010,8 +1010,8 @@ pub fn write_pane_state(pane: &str, data: &Value) {
 
 /// What a tab keeps in the state folder, one file per tab and kind: <kind>-<tab id>.json. The kinds: the review notes
 /// (notes), the preview's requests (actions), the diff scope and the agent's last turn (scope), the files viewed
-/// (viewed).
-pub const TAB_KINDS: [&str; 7] = ["notes", "preview", "review", "scope", "search", "turn", "viewed"];
+/// (viewed), the panes of the tabs of their own (edit, review, search: actions::hold_tab).
+pub const TAB_KINDS: [&str; 8] = ["edit", "notes", "preview", "review", "scope", "search", "turn", "viewed"];
 
 fn tab_name(kind: &str, tab: &str) -> String {
     format!("{kind}-{}.json", js::replace_chars(tab, |c| js::is_word(c) || c == '-'))
