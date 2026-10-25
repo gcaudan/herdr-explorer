@@ -7,7 +7,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { GIT, gitEnv, exec } = require('./exec');
+const { WIN, GIT, gitEnv, exec } = require('./exec');
 
 // The section each mode works on.
 const SECTION = { stage: 'unstaged', unstage: 'staged', discard: 'unstaged' };
@@ -207,33 +207,72 @@ async function apply(top, parsed, sel, mode, opts = {}) {
     // The patch already applied stays: said, not undone.
     if (res.code !== 0) return patch ? `${VERB[mode]} ${summary(patched)}; cannot ${mode} ${whole.length > 1 ? plural(whole.length, 'file') : whole[0]}: ${why(res)}` : fail(res);
   }
-  const trash = opts.trash || require('./actions').trash;
-  const left = [];
-  // The files deleted for good that could not be: the others are still deleted, and their index entry goes. Never a
-  // path that resolves outside the repository, through a symbolic link too (within).
+  // The files deleted for good that could not be: the others are still deleted, and their index entry goes.
   const failed = new Map();
-  for (const name of remove) {
-    if (!within(path.join(top, name), top)) failed.set(name, 'outside the repository');
-    else if (await trash(path.join(top, name))) pruneDirs(path.join(top, name), top); else left.push(name);
-  }
-  if (left.length && opts.noTrash && await opts.noTrash(left)) {
-    for (const name of left.splice(0)) {
-      try { fs.rmSync(path.join(top, name)); } catch (e) { failed.set(name, e.code || e.message); continue; }
-      pruneDirs(path.join(top, name), top);
-    }
-  }
+  // Listed by the diff, files all: one made a folder since is not taken with what it now holds.
+  const left = await removeFiles(top, remove, failed, opts.trash || require('./actions').trash, true);
+  // Checked again by removeFiles: a folder may have been made a link while the question was open.
+  if (left.length && opts.noTrash && await opts.noTrash(left)) await removeFiles(top, left.splice(0), failed, forGood, true);
   const gone = unindex.filter(name => !left.includes(name) && !failed.has(name));
   if (gone.length) {
     const res = await git(top, env, ['rm', '--cached', '-q', '--', ...gone]);
     if (res.code !== 0) return fail(res);
   }
-  if (left.length) return `${plural(left.length, 'untracked file')} kept: no trash`;
-  if (failed.size) {
-    const [name, code] = [...failed][0], done = list.filter(t => !failed.has(nameOf(t)));
-    const cannot = `delete ${failed.size > 1 ? plural(failed.size, 'file') : name}: ${code}`;
-    return done.length ? `${VERB[mode]} ${summary(done)}; cannot ${cannot}` : `Cannot ${cannot}`;
+  if (!left.length && !failed.size) return `${VERB[mode]} ${summary(list)}`;
+  // What went through, then what did not.
+  const done = list.filter(t => !failed.has(nameOf(t)) && !left.includes(nameOf(t)));
+  const said = [done.length && `${VERB[mode]} ${summary(done)}`, left.length && `${plural(left.length, 'untracked file')} kept: no trash`,
+    failed.size && `cannot ${cannotDelete(failed)}`].filter(Boolean).join('; ');
+  return said[0].toUpperCase() + said.slice(1);
+}
+
+// Deletes the repository's files names (paths from its folder top, a folder listed as nested/) with del (abs, folder
+// → true once deleted, false when it could not, as the trash; for good when left out): those refused (refused) or
+// failing are set in failed (name → reason), those already gone are left out, and those del did not take returned,
+// but for folders, set in failed as never going for good (folderless). The folders they leave empty go too. files:
+// all of them listed as files, a folder among them refused.
+async function removeFiles(top, names, failed, del = forGood, files = false) {
+  const left = [];
+  for (const name of names) {
+    const { abs, folder } = located(top, name), kind = folder || (files ? false : undefined), why = refused(abs, top, kind);
+    if (why === 'gone') continue;
+    if (why) { failed.set(name, why); continue; }
+    let done;
+    try { done = await del(abs, folder); } catch (e) { failed.set(name, e.code || e.message); continue; }
+    // Gone meanwhile (the trash command then fails): nothing left to delete.
+    if (!done && refused(abs, top, kind) === 'gone') done = true;
+    if (done) pruneDirs(abs, top); else left.push(name);
   }
-  return `${VERB[mode]} ${summary(list)}`;
+  return folderless(top, left, failed);
+}
+
+// Deletes the file abs for good, for removeFiles: a file, or a link itself (actions.unlink). Never a folder with what
+// it holds (an embedded repository and its history, or a file made a folder since it was listed): the trash only;
+// unlink fails on one made a folder after the check.
+async function forGood(abs) {
+  const st = fs.lstatSync(abs, { throwIfNoEntry: false });
+  if (!st) return true;
+  if (st.isDirectory()) throw new Error(NO_TRASH_FOLDER);
+  try { require('./actions').unlink(abs, st); } catch (e) { if (e.code !== 'ENOENT') throw e; }
+  return true;
+}
+
+const NO_TRASH_FOLDER = 'a folder, never deleted for good';
+
+// The names (from removeFiles' left) that may be asked about for good: the folders set in failed instead.
+function folderless(top, names, failed) {
+  return names.filter(name => {
+    let st;
+    try { st = fs.lstatSync(located(top, name).abs, { throwIfNoEntry: false }); } catch { }
+    if (st?.isDirectory()) { failed.set(name, NO_TRASH_FOLDER); return false; }
+    return true;
+  });
+}
+
+// What failed (name → reason, from removeFiles) says: delete <name or count>: <the first reason>.
+function cannotDelete(failed) {
+  const [name, why] = [...failed][0];
+  return `delete ${failed.size > 1 ? plural(failed.size, 'file') : name}: ${why}`;
 }
 
 // The folders left empty by the file abs gone, up to the repository's folder top (kept).
@@ -244,12 +283,59 @@ function pruneDirs(abs, top) {
   }
 }
 
-// Whether the file abs is in the repository's folder top, its folder too once symbolic links are followed (an index
-// naming sub/x while sub links to the home folder is not).
-function within(abs, top) {
-  const real = p => { try { return fs.realpathSync(p); } catch { return null; } };
-  const root = real(top), dir = real(path.dirname(path.resolve(abs)));
-  return path.resolve(abs).startsWith(path.resolve(top) + path.sep) && !!root && !!dir && (dir === root || dir.startsWith(root + path.sep));
+// The repository's file name (a path from its folder top, a folder listed as nested/): abs, its path without the final
+// separator, which would have lstat follow a folder made a link, and folder, whether it is listed as one. A backslash
+// is a separator on Windows only: elsewhere, the last character of a file name.
+function located(top, name) {
+  const sep = WIN ? /[\\/]+$/ : /\/+$/;
+  return { abs: path.join(top, name).replace(sep, ''), folder: sep.test(name) };
 }
 
-module.exports = { SECTION, picked, targets, patchOf, quote, count, apply, pruneDirs, within };
+// Why the repository's file abs is not to be deleted as the file of that name: 'gone' once it is no longer there (its
+// folder too, or made a file), else the reason to show (outside the repository, or reached through a symbolic link:
+// a folder made a link since the diff was read would lead to another file), or null when it can go. folder: true when
+// listed as a folder, which must still be one (not a link to one), false as a file, which must not be one.
+function refused(abs, top, folder) {
+  if (!inside(abs, top)) return 'outside the repository';
+  const link = linked(abs, top);
+  if (link) return link;
+  let st;
+  try { st = fs.lstatSync(abs, { throwIfNoEntry: false }); } catch (e) { return e.code === 'ENOTDIR' ? 'gone' : e.code || e.message; }
+  if (!st) return 'gone';
+  if (folder === true && !st.isDirectory()) return 'no longer a folder';
+  return folder === false && st.isDirectory() ? 'no longer a file' : null;
+}
+
+// Whether the file abs is in the repository's folder top, its folder too once symbolic links are followed (an index
+// naming sub/x while sub links to the home folder is not). A folder gone is judged by the nearest one left; one that
+// is there but cannot be followed (a link to nothing) is not in it.
+function inside(abs, top) {
+  const real = p => { try { return fs.realpathSync(p); } catch { return null; } };
+  const root = real(top);
+  if (!root || !path.resolve(abs).startsWith(path.resolve(top) + path.sep)) return false;
+  for (let d = path.dirname(path.resolve(abs)); ; d = path.dirname(d)) {
+    const dir = real(d);
+    if (dir) return dir === root || dir.startsWith(root + path.sep);
+    // Up to the root of the drive without one to follow (top resolved, so only through a folder that cannot be read).
+    if (d === path.dirname(d)) return false;
+    // A folder higher up made a file: this one cannot be there either.
+    try { if (fs.lstatSync(d, { throwIfNoEntry: false })) return false; } catch (e) { if (e.code !== 'ENOTDIR') return false; }
+  }
+}
+
+// Why a folder between top and the file abs keeps it from being reached as is: 'through a symbolic link' when one
+// is a link (the file itself may be one), the error when one cannot be read (EACCES), else null.
+function linked(abs, top) {
+  let d = path.resolve(top);
+  for (const part of path.relative(d, path.dirname(path.resolve(abs))).split(path.sep).filter(Boolean)) {
+    d = path.join(d, part);
+    let st;
+    // A folder higher up made a file: nothing there to reach.
+    try { st = fs.lstatSync(d, { throwIfNoEntry: false }); } catch (e) { return e.code === 'ENOTDIR' ? null : e.code || e.message; }
+    if (!st) return null;
+    if (st.isSymbolicLink()) return 'through a symbolic link';
+  }
+  return null;
+}
+
+module.exports = { SECTION, picked, targets, patchOf, quote, count, apply, pruneDirs, located, refused, removeFiles, cannotDelete };

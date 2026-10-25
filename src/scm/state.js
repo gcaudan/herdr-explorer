@@ -62,8 +62,9 @@ function english(env) {
 // for the other commands: stash -u relies on pathspec magic internally). opts.safe: the hardened environment,
 // for the commands that write. opts.config: [key, value] pairs, after the repository's config, as GIT_CONFIG_KEY_n
 // (-c would split a key holding '=', which a branch name can).
+// In the repository loaded, or opts.top.
 async function git(args, opts = {}) {
-  const cwd = (S.repo && S.repo.top) || ROOT;
+  const cwd = opts.top || (S.repo && S.repo.top) || ROOT;
   const safe = opts.safe ? await safeEnv(cwd) : null;
   const literal = args.includes('--') || args.includes(fromFile[0]) ? { GIT_LITERAL_PATHSPECS: '1' } : {};
   const env = english({ ...(safe ? safe.env : await gitEnv(cwd)), ...literal, ...opts.env });

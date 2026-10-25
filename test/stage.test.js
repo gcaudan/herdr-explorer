@@ -238,15 +238,118 @@ test('whole files failing after a patch say what was staged', { skip: noPerms },
   } finally { fs.chmodSync(path.join(r.top, 'u.txt'), 0o644); }
 });
 
-test('within refuses a path whose folder links outside the repository', { skip: process.platform === 'win32' }, () => {
+test('refused keeps a path whose folder links outside the repository, or anywhere', { skip: process.platform === 'win32' }, t => {
   const top = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'within-')));
   const out = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'outside-')));
+  t.after(() => { for (const d of [top, out]) fs.rmSync(d, { recursive: true, force: true }); });
+  // Deletable, or already gone.
+  const ok = abs => [null, 'gone'].includes(stage.refused(abs, top));
   fs.mkdirSync(path.join(top, 'dir'));
   fs.symlinkSync(out, path.join(top, 'sub'));
-  assert.ok(stage.within(path.join(top, 'a.txt'), top));
-  assert.ok(stage.within(path.join(top, 'dir/a.txt'), top));
-  assert.ok(!stage.within(path.join(top, 'sub/x'), top));
-  assert.ok(!stage.within(path.join(top, '../x'), top));
+  assert.ok(ok(path.join(top, 'a.txt')));
+  assert.ok(ok(path.join(top, 'dir/a.txt')));
+  assert.ok(!ok(path.join(top, 'sub/x')));
+  assert.ok(!ok(path.join(top, '../x')));
+  // A folder gone: judged by the nearest one left.
+  assert.ok(ok(path.join(top, 'dir/gone/a.txt')));
+  assert.ok(!ok(path.join(top, 'sub/gone/a.txt')));
+  fs.writeFileSync(path.join(top, 'file'), '');
+  // A folder linking inside: another file of the same name, refused too.
+  fs.symlinkSync(path.join(top, 'dir'), path.join(top, 'inner'));
+  assert.ok(!ok(path.join(top, 'inner/a.txt')));
+  assert.ok(ok(path.join(top, 'inner')));
+  // Why not.
+  assert.strictEqual(stage.refused(path.join(top, 'inner/a.txt'), top), 'through a symbolic link');
+  assert.strictEqual(stage.refused(path.join(top, 'sub/x'), top), 'outside the repository');
+  assert.strictEqual(stage.refused(path.join(top, 'dir/gone/a.txt'), top), 'gone');
+  assert.strictEqual(stage.refused(path.join(top, 'file/sub/a.txt'), top), 'gone');
+  assert.strictEqual(stage.refused(path.join(top, 'file'), top), null);
+  // A folder listed as one (nested/) made a link to one outside: neither followed nor deleted.
+  fs.mkdirSync(path.join(out, 'data'));
+  fs.writeFileSync(path.join(out, 'data/keep'), '');
+  fs.symlinkSync(path.join(out, 'data'), path.join(top, 'nested'));
+  const failed = new Map();
+  assert.ok(ok(path.join(top, 'file/sub/a.txt')));
+  // A folder, listed as one or made one since: never deleted for good with what it holds.
+  fs.mkdirSync(path.join(top, 'made'));
+  fs.writeFileSync(path.join(top, 'made/keep'), '');
+  return stage.removeFiles(top, ['nested/', 'made', 'made/'], failed).then(left => {
+    assert.deepStrictEqual([left, [...failed]], [[], [['nested/', 'no longer a folder'], ['made', 'a folder, never deleted for good'],
+      ['made/', 'a folder, never deleted for good']]]);
+    assert.ok(fs.existsSync(path.join(out, 'data/keep')) && fs.existsSync(path.join(top, 'made/keep')));
+  });
+});
+
+test('discarding an untracked file already gone, or one in a folder linking outside, says so', { skip: process.platform === 'win32' }, async t => {
+  const r = repo({ 'a.txt': 'x\n' });
+  if (!r) return;
+  const out = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'outside-')));
+  t.after(() => fs.rmSync(out, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(r.top, 'sub'));
+  r.write('sub/gone.txt', 'bye\n');
+  r.write('kept.txt', 'k\n');
+  let parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+  const rows = name => diff.render(parsed, 200, 'inline').filter(x => x.f && x.f.to === name);
+  const goneRows = rows('sub/gone.txt');
+  fs.rmSync(path.join(r.top, 'sub'), { recursive: true });
+  assert.strictEqual(await stage.apply(r.top, parsed, stage.picked(goneRows), 'discard', { trash: async () => true }), 'Discarded 1 line');
+  // A folder made a link outside once the diff was read: refused, and said beside the file kept for want of a trash.
+  fs.mkdirSync(path.join(r.top, 'link'));
+  r.write('link/x.txt', 'x\n');
+  parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+  const picked = stage.picked([...rows('link/x.txt'), ...rows('kept.txt')]);
+  fs.rmSync(path.join(r.top, 'link'), { recursive: true });
+  fs.writeFileSync(path.join(out, 'x.txt'), 'x\n');
+  fs.symlinkSync(out, path.join(r.top, 'link'));
+  assert.strictEqual(await stage.apply(r.top, parsed, picked, 'discard', { trash: async () => false, noTrash: async () => false }),
+    '1 untracked file kept: no trash; cannot delete link/x.txt: outside the repository');
+  assert.ok(fs.existsSync(path.join(out, 'x.txt')));
+  // Missing behind that link: refused all the same, not taken for already gone.
+  fs.rmSync(path.join(out, 'x.txt'));
+  assert.strictEqual(await stage.apply(r.top, parsed, stage.picked(rows('link/x.txt')), 'discard', { trash: async () => true }),
+    'Cannot delete link/x.txt: outside the repository');
+  // Its folder missing too, or the link leading nowhere: refused as well.
+  fs.mkdirSync(path.join(r.top, 'deep/sub'), { recursive: true });
+  r.write('deep/sub/x.txt', 'x\n');
+  parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+  const deep = stage.picked(rows('deep/sub/x.txt'));
+  fs.rmSync(path.join(r.top, 'deep'), { recursive: true });
+  fs.symlinkSync(out, path.join(r.top, 'deep'));
+  assert.strictEqual(await stage.apply(r.top, parsed, deep, 'discard', { trash: async () => true }), 'Cannot delete deep/sub/x.txt: outside the repository');
+  fs.rmSync(path.join(r.top, 'deep'));
+  fs.symlinkSync(path.join(out, 'none'), path.join(r.top, 'deep'));
+  assert.strictEqual(await stage.apply(r.top, parsed, deep, 'discard', { trash: async () => true }), 'Cannot delete deep/sub/x.txt: outside the repository');
+  // A folder made a link to another folder of the repository: its file of that name is left alone.
+  fs.rmSync(path.join(r.top, 'deep'));
+  fs.mkdirSync(path.join(r.top, 'other/sub'), { recursive: true });
+  r.write('other/sub/x.txt', 'tracked\n');
+  fs.symlinkSync(path.join(r.top, 'other'), path.join(r.top, 'deep'));
+  assert.strictEqual(await stage.apply(r.top, parsed, deep, 'discard', { trash: async abs => { fs.rmSync(abs); return true; } }),
+    'Cannot delete deep/sub/x.txt: through a symbolic link');
+  assert.ok(fs.existsSync(path.join(r.top, 'other/sub/x.txt')));
+  fs.rmSync(path.join(r.top, 'other'), { recursive: true });
+  // A folder made a file: already gone; what went through said before what was kept.
+  fs.rmSync(path.join(r.top, 'link'));
+  fs.rmSync(path.join(r.top, 'deep'));
+  fs.mkdirSync(path.join(r.top, 'dir'));
+  r.write('dir/y.txt', 'y\n');
+  r.write('z.txt', 'z\n');
+  r.write('w.txt', 'w\n');
+  parsed = diff.changesOf(await diff.collect({ cwd: r.top }));
+  const three = stage.picked([...rows('dir/y.txt'), ...rows('z.txt'), ...rows('w.txt')]);
+  fs.rmSync(path.join(r.top, 'dir'), { recursive: true });
+  r.write('dir', 'now a file\n');
+  const trash = async abs => abs.endsWith('z.txt') && (fs.rmSync(abs), true);
+  assert.strictEqual(await stage.apply(r.top, parsed, three, 'discard', { trash, noTrash: async () => false }),
+    'Discarded 2 files; 1 untracked file kept: no trash');
+  assert.ok(!fs.existsSync(path.join(r.top, 'z.txt')) && fs.existsSync(path.join(r.top, 'w.txt')));
+  // Made a folder since it was listed: not deleted for good with what it now holds.
+  fs.rmSync(path.join(r.top, 'w.txt'));
+  fs.mkdirSync(path.join(r.top, 'w.txt'));
+  r.write('w.txt/inner', 'keep\n');
+  assert.strictEqual(await stage.apply(r.top, parsed, three, 'discard', { trash: async () => false, noTrash: async () => true }),
+    'Discarded 2 files; cannot delete w.txt: no longer a file');
+  assert.ok(fs.existsSync(path.join(r.top, 'w.txt/inner')));
 });
 
 test('the lines changed since HEAD, staged or not, as the File view marks them', async () => {

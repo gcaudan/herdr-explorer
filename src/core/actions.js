@@ -682,7 +682,8 @@ async function trash(abs) {
   if (remoteLink(abs)) return false;
   let ok;
   if (WIN) {
-    const fn = fs.statSync(abs).isDirectory() ? 'DeleteDirectory' : 'DeleteFile';
+    // A link (a junction too) as a file: never its target.
+    const fn = fs.lstatSync(abs).isDirectory() ? 'DeleteDirectory' : 'DeleteFile';
     ok = await run(which('powershell.exe'), ['-NoProfile', '-NonInteractive', '-Command',
       `Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.FileIO.FileSystem]::${fn}($env:EXPLORER_TRASH, 'OnlyErrorDialogs', 'SendToRecycleBin')`],
     { env: { ...process.env, EXPLORER_TRASH: abs } }) !== null;
@@ -693,14 +694,31 @@ async function trash(abs) {
   return ok && !fs.lstatSync(abs, { throwIfNoEntry: false });
 }
 
-// A link goes itself, its target untouched: unlink, or rmdir for a folder link on Windows, which unlink refuses.
+// A link goes itself, its target untouched (unlink).
 function remove(abs) {
   try {
-    if (fs.lstatSync(abs, { throwIfNoEntry: false })?.isSymbolicLink()) {
-      try { fs.unlinkSync(abs); } catch (e) { if (e.code !== 'EPERM' && e.code !== 'EISDIR') throw e; fs.rmdirSync(abs); }
-    } else fs.rmSync(abs, { recursive: true, force: true });
+    const st = fs.lstatSync(abs, { throwIfNoEntry: false });
+    if (st?.isSymbolicLink()) unlink(abs, st);
+    else fs.rmSync(abs, { recursive: true, force: true });
     return null;
   } catch (e) { return `Cannot delete: ${e.code || e.message}`; }
+}
+
+// Deletes the file or link abs (st, its lstat), never a folder. unlink refuses a folder link on Windows (and on some
+// mounts, EISDIR): rmdir; and a read-only file on Windows: made writable first, as rmSync does, and back to read-only
+// if it still cannot go. What failed first is what is said.
+function unlink(abs, st) {
+  try { fs.unlinkSync(abs); } catch (e) {
+    const link = st.isSymbolicLink();
+    if (!(WIN && e.code === 'EPERM') && !(link && e.code === 'EISDIR')) throw e;
+    try {
+      if (link) fs.rmdirSync(abs);
+      else {
+        fs.chmodSync(abs, 0o666);
+        try { fs.unlinkSync(abs); } catch (again) { try { fs.chmodSync(abs, st.mode); } catch { } throw again; }
+      }
+    } catch { throw e; }
+  }
 }
 
 // --- git
@@ -747,5 +765,5 @@ async function discard(abs, root) {
 module.exports = {
   open, app, editor, system, web, canOpen, canPreview, reveal, copy, clipboard, insert, type, relativeTo, diff, preview, edit, search, scm, reviewOf, ownOf, originOf, focusPane, holdTab, sharer, zoom, unzoom, requestFile, tabOf, terminalOf,
   layoutOf, sideSplit, setWidth, widthKeeper,
-  create, rename, duplicate, trash, remove, stage, unstage, discard, REVEAL: WIN ? 'Reveal in Explorer' : 'Open folder',
+  create, rename, duplicate, trash, remove, unlink, stage, unstage, discard, REVEAL: WIN ? 'Reveal in Explorer' : 'Open folder',
 };

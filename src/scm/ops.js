@@ -9,7 +9,7 @@ const ui = require('../core/ui');
 const diffs = require('../diff');
 const actions = require('../core/actions');
 const { WIN, which } = require('../core/exec');
-const { pruneDirs, within } = require('../core/stage');
+const { removeFiles, cannotDelete } = require('../core/stage');
 const { ROOT, MAX_PROMPT, S, frame, draw, follow, base, files, flash, confirm } = require('./context');
 const {
   exec, git, errorOf, op, net, fromFile, nul, loadStatus, schedule, ongoing, mergeOptions, continues, headName, openPicker,
@@ -50,31 +50,29 @@ async function unstageAll() {
   if (await op('Unstaging all', args)) pulse(items, 'changes');
 }
 
-// Folders left empty by a file gone go too.
-const prune = abs => pruneDirs(abs, S.repo.top);
-const onDisk = rel => { try { return !!fs.lstatSync(path.resolve(S.repo.top, rel)); } catch { return false; } };
-
-// Files of the repository (paths from its top) to the trash; those it does not take are deleted for good once asked
-// again. Never a path that resolves outside the repository, through a symbolic link too (within).
-async function toTrash(list) {
-  let failed = 0;
-  const left = [];
-  for (const rel of list) {
-    const abs = path.resolve(S.repo.top, rel);
-    if (!within(abs, S.repo.top)) { failed++; continue; }
-    if (await actions.trash(abs)) prune(abs); else left.push(abs);
-  }
-  if (failed) flash(`Could not delete ${files(failed)}`, true);
+// Files of the repository top (paths from it) to the trash; those it does not take are deleted for good once asked
+// again. Never a path that resolves outside the repository, nor one through a symbolic link (refused); one already
+// gone is left out. gone(names), awaited, gets those no longer there: once moved, then once deleted for good. kept:
+// what becomes of those not deleted for good, said in the question.
+async function toTrash(top, list, gone = async () => {}, kept = '') {
+  const failed = new Map();
+  const left = await removeFiles(top, list, failed, actions.trash);
+  const went = async out => {
+    if (out.length) try { await gone(out); } catch (e) { flash(`Discarding failed: ${e.code || e.message}`, true); }
+  };
+  await went(list.filter(n => !left.includes(n) && !failed.has(n)));
   schedule();
-  if (!left.length) return;
-  confirm({ title: 'No trash: delete for good?', name: left.length === 1 ? path.relative(S.repo.top, left[0]) : files(left.length),
-    note: 'This cannot be undone.', action: 'Delete' }, () => {
-    let lost = 0;
-    for (const abs of left) {
-      try { fs.rmSync(abs, { force: true }); prune(abs); } catch { lost++; }
-    }
-    if (lost) flash(`Could not delete ${files(lost)}`, true);
-    schedule();
+  if (!left.length) { if (failed.size) flash(`Could not ${cannotDelete(failed)}`, true); return; }
+  // The refusals said in the question, which would hide a flash.
+  confirm({ title: 'No trash: delete for good?', name: left.length === 1 ? left[0] : files(left.length),
+    note: `This cannot be undone.${kept && ` ${kept}`}${failed.size ? ` Could not ${cannotDelete(failed)}.` : ''}`, action: 'Delete' }, () => {
+    // Checked again by removeFiles: a folder may have been made a link while the question was open. confirm does
+    // not wait for it: what fails is said here.
+    const lost = new Map();
+    removeFiles(top, left, lost).then(async kept => {
+      await went(left.filter(n => !kept.includes(n) && !lost.has(n)));
+      if (lost.size) flash(`Could not ${cannotDelete(lost)}`, true);
+    }, e => flash(`Could not delete: ${e.code || e.message}`, true)).then(schedule);
   });
 }
 
@@ -84,17 +82,24 @@ async function toTrash(list) {
 function discard(items, sec) {
   if (!items.length) return;
   if (sec === 'conflicts') return flash('Merge conflict: edit the file and stage it, or abort the merge', true);
-  const what = items.length === 1 ? items[0].path : files(items.length);
+  // The repository the files were listed in, even if another is loaded meanwhile.
+  const what = items.length === 1 ? items[0].path : files(items.length), top = S.repo.top;
   if (sec === 'staged') {
     const added = items.filter(i => !S.repo.hasHead || i.code === 'A'), others = items.filter(i => !added.includes(i));
     return confirm({ title: 'Discard all changes?', name: `${what}, staged and not`,
       where: added.length ? `moves ${files(added.length)} added since HEAD to the trash` : '',
       note: others.length ? 'The changes cannot be recovered.' : '', action: 'Discard' }, async () => {
-      if (others.length && !await op('Discarding', ['restore', '--staged', '--worktree', '--source=HEAD', ...fromFile], { input: nul(others) })) return;
+      const restore = ['restore', '--staged', '--worktree', '--source=HEAD', ...fromFile];
+      if (others.length && !await op('Discarding', restore, { top, input: nul(others) })) return;
       if (!added.length) return;
-      if (!await op('Discarding', ['rm', '--cached', '-r', '-q', ...fromFile], { input: nul(added) })) return;
-      // A file deleted since it was added (AD) has nothing left to move to the trash.
-      await toTrash(added.map(i => i.path).filter(onDisk));
+      // Out of the index once gone only: one refused, or kept when not deleted for good, keeps its staged content.
+      // One deleted since it was added (AD) is gone already. Not through op: once deleted, the index follows even
+      // with another command running, in the repository the files were listed in.
+      await toTrash(top, added.map(i => i.path), async out => {
+        const input = nul(added.filter(i => out.includes(i.path)));
+        const res = await git(['rm', '--cached', '-r', '-q', ...fromFile], { top, safe: true, input });
+        if (res.code !== 0) flash(`Discarding failed: ${errorOf(res)}`, true);
+      }, 'Kept, they stay staged.');
     });
   }
   const untracked = items.filter(i => i.untracked), tracked = items.filter(i => !i.untracked);
@@ -103,8 +108,8 @@ function discard(items, sec) {
       where: tracked.length ? `and discard the changes in ${files(tracked.length)}` : '', action: 'Discard' }
     : { title: 'Discard the changes?', name: what, action: 'Discard' };
   confirm({ ...q, note: tracked.length ? 'The changes cannot be recovered.' : '' }, async () => {
-    if (tracked.length) await op('Discarding', ['restore', '--worktree', ...fromFile], { input: nul(tracked) });
-    if (untracked.length) await toTrash(untracked.map(i => i.path));
+    if (tracked.length) await op('Discarding', ['restore', '--worktree', ...fromFile], { top, input: nul(tracked) });
+    if (untracked.length) await toTrash(top, untracked.map(i => i.path));
     else schedule();
   });
 }
