@@ -87,7 +87,8 @@ test('untracked files of a subfolder are named from the repository', async () =>
 });
 
 test('diff scopes: a commit, a range, a branch, the last agent turn', async () => {
-  const top = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'scope-')));
+  // The long form on Windows (runneradmin, not RUNNER~1), as git gives it: the turn's folder is compared with it.
+  const top = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'scope-')));
   const git = (...a) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { cwd: top, encoding: 'utf8' });
   if (git('init', '-q', '-b', 'main').status !== 0) return;
   const commit = (file, text) => { fs.writeFileSync(path.join(top, file), text); git('add', '-A'); git('commit', '-q', '-m', file); };
@@ -110,6 +111,7 @@ test('diff scopes: a commit, a range, a branch, the last agent turn', async () =
   fs.writeFileSync(path.join(top, 'other.txt'), 'y\n');
   const turn = { top, tree };
   const res = await diff.collect({ cwd: top, scope: { kind: 'turn' }, turn });
+  assert.ok(!res.error, res.error);
   assert.deepStrictEqual(diff.parse(res.text).files.map(f => f.to), ['a.txt', 'other.txt']);
   // Limited to one file, which alone is added again: a new one untracked too.
   fs.writeFileSync(path.join(top, 'third.txt'), 'z\n');
