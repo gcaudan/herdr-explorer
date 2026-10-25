@@ -265,7 +265,7 @@ pub fn restore(saved: &Saved) {
     unsafe { tcsetattr(saved.fd, TCSADRAIN, &saved.termios) };
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 /// The raw-mode flags of fd's terminal, for the tests: (input, output, control, local, VMIN, VTIME).
 pub fn mode_of(fd: c_int) -> Option<(u64, u64, u64, u64, u8, u8)> {
     // SAFETY: as in raw_mode_fd.

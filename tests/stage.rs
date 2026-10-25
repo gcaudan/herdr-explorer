@@ -115,23 +115,16 @@ fn lines(n: usize) -> String {
     (1..=n).map(|i| format!("line {i}\n")).collect()
 }
 
-/// chmod does not stop root, nor Windows.
+/// chmod does not stop root (and the tests that use it are Unix-only).
+#[cfg(unix)]
 fn no_perms(dir: &TempDir) -> bool {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let probe = dir.path.join(".probe");
-        std::fs::write(&probe, "x").unwrap();
-        std::fs::set_permissions(&probe, std::fs::Permissions::from_mode(0o0)).unwrap();
-        let readable = std::fs::read(&probe).is_ok();
-        let _ = std::fs::remove_file(&probe);
-        readable
-    }
-    #[cfg(not(unix))]
-    {
-        let _ = dir;
-        true
-    }
+    use std::os::unix::fs::PermissionsExt;
+    let probe = dir.path.join(".probe");
+    std::fs::write(&probe, "x").unwrap();
+    std::fs::set_permissions(&probe, std::fs::Permissions::from_mode(0o0)).unwrap();
+    let readable = std::fs::read(&probe).is_ok();
+    let _ = std::fs::remove_file(&probe);
+    readable
 }
 
 #[test]
@@ -348,6 +341,7 @@ fn the_last_line_added_to_a_file_without_newline_is_taken_out_without_adding_one
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn discarding_for_good_goes_on_after_a_file_it_cannot_delete() {
     let Some(r) = Repo::new(&[("a.txt", "x\n")]) else { return };
@@ -360,20 +354,18 @@ fn discarding_for_good_goes_on_after_a_file_it_cannot_delete() {
     let parsed = r.changes();
     let list = render(&parsed, "inline");
     let files = stage::picked(file_rows(&parsed, &list, &["ro/a.txt", "b.txt"], None));
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mode = |m| std::fs::set_permissions(r.path("ro"), std::fs::Permissions::from_mode(m)).unwrap();
-        mode(0o555);
-        let yes = |_: &[String]| true;
-        let said = stage::apply(&r.top, &parsed, &files, Mode::Discard, &|_| false, Some(&yes));
-        mode(0o755);
-        assert_eq!(said, "Discarded 1 line; cannot delete ro/a.txt: EACCES");
-        assert!(r.path("ro/a.txt").exists());
-        assert!(!r.path("b.txt").exists());
-    }
+    use std::os::unix::fs::PermissionsExt;
+    let mode = |m| std::fs::set_permissions(r.path("ro"), std::fs::Permissions::from_mode(m)).unwrap();
+    mode(0o555);
+    let yes = |_: &[String]| true;
+    let said = stage::apply(&r.top, &parsed, &files, Mode::Discard, &|_| false, Some(&yes));
+    mode(0o755);
+    assert_eq!(said, "Discarded 1 line; cannot delete ro/a.txt: EACCES");
+    assert!(r.path("ro/a.txt").exists());
+    assert!(!r.path("b.txt").exists());
 }
 
+#[cfg(unix)]
 #[test]
 fn whole_files_failing_after_a_patch_say_what_was_staged() {
     let Some(r) = Repo::new(&[("a.txt", "one\n")]) else { return };
@@ -390,16 +382,13 @@ fn whole_files_failing_after_a_patch_say_what_was_staged() {
         .collect();
     rows.extend(file_rows(&parsed, &list, &["u.txt"], None));
     let sel = stage::picked(rows);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mode = |m| std::fs::set_permissions(r.path("u.txt"), std::fs::Permissions::from_mode(m)).unwrap();
-        mode(0o0);
-        let said = r.apply(&parsed, &sel, Mode::Stage);
-        mode(0o644);
-        assert!(said.starts_with("Staged 1 line; cannot stage u.txt: "), "{said}");
-        assert!(r.out(&["diff", "--cached"]).contains("+two"));
-    }
+    use std::os::unix::fs::PermissionsExt;
+    let mode = |m| std::fs::set_permissions(r.path("u.txt"), std::fs::Permissions::from_mode(m)).unwrap();
+    mode(0o0);
+    let said = r.apply(&parsed, &sel, Mode::Stage);
+    mode(0o644);
+    assert!(said.starts_with("Staged 1 line; cannot stage u.txt: "), "{said}");
+    assert!(r.out(&["diff", "--cached"]).contains("+two"));
 }
 
 #[cfg(unix)]

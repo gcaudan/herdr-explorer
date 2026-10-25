@@ -26,6 +26,7 @@ fn fixtures_are_well_formed() {
 }
 
 /// A call that panics where the JS throws: its message as the error.
+#[cfg(unix)]
 fn caught(f: impl FnOnce() -> Value) -> Result<Value, String> {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).map_err(|e| {
         e.downcast_ref::<String>()
@@ -225,7 +226,12 @@ fn core_scope() {
                     .map(|_| scope::worktree(&s(1), &env, keep, only).map_or(Value::Null, Value::Str))
                     .collect();
                 let dir = std::env::var("HERDR_PLUGIN_STATE_DIR").unwrap_or_default();
-                let state = sh(&format!("cd '{dir}' 2>/dev/null && find . -type f | sort || true"));
+                // An empty dir is no state folder: dash's `cd ''` stays put where bash's fails.
+                let state = if dir.is_empty() {
+                    String::new()
+                } else {
+                    sh(&format!("cd '{dir}' 2>/dev/null && find . -type f | sort || true"))
+                };
                 let hash =
                     |w: &str| w.len() == 40 && w.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b));
                 let state: String = state
