@@ -24,6 +24,42 @@ pub fn env_var(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|s| !s.is_empty())
 }
 
+type Hook = Box<dyn FnOnce() + Send>;
+static EXIT_HOOKS: Mutex<Vec<Hook>> = Mutex::new(Vec::new());
+
+/// Work to do when the process ends (the JS's process.on('exit')): run by `exit_hooks`, which the screen calls before
+/// exiting, restart included.
+pub fn at_exit(f: impl FnOnce() + Send + 'static) {
+    static PANIC: std::sync::Once = std::sync::Once::new();
+    PANIC.call_once(|| {
+        let before = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            before(info);
+            if std::thread::current().name() == Some("main") {
+                exit_hooks();
+            }
+        }));
+    });
+    EXIT_HOOKS.lock().unwrap_or_else(|e| e.into_inner()).push(Box::new(f));
+}
+
+static EXITING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Whether the process is ending: `exit_hooks` ran or runs.
+pub fn exiting() -> bool {
+    EXITING.load(std::sync::atomic::Ordering::SeqCst)
+}
+
+/// Runs the work given to `at_exit`, once, in the order given. Also run on a panic of the main thread, as the JS's
+/// hooks ran on a crash.
+pub fn exit_hooks() {
+    EXITING.store(true, std::sync::atomic::Ordering::SeqCst);
+    let hooks = std::mem::take(&mut *EXIT_HOOKS.lock().unwrap_or_else(|e| e.into_inner()));
+    for f in hooks {
+        f();
+    }
+}
+
 /// The plugin's state folder (HERDR_PLUGIN_STATE_DIR).
 pub fn state_dir() -> Option<String> {
     env_var("HERDR_PLUGIN_STATE_DIR")

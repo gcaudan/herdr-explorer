@@ -284,6 +284,7 @@ impl Screen {
     /// The screen restored, then the process ended with code.
     pub fn exit(&mut self, code: i32) -> ! {
         self.restore();
+        super::exec::exit_hooks();
         std::process::exit(code)
     }
 
@@ -309,6 +310,7 @@ impl Screen {
             "restart".into(),
             Value::Obj(env.iter().map(|(k, v)| (k.clone(), Value::Str(v.clone()))).collect()),
         )]));
+        super::exec::exit_hooks();
         std::process::exit(RESTART)
     }
 }

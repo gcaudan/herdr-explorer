@@ -291,6 +291,552 @@
    "out": "/r/a"
   },
   {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "b",
+       "rect": {
+        "x": 30,
+        "y": 0,
+        "width": 70,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.3,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "a"
+   ],
+   "out": {
+    "width": 30,
+    "splitWidth": 100,
+    "ratio": 0.3,
+    "left": true
+   }
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "b",
+       "rect": {
+        "x": 30,
+        "y": 0,
+        "width": 70,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.3,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "b"
+   ],
+   "out": {
+    "width": 70,
+    "splitWidth": 100,
+    "ratio": 0.3,
+    "left": false
+   }
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "b",
+       "rect": {
+        "x": 30,
+        "y": 0,
+        "width": 70,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.3,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "c"
+   ],
+   "out": null
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 25,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "b",
+       "rect": {
+        "x": 25,
+        "y": 0,
+        "width": 50,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "c",
+       "rect": {
+        "x": 75,
+        "y": 0,
+        "width": 25,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.25,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      },
+      {
+       "direction": "right",
+       "ratio": 0.6667,
+       "rect": {
+        "x": 25,
+        "y": 0,
+        "width": 75,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "a"
+   ],
+   "out": {
+    "width": 25,
+    "splitWidth": 100,
+    "ratio": 0.25,
+    "left": true
+   }
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 25,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "b",
+       "rect": {
+        "x": 25,
+        "y": 0,
+        "width": 50,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "c",
+       "rect": {
+        "x": 75,
+        "y": 0,
+        "width": 25,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.25,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      },
+      {
+       "direction": "right",
+       "ratio": 0.6667,
+       "rect": {
+        "x": 25,
+        "y": 0,
+        "width": 75,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "b"
+   ],
+   "out": {
+    "width": 50,
+    "splitWidth": 75,
+    "ratio": 0.6667,
+    "left": true
+   }
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 25,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "b",
+       "rect": {
+        "x": 25,
+        "y": 0,
+        "width": 50,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "c",
+       "rect": {
+        "x": 75,
+        "y": 0,
+        "width": 25,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.25,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      },
+      {
+       "direction": "right",
+       "ratio": 0.6667,
+       "rect": {
+        "x": 25,
+        "y": 0,
+        "width": 75,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "c"
+   ],
+   "out": {
+    "width": 25,
+    "splitWidth": 75,
+    "ratio": 0.6667,
+    "left": false
+   }
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 31,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.3,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "a"
+   ],
+   "out": {
+    "width": 31,
+    "splitWidth": 100,
+    "ratio": 0.3,
+    "left": true
+   }
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.3,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "a"
+   ],
+   "out": null
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "down",
+       "ratio": 0.3,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "a"
+   ],
+   "out": null
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 20
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.3,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "a"
+   ],
+   "out": null
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 50,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.505,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "a"
+   ],
+   "out": {
+    "width": 50,
+    "splitWidth": 100,
+    "ratio": 0.505,
+    "left": true
+   }
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "b",
+       "rect": {
+        "x": 50,
+        "y": 0,
+        "width": 50,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.495,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "b"
+   ],
+   "out": {
+    "width": 50,
+    "splitWidth": 100,
+    "ratio": 0.495,
+    "left": false
+   }
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [],
+     "splits": []
+    },
+    "a"
+   ],
+   "out": null
+  },
+  {
    "fn": "webPage",
    "args": [
     "https://github.com/gcaudan/herdr-explorer#readme"

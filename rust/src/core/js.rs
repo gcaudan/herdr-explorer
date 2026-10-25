@@ -247,6 +247,32 @@ pub fn is_word(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '_'
 }
 
+/// `Math.round`: halves rounded up (x + 0.5 floored would round 0.49999999999999994 up).
+pub fn round(x: f64) -> f64 {
+    let f = x.floor();
+    if x - f >= 0.5 { f + 1.0 } else { f }
+}
+
+/// `x.toFixed(digits)`, for |x| < 1e21. Rust rounds an exact tie to even, JS away from zero: such a tie (the exact
+/// value ending with a 5 right after the digits kept) is moved off it, away from zero.
+pub fn to_fixed(x: f64, digits: usize) -> String {
+    if x.is_nan() {
+        return "NaN".into();
+    }
+    if x.is_infinite() {
+        return if x > 0.0 { "Infinity" } else { "-Infinity" }.into();
+    }
+    let exact = format!("{:.*}", digits + 40, x.abs());
+    let tail = &exact[exact.len() - 40..];
+    let x = if tail.starts_with('5') && tail[1..].bytes().all(|b| b == b'0') {
+        x + x.signum() * 0.25 * 10f64.powi(-(digits as i32))
+    } else {
+        x
+    };
+    // -0 is written without its sign; any other negative number keeps it, even rounded to zero.
+    format!("{:.*}", digits, if x == 0.0 { 0.0 } else { x })
+}
+
 /// `Date.now()`: milliseconds since the epoch.
 pub fn now_ms() -> f64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0.0, |d| d.as_millis() as f64)
@@ -263,6 +289,21 @@ pub fn time_ms(t: std::time::SystemTime) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn to_fixed_rounds_ties_away_from_zero() {
+        assert_eq!(to_fixed(0.0078125, 6), "0.007813");
+        assert_eq!(to_fixed(-0.0078125, 6), "-0.007813");
+        assert_eq!(to_fixed(0.1234565, 6), "0.123456"); // below the tie in binary
+        assert_eq!(to_fixed(0.05, 6), "0.050000");
+        assert_eq!(to_fixed(-0.0000001, 6), "-0.000000");
+        assert_eq!(to_fixed(-0.0, 6), "0.000000");
+        assert_eq!(to_fixed(f64::NAN, 4), "NaN");
+        assert_eq!(to_fixed(f64::NEG_INFINITY, 4), "-Infinity");
+        assert_eq!(round(2.5), 3.0);
+        assert_eq!(round(-2.5), -2.0);
+        assert_eq!(round(0.49999999999999994), 0.0);
+    }
 
     #[test]
     fn numbers_read_as_node_reads_them() {

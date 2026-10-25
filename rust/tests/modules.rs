@@ -1535,6 +1535,14 @@ git init -q -b main . && git config user.name t && git config user.email t@t && 
         Ok(match name {
             "quote" => Value::Str(actions::quote(&s(0))),
             "target" => opt(actions::target(&s(0), &s(1))),
+            "sideSplit" => actions::side_split(&args[0], &s(1)).map_or(Value::Null, |f| {
+                herdr_explorer::obj! {
+                    "width" => Value::Num(f.width),
+                    "splitWidth" => Value::Num(f.split_width),
+                    "ratio" => Value::Num(f.ratio),
+                    "left" => Value::Bool(f.left),
+                }
+            }),
             "webPage" => Value::Bool(actions::web_page(&s(0))),
             "canPreview" => Value::Bool(actions::can_preview(&s(0))),
             "canOpen" => Value::Bool(actions::can_open(&s(0))),

@@ -60,7 +60,28 @@ const impl = {
   duplicate: after(actions.duplicate),
   remove: after(actions.remove),
   git,
+  sideSplit: (layout, pane) => {
+    const f = actions.sideSplit(layout, pane);
+    return f && { width: f.me.rect.width, splitWidth: f.split.rect.width, ratio: f.split.ratio, left: f.left };
+  },
 };
+
+// Layouts: panes (id, x, y, width, height) and splits (direction, ratio, x, y, width, height).
+const lay = (panes, splits) => ({
+  panes: panes.map(([pane_id, x, y, width, height]) => ({ pane_id, rect: { x, y, width, height } })),
+  splits: splits.map(([direction, ratio, x, y, width, height]) => ({ direction, ratio, rect: { x, y, width, height } })),
+});
+const TWO = lay([['a', 0, 0, 30, 40], ['b', 30, 0, 70, 40]], [['right', 0.3, 0, 0, 100, 40]]);
+const NESTED = lay([['a', 0, 0, 25, 40], ['b', 25, 0, 50, 40], ['c', 75, 0, 25, 40]],
+  [['right', 0.25, 0, 0, 100, 40], ['right', 0.6667, 25, 0, 75, 40]]);
+const SPLITS = [[TWO, 'a'], [TWO, 'b'], [TWO, 'c'], [NESTED, 'a'], [NESTED, 'b'], [NESTED, 'c'],
+  [lay([['a', 0, 0, 31, 40]], [['right', 0.3, 0, 0, 100, 40]]), 'a'],
+  [lay([['a', 0, 0, 32, 40]], [['right', 0.3, 0, 0, 100, 40]]), 'a'],
+  [lay([['a', 0, 0, 30, 40]], [['down', 0.3, 0, 0, 100, 40]]), 'a'],
+  [lay([['a', 0, 0, 30, 20]], [['right', 0.3, 0, 0, 100, 40]]), 'a'],
+  [lay([['a', 0, 0, 50, 40]], [['right', 0.505, 0, 0, 100, 40]]), 'a'],
+  [lay([['b', 50, 0, 50, 40]], [['right', 0.495, 0, 0, 100, 40]]), 'b'],
+  [lay([], []), 'a']];
 
 const QUOTES = ['a.txt', 'src/app.js', 'é/日本.md', 'a b.txt', "it's", '-rf', '--x y', '', '$HOME', 'a;b', 'a`b`', 'a\\b',
   'a"b', '~/x', 'a*', '[id].ts', '@scope/pkg', 'v1.2+3,x=y:z', '‘q’', 'á', '½', 'tab\tx', 'a b'];
@@ -83,6 +104,7 @@ module.exports = {
   cases: [
     ...QUOTES.map(q => ({ fn: 'quote', args: [q] })),
     ...TARGETS.map(args => ({ fn: 'target', args })),
+    ...SPLITS.map(args => ({ fn: 'sideSplit', args })),
     ...URLS.map(u => ({ fn: 'webPage', args: [u] })),
     ...NAMES.map(n => ({ fn: 'canPreview', args: [`/x/${n}`] })),
     ...NAMES.map(n => ({ fn: 'canOpen', args: [`/nowhere/${n}`] })),
