@@ -1,7 +1,11 @@
-# Installs the plugin: links it to herdr, adds the key bindings (prefix+f, prefix+a, prefix+d) and, with Claude Code,
-# links its skill.
+# Installs the plugin: puts its binary in bin\ (scripts\fetch-bin), links it to herdr, adds the key bindings
+# (prefix+f, prefix+a, prefix+d) and, with Claude Code, links its skill.
 $ErrorActionPreference = 'Stop'
 if (-not (Get-Command herdr -ErrorAction SilentlyContinue)) { Write-Host "herdr not found"; exit 1 }
+
+# The binary of the manifest's version, before the link: on failure, herdr is left as it was.
+& (Join-Path $PSScriptRoot 'scripts\fetch-bin.ps1') $PSScriptRoot
+if ($LASTEXITCODE) { exit 1 }
 
 # Windows PowerShell 5.1 turns a native command's stderr into an error, which 'Stop' would make fatal: not linked
 # yet, or no server to reload, is fine.

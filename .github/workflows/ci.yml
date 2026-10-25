@@ -47,3 +47,22 @@ jobs:
             cargo clippy --manifest-path rust/Cargo.toml --target $t -- -D warnings
           done
       - run: cargo test --manifest-path rust/Cargo.toml
+      # The shell scripts parse: scripts/ as POSIX sh (dash on Ubuntu), the installer as bash; fetch-bin
+      # itself runs in cargo test's tests/fetch_bin.rs.
+      - name: Parse the shell scripts
+        if: runner.os == 'Linux'
+        run: |
+          for f in scripts/*.sh; do sh -n "$f"; done
+          bash -n install.sh
+      # The PowerShell scripts parse in Windows PowerShell 5.1, which herdr's [[build]] runs.
+      - name: Parse the PowerShell scripts
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $failed = $false
+          foreach ($f in @(Get-Item install.ps1) + @(Get-ChildItem scripts -Filter *.ps1)) {
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$null, [ref]$errors) | Out-Null
+            foreach ($e in $errors) { Write-Host "::error file=$($f.Name)::$($e.Extent.StartLineNumber): $($e.Message)"; $failed = $true }
+          }
+          if ($failed) { exit 1 }

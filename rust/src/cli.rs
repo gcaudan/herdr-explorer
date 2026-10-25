@@ -50,9 +50,28 @@ pub fn parse(mut args: Vec<OsString>) -> Result<Command, String> {
     }
 }
 
+/// The binaries set aside by fetch-bin, dev-build and the updater (`<name>.old-*` next to this one), removed when
+/// they can be: Windows keeps one that still runs, until a later start.
+fn remove_old(exe: &std::path::Path) {
+    let (Some(dir), Some(name)) = (exe.parent(), exe.file_name().and_then(|n| n.to_str())) else { return };
+    let prefix = format!("{name}.old-");
+    let Ok(entries) = std::fs::read_dir(dir) else { return };
+    for e in entries.flatten() {
+        if e.file_name().to_str().is_some_and(|n| n.starts_with(&prefix)) {
+            let _ = std::fs::remove_file(e.path());
+        }
+    }
+}
+
 /// Runs the command line and gives the process's exit code.
 pub fn run(args: Vec<OsString>) -> ExitCode {
-    match parse(args) {
+    let cmd = parse(args);
+    if matches!(cmd, Ok(Command::Hook(_) | Command::Peek(_) | Command::Pane(..)))
+        && let Ok(exe) = std::env::current_exe()
+    {
+        remove_old(&exe);
+    }
+    match cmd {
         Ok(Command::Version) => {
             println!("{}", crate::VERSION);
             ExitCode::SUCCESS
@@ -97,6 +116,20 @@ fn done(code: i32) -> ExitCode {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn removes_the_binaries_set_aside_only() {
+        let dir = std::env::temp_dir().join(format!("hx-old-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let names = ["herdr-explorer", "herdr-explorer.old-20260101-1", "herdr-explorer.older", "other.old-1"];
+        for n in names {
+            std::fs::write(dir.join(n), "").unwrap();
+        }
+        remove_old(&dir.join("herdr-explorer"));
+        let left: Vec<bool> = names.iter().map(|n| dir.join(n).exists()).collect();
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert_eq!(left, [true, false, true, true]);
+    }
 
     fn args(list: &[&str]) -> Vec<OsString> {
         list.iter().map(OsString::from).collect()

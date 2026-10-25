@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# Installs the plugin: links it to herdr, adds the key bindings (prefix+f, prefix+a, prefix+d) and, with Claude Code,
-# links its skill.
+# Installs the plugin: puts its binary in bin/ (scripts/fetch-bin), links it to herdr, adds the key bindings
+# (prefix+f, prefix+a, prefix+d) and, with Claude Code, links its skill.
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 command -v herdr >/dev/null || { echo "herdr not found" >&2; exit 1; }
+
+# The binary of the manifest's version, before the link: on failure, herdr is left as it was.
+sh "$here/scripts/fetch-bin.sh" "$here"
 
 herdr plugin unlink gcaudan.explorer >/dev/null 2>&1 || true
 herdr plugin link "$here" >/dev/null
