@@ -91,9 +91,9 @@ pub(super) enum Op {
 /// What y does to a question of the card (ui::confirm).
 pub(super) enum Yes {
     Init,
-    DeleteForGood(Vec<String>),
-    DiscardStaged { others: Vec<Item>, added: Vec<Item> },
-    Discard { tracked: Vec<Item>, untracked: Vec<Item> },
+    DeleteForGood { top: String, left: Vec<String>, unindex: Option<Vec<Item>> },
+    DiscardStaged { top: String, others: Vec<Item>, added: Vec<Item> },
+    Discard { top: String, tracked: Vec<Item>, untracked: Vec<Item> },
     StageAndCommit(String),
     Abort(Ongoing),
     DeleteBranch(Branch),
@@ -625,7 +625,7 @@ impl Pane {
         }
         self.s.busy = Some(label.to_string());
         self.draw();
-        let (top, label) = (self.top(), label.to_string());
+        let (top, label) = (opts.top.clone().unwrap_or_else(|| self.top()), label.to_string());
         self.ops.send(Box::new(move || {
             let res = std::panic::catch_unwind(|| {
                 let args: Vec<&str> = args.iter().map(String::as_str).collect();

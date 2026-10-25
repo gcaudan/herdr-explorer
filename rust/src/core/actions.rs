@@ -1375,8 +1375,10 @@ pub fn trash(abs: &str) -> bool {
     }
     let none = Opts::default();
     let ok = if WIN {
-        // The JS's statSync throws on a missing file: taken as a file here.
-        let what = if std::fs::metadata(abs).is_ok_and(|m| m.is_dir()) { "DeleteDirectory" } else { "DeleteFile" };
+        // A link (a junction too) as a file: never its target. The JS's lstatSync throws on a missing file: taken as
+        // a file here.
+        let what =
+            if std::fs::symlink_metadata(abs).is_ok_and(|m| m.is_dir()) { "DeleteDirectory" } else { "DeleteFile" };
         let mut env = exec::process_env();
         exec::env_set(&mut env, "EXPLORER_TRASH", abs);
         let script = format!(
@@ -1395,13 +1397,10 @@ pub fn trash(abs: &str) -> bool {
     ok && std::fs::symlink_metadata(abs).is_err()
 }
 
-/// Deleted for good. A link goes itself, its target untouched: unlink, or rmdir for a folder link on Windows, which
-/// unlink refuses.
+/// Deleted for good. A link goes itself, its target untouched (unlink).
 pub fn remove(abs: &str) -> Option<String> {
     let gone = match std::fs::symlink_metadata(abs) {
-        Ok(m) if m.file_type().is_symlink() => std::fs::remove_file(abs).or_else(|e| {
-            if matches!(io_code(&e).as_str(), "EPERM" | "EISDIR") { std::fs::remove_dir(abs) } else { Err(e) }
-        }),
+        Ok(m) if m.file_type().is_symlink() => unlink(abs, &m),
         Ok(m) if m.is_dir() => std::fs::remove_dir_all(abs),
         Ok(_) => std::fs::remove_file(abs),
         // force: a missing file is no error; any other lstat error is.
@@ -1409,6 +1408,30 @@ pub fn remove(abs: &str) -> Option<String> {
         Err(e) => Err(e),
     };
     gone.err().map(|e| format!("Cannot delete: {}", io_code(&e)))
+}
+
+/// Deletes the file or link abs (st, its lstat), never a folder. unlink refuses a folder link on Windows (and on some
+/// mounts, EISDIR): rmdir; and a read-only file on Windows: made writable first, as rmSync does, and back to read-only
+/// if it still cannot go. What failed first is what is said.
+pub fn unlink(abs: &str, st: &std::fs::Metadata) -> std::io::Result<()> {
+    let Err(e) = std::fs::remove_file(abs) else { return Ok(()) };
+    let (link, code) = (st.file_type().is_symlink(), io_code(&e));
+    if !(WIN && code == "EPERM") && !(link && code == "EISDIR") {
+        return Err(e);
+    }
+    let again = if link {
+        std::fs::remove_dir(abs)
+    } else {
+        let mut writable = st.permissions();
+        #[allow(clippy::permissions_set_readonly_false)]
+        writable.set_readonly(false);
+        std::fs::set_permissions(abs, writable).and_then(|()| {
+            std::fs::remove_file(abs).inspect_err(|_| {
+                let _ = std::fs::set_permissions(abs, st.permissions());
+            })
+        })
+    };
+    again.map_err(|_| e)
 }
 
 // --- git

@@ -207,22 +207,22 @@ pub fn branches(cwd: &str) -> Vec<String> {
         &[
             "for-each-ref",
             "--sort=-committerdate",
-            "--format=%(refname)%00%(refname:short)",
+            "--format=%(refname)%00%(symref)%00%(refname:short)",
             "refs/heads",
             "refs/remotes",
         ],
         &opts,
     )
     .unwrap_or_default();
-    // origin/HEAD, whose short name is origin, left out on its full name.
+    // origin/HEAD, whose short name is origin, left out: a remote's symbolic ref (whatever the remote's name), or its
+    // HEAD by name when not symbolic. A local symbolic ref (master as an alias of main) stays.
     out.split('\n')
         .filter_map(|l| {
             let mut f = l.split('\0');
-            let (full, short) = (f.next().unwrap_or(""), f.next().unwrap_or(""));
-            let remote_head = full
-                .strip_prefix("refs/remotes/")
-                .and_then(|r| r.strip_suffix("/HEAD"))
-                .is_some_and(|r| !r.is_empty() && !r.contains('/'));
+            let (full, sym, short) = (f.next().unwrap_or(""), f.next().unwrap_or(""), f.next().unwrap_or(""));
+            let remote_head = full.strip_prefix("refs/remotes/").is_some_and(|r| {
+                !sym.is_empty() || r.strip_suffix("/HEAD").is_some_and(|r| !r.is_empty() && !r.contains('/'))
+            });
             (!short.is_empty() && !remote_head).then(|| short.trim_matches(js::is_space).to_string())
         })
         .collect()
@@ -279,8 +279,8 @@ pub fn worktree(top: &str, env: &Env, keep: bool, only: Option<&str>) -> Option<
     let real_index = paths::resolve(&[top, index]);
     let kept = if keep { kept_index(&real_index) } else { None };
     if let Some(kept) = kept {
-        let st = std::fs::metadata(&real_index).ok();
-        let from = match &st {
+        remove_old_copies(&paths::dirname(&real_index));
+        let from_of = |st: &Option<std::fs::Metadata>| match st {
             Some(m) => format!(
                 "{}:{}",
                 json::number(m.modified().map(js::time_ms).unwrap_or(0.0)),
@@ -288,31 +288,56 @@ pub fn worktree(top: &str, env: &Env, keep: bool, only: Option<&str>) -> Option<
             ),
             None => "none".into(),
         };
-        let fresh = super::exec::read_text(format!("{kept}.from")).is_ok_and(|t| t == from)
-            && std::path::Path::new(&kept).exists();
-        if !fresh {
-            let tmp = format!("{kept}.{}", std::process::id());
+        let fresh = |from: &str| {
+            super::exec::read_text(format!("{kept}.from")).is_ok_and(|t| t == from)
+                && std::path::Path::new(&kept).exists()
+        };
+        if !fresh(&from_of(&std::fs::metadata(&real_index).ok())) {
+            // Copied while holding git's own lock of the copy: a git add of another pane running on it would otherwise
+            // put back the old copy when it ends, while .from says it is fresh. Taken already: a copy of its own.
+            let (lock, tmp) = (format!("{kept}.lock"), format!("{kept}.{}", std::process::id()));
+            let locked = std::fs::create_dir_all(paths::dirname(&kept))
+                .and_then(|()| std::fs::OpenOptions::new().write(true).create_new(true).open(&lock))
+                .map(drop);
+            // Never removed here, whatever its age: git add can hold it for minutes on a large repository, and nothing
+            // tells whose it is. One left by a process that died goes with the weekly sweep (sweep_state).
+            if locked.is_err() {
+                return worktree(top, env, false, only);
+            }
             let copied = (|| -> std::io::Result<bool> {
-                std::fs::create_dir_all(paths::dirname(&kept))?;
-                if st.is_some() {
-                    std::fs::copy(&real_index, &tmp)?;
-                    std::fs::rename(&tmp, &kept)?;
-                } else {
-                    match std::fs::remove_file(&kept) {
+                // Another pane may have copied it while this one waited: copied again, the files its git add hashed
+                // since would be hashed again. The index read again: it may have changed meanwhile, and .from must
+                // say what is copied.
+                let cur = std::fs::metadata(&real_index).ok();
+                let cur_from = from_of(&cur);
+                if fresh(&cur_from) {
+                    return Ok(true);
+                }
+                match &cur {
+                    Some(st) => copy_index(&real_index, &kept, st, &tmp)?,
+                    None => match std::fs::remove_file(&kept) {
                         Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(e),
                         _ => {}
-                    }
+                    },
                 }
-                Ok(write_atomic(&format!("{kept}.from"), &from))
+                Ok(write_atomic(&format!("{kept}.from"), &cur_from))
             })();
             if !matches!(copied, Ok(true)) {
                 let _ = std::fs::remove_file(&tmp);
+                let _ = std::fs::remove_file(&lock);
                 return worktree(top, env, false, only);
             }
+            let _ = std::fs::remove_file(&lock);
         }
         if git_in(&add, Some(&kept)).is_some() {
             let tree = git_in(&["write-tree"], Some(&kept)).unwrap_or_default();
             let tree = tree.trim_matches(js::is_space);
+            // Marked used through .from (sweep_state removes the copy a week after it): git rewrites neither file
+            // when nothing changed, and the copy's own mtime is git's to judge its racily clean entries.
+            if let Ok(f) = std::fs::File::options().write(true).open(format!("{kept}.from")) {
+                let now = std::time::SystemTime::now();
+                let _ = f.set_times(std::fs::FileTimes::new().set_accessed(now).set_modified(now));
+            }
             if !tree.is_empty() {
                 return Some(tree.to_string());
             }
@@ -322,7 +347,9 @@ pub fn worktree(top: &str, env: &Env, keep: bool, only: Option<&str>) -> Option<
     }
     let dir = exec::mkdtemp("herdr-explorer-index-").ok()?;
     let tmp = paths::join(&[&dir, "index"]);
-    let _ = std::fs::copy(&real_index, &tmp);
+    if let Ok(st) = std::fs::metadata(&real_index) {
+        let _ = copy_index(&real_index, &tmp, &st, &tmp);
+    }
     let tree = git_in(&add, Some(&tmp)).and_then(|_| git_in(&["write-tree"], Some(&tmp))).and_then(|t| {
         let t = t.trim_matches(js::is_space);
         (!t.is_empty()).then(|| t.to_string())
@@ -331,12 +358,57 @@ pub fn worktree(top: &str, env: &Env, keep: bool, only: Option<&str>) -> Option<
     tree
 }
 
+/// Copies the index file src (st, its metadata, read before) to dst through tmp, with its dates: git trusts the stat
+/// data of the files changed in the same tick as the index was written (racily clean) only if they are older than it,
+/// not the copy. Dated once renamed: sweep_state judges a leftover tmp by its own date.
+fn copy_index(src: &str, dst: &str, st: &std::fs::Metadata, tmp: &str) -> std::io::Result<()> {
+    std::fs::copy(src, tmp)?;
+    if tmp != dst {
+        std::fs::rename(tmp, dst)?;
+    }
+    let mut times = std::fs::FileTimes::new();
+    if let Ok(a) = st.accessed() {
+        times = times.set_accessed(a);
+    }
+    if let Ok(m) = st.modified() {
+        times = times.set_modified(m);
+    }
+    std::fs::File::options().write(true).open(dst)?.set_times(times)
+}
+
+/// The copy that versions before 0.8.0 kept in the git folder, beside the index, with its .from, and the .<pid>
+/// copies and git's .lock of a process that died: removed once per git folder and process.
+fn remove_old_copies(git_dir: &str) {
+    static DONE: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+    {
+        let mut done = DONE.lock().unwrap_or_else(|p| p.into_inner());
+        if done.iter().any(|d| d == git_dir) {
+            return;
+        }
+        done.push(git_dir.to_string());
+    }
+    static OLD: std::sync::LazyLock<super::regex::Regex> = std::sync::LazyLock::new(|| {
+        super::regex::Regex::new(r"^herdr-explorer-index(\.from(\.\d+)?|\.lock|\.\d+)?$", "").expect("a valid pattern")
+    });
+    for name in exec::list_dir(git_dir).into_iter().filter(|n| OLD.test(n)) {
+        let _ = std::fs::remove_file(paths::join(&[git_dir, &name]));
+    }
+}
+
 /// The copy of an index file kept by worktree: index/<hash of its path> in the state folder, None without one. Those
-/// not used for a week are removed by sweep_state (exec).
+/// not used for a week are removed by sweep_state (exec). Kept per state folder and index, as its path is resolved.
 pub fn kept_index(index: &str) -> Option<String> {
+    static KEPT: std::sync::Mutex<Vec<(String, String)>> = std::sync::Mutex::new(Vec::new());
     let dir = exec::state_dir()?;
+    let key = format!("{dir}\0{index}");
+    let mut kept = KEPT.lock().unwrap_or_else(|p| p.into_inner());
+    if let Some((_, path)) = kept.iter().find(|(k, _)| *k == key) {
+        return Some(path.clone());
+    }
     let hash = sha::hex(&sha::sha1(exec::real_path(index).as_bytes()));
-    Some(paths::join(&[&dir, "index", &hash]))
+    let path = paths::join(&[&dir, "index", &hash]);
+    kept.push((key, path.clone()));
+    Some(path)
 }
 
 /// What turn-<tab id>.json keeps: { pane, top, tree, t, ended }, the working tree of the repository of the pane whose

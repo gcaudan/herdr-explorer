@@ -1038,7 +1038,7 @@ pub fn stale_state(
     out
 }
 
-fn list_dir(d: &str) -> Vec<String> {
+pub(crate) fn list_dir(d: &str) -> Vec<String> {
     std::fs::read_dir(d)
         .map(|r| r.filter_map(|e| e.ok()).map(|e| e.file_name().to_string_lossy().into_owned()).collect())
         .unwrap_or_default()
@@ -1060,14 +1060,24 @@ pub fn sweep_state(tabs: &[String], live_panes: &[String]) {
             let _ = std::fs::remove_dir_all(&f).or_else(|_| std::fs::remove_file(&f));
         }
     }
-    // The copies of indexes that the agent-turn snapshots keep (scope's kept index), unused for a week.
+    // The copies of indexes that the agent-turn snapshots keep (scope's kept index), unused for a week: a copy goes
+    // by the date of its .from, touched at each use. The same week for a lock left by a process that died (scope
+    // never removes one, git may be using it).
     let week = SystemTime::now() - Duration::from_secs(7 * 24 * 3600);
     let index = paths::join(&[&dir, "index"]);
-    for n in list_dir(&index) {
-        let f = paths::join(&[&index, &n]);
-        if modified_before(&f, week) {
-            let _ = std::fs::remove_file(&f);
-        }
+    // All judged before any goes: a copy whose .from went first would be judged by its own date.
+    let names = list_dir(&index);
+    let hex = |n: &str| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b));
+    let stale: Vec<&String> = names
+        .iter()
+        .filter(|n| {
+            let from = format!("{n}.from");
+            let judged = if hex(n) && names.contains(&from) { from } else { n.to_string() };
+            modified_before(&paths::join(&[&index, &judged]), week)
+        })
+        .collect();
+    for n in stale {
+        let _ = std::fs::remove_file(paths::join(&[&index, n]));
     }
 }
 

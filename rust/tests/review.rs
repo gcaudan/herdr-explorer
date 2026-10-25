@@ -96,6 +96,19 @@ fn a_file_stays_viewed_until_its_content_changes() {
     assert_eq!(viewed::sign(&file), "gone");
 }
 
+/// Rewritten with the same size and times right after it was hashed (a coarse clock): hashed again all the same.
+#[test]
+fn a_file_changed_within_2_s_of_its_hash_is_hashed_again() {
+    let dir = support::TempDir::new("racy");
+    let file = paths::join(&[&dir.path.to_string_lossy(), "a.txt"]);
+    std::fs::write(&file, "one\n").unwrap();
+    let times = std::fs::metadata(&file).unwrap().modified().unwrap();
+    let before = viewed::sign(&file);
+    std::fs::write(&file, "two\n").unwrap();
+    std::fs::File::options().write(true).open(&file).unwrap().set_modified(times).unwrap();
+    assert_ne!(viewed::sign(&file), before);
+}
+
 #[test]
 fn notes_stay_relative_from_a_folder_reached_through_a_link() {
     let dir = support::TempDir::new("notes");
@@ -163,6 +176,7 @@ fn diff_scopes_a_commit_a_range_a_branch_the_last_agent_turn() {
     write("other.txt", "y\n");
     let turn = obj! { "top" => top.clone(), "tree" => tree };
     let res = collect("", Scope::new("turn", None), Some(&turn));
+    assert!(res.error.is_none(), "{:?}", res.error);
     assert_eq!(names(&res.text), ["a.txt", "other.txt"]);
     // Limited to one file, which alone is added again: a new one untracked too.
     write("third.txt", "z\n");

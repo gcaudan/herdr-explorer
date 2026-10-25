@@ -1150,7 +1150,7 @@
     "GIT_COMMITTER_DATE": "2024-01-01T00:00:00Z"
    },
    "out": {
-    "message": "Discarded 5 lines; cannot delete new.txt: ENOENT",
+    "message": "Discarded 2 files",
     "status": "",
     "diff": "",
     "cached": "",
@@ -2723,7 +2723,7 @@
    "out": "é"
   },
   {
-   "fn": "within",
+   "fn": "refused",
    "args": [
     "$ROOT/r/a",
     "$ROOT/r"
@@ -2731,10 +2731,21 @@
    "files": {
     "r": null
    },
-   "out": true
+   "out": "gone"
   },
   {
-   "fn": "within",
+   "fn": "refused",
+   "args": [
+    "$ROOT/r/a",
+    "$ROOT/r"
+   ],
+   "files": {
+    "r/a": "x"
+   },
+   "out": null
+  },
+  {
+   "fn": "refused",
    "args": [
     "$ROOT/r/d/a",
     "$ROOT/r"
@@ -2742,10 +2753,10 @@
    "files": {
     "r/d": null
    },
-   "out": true
+   "out": "gone"
   },
   {
-   "fn": "within",
+   "fn": "refused",
    "args": [
     "$ROOT/r",
     "$ROOT/r"
@@ -2753,10 +2764,10 @@
    "files": {
     "r": null
    },
-   "out": false
+   "out": "outside the repository"
   },
   {
-   "fn": "within",
+   "fn": "refused",
    "args": [
     "$ROOT/other/a",
     "$ROOT/r"
@@ -2765,10 +2776,10 @@
     "r": null,
     "other": null
    },
-   "out": false
+   "out": "outside the repository"
   },
   {
-   "fn": "within",
+   "fn": "refused",
    "args": [
     "$ROOT/r/l/a",
     "$ROOT/r"
@@ -2780,10 +2791,52 @@
      "link": "$ROOT/out"
     }
    },
-   "out": false
+   "out": "outside the repository"
   },
   {
-   "fn": "within",
+   "fn": "refused",
+   "args": [
+    "$ROOT/r/l/a",
+    "$ROOT/r"
+   ],
+   "files": {
+    "r/d": null,
+    "r/l": {
+     "link": "$ROOT/r/d"
+    }
+   },
+   "out": "through a symbolic link"
+  },
+  {
+   "fn": "refused",
+   "args": [
+    "$ROOT/r/l/a",
+    "$ROOT/r"
+   ],
+   "files": {
+    "r": null,
+    "r/l": {
+     "link": "$ROOT/none"
+    }
+   },
+   "out": "outside the repository"
+  },
+  {
+   "fn": "refused",
+   "args": [
+    "$ROOT/r/l",
+    "$ROOT/r"
+   ],
+   "files": {
+    "r/d": null,
+    "r/l": {
+     "link": "$ROOT/r/d"
+    }
+   },
+   "out": null
+  },
+  {
+   "fn": "refused",
    "args": [
     "$ROOT/r/missing/a",
     "$ROOT/r"
@@ -2791,18 +2844,158 @@
    "files": {
     "r": null
    },
-   "out": false
+   "out": "gone"
   },
   {
-   "fn": "within",
+   "fn": "refused",
+   "args": [
+    "$ROOT/r/f/a",
+    "$ROOT/r"
+   ],
+   "files": {
+    "r/f": "x"
+   },
+   "out": "gone"
+  },
+  {
+   "fn": "refused",
    "args": [
     "$ROOT/r/../r/a",
     "$ROOT/r/"
    ],
    "files": {
-    "r": null
+    "r/a": "x"
    },
-   "out": true
+   "out": null
+  },
+  {
+   "fn": "refused",
+   "args": [
+    "$ROOT/r/d",
+    "$ROOT/r",
+    true
+   ],
+   "files": {
+    "r/d": null
+   },
+   "out": null
+  },
+  {
+   "fn": "refused",
+   "args": [
+    "$ROOT/r/d",
+    "$ROOT/r",
+    false
+   ],
+   "files": {
+    "r/d": null
+   },
+   "out": "no longer a file"
+  },
+  {
+   "fn": "refused",
+   "args": [
+    "$ROOT/r/a",
+    "$ROOT/r",
+    true
+   ],
+   "files": {
+    "r/a": "x"
+   },
+   "out": "no longer a folder"
+  },
+  {
+   "fn": "refused",
+   "args": [
+    "$ROOT/r/a",
+    "$ROOT/r",
+    false
+   ],
+   "files": {
+    "r/a": "x"
+   },
+   "out": null
+  },
+  {
+   "fn": "refused",
+   "args": [
+    "$ROOT/r/l",
+    "$ROOT/r",
+    true
+   ],
+   "files": {
+    "r/d": null,
+    "r/l": {
+     "link": "$ROOT/r/d"
+    }
+   },
+   "out": "no longer a folder"
+  },
+  {
+   "fn": "located",
+   "args": [
+    "$ROOT/r",
+    "a"
+   ],
+   "out": {
+    "abs": "$ROOT/r/a",
+    "folder": false
+   }
+  },
+  {
+   "fn": "located",
+   "args": [
+    "$ROOT/r",
+    "d/"
+   ],
+   "out": {
+    "abs": "$ROOT/r/d",
+    "folder": true
+   }
+  },
+  {
+   "fn": "located",
+   "args": [
+    "$ROOT/r",
+    "d//"
+   ],
+   "out": {
+    "abs": "$ROOT/r/d",
+    "folder": true
+   }
+  },
+  {
+   "fn": "located",
+   "args": [
+    "$ROOT/r",
+    "d/a"
+   ],
+   "out": {
+    "abs": "$ROOT/r/d/a",
+    "folder": false
+   }
+  },
+  {
+   "fn": "located",
+   "args": [
+    "$ROOT/r",
+    "a\\"
+   ],
+   "out": {
+    "abs": "$ROOT/r/a\\",
+    "folder": false
+   }
+  },
+  {
+   "fn": "located",
+   "args": [
+    "$ROOT/r",
+    "./x/../a"
+   ],
+   "out": {
+    "abs": "$ROOT/r/a",
+    "folder": false
+   }
   },
   {
    "fn": "pruneDirs",

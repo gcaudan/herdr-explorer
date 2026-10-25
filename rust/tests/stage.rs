@@ -404,16 +404,145 @@ fn whole_files_failing_after_a_patch_say_what_was_staged() {
 
 #[cfg(unix)]
 #[test]
-fn within_refuses_a_path_whose_folder_links_outside_the_repository() {
+fn refused_keeps_a_path_whose_folder_links_outside_the_repository_or_anywhere() {
     use herdr_explorer::core::paths::join;
+    use std::os::unix::fs::symlink;
     let (t, o) = (support::TempDir::new("within"), support::TempDir::new("outside"));
     let top = t.path.to_string_lossy().into_owned();
+    let at = |p: &str| join(&[&top, p]);
+    let refused = |p: &str| stage::refused(&at(p), &top, None);
+    // Deletable, or already gone.
+    let ok = |p: &str| refused(p).is_none_or(|w| w == "gone");
     std::fs::create_dir(t.path.join("dir")).unwrap();
-    std::os::unix::fs::symlink(&o.path, t.path.join("sub")).unwrap();
-    assert!(stage::within(&join(&[&top, "a.txt"]), &top));
-    assert!(stage::within(&join(&[&top, "dir/a.txt"]), &top));
-    assert!(!stage::within(&join(&[&top, "sub/x"]), &top));
-    assert!(!stage::within(&join(&[&top, "../x"]), &top));
+    symlink(&o.path, t.path.join("sub")).unwrap();
+    assert!(ok("a.txt"));
+    assert!(ok("dir/a.txt"));
+    assert!(!ok("sub/x"));
+    assert!(!ok("../x"));
+    // A folder gone: judged by the nearest one left.
+    assert!(ok("dir/gone/a.txt"));
+    assert!(!ok("sub/gone/a.txt"));
+    std::fs::write(t.path.join("file"), "").unwrap();
+    // A folder linking inside: another file of the same name, refused too.
+    symlink(t.path.join("dir"), t.path.join("inner")).unwrap();
+    assert!(!ok("inner/a.txt"));
+    assert!(ok("inner"));
+    // Why not.
+    assert_eq!(refused("inner/a.txt").as_deref(), Some("through a symbolic link"));
+    assert_eq!(refused("sub/x").as_deref(), Some("outside the repository"));
+    assert_eq!(refused("dir/gone/a.txt").as_deref(), Some("gone"));
+    assert_eq!(refused("file/sub/a.txt").as_deref(), Some("gone"));
+    assert_eq!(refused("file"), None);
+    // A folder listed as one (nested/) made a link to one outside: neither followed nor deleted.
+    std::fs::create_dir(o.path.join("data")).unwrap();
+    std::fs::write(o.path.join("data/keep"), "").unwrap();
+    symlink(o.path.join("data"), t.path.join("nested")).unwrap();
+    assert!(ok("file/sub/a.txt"));
+    // A folder, listed as one or made one since: never deleted for good with what it holds.
+    std::fs::create_dir(t.path.join("made")).unwrap();
+    std::fs::write(t.path.join("made/keep"), "").unwrap();
+    let mut failed = Vec::new();
+    let names = ["nested/".to_string(), "made".into(), "made/".into()];
+    let left = stage::remove_files(&top, &names, &mut failed, &stage::for_good, false);
+    let pair = |n: &str, w: &str| (n.to_string(), w.to_string());
+    assert_eq!(
+        (left, failed),
+        (
+            vec![],
+            vec![
+                pair("nested/", "no longer a folder"),
+                pair("made", "a folder, never deleted for good"),
+                pair("made/", "a folder, never deleted for good"),
+            ]
+        )
+    );
+    assert!(o.path.join("data/keep").exists() && t.path.join("made/keep").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn discarding_an_untracked_file_already_gone_or_one_in_a_folder_linking_outside_says_so() {
+    use std::os::unix::fs::symlink;
+    let Some(r) = Repo::new(&[("a.txt", "x\n")]) else { return };
+    let out = support::TempDir::new("outside");
+    let top = r.top.clone();
+    let rows_of = |parsed: &Diff, names: &[&str]| -> Sel {
+        let list = render(parsed, "inline");
+        stage::picked(file_rows(parsed, &list, names, None))
+    };
+    let discard = |parsed: &Diff, sel: &Sel, trash: &dyn Fn(&str) -> bool, no_trash: Option<bool>| {
+        let ask = |_: &[String]| no_trash.unwrap();
+        stage::apply(&top, parsed, sel, Mode::Discard, trash, no_trash.is_some().then_some(&ask as _))
+    };
+    std::fs::create_dir(r.path("sub")).unwrap();
+    r.write("sub/gone.txt", "bye\n");
+    r.write("kept.txt", "k\n");
+    let parsed = r.changes();
+    let gone = rows_of(&parsed, &["sub/gone.txt"]);
+    std::fs::remove_dir_all(r.path("sub")).unwrap();
+    assert_eq!(discard(&parsed, &gone, &|_| true, None), "Discarded 1 line");
+    // A folder made a link outside once the diff was read: refused, and said beside the file kept for want of a trash.
+    std::fs::create_dir(r.path("link")).unwrap();
+    r.write("link/x.txt", "x\n");
+    let parsed = r.changes();
+    let picked = rows_of(&parsed, &["link/x.txt", "kept.txt"]);
+    std::fs::remove_dir_all(r.path("link")).unwrap();
+    std::fs::write(out.path.join("x.txt"), "x\n").unwrap();
+    symlink(&out.path, r.path("link")).unwrap();
+    assert_eq!(
+        discard(&parsed, &picked, &|_| false, Some(false)),
+        "1 untracked file kept: no trash; cannot delete link/x.txt: outside the repository"
+    );
+    assert!(out.path.join("x.txt").exists());
+    // Missing behind that link: refused all the same, not taken for already gone.
+    std::fs::remove_file(out.path.join("x.txt")).unwrap();
+    assert_eq!(
+        discard(&parsed, &rows_of(&parsed, &["link/x.txt"]), &|_| true, None),
+        "Cannot delete link/x.txt: outside the repository"
+    );
+    // Its folder missing too, or the link leading nowhere: refused as well.
+    std::fs::create_dir_all(r.path("deep/sub")).unwrap();
+    r.write("deep/sub/x.txt", "x\n");
+    let parsed = r.changes();
+    let deep = rows_of(&parsed, &["deep/sub/x.txt"]);
+    std::fs::remove_dir_all(r.path("deep")).unwrap();
+    symlink(&out.path, r.path("deep")).unwrap();
+    assert_eq!(discard(&parsed, &deep, &|_| true, None), "Cannot delete deep/sub/x.txt: outside the repository");
+    std::fs::remove_file(r.path("deep")).unwrap();
+    symlink(out.path.join("none"), r.path("deep")).unwrap();
+    assert_eq!(discard(&parsed, &deep, &|_| true, None), "Cannot delete deep/sub/x.txt: outside the repository");
+    // A folder made a link to another folder of the repository: its file of that name is left alone.
+    std::fs::remove_file(r.path("deep")).unwrap();
+    std::fs::create_dir_all(r.path("other/sub")).unwrap();
+    r.write("other/sub/x.txt", "tracked\n");
+    symlink(r.path("other"), r.path("deep")).unwrap();
+    let rm = |abs: &str| std::fs::remove_file(abs).is_ok();
+    assert_eq!(discard(&parsed, &deep, &rm, None), "Cannot delete deep/sub/x.txt: through a symbolic link");
+    assert!(r.path("other/sub/x.txt").exists());
+    std::fs::remove_dir_all(r.path("other")).unwrap();
+    // A folder made a file: already gone; what went through said before what was kept.
+    std::fs::remove_file(r.path("link")).unwrap();
+    std::fs::remove_file(r.path("deep")).unwrap();
+    std::fs::create_dir(r.path("dir")).unwrap();
+    r.write("dir/y.txt", "y\n");
+    r.write("z.txt", "z\n");
+    r.write("w.txt", "w\n");
+    let parsed = r.changes();
+    let three = rows_of(&parsed, &["dir/y.txt", "z.txt", "w.txt"]);
+    std::fs::remove_dir_all(r.path("dir")).unwrap();
+    r.write("dir", "now a file\n");
+    let trash = |abs: &str| abs.ends_with("z.txt") && std::fs::remove_file(abs).is_ok();
+    assert_eq!(discard(&parsed, &three, &trash, Some(false)), "Discarded 2 files; 1 untracked file kept: no trash");
+    assert!(!r.path("z.txt").exists() && r.path("w.txt").exists());
+    // Made a folder since it was listed: not deleted for good with what it now holds.
+    std::fs::remove_file(r.path("w.txt")).unwrap();
+    std::fs::create_dir(r.path("w.txt")).unwrap();
+    r.write("w.txt/inner", "keep\n");
+    assert_eq!(
+        discard(&parsed, &three, &|_| false, Some(true)),
+        "Discarded 2 files; cannot delete w.txt: no longer a file"
+    );
+    assert!(r.path("w.txt/inner").exists());
 }
 
 #[test]

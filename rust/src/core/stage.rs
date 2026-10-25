@@ -6,7 +6,7 @@
 //!   discard  lines of the Unstaged section, taken out of the working tree (the caller confirms first)
 //! Files, hunks and lines are named by their place in the diff: file index, (file, hunk), (file, hunk, line).
 
-use super::exec::{Env, Exec, Opts, env_set, exec, git, git_env, node_realpath};
+use super::exec::{Env, Exec, Opts, WIN, env_set, exec, git, git_env, io_code, node_realpath};
 use super::paths;
 use crate::diff::{self, Diff, Line};
 use std::collections::HashSet;
@@ -350,29 +350,6 @@ pub fn count(parsed: &Diff, sel: &Sel, mode: Mode) -> String {
     if list.is_empty() { String::new() } else { summary(&list.iter().collect::<Vec<_>>()) }
 }
 
-/// The code of a failed removal, as Node names it.
-fn error_code(e: &std::io::Error) -> String {
-    use std::io::ErrorKind::*;
-    match e.kind() {
-        NotFound => "ENOENT".into(),
-        PermissionDenied if e.raw_os_error() == Some(1) => "EPERM".into(),
-        PermissionDenied => "EACCES".into(),
-        IsADirectory => "ERR_FS_EISDIR".into(),
-        NotADirectory => "ENOTDIR".into(),
-        ResourceBusy => "EBUSY".into(),
-        ReadOnlyFilesystem => "EROFS".into(),
-        _ => e.raw_os_error().map_or_else(|| e.to_string(), |n| format!("E{n}")),
-    }
-}
-
-/// `fs.rmSync(p)`: a file or a link, never a folder.
-fn remove(p: &str) -> Result<(), String> {
-    if std::fs::symlink_metadata(p).is_ok_and(|m| m.is_dir()) {
-        return Err("ERR_FS_EISDIR".into());
-    }
-    std::fs::remove_file(p).map_err(|e| error_code(&e))
-}
-
 /// Asks whether to delete files for good (their names), without a trash.
 pub type Ask<'a> = &'a dyn Fn(&[String]) -> bool;
 
@@ -489,32 +466,16 @@ pub fn apply(
             return format!("{} {}; cannot {name} {which}: {}", mode.verb(), summary(&patched), why(&res));
         }
     }
-    let mut left: Vec<String> = Vec::new();
-    // The files deleted for good that could not be: the others are still deleted, and their index entry goes. Never
-    // a path that resolves outside the repository, through a symbolic link too (within).
-    let mut failed: Vec<(String, String)> = Vec::new();
-    for name in &removed {
-        let abs = paths::join(&[top, name]);
-        if !within(&abs, top) {
-            failed.push((name.clone(), "outside the repository".into()));
-        } else if trash(&abs) {
-            prune_dirs(&abs, top);
-        } else {
-            left.push(name.clone());
-        }
-    }
+    // The files deleted for good that could not be: the others are still deleted, and their index entry goes.
+    let mut failed: Failed = Vec::new();
+    // Listed by the diff, files all: one made a folder since is not taken with what it now holds.
+    let mut left = remove_files(top, &removed, &mut failed, &|abs, _| Ok(trash(abs)), true);
+    // Checked again by remove_files: a folder may have been made a link while the question was open.
     if !left.is_empty()
         && let Some(no_trash) = no_trash
         && no_trash(&left)
     {
-        for name in std::mem::take(&mut left) {
-            let abs = paths::join(&[top, &name]);
-            if let Err(code) = remove(&abs) {
-                failed.push((name, code));
-                continue;
-            }
-            prune_dirs(&abs, top);
-        }
+        remove_files(top, &std::mem::take(&mut left), &mut failed, &for_good, true);
     }
     let is_failed = |n: &String| failed.iter().any(|(f, _)| f == n);
     let gone: Vec<String> = unindex.into_iter().filter(|n| !left.contains(n) && !is_failed(n)).collect();
@@ -524,20 +485,125 @@ pub fn apply(
             return fail(&res);
         }
     }
+    if left.is_empty() && failed.is_empty() {
+        return format!("{} {}", mode.verb(), summary(&list.iter().collect::<Vec<_>>()));
+    }
+    // What went through, then what did not.
+    let done: Vec<&Target> = list
+        .iter()
+        .filter(|t| {
+            let n = name_of(file(t));
+            !is_failed(&n) && !left.contains(&n)
+        })
+        .collect();
+    let mut said = Vec::new();
+    if !done.is_empty() {
+        said.push(format!("{} {}", mode.verb(), summary(&done)));
+    }
     if !left.is_empty() {
-        return format!("{} kept: no trash", plural(left.len(), "untracked file"));
+        said.push(format!("{} kept: no trash", plural(left.len(), "untracked file")));
     }
-    if let Some((first, code)) = failed.first() {
-        let done: Vec<&Target> = list.iter().filter(|t| !is_failed(&name_of(file(t)))).collect();
-        let what = if failed.len() > 1 { plural(failed.len(), "file") } else { first.clone() };
-        let cannot = format!("delete {what}: {code}");
-        return if done.is_empty() {
-            format!("Cannot {cannot}")
+    if !failed.is_empty() {
+        said.push(format!("cannot {}", cannot_delete(&failed)));
+    }
+    let said = said.join("; ");
+    let mut chars = said.chars();
+    chars.next().map_or_else(String::new, |c| c.to_uppercase().chain(chars).collect())
+}
+
+/// The files that could not be deleted, in order: name → reason (the JS's Map: set again, a name keeps its place).
+pub type Failed = Vec<(String, String)>;
+
+fn set_failed(failed: &mut Failed, name: &str, why: String) {
+    match failed.iter_mut().find(|(n, _)| n == name) {
+        Some(entry) => entry.1 = why,
+        None => failed.push((name.to_string(), why)),
+    }
+}
+
+/// Deletes a file (abs, whether it is listed as a folder) for remove_files: Ok(true) once deleted, Ok(false) when it
+/// could not (as the trash), Err(reason) when it failed.
+pub type Del<'a> = &'a dyn Fn(&str, bool) -> Result<bool, String>;
+
+/// Deletes the repository's files names (paths from its folder top, a folder listed as nested/) with del (for_good to
+/// delete them for good): those refused or failing are set in failed (name → reason), those already gone are left
+/// out, and those del did not take returned, but for folders, set in failed as never going for good (folderless). The
+/// folders they leave empty go too. files: all of them listed as files, a folder among them refused.
+pub fn remove_files(top: &str, names: &[String], failed: &mut Failed, del: Del, files: bool) -> Vec<String> {
+    let mut left = Vec::new();
+    for name in names {
+        let (abs, folder) = located(top, name);
+        let kind = if folder {
+            Some(true)
+        } else if files {
+            Some(false)
         } else {
-            format!("{} {}; cannot {cannot}", mode.verb(), summary(&done))
+            None
         };
+        match refused(&abs, top, kind).as_deref() {
+            Some("gone") => continue,
+            Some(why) => {
+                set_failed(failed, name, why.to_string());
+                continue;
+            }
+            None => {}
+        }
+        let done = match del(&abs, folder) {
+            Ok(done) => done,
+            Err(why) => {
+                set_failed(failed, name, why);
+                continue;
+            }
+        };
+        // Gone meanwhile (the trash command then fails): nothing left to delete.
+        if done || refused(&abs, top, kind).as_deref() == Some("gone") {
+            prune_dirs(&abs, top);
+        } else {
+            left.push(name.clone());
+        }
     }
-    format!("{} {}", mode.verb(), summary(&list.iter().collect::<Vec<_>>()))
+    folderless(top, left, failed)
+}
+
+/// Deletes the file abs for good, for remove_files: a file, or a link itself (actions::unlink). Never a folder with
+/// what it holds (an embedded repository and its history, or a file made a folder since it was listed): the trash
+/// only; unlink fails on one made a folder after the check.
+pub fn for_good(abs: &str, _folder: bool) -> Result<bool, String> {
+    let st = match std::fs::symlink_metadata(abs) {
+        Ok(st) => st,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(true),
+        Err(e) => return Err(io_code(&e)),
+    };
+    if st.is_dir() {
+        return Err(NO_TRASH_FOLDER.into());
+    }
+    match super::actions::unlink(abs, &st) {
+        Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(io_code(&e)),
+        _ => Ok(true),
+    }
+}
+
+const NO_TRASH_FOLDER: &str = "a folder, never deleted for good";
+
+/// The names (from remove_files' left) that may be asked about for good: the folders set in failed instead.
+fn folderless(top: &str, names: Vec<String>, failed: &mut Failed) -> Vec<String> {
+    names
+        .into_iter()
+        .filter(|name| {
+            let dir = std::fs::symlink_metadata(located(top, name).0).is_ok_and(|m| m.is_dir());
+            if dir {
+                set_failed(failed, name, NO_TRASH_FOLDER.into());
+            }
+            !dir
+        })
+        .collect()
+}
+
+/// What failed (name → reason, from remove_files) says: delete <name or count>: <the first reason>.
+pub fn cannot_delete(failed: &Failed) -> String {
+    let (name, why) = &failed[0];
+    let what = if failed.len() > 1 { plural(failed.len(), "file") } else { name.clone() };
+    format!("delete {what}: {why}")
 }
 
 /// The folders left empty by the file abs gone, up to the repository's folder top (kept).
@@ -553,17 +619,91 @@ pub fn prune_dirs(abs: &str, top: &str) {
     }
 }
 
-/// Whether the file abs is in the repository's folder top, its folder too once symbolic links are followed (an
-/// index naming sub/x while sub links to the home folder is not).
-pub fn within(abs: &str, top: &str) -> bool {
+/// The repository's file name (a path from its folder top, a folder listed as nested/): its path without the final
+/// separator, which would have lstat follow a folder made a link, and whether it is listed as a folder. A backslash
+/// is a separator on Windows only: elsewhere, the last character of a file name.
+pub fn located(top: &str, name: &str) -> (String, bool) {
+    let is_sep = |c: char| c == '/' || (WIN && c == '\\');
+    let abs = paths::join(&[top, name]);
+    (abs.trim_end_matches(is_sep).to_string(), name.ends_with(is_sep))
+}
+
+/// Why the repository's file abs is not to be deleted as the file of that name: "gone" once it is no longer there
+/// (its folder too, or made a file), else the reason to show (outside the repository, or reached through a symbolic
+/// link: a folder made a link since the diff was read would lead to another file), or None when it can go. folder:
+/// Some(true) when listed as a folder, which must still be one (not a link to one), Some(false) as a file, which must
+/// not be one.
+pub fn refused(abs: &str, top: &str, folder: Option<bool>) -> Option<String> {
+    if !inside(abs, top) {
+        return Some("outside the repository".into());
+    }
+    if let Some(link) = linked(abs, top) {
+        return Some(link);
+    }
+    let st = match std::fs::symlink_metadata(abs) {
+        Ok(st) => st,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Some("gone".into()),
+        Err(e) => {
+            let code = io_code(&e);
+            return Some(if code == "ENOTDIR" { "gone".into() } else { code });
+        }
+    };
+    match folder {
+        Some(true) if !st.is_dir() => Some("no longer a folder".into()),
+        Some(false) if st.is_dir() => Some("no longer a file".into()),
+        _ => None,
+    }
+}
+
+/// Whether the file abs is in the repository's folder top, its folder too once symbolic links are followed (an index
+/// naming sub/x while sub links to the home folder is not). A folder gone is judged by the nearest one left; one that
+/// is there but cannot be followed (a link to nothing) is not in it.
+fn inside(abs: &str, top: &str) -> bool {
     let real = |p: &str| node_realpath(p).ok();
-    let (root, dir) = (real(top), real(&paths::dirname(&paths::resolve(&[abs]))));
     let sep = paths::SEP;
-    if !paths::resolve(&[abs]).starts_with(&format!("{}{sep}", paths::resolve(&[top]))) {
+    let Some(root) = real(top) else { return false };
+    let resolved = paths::resolve(&[abs]);
+    if !resolved.starts_with(&format!("{}{sep}", paths::resolve(&[top]))) {
         return false;
     }
-    match (root, dir) {
-        (Some(root), Some(dir)) => dir == root || dir.starts_with(&format!("{root}{sep}")),
-        _ => false,
+    let mut d = paths::dirname(&resolved);
+    loop {
+        if let Some(dir) = real(&d) {
+            return dir == root || dir.starts_with(&format!("{root}{sep}"));
+        }
+        // Up to the root of the drive without one to follow (top resolved, so only through a folder that cannot be
+        // read).
+        let up = paths::dirname(&d);
+        if d == up {
+            return false;
+        }
+        // A folder higher up made a file: this one cannot be there either.
+        match std::fs::symlink_metadata(&d) {
+            Ok(_) => return false,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound || io_code(&e) == "ENOTDIR" => {}
+            Err(_) => return false,
+        }
+        d = up;
     }
+}
+
+/// Why a folder between top and the file abs keeps it from being reached as is: "through a symbolic link" when one
+/// is a link (the file itself may be one), the error when one cannot be read (EACCES), else None.
+fn linked(abs: &str, top: &str) -> Option<String> {
+    let mut d = paths::resolve(&[top]);
+    let rel = paths::relative(&d, &paths::dirname(&paths::resolve(&[abs])));
+    for part in rel.split(paths::SEP).filter(|p| !p.is_empty()) {
+        d = paths::join(&[&d, part]);
+        match std::fs::symlink_metadata(&d) {
+            Ok(st) if st.file_type().is_symlink() => return Some("through a symbolic link".into()),
+            Ok(_) => {}
+            // A folder higher up made a file: nothing there to reach.
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return None,
+            Err(e) => {
+                let code = io_code(&e);
+                return if code == "ENOTDIR" { None } else { Some(code) };
+            }
+        }
+    }
+    None
 }

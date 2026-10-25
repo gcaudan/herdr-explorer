@@ -97,9 +97,11 @@ pub fn english(env: &mut Env) {
 
 /// How git runs: safe, the hardened environment, for the commands that write; env, variables added; config, [key,
 /// value] pairs after the repository's config, as GIT_CONFIG_KEY_n (-c would split a key holding '=', which a branch
-/// name can); input, its standard input; timeout and detached, as exec's.
+/// name can); input, its standard input; timeout and detached, as exec's; top, the repository an op runs in (the
+/// one loaded when None).
 #[derive(Debug, Clone, Default)]
 pub struct GitOpts {
+    pub top: Option<String>,
     pub safe: bool,
     pub env: Vec<(String, String)>,
     pub config: Vec<(String, String)>,

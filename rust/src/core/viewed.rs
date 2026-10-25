@@ -22,26 +22,36 @@ pub fn read(tab: &str) -> Value {
     }
 }
 
-/// The signatures known: file → ("size mtime ctime", signature).
-static SIGNS: Mutex<Option<HashMap<String, (String, String)>>> = Mutex::new(None);
+/// A signature known: ("size mtime ctime", signature, when hashed in ms).
+type Known = (String, String, f64);
+
+/// The signatures known, by file.
+static SIGNS: Mutex<Option<HashMap<String, Known>>> = Mutex::new(None);
+
+/// A signature not trusted for a file changed less than this before it was hashed (ms).
+const RACY: f64 = 2000.0;
 
 /// What the file holds now, in short: a hash of its content, "gone" once deleted. Hashed again only when its size or
-/// times change, as git does: the Changes pane asks at each reload.
+/// times change, as git does: the Changes pane asks at each reload. Nor trusted for a file changed less than RACY
+/// before it was hashed: changed again in the same tick (a coarse clock, as on Windows), its times would not show it.
 pub fn sign(file: &str) -> String {
     let mut signs = SIGNS.lock().unwrap_or_else(|p| p.into_inner());
     let signs = signs.get_or_insert_with(HashMap::new);
     let stat = std::fs::metadata(file).map(|m| {
-        let ms = |t: std::io::Result<std::time::SystemTime>| json::number(t.map(js::time_ms).unwrap_or(0.0));
-        format!("{} {} {}", m.len(), ms(m.modified()), ms(changed(&m)))
+        let time = |t: std::io::Result<std::time::SystemTime>| t.map(js::time_ms).unwrap_or(0.0);
+        let mtime = time(m.modified());
+        (format!("{} {} {}", m.len(), json::number(mtime), json::number(time(changed(&m)))), mtime)
     });
-    let signed = stat.and_then(|stat| {
-        if let Some((known, sign)) = signs.get(file)
+    let signed = stat.and_then(|(stat, mtime)| {
+        if let Some((known, sign, at)) = signs.get(file)
             && *known == stat
+            && at - mtime > RACY
         {
             return Ok(sign.clone());
         }
+        let at = js::now_ms();
         let sign = sha::hex(&sha::sha1(&std::fs::read(file)?));
-        signs.insert(file.to_string(), (stat, sign.clone()));
+        signs.insert(file.to_string(), (stat, sign.clone(), at));
         Ok(sign)
     });
     signed.unwrap_or_else(|_: std::io::Error| {
@@ -98,4 +108,30 @@ pub fn toggle(tab: &str, file: &str) -> bool {
 /// Watches the tab's marks (another pane marked a file); None without a state folder.
 pub fn watch(tab: &str) -> Option<super::watch::Watch> {
     file_of(tab).map(|f| super::watch::Watch::new(&f, Duration::from_millis(500)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A signature known for the file's size and times: trusted once hashed more than RACY after the file changed,
+    /// hashed again when less.
+    #[test]
+    fn a_signature_is_not_trusted_for_a_file_changed_within_2_s_of_its_hash() {
+        let dir = std::env::temp_dir().join(format!("viewed-racy-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("a.txt").to_string_lossy().into_owned();
+        std::fs::write(&file, "one\n").unwrap();
+        let real = sign(&file);
+        let stat = SIGNS.lock().unwrap().as_ref().unwrap()[&file].0.clone();
+        let mtime = std::fs::metadata(&file).unwrap().modified().map(js::time_ms).unwrap();
+        let known = |at: f64| {
+            SIGNS.lock().unwrap().as_mut().unwrap().insert(file.clone(), (stat.clone(), "stale".into(), at));
+        };
+        known(mtime + RACY + 1000.0);
+        assert_eq!(sign(&file), "stale");
+        known(mtime + RACY - 1000.0);
+        assert_eq!(sign(&file), real);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 }

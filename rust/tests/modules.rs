@@ -760,7 +760,14 @@ fn core_stage() {
                 ])
             }
             "quote" => Value::Str(stage::quote(&s(0))),
-            "within" => Value::Bool(stage::within(&s(0), &s(1))),
+            "refused" => {
+                let folder = args.get(2).and_then(Value::as_bool);
+                stage::refused(&s(0), &s(1), folder).map_or(Value::Null, Value::Str)
+            }
+            "located" => {
+                let (abs, folder) = stage::located(&s(0), &s(1));
+                Value::Obj(vec![("abs".into(), Value::Str(abs)), ("folder".into(), Value::Bool(folder))])
+            }
             "pruneDirs" => {
                 stage::prune_dirs(&s(0), &s(1));
                 Value::Str(sh(&format!("cd '{}' && find . | sort", s(1))))
