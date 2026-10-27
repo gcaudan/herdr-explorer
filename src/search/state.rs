@@ -62,11 +62,11 @@ pub(super) const CONTENT: usize = 1;
 pub(super) const INCLUDE: usize = 2;
 pub(super) const EXCLUDE: usize = 3;
 
-/// The file list, sorted, with each path in UTF-16 units, in lower case, and where its name starts.
+/// The file list, sorted, with each path in lower case, its length in characters and where its name starts (byte).
 pub(super) struct Files {
     pub(super) list: Arc<Vec<String>>,
-    pub(super) units: Vec<Vec<u16>>,
-    pub(super) lower: Vec<Vec<u16>>,
+    pub(super) lower: Vec<String>,
+    pub(super) len: Vec<usize>,
     pub(super) base: Vec<usize>,
 }
 
@@ -113,7 +113,7 @@ pub(super) struct State {
     pub(super) results: Vec<Scored>,
     pub(super) line: f64,
     /// The last query in lower case and the files it matched, to score only those when the query grows.
-    pub(super) prev: Option<(Vec<u16>, Vec<usize>)>,
+    pub(super) prev: Option<(String, Vec<usize>)>,
     // Search in files
     pub(super) groups: Vec<Group>,
     pub(super) total: usize,

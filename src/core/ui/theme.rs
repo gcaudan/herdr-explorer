@@ -3,7 +3,6 @@
 
 use super::Rgb;
 use crate::core::exec;
-use crate::core::js;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
 /// The glyphs of the panes' controls in an icon set: `search` is the magnifier before every find and filter field;
@@ -39,7 +38,7 @@ pub fn use_glyphs(set: &str) {
     GLYPH_SET.store(i as u8, Ordering::Relaxed);
 }
 
-/// The glyphs of the set in use (`G` in the JS).
+/// The glyphs of the set in use.
 pub fn g() -> &'static Glyphs {
     &GLYPHS[GLYPH_SET.load(Ordering::Relaxed) as usize]
 }
@@ -50,7 +49,7 @@ macro_rules! palette {
         /// the light one.
         pub struct Palette { $(pub $field: Rgb),* }
         impl Palette {
-            /// A colour by its name in the JS (`C[name]`).
+            /// A colour by its name.
             pub fn get(&self, name: &str) -> Option<Rgb> {
                 match name { $($name => Some(self.$field),)* _ => None }
             }
@@ -184,7 +183,7 @@ pub fn c() -> &'static Palette {
     if light() { &LIGHT } else { &DARK }
 }
 
-/// The colour of a git status in the theme (`GIT[status]`).
+/// The colour of a git status in the theme.
 pub fn git(status: char) -> Option<Rgb> {
     let table = if light() { &GIT_LIGHT } else { &GIT_DARK };
     table.iter().find(|(s, _)| *s == status).map(|(_, rgb)| *rgb)
@@ -216,7 +215,7 @@ pub fn theme_setting() -> &'static str {
 /// The terminal's background as last seen, dark until then.
 pub fn seen_background() -> &'static str {
     let text = background_file().and_then(|f| crate::core::exec::read_text(f).ok());
-    if text.is_some_and(|t| t.trim_matches(js::is_space) == "light") { "light" } else { "dark" }
+    if text.is_some_and(|t| t.trim_matches(crate::unicode::is_space) == "light") { "light" } else { "dark" }
 }
 
 /// The theme a setting stands for: 'auto' is the terminal's background as last seen.
@@ -225,12 +224,12 @@ pub fn setting_theme(t: Option<&str>) -> &'static str {
         "dark" => "dark",
         "light" => "light",
         "auto" => seen_background(),
-        // The JS returns any other value as it is, which useTheme takes as dark.
+        // Any other value: dark.
         _ => "dark",
     }
 }
 
-/// The theme of the settings put in use, as the JS does when the module loads.
+/// The theme of the settings put in use.
 pub fn init_theme() {
     use_theme(setting_theme(None));
 }

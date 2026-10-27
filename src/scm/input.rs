@@ -1,4 +1,4 @@
-//! Keys and mouse of the source control pane (src/scm/input.js); the selection, which the diff beside the list
+//! Keys and mouse of the source control pane; the selection, which the diff beside the list
 //! follows, is the pane's (pane.rs).
 
 use super::context::{PickItem, Row, VIEWS};
@@ -387,12 +387,15 @@ impl Pane {
                     return self.open_row(row.as_ref(), false);
                 }
             }
-            "1" | "2" | "3" | "4" => {
+            "1" | "2" | "3" | "4" | "5" => {
                 let i = k.parse::<usize>().unwrap_or(1) - 1;
                 return self.set_view(VIEWS[i].0);
             }
             "r" => {
                 self.flash("Refreshed", false);
+                if self.s.view == "pulls" {
+                    self.load_pulls();
+                }
                 return self.schedule();
             }
             "f" => return self.fetch(),
@@ -485,6 +488,15 @@ impl Pane {
                         }
                     }
                     _ => {}
+                }
+            }
+            "pulls" => {
+                if let Some(pull) = row.as_ref().and_then(|r| r.pull.clone()) {
+                    match k {
+                        "o" => self.open_pull(&pull),
+                        "C" => self.checkout_pull(pull),
+                        _ => {}
+                    }
                 }
             }
             "stashes" => {

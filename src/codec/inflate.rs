@@ -1,13 +1,12 @@
-//! Inflate (RFC 1951) in a zlib wrapper (RFC 1950), as the JS calls it: `zlib.inflateSync(data, { finishFlush:
-//! Z_SYNC_FLUSH, maxOutputLength })`. A stream cut short gives what it decoded so far; more output than allowed, a
-//! bad header, bad codes or a wrong checksum are errors. Node writes the output in chunks of 16 KiB and checks its
+//! Inflate (RFC 1951) in a zlib wrapper (RFC 1950), its output bounded. A stream cut short gives what it decoded so far; more output than allowed, a
+//! bad header, bad codes or a wrong checksum are errors. The output is written in chunks of 16 KiB and checks its
 //! size after each one: a data error met before the chunk holding the byte past the limit is full wins over it.
 
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
-    /// More than the allowed output (zlib's "Cannot create a Buffer larger than…").
+    /// More than the allowed output.
     TooLarge,
     /// A header, block or code zlib refuses, or a wrong Adler-32.
     Data(&'static str),
@@ -179,10 +178,10 @@ pub fn adler32(data: &[u8]) -> u32 {
     b << 16 | a
 }
 
-/// Node's output chunk (zlib's Z_DEFAULT_CHUNK): the output size is checked each time one is full.
+/// The output chunk (zlib's Z_DEFAULT_CHUNK): the output size is checked each time one is full.
 const CHUNK: usize = 16 * 1024;
 
-/// The output, bounded as Node bounds it.
+/// The output, its size checked at each full chunk.
 struct Out {
     data: Vec<u8>,
     max: usize,

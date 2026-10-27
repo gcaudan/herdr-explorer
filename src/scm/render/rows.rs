@@ -82,7 +82,7 @@ impl Pane {
         }
         fn walk(p: &Pane, out: &mut Vec<Row>, sec: &'static str, n: &Node, prefix: &str, depth: usize) {
             let mut dirs: Vec<&(String, Node)> = n.dirs.iter().collect();
-            dirs.sort_by(|a, b| crate::unicode::locale_compare(&a.0, &b.0, false));
+            dirs.sort_by(|a, b| crate::unicode::natural_cmp(&a.0, &b.0));
             for (name, d) in dirs {
                 let (mut label, mut dir, mut full) = (name.clone(), d, format!("{prefix}{name}"));
                 while dir.dirs.len() == 1 && dir.files.is_empty() {
@@ -247,6 +247,36 @@ impl Pane {
                 }));
                 out
             }
+            "pulls" => {
+                let note = |text: &str| Row {
+                    kind: "note",
+                    key: "none".into(),
+                    text: text.into(),
+                    depth: 1,
+                    ..Row::default()
+                };
+                let pulls = match &self.s.pulls {
+                    None => return vec![note("Loading…")],
+                    Some(Err(e)) => return vec![note(e)],
+                    Some(Ok(p)) if p.is_empty() && self.s.pulls_loading => return vec![note("Loading…")],
+                    Some(Ok(p)) if p.is_empty() => return vec![note("No open pull requests")],
+                    Some(Ok(p)) => p,
+                };
+                // The current branch's first.
+                let branch = crate::scm::state::head_name(repo);
+                let mut rows: Vec<Row> = pulls
+                    .iter()
+                    .map(|p| Row {
+                        kind: "pull",
+                        key: format!("#{}", p.number),
+                        current: !branch.is_empty() && p.branch == branch,
+                        pull: Some(p.clone()),
+                        ..Row::default()
+                    })
+                    .collect();
+                rows.sort_by_key(|r| !r.current);
+                rows
+            }
             _ => self.ref_rows(),
         }
     }
@@ -327,7 +357,7 @@ fn compare_rows(d: &DiffView, width: i64) -> Vec<CmpRow> {
         }
         for x in list {
             let date = format!(" {} ", pad_start(&x.date, 6));
-            let room = (width - crate::core::js::utf16_len(&date) as i64 - 13).max(1);
+            let room = (width - crate::core::ui::text_width(&date) as i64 - 13).max(1);
             out.push(CmpRow {
                 commit: Some(x.clone()),
                 segs: vec![
@@ -348,7 +378,7 @@ fn compare_rows(d: &DiffView, width: i64) -> Vec<CmpRow> {
     commits(&mut out, &c.mine, c.ahead);
     section(&mut out, format!("Only on {}", d.base), num(c.behind));
     commits(&mut out, &c.theirs, c.behind);
-    let n = |v: &str| if v == "-" { 0.0 } else { crate::core::js::string_to_number(v) };
+    let n = |v: &str| if v == "-" { 0.0 } else { v.trim().parse().unwrap_or(f64::NAN) };
     let add: f64 = c.files.iter().map(|f| n(&f.add)).sum();
     let del: f64 = c.files.iter().map(|f| n(&f.del)).sum();
     section(&mut out, "Files changed".into(), format!("{}  +{} −{}", c.files.len(), num(add), num(del)));
@@ -360,7 +390,7 @@ fn compare_rows(d: &DiffView, width: i64) -> Vec<CmpRow> {
         let counts = if binary { " binary ".to_string() } else { format!(" +{} −{} ", f.add, f.del) };
         let mut segs = vec![
             seg("   ", ""),
-            seg(pad(&f.path, (width - crate::core::js::utf16_len(&counts) as i64 - 3).max(1)), ""),
+            seg(pad(&f.path, (width - crate::core::ui::text_width(&counts) as i64 - 3).max(1)), ""),
         ];
         if binary {
             segs.push(seg(counts, dim()));

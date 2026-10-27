@@ -1,10 +1,9 @@
-//! JSON as the JS reads and writes it: `parse` follows `JSON.parse` (objects keep their keys in the order first seen,
-//! a repeated key takes the last value), `stringify` and `stringify_pretty` give the bytes of `JSON.stringify`,
-//! numbers included. State files and settings keep their format through it.
+//! JSON read and written: `parse` keeps an object's keys in the order first seen (a repeated key takes the last
+//! value), `stringify` and `stringify_pretty` write it compact or indented, numbers in their shortest form. State files and settings keep their format through it.
 
 use std::fmt::Write as _;
 
-/// A JSON value. Objects keep their keys in insertion order, as JS objects do for non-numeric keys.
+/// A JSON value. Objects keep their keys in insertion order, array indexes aside (insert).
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum Value {
     #[default]
@@ -82,7 +81,7 @@ impl Value {
         matches!(self, Value::Null)
     }
 
-    /// JS truthiness: false, 0, NaN, "" and null are falsy.
+    /// Truthiness: false, 0, NaN, "" and null are falsy.
     pub fn truthy(&self) -> bool {
         match self {
             Value::Null => false,
@@ -144,7 +143,7 @@ macro_rules! obj {
     };
 }
 
-/// Sets a key of an object's fields as a JS object does: in place when it exists; else an array index ("0", "17")
+/// Sets a key of an object's fields: in place when it exists; else an array index ("0", "17")
 /// among the other indexes in numeric order, before every other key, and any other key at the end.
 pub fn insert(fields: &mut Vec<(String, Value)>, key: String, value: Value) {
     if let Some((_, v)) = fields.iter_mut().find(|(k, _)| *k == key) {
@@ -160,7 +159,7 @@ pub fn insert(fields: &mut Vec<(String, Value)>, key: String, value: Value) {
     }
 }
 
-/// The array index a key stands for in JS: digits without a leading zero, below 2^32 - 1.
+/// The array index a key stands for: digits without a leading zero, below 2^32 - 1.
 fn index(key: &str) -> Option<u32> {
     if key.is_empty() || (key.len() > 1 && key.starts_with('0')) || !key.bytes().all(|b| b.is_ascii_digit()) {
         return None;
@@ -170,7 +169,7 @@ fn index(key: &str) -> Option<u32> {
 
 // --- parse
 
-/// Parses a JSON text as `JSON.parse` does; `Err` holds a short reason.
+/// Parses a JSON text; `Err` holds a short reason.
 pub fn parse(text: &str) -> Result<Value, String> {
     let mut p = Parser { s: text.as_bytes(), at: 0 };
     p.ws();
@@ -211,7 +210,7 @@ impl Parser<'_> {
     }
 
     fn value(&mut self, depth: usize) -> Result<Value, String> {
-        // V8 has no such limit: a deeper text is refused here rather than overflowing the stack (registered gap).
+        // A deeper text is refused rather than overflowing the stack.
         if depth > 512 {
             return Err("nested too deeply".into());
         }
@@ -354,7 +353,7 @@ impl Parser<'_> {
                             self.at += 1;
                             let hi = self.hex4()?;
                             // A surrogate pair makes one character; a lone surrogate, which a Rust string cannot
-                            // hold, becomes U+FFFD (the JS keeps it as is).
+                            // hold, becomes U+FFFD.
                             let c = if (0xD800..0xDC00).contains(&hi) && self.s[self.at..].starts_with(b"\\u") {
                                 let back = self.at;
                                 self.at += 2;
@@ -384,14 +383,14 @@ impl Parser<'_> {
 
 // --- stringify
 
-/// `JSON.stringify(v)`.
+/// The value as compact JSON.
 pub fn stringify(v: &Value) -> String {
     let mut out = String::new();
     write_value(&mut out, v, None, 0);
     out
 }
 
-/// `JSON.stringify(v, null, indent)`.
+/// The value as JSON indented by `indent` spaces (compact when 0).
 pub fn stringify_pretty(v: &Value, indent: usize) -> String {
     let mut out = String::new();
     write_value(&mut out, v, Some(indent), 0);
@@ -448,7 +447,7 @@ fn newline(out: &mut String, indent: Option<usize>, depth: usize) {
     }
 }
 
-/// A string as `JSON.stringify` quotes it.
+/// A string quoted as JSON, control characters escaped.
 pub fn quote(out: &mut String, s: &str) {
     out.push('"');
     for c in s.chars() {
@@ -469,7 +468,26 @@ pub fn quote(out: &mut String, s: &str) {
     out.push('"');
 }
 
-/// A finite number as JS's `Number.prototype.toString` writes it: the shortest digits that read back the same, in
+/// The number a field holds: a number, or a string that reads as one (white space around it); NaN for anything else,
+/// a missing field included.
+pub fn num(v: Option<&Value>) -> f64 {
+    match v {
+        Some(Value::Num(n)) => *n,
+        Some(Value::Str(s)) => s.trim().parse().unwrap_or(f64::NAN),
+        Some(Value::Bool(b)) => *b as u8 as f64,
+        _ => f64::NAN,
+    }
+}
+
+/// A value as a message or a command line writes it: a string as it is, anything else as JSON.
+pub fn text(v: &Value) -> String {
+    match v {
+        Value::Str(s) => s.clone(),
+        v => stringify(v),
+    }
+}
+
+/// A finite number written as the shortest digits that read back the same, in
 /// plain notation from 1e-7 to 1e21, else as d.ddde±x.
 pub fn number(n: f64) -> String {
     if n == 0.0 {
@@ -547,7 +565,7 @@ mod tests {
         assert_eq!(parse(r#""\ud83d""#).unwrap(), Value::from("\u{FFFD}"));
         assert_eq!(stringify_pretty(&parse("[]").unwrap(), 1), "[]");
         assert_eq!(stringify_pretty(&parse(r#"{"a":1}"#).unwrap(), 0), r#"{"a":1}"#);
-        // Array indexes first, in numeric order, as in a JS object.
+        // Array indexes first, in numeric order.
         assert_eq!(
             stringify(&parse(r#"{"b":1,"10":2,"2":3,"01":4,"4294967295":5}"#).unwrap()),
             r#"{"2":3,"10":2,"b":1,"01":4,"4294967295":5}"#

@@ -1,4 +1,4 @@
-//! test/places.test.js: the places of peek's argument, and the links clicked in a terminal.
+//! The places of peek's argument, and the links clicked in a terminal.
 
 mod support;
 

@@ -2,7 +2,6 @@
 //! { real path: signature of the content when marked }. A viewed file shows folded, and ] and [ skip it.
 
 use super::exec::{tab_file, write_atomic};
-use super::js;
 use crate::codec::sha;
 use crate::json::{self, Value};
 use std::collections::HashMap;
@@ -38,7 +37,7 @@ pub fn sign(file: &str) -> String {
     let mut signs = SIGNS.lock().unwrap_or_else(|p| p.into_inner());
     let signs = signs.get_or_insert_with(HashMap::new);
     let stat = std::fs::metadata(file).map(|m| {
-        let time = |t: std::io::Result<std::time::SystemTime>| t.map(js::time_ms).unwrap_or(0.0);
+        let time = |t: std::io::Result<std::time::SystemTime>| t.map(crate::core::clock::ms).unwrap_or(0.0);
         let mtime = time(m.modified());
         (format!("{} {} {}", m.len(), json::number(mtime), json::number(time(changed(&m)))), mtime)
     });
@@ -49,7 +48,7 @@ pub fn sign(file: &str) -> String {
         {
             return Ok(sign.clone());
         }
-        let at = js::now_ms();
+        let at = crate::core::clock::now_ms();
         let sign = sha::hex(&sha::sha1(&std::fs::read(file)?));
         signs.insert(file.to_string(), (stat, sign.clone(), at));
         Ok(sign)
@@ -60,7 +59,7 @@ pub fn sign(file: &str) -> String {
     })
 }
 
-/// The status change time (ctime); on Windows, as Node fills it there, the last write.
+/// The status change time (ctime); on Windows the last write.
 fn changed(m: &std::fs::Metadata) -> std::io::Result<std::time::SystemTime> {
     #[cfg(unix)]
     {
@@ -124,7 +123,7 @@ mod tests {
         std::fs::write(&file, "one\n").unwrap();
         let real = sign(&file);
         let stat = SIGNS.lock().unwrap().as_ref().unwrap()[&file].0.clone();
-        let mtime = std::fs::metadata(&file).unwrap().modified().map(js::time_ms).unwrap();
+        let mtime = std::fs::metadata(&file).unwrap().modified().map(crate::core::clock::ms).unwrap();
         let known = |at: f64| {
             SIGNS.lock().unwrap().as_mut().unwrap().insert(file.clone(), (stat.clone(), "stale".into(), at));
         };

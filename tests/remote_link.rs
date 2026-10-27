@@ -1,4 +1,4 @@
-//! test/remote-link.test.js: links to a network share, found by reading the links on the way, never by following
+//! Links to a network share, found by reading the links on the way, never by following
 //! them.
 
 mod support;
@@ -26,7 +26,8 @@ fn links() -> Option<(support::TempDir, String)> {
     let dir = tmp.path.to_string_lossy().into_owned();
     std::fs::write(tmp.path.join("real.png"), "").unwrap();
     match link(&format!(r"{SHARE}\a.png"), &tmp.path.join("remote.png"), false) {
-        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => return None,
+        // ERROR_PRIVILEGE_NOT_HELD (1314): no developer mode, nor an elevated process.
+        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied || e.raw_os_error() == Some(1314) => return None,
         r => r.unwrap(),
     }
     link(SHARE, &tmp.path.join("pics"), true).unwrap();
@@ -52,7 +53,7 @@ fn a_link_to_a_network_share_is_found_directly_through_a_folder_or_another_link(
     assert!(remote_link(&at("remote.png"), ""));
 }
 
-/// The second half of the JS test: the file actions never hand such a link to a program, a rename moves the link
+/// The file actions never hand such a link to a program, a rename moves the link
 /// itself, and a removal takes the link, never its target.
 #[test]
 fn the_file_actions_never_follow_a_link_to_a_network_share() {

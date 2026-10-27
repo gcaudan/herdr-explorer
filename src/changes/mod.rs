@@ -1,10 +1,10 @@
-//! The Changes pane (src/diff.js's main): git changes of a file or folder, in a temporary side pane: compared with the
+//! The Changes pane: git changes of a file or folder, in a temporary side pane: compared with the
 //! tab's scope (b), inline or side by side (v), staged, unstaged or discarded by the rows selected (s, u, D), with
 //! review notes (a) and files marked viewed (m); q or Esc closes it.
 //!
 //! As in the other panes, the herdr calls run on a worker thread, git on a second one, a staging that may ask about
-//! the trash on a thread of its own; their results come back to the pane's loop, the JS's timers are deadlines of
-//! that loop.
+//! the trash on a thread of its own; their results come back to the pane's loop, timers are deadlines of that
+//! loop.
 //!
 //! This file holds the pane, its loop and timers; state.rs the changes loaded and what is asked, ops.rs staging,
 //! viewed files and scopes, render.rs the frame, input.rs keys, mouse and notes.
@@ -18,7 +18,7 @@ use crate::core::scope::Scope;
 use crate::core::screen::{self, Input, Screen};
 use crate::core::ui::{self, Field, HelpState, Hints, Menu, Scrollbar};
 use crate::core::watch::Watch;
-use crate::core::{actions, exec, js, notes, paths, scope, viewed, worker};
+use crate::core::{actions, exec, notes, paths, scope, viewed, worker};
 use crate::diff::{Diff, Row};
 use crate::json::Value;
 use crate::sys;
@@ -108,7 +108,7 @@ impl Pane {
         let env = |k: &str| exec::env_var(k).filter(|v| !v.is_empty());
         ui::init_theme();
         let settings = exec::read_settings();
-        // The glyphs stay Nerd Font ones whatever the settings say, as in the JS.
+        // The glyphs stay Nerd Font ones whatever the settings say.
         let file = env("EXPLORER_FILE").unwrap_or_default();
         let cwd = env("EXPLORER_ROOT")
             .or_else(|| (!file.is_empty()).then(|| paths::dirname(&file)))
@@ -167,7 +167,7 @@ impl Pane {
         })
     }
 
-    /// What the JS does as its script loads, once the screen is set up.
+    /// What the pane does first, once the screen is set up.
     fn start(&mut self) {
         self.draw();
         self.changes(|p, d| {
@@ -183,7 +183,8 @@ impl Pane {
         }
         let pane = self.pane.clone();
         self.herdr.send(Box::new(move || {
-            let tab = actions::tab_of(&pane).and_then(|t| t.me.get("tab_id").filter(|v| v.truthy()).map(js::string));
+            let tab =
+                actions::tab_of(&pane).and_then(|t| t.me.get("tab_id").filter(|v| v.truthy()).map(crate::json::text));
             Box::new(move |p: &mut Pane| p.got_tab(tab))
         }));
     }
@@ -233,7 +234,7 @@ impl Pane {
         let watches = [&self.settings_watch, &self.notes_watch, &self.viewed_watch, &self.scope_watch];
         [self.flash_at, self.scrollbar.due()]
             .into_iter()
-            .chain(watches.into_iter().map(|w| w.as_ref().map(Watch::due)))
+            .chain(watches.into_iter().map(|w| w.as_ref().and_then(Watch::due)))
             .flatten()
             .min()
     }

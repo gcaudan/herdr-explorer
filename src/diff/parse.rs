@@ -1,7 +1,5 @@
 //! The output of git diff, show or stash show, read into files, hunks and lines.
 
-use crate::core::js;
-
 /// A line of a hunk: its sign (' ', '+', '-', or '\\' for "\ No newline at end of file", whose text is then trimmed
 /// and has no numbers), its text, its number in the old and the new version (None on the side it is not on), its
 /// place (its number in the new version, or for a removed line that of the line now in its place), and whether it
@@ -52,48 +50,40 @@ pub struct Diff {
     pub del: usize,
 }
 
-/// A path as git quotes it when it contains special characters: "a/tab\there" with octal escapes for bytes. Each
-/// UTF-16 unit of a character past the BMP becomes U+FFFD, as Buffer.from(one unit) makes it.
+/// A path as git quotes it when it contains special characters: "a/tab\there" with octal escapes for bytes.
 pub fn unquote(p: &str) -> String {
-    let units: Vec<u16> = p.encode_utf16().collect();
-    if !p.starts_with('"') || !p.ends_with('"') || units.len() < 2 {
+    let c: Vec<char> = p.chars().collect();
+    if !p.starts_with('"') || !p.ends_with('"') || c.len() < 2 {
         return p.to_string();
     }
     let mut bytes = Vec::new();
-    let unit_bytes = |u: u16, bytes: &mut Vec<u8>| match char::from_u32(u as u32) {
-        Some(c) => bytes.extend_from_slice(c.encode_utf8(&mut [0; 4]).as_bytes()),
-        None => bytes.extend_from_slice("\u{FFFD}".as_bytes()),
-    };
-    let end = units.len() - 1;
+    let push = |ch: char, bytes: &mut Vec<u8>| bytes.extend_from_slice(ch.encode_utf8(&mut [0; 4]).as_bytes());
+    let end = c.len() - 1;
     let mut i = 1;
     while i < end {
-        if units[i] != b'\\' as u16 {
-            unit_bytes(units[i], &mut bytes);
+        if c[i] != '\\' {
+            push(c[i], &mut bytes);
             i += 1;
             continue;
         }
         i += 1;
-        let n = units[i];
-        if (b'0' as u16..=b'7' as u16).contains(&n) {
-            // parseInt(p.substr(i, 3), 8): the octal digits among the next three units, a byte of the value.
-            let value = units[i..(i + 3).min(units.len())]
-                .iter()
-                .take_while(|&&u| (b'0' as u16..=b'7' as u16).contains(&u))
-                .fold(0u32, |v, &u| v * 8 + (u - b'0' as u16) as u32);
+        let n = c[i];
+        if n.is_digit(8) {
+            // The octal digits among the next three characters, a byte of the value.
+            let value = c[i..(i + 3).min(c.len())].iter().map_while(|d| d.to_digit(8)).fold(0u32, |v, d| v * 8 + d);
             bytes.push(value as u8);
             i += 3;
         } else {
-            let esc = match n {
-                0x61 => 7,
-                0x62 => 8,
-                0x74 => 9,
-                0x6E => 10,
-                0x76 => 11,
-                0x66 => 12,
-                0x72 => 13,
-                _ => n as u32,
-            };
-            bytes.push(esc as u8);
+            match n {
+                'a' => bytes.push(7),
+                'b' => bytes.push(8),
+                't' => bytes.push(9),
+                'n' => bytes.push(10),
+                'v' => bytes.push(11),
+                'f' => bytes.push(12),
+                'r' => bytes.push(13),
+                _ => push(n, &mut bytes),
+            }
             i += 1;
         }
     }
@@ -140,7 +130,13 @@ pub fn head(l: &str) -> Option<Head<'_>> {
     let (o, oc, rest) = range(l.strip_prefix("@@ -")?)?;
     let (n, nc, rest) = range(rest.strip_prefix(" +")?)?;
     let rest = rest.strip_prefix(" @@")?;
-    (!rest.chars().any(js::is_line_terminator)).then_some(Head { old: o, old_count: oc, new: n, new_count: nc, rest })
+    (!rest.chars().any(crate::core::regex::is_line_terminator)).then_some(Head {
+        old: o,
+        old_count: oc,
+        new: n,
+        new_count: nc,
+        rest,
+    })
 }
 
 /// Parses the output of git diff, show or stash show.
@@ -156,7 +152,7 @@ pub fn parse(text: &str) -> Diff {
             let f = d.files.last_mut().unwrap();
             let h = f.hunks.last_mut().unwrap();
             if sign == '\\' {
-                let text = l[1..].trim_matches(js::is_space).to_string();
+                let text = l[1..].trim_matches(crate::unicode::is_space).to_string();
                 h.lines.push(Line { sign, text, old: None, new: None, at: 0, cr: false });
                 continue;
             }
@@ -229,11 +225,11 @@ pub fn parse(text: &str) -> Diff {
             f.notes.push(format!("mode {m}"));
         } else if let Some(m) = l.strip_prefix("new mode ") {
             f.new_mode = Some(m.to_string());
-            // Without a note before it, the JS sets notes[-1], which no one reads.
+            // Without a note before it, nothing to add to.
             if let Some(last) = f.notes.last_mut() {
                 last.push_str(&format!(" → {m}"));
             }
-        } else if !l.trim_matches(js::is_space).is_empty()
+        } else if !l.trim_matches(crate::unicode::is_space).is_empty()
             && !["index ", "similarity ", "dissimilarity ", "new file", "deleted file"].iter().any(|p| l.starts_with(p))
         {
             d.pre.push(l.to_string());
@@ -251,28 +247,23 @@ pub fn parse(text: &str) -> Diff {
 }
 
 /// The path of a diff --git a/x b/x line, when the same on both sides (otherwise it comes from the --- +++ or rename
-/// lines), measured in UTF-16 units as the JS does.
+/// lines): "a/" + p + " b/" + p, the halves measured in characters.
 fn same_path(l: &str) -> Option<String> {
     // l.replace(/^diff --\S+ /, '')
     let rest = l
         .strip_prefix("diff --")
         .and_then(|r| {
-            let n = r.find(js::is_space)?;
+            let n = r.find(crate::unicode::is_space)?;
             (n > 0 && r[n..].starts_with(' ')).then(|| &r[n + 1..])
         })
         .unwrap_or(l);
-    let units: Vec<u16> = rest.encode_utf16().collect();
     if !rest.starts_with("a/") {
         return None;
     }
-    // half = (length - 1) / 2, and slice() truncates it.
-    let len = units.len() as f64;
-    let half = (len - 1.0) / 2.0;
-    let slice = |from: f64, to: f64| {
-        let clamp = |x: f64| (x.trunc().max(0.0) as usize).min(units.len());
-        let (a, b) = (clamp(from), clamp(to));
-        if a < b { &units[a..b] } else { &units[0..0] }
-    };
-    let first = slice(2.0, half);
-    (first == slice(half + 3.0, len)).then(|| String::from_utf16_lossy(first))
+    let at: Vec<usize> = rest.char_indices().map(|(b, _)| b).chain([rest.len()]).collect();
+    let len = at.len() - 1;
+    let half = (len - 1) / 2;
+    let slice = |from: usize, to: usize| if from < to { &rest[at[from]..at[to.min(len)]] } else { "" };
+    let first = slice(2, half);
+    (first == slice(half + 3, len)).then(|| first.to_string())
 }

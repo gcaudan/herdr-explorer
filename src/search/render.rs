@@ -1,5 +1,5 @@
 //! The search's frame: tabs, the query and its options, the globs, the status, the results with the file on the right,
-//! the keys (src/search.js's render).
+//! the keys.
 
 use super::find::{self, MAX_FILES, MAX_MATCHES, MAX_ROWS};
 use super::{Act, CONTENT, EXCLUDE, FILES, Focus, INCLUDE, Mode, Opt, Row, SField, Search, Shown, Target, Zone};
@@ -54,50 +54,36 @@ fn num(n: f64) -> String {
     if n.fract() == 0.0 && n.abs() < 1e21 { format!("{n:.0}") } else { n.to_string() }
 }
 
-/// `text.slice(start, end)` on UTF-16 units: negative bounds count from the end.
-fn js_slice(text: &[u16], start: i64, end: Option<i64>) -> &[u16] {
-    let len = text.len() as i64;
-    let at = |i: i64| if i < 0 { (len + i).max(0) } else { i.min(len) } as usize;
-    let (a, b) = (at(start), at(end.unwrap_or(len)));
-    if a < b { &text[a..b] } else { &[] }
+fn is_blank(c: char) -> bool {
+    crate::unicode::is_space(c) || crate::core::regex::is_line_terminator(c)
 }
 
-fn is_blank(u: u16) -> bool {
-    char::from_u32(u as u32).is_some_and(|c| crate::core::js::is_space(c) || crate::core::js::is_line_terminator(c))
-}
-
-fn is_control(u: u16) -> bool {
-    u <= 0x1f || (0x7f..=0x9f).contains(&u)
-}
-
-/// Segments of a text (UTF-16) with ranges highlighted, tabs expanded and control characters dropped.
-fn marked(text: &[u16], found: &[(i64, i64)], style: &str, hi: &str, tab: usize) -> Vec<Seg> {
+/// Segments of a text with byte ranges highlighted, tabs expanded and control characters dropped.
+fn marked(text: &str, found: &[(usize, usize)], style: &str, hi: &str, tab: usize) -> Vec<Seg> {
     let mut out = Vec::new();
-    let (mut cur, mut on, mut col, mut r): (Vec<u16>, bool, usize, usize) = (Vec::new(), false, 0, 0);
-    for (i, &ch) in text.iter().enumerate() {
-        let i = i as i64;
+    let (mut cur, mut on, mut col, mut r) = (String::new(), false, 0, 0);
+    for (i, ch) in text.char_indices() {
         while r < found.len() && i >= found[r].1 {
             r += 1;
         }
         let inside = r < found.len() && i >= found[r].0;
         if inside != on {
             if !cur.is_empty() {
-                out.push(seg(find::from_utf16(&cur), if on { hi } else { style }));
+                out.push(seg(std::mem::take(&mut cur), if on { hi } else { style }));
             }
-            cur.clear();
             on = inside;
         }
-        if ch == b'\t' as u16 {
+        if ch == '\t' {
             let n = tab - col % tab;
-            cur.extend(std::iter::repeat_n(b' ' as u16, n));
+            cur.extend(std::iter::repeat_n(' ', n));
             col += n;
-        } else if !is_control(ch) {
+        } else if !ui::is_control(ch) {
             cur.push(ch);
             col += 1;
         }
     }
     if !cur.is_empty() {
-        out.push(seg(find::from_utf16(&cur), if on { hi } else { style }));
+        out.push(seg(cur, if on { hi } else { style }));
     }
     out
 }
@@ -178,29 +164,30 @@ impl Search {
         let s = &mut self.state;
         let Some(files) = &s.files else { return Vec::new() };
         let r = &mut s.results[k];
-        let rel = &files.units[r.i];
+        let rel = files.list[r.i].as_str();
         if !s.fields[FILES].field.value.is_empty() && r.pos.is_none() {
             let (q, _) = find::parse_query(&s.fields[FILES].field.value);
-            let ql = find::utf16(&crate::core::js::lower(&find::from_utf16(&q)));
+            let (qc, ql) = find::query_chars(&q);
             r.pos = Some(if q.is_empty() {
                 Vec::new()
             } else {
-                find::fuzzy(&q, &ql, rel, &files.lower[r.i], files.base[r.i], true).map(|f| f.1).unwrap_or_default()
+                find::fuzzy(&qc, &ql, rel, &files.lower[r.i], files.base[r.i], true).map(|f| f.1).unwrap_or_default()
             });
         }
         let pos: HashSet<usize> = r.pos.iter().flatten().copied().collect();
         let b = files.base[r.i];
         let (hi, dim) = (hi(), dim());
+        // The bytes [from, to) of the path, the matched characters highlighted.
         let part = |from: usize, to: usize, style: &str| -> Vec<Seg> {
-            let mut segs: Vec<(Vec<u16>, String)> = Vec::new();
-            for (i, &u) in rel.iter().enumerate().take(to).skip(from) {
-                let st = if pos.contains(&i) { hi.as_str() } else { style };
+            let mut segs: Vec<Seg> = Vec::new();
+            for (i, ch) in rel[from..to].char_indices() {
+                let st = if pos.contains(&(from + i)) { hi.as_str() } else { style };
                 match segs.last_mut() {
-                    Some(last) if last.1 == st => last.0.push(u),
-                    _ => segs.push((vec![u], st.to_string())),
+                    Some(last) if last.1 == st => last.0.push(ch),
+                    _ => segs.push(seg(ch.to_string(), st)),
                 }
             }
-            segs.into_iter().map(|(t, st)| seg(find::from_utf16(&t), st)).collect()
+            segs
         };
         // The name, and its folder on the right (cut from the left when long).
         let name = part(b, rel.len(), "");
@@ -251,27 +238,30 @@ impl Search {
         let m = &g.matches[mi];
         let num = format!("   {:>5}  ", m.n);
         // Leading blanks removed, then the start cut so that the first match shows within the room left.
-        let lead = m.text.iter().take_while(|&&u| is_blank(u)).count() as i64;
-        let mut text = js_slice(&m.text, lead, None).to_vec();
-        let mut found: Vec<(i64, i64)> = m.ranges.iter().map(|&(a, b)| (a - lead, b - lead)).collect();
+        let mut text = m.text.trim_start_matches(is_blank);
+        let lead = m.text.len() - text.len();
+        let mut found: Vec<(usize, usize)> =
+            m.ranges.iter().map(|&(a, b)| (a.saturating_sub(lead), b.saturating_sub(lead))).collect();
         let mut cut = m.cut;
         let room = w - num.len() as i64 - 1;
+        // The first match starts about a third into the room, its start moved by whole characters.
         if let Some(&(a, b)) = found.first()
-            && text_width(&find::from_utf16(js_slice(&text, 0, Some(b)))) as i64 > room - 8
+            && text_width(&text[..b]) as i64 > room - 8
         {
-            let mut at = a - (room as f64 * 0.3).floor() as i64;
-            if usize::try_from(at).ok().and_then(|i| text.get(i)).is_some_and(|&u| (0xdc00..=0xdfff).contains(&u)) {
-                at += 1;
+            let back = (room as f64 * 0.3).floor() as i64;
+            let first = text[..a].chars().count() as i64 - back;
+            if first > 0 {
+                let at = find::char_at(text, first as usize);
+                text = &text[at..];
+                found = found.iter().map(|&(a, b)| (a.saturating_sub(at), b.saturating_sub(at))).collect();
+                cut = true;
             }
-            text = js_slice(&text, at, None).to_vec();
-            found = found.iter().map(|&(a, b)| (a - at, b - at)).collect();
-            cut = true;
         }
         let mut out = vec![seg(num, dim.clone())];
         if cut {
             out.push(seg("…", dim));
         }
-        out.extend(marked(&text, &found, "", &found_style(), 1));
+        out.extend(marked(text, &found, "", &found_style(), 1));
         out
     }
 

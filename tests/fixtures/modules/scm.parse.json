@@ -342,13 +342,13 @@
     "staged": [],
     "changes": [
      {
-      "path": "A.txt",
+      "path": "a.txt",
       "code": "U",
       "untracked": true,
       "sec": "changes"
      },
      {
-      "path": "a.txt",
+      "path": "A.txt",
       "code": "U",
       "untracked": true,
       "sec": "changes"
@@ -366,13 +366,13 @@
       "sec": "changes"
      },
      {
-      "path": "é.md",
+      "path": "e.md",
       "code": "U",
       "untracked": true,
       "sec": "changes"
      },
      {
-      "path": "e.md",
+      "path": "é.md",
       "code": "U",
       "untracked": true,
       "sec": "changes"

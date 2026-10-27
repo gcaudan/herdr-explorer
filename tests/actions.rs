@@ -1,4 +1,4 @@
-//! core::actions: what the JS would crash on, and the programs the actions start (browser, file manager, clipboard,
+//! core::actions: the edge cases of the file actions, and the programs they start (browser, file manager, clipboard,
 //! editor), here fakes first on a PATH of their own, with herdr's variables removed and a fake herdr.
 
 mod support;
@@ -8,7 +8,7 @@ use herdr_explorer::core::actions;
 #[cfg(unix)]
 #[test]
 fn a_copy_never_lands_on_a_broken_link() {
-    // Node's cpSync aborts the process there.
+    // The copy's name is taken by a link to nothing.
     let tmp = support::TempDir::new("dup-link");
     let dir = tmp.path.to_string_lossy().into_owned();
     std::fs::write(tmp.path.join("a.txt"), "A").unwrap();
@@ -21,7 +21,6 @@ fn a_copy_never_lands_on_a_broken_link() {
 #[cfg(unix)]
 #[test]
 fn a_broken_link_or_a_missing_file_is_not_duplicated() {
-    // statSync throws in the JS.
     let tmp = support::TempDir::new("dup-broken");
     let dir = tmp.path.to_string_lossy().into_owned();
     std::os::unix::fs::symlink("nowhere", tmp.path.join("l")).unwrap();
@@ -31,7 +30,7 @@ fn a_broken_link_or_a_missing_file_is_not_duplicated() {
 
 #[test]
 fn a_rename_through_a_file_says_why() {
-    // lstat throws ENOTDIR in the JS.
+    // The new name goes through a file: ENOTDIR.
     let tmp = support::TempDir::new("rename-through");
     let dir = tmp.path.to_string_lossy().into_owned();
     std::fs::write(tmp.path.join("f"), "F").unwrap();

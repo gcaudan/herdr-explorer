@@ -21,7 +21,8 @@ The plugin runs with your user's rights. It treats as untrusted:
 Opening a folder, browsing it, previewing its files or viewing its changes must not run code from it. Commands that
 change something run only on an explicit key or menu choice, and destructive ones ask first.
 
-It trusts your own settings, your global and system git configuration, the programs in the absolute folders of your
+It trusts your own settings (a source control tool set there, `scmCommand`, is a program of your choosing: it runs the
+repository's hooks and filters, none of the protections below apply to it), your global and system git configuration, the programs in the absolute folders of your
 `PATH`, herdr, and the plugin's own clone.
 
 ## Running programs
@@ -34,11 +35,16 @@ It trusts your own settings, your global and system git configuration, the progr
   looked up in the working directory, and elsewhere an empty or `.` entry of `PATH` means that folder too: a
   repository could plant a `git` there. On Linux and macOS, the clipboard, trash and file manager tools and the
   fallback terminal editor go through the usual `PATH` lookup.
+- **GitHub CLI**: the PRs view of source control runs `gh pr list`, `gh pr view`, `gh pr diff` and, on `C`,
+  `gh pr checkout`, with the repository's git environment (its hooks and filters off for the git gh runs), no
+  prompt and a 30 s limit. The checkout's fetch gets the settings of a fetch: refused when the repository sets
+  network settings or its own upload-pack, and its ssh command, proxy, askpass and credential helpers replaced. Titles, descriptions and diffs are untrusted text, cleaned of control characters.
 - **Editor commands**: the editor setting and `$EXPLORER_EDITOR`, `$VISUAL` or `$EDITOR` are split into words (quotes
   group them), never interpreted by a shell; the file path is the last argument.
 - **Output limits**. Program output is read up to 64 MB.
-- **The shims** run `scripts/fetch-bin` with the system's own shell and PowerShell, by absolute path (`/bin/sh`, and
-  `powershell.exe` under `%SystemRoot%\System32\WindowsPowerShell`), never one found in a folder of `PATH`.
+- **The launcher** of the explorer and preview panes runs `scripts/fetch-bin` with the system's own shell and
+  PowerShell, by absolute path (`/bin/sh`, and `powershell.exe` under `%SystemRoot%\System32\WindowsPowerShell`),
+  never one found in a folder of `PATH`.
 - **Messages between processes**: the launcher of the explorer and preview panes and the binary it restarts exchange
   their messages through a file in a new folder of their own (mode 0700 on Unix), created so that it fails if it
   already exists. Another user of a shared temporary folder cannot write the messages first and give the next process
@@ -147,12 +153,12 @@ contains spaces or control characters is refused; the others pass after `--end-o
   drawn with characters only. The link under a pixelated image opens one fixed `https://` page of
   this documentation in the browser, never an address taken from a file; the plugin opens nothing in a browser that
   is not a plain `https://` address.
-- **`peek.js`** shows, in the preview, a regular file the caller names: anything the user can read, as the preview
-  already does, never a folder or a device. An agent calling it changes what you see, not what is run. It writes the
+- **`herdr-explorer peek`** shows, in the preview, a regular file the caller names: anything the user can read, as
+  the preview already does, never a folder or a device. An agent calling it changes what you see, not what is run. It writes the
   request file of the state folder only, whose path it reads from `state-dir` in the plugin's config folder.
 - **Ctrl-clicked links**: herdr hands the plugin only `file://` hyperlinks. A link naming another host than this
   machine (or `localhost`) is refused, since on Windows it would reach a network share; the file then shows as with
-  `peek.js`, never run.
+  `peek`, never run.
 
 ## Commit messages from Claude
 
@@ -191,23 +197,18 @@ Files are untrusted input:
 - The check is a single HTTPS request to the GitHub releases API (3 s timeout), at most once a day, from the hooks
   only, for the repository of the clone's `origin` (the plugin's when it is not on GitHub), and only a version number made of digits and dots is kept: nothing it returns reaches a command. Turn it off
   with *Check for updates*.
-- The update only works on the plugin's own clone (its git top level must be the plugin folder, not a dotfiles
-  repository holding a copy), with no operation in progress and no local changes. It first downloads the release's
-  binary with `curl` over HTTPS into `bin/`, and refuses the update unless it matches its line of the release's
-  `SHA256SUMS` (computed by the plugin, no tool run). Only then does it run `git fetch --tags` and `git merge
-  --ff-only v<version>` (or `git checkout --detach v<version>`) in the clone, under the same no-prompt rules
-  (`GIT_TERMINAL_PROMPT=0`, `GCM_INTERACTIVE=never`, detached, ssh in `BatchMode` unless you set your own ssh
-  command), and puts the binary in place by renaming. A binary you built (`bin/.dev`) is never replaced.
-- `scripts/fetch-bin.sh` and `scripts/fetch-bin.ps1`, run by the installers, herdr's build step and the shims,
+- The plugin installs no update and never runs git to move its folder: the explorer only copies herdr's update
+  command (`herdr plugin update gcaudan.explorer`) for you to run, and a linked clone is yours to pull.
+- `scripts/fetch-bin.sh` and `scripts/fetch-bin.ps1`, run by herdr's build step and the launcher,
   follow the same rule: the asset of the manifest's version, from the clone's GitHub `origin` (else
-  `gcaudan/herdr-explorer`), checked against `SHA256SUMS` before it replaces anything. The release workflow builds
+  `gcaudan/herdr-explorer`), checked against `SHA256SUMS` before it replaces anything. A binary you built
+  (`bin/.dev`) is never replaced. The release workflow builds
   the binaries on GitHub's runners and writes `SHA256SUMS` from them; the checksums come from the same release as
   the binary, so they guard against a corrupted or truncated download, not against a compromised release.
-- A checkout installed by `herdr plugin install` is never pulled: the plugin copies herdr's update command instead.
-- The installer is never run by the update. When an update changes the manifest or the install scripts, the plugin
-  only copies the command for you to run.
-- The installers only append the key bindings to herdr's `config.toml` and, when `~/.claude` exists, link
-  `~/.claude/skills/herdr-preview` to the clone. A folder of that name that is not a link is left alone.
+- `herdr-explorer setup`, run by you or from the dialog the explorer offers once, only appends the key bindings to
+  herdr's `config.toml` and, when `~/.claude` exists, links `~/.claude/skills/herdr-preview` to the plugin folder;
+  at each start, the explorer repoints that link when it points at another folder. A folder of that name that is
+  not a link is left alone.
 
 ## Windows
 

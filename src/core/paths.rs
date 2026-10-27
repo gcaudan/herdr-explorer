@@ -1,4 +1,4 @@
-//! Paths as Node's `path` module handles them, on strings: `posix` and `win32` are both here (tested on every
+//! Paths handled as strings: `posix` and `win32` are both here (tested on every
 //! system), the functions at the top are the running system's. Indices are bytes: the separators, dots and drive
 //! letters these functions look at are ASCII, so every slice falls on a character boundary.
 
@@ -16,12 +16,12 @@ pub const DELIMITER: char = ':';
 #[cfg(windows)]
 pub const DELIMITER: char = ';';
 
-/// The process's working directory, as `process.cwd()`.
+/// The process's working directory.
 pub fn cwd() -> String {
     std::env::current_dir().map(|p| p.to_string_lossy().into_owned()).unwrap_or_else(|_| "/".into())
 }
 
-/// The path with `..` and `.` resolved and separators merged, as Node's normalizeString: `sep` joins the parts kept.
+/// The path with `..` and `.` resolved and separators merged: `sep` joins the parts kept.
 fn normalize_string(path: &str, above_root: bool, sep: &str, is_sep: fn(u8) -> bool) -> String {
     let b = path.as_bytes();
     let mut res = String::new();
@@ -153,7 +153,7 @@ fn basename_from(path: &str, start: usize, is_sep: fn(u8) -> bool) -> String {
     if end == -1 { String::new() } else { path[from..end as usize].to_string() }
 }
 
-/// Node's basename with a suffix: taken off when the name ends with it and is not only it; nothing left when the
+/// The basename with a suffix: taken off when the name ends with it and is not only it; nothing left when the
 /// whole path is the suffix.
 fn strip_suffix(path: &str, name: String, suffix: Option<&str>) -> String {
     match suffix {
@@ -176,7 +176,7 @@ pub mod posix {
         path.starts_with('/')
     }
 
-    /// `path.posix.resolve`: from the last absolute part (the working directory before them all).
+    /// The parts resolved to an absolute POSIX path: from the last absolute part (the working directory before them all).
     pub fn resolve(parts: &[&str]) -> String {
         let mut resolved = String::new();
         let mut absolute = false;
@@ -314,7 +314,7 @@ pub mod posix {
         extname_from(path, 0, is_sep)
     }
 
-    /// `path.posix.parse(p).root`.
+    /// The root of a POSIX path: / or nothing.
     pub fn root(path: &str) -> String {
         if path.starts_with('/') { "/".into() } else { String::new() }
     }
@@ -336,7 +336,7 @@ pub mod win32 {
         !b.is_empty() && (is_sep(b[0]) || (b.len() > 2 && is_drive(b) && is_sep(b[2])))
     }
 
-    /// The root of a path that starts with two separators: (device, root end), as Node's resolve reads
+    /// The root of a path that starts with two separators: (device, root end), as resolve reads
     /// `\\server\share`, and `\\?\…`, `\\.\…` when `devices` (parse takes those as a server and a share too); None
     /// when it is not one.
     fn unc(path: &str, devices: bool) -> Option<(String, usize)> {
@@ -369,7 +369,8 @@ pub mod win32 {
         None
     }
 
-    /// `path.win32.resolve`. The working directory of another drive (`=C:` variables) is looked up as Node does.
+    /// The parts resolved to an absolute Windows path. The working directory of another drive comes from its `=C:`
+    /// variable.
     pub fn resolve(parts: &[&str]) -> String {
         let mut device = String::new();
         let mut tail = String::new();
@@ -486,13 +487,11 @@ pub mod win32 {
     ];
 
     /// Whether the start of a path up to its colon (at `colon`, a byte offset) is a reserved device name (CON,
-    /// COM1…), uppercased. No colon (None) takes all but the last UTF-16 unit, as Node's `slice(0, -1)`.
+    /// COM1…), uppercased. No colon (None) takes all but the last character.
     fn reserved(path: &str, colon: Option<usize>) -> bool {
         let part = match colon {
             Some(c) => &path[..c],
             None => match path.chars().next_back() {
-                // Half of a surrogate pair would be left: never a name.
-                Some(ch) if ch.len_utf16() == 2 => return false,
                 Some(ch) => &path[..path.len() - ch.len_utf8()],
                 None => "",
             },
@@ -500,7 +499,8 @@ pub mod win32 {
         RESERVED.contains(&part.to_uppercase().as_str())
     }
 
-    /// Node 26's win32.normalize, reserved device names and the guard of CVE-2024-36139 included.
+    /// The Windows path normalized: reserved device names (CON:) kept as devices, a relative path never read as a
+    /// drive.
     pub fn normalize(path: &str) -> String {
         let b = path.as_bytes();
         let len = b.len();
@@ -805,7 +805,7 @@ pub mod win32 {
         extname_from(path, start, is_sep)
     }
 
-    /// `path.win32.parse(p).root`: a drive (`C:`, `C:\`), a share (`\\server\share\`), or a separator.
+    /// The root of a Windows path: a drive (`C:`, `C:\`), a share (`\\server\share\`), or a separator.
     pub fn root(path: &str) -> String {
         let b = path.as_bytes();
         if b.is_empty() {

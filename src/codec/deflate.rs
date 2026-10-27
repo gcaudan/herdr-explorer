@@ -1,4 +1,4 @@
-//! Deflate (RFC 1951) in a zlib wrapper, for the Kitty graphics protocol (`zlib.deflateSync` in the JS): LZ77 over a
+//! Deflate (RFC 1951) in a zlib wrapper, for the Kitty graphics protocol: LZ77 over a
 //! 32 KiB window with hash chains, fixed Huffman codes. The bytes differ from zlib's (registered gap); what they
 //! inflate to is the same.
 

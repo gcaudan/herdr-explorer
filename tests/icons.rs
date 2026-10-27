@@ -1,4 +1,4 @@
-//! test/icons.test.js: file icons in each icon set: every one and its space take the same columns, two (three for
+//! File icons in each icon set: every one and its space take the same columns, two (three for
 //! emoji, two columns wide), so that the names line up.
 
 use herdr_explorer::core::{icons, ui};
@@ -46,7 +46,7 @@ fn icons_take_the_same_width_within_a_set() {
         ui::use_glyphs(set);
         let all = NAMES.iter().map(|&n| (n, false, false)).chain([("src", true, false), ("src", true, true)]);
         for (name, dir, open) in all {
-            // The colour is always one (an array in the JS).
+            // The colour is always one.
             let (text, _rgb) = icons::icon(None, name, dir, open);
             assert_eq!(ui::text_width(&text), if set == "emoji" { 3 } else { 2 }, "{set} {name}: {text:?}");
         }

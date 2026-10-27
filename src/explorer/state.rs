@@ -6,8 +6,8 @@ use super::watch::AfterGit;
 use super::{Act, Explorer, Run, later, rel_of};
 use crate::core::actions;
 use crate::core::exec::{self};
+use crate::core::paths;
 use crate::core::ui::{Ask, Confirm, Field, HelpState, Menu};
-use crate::core::{js, paths};
 use crate::json::{self, Value};
 use std::rc::Rc;
 use std::time::Instant;
@@ -70,7 +70,7 @@ pub struct Choice {
 }
 
 pub struct State {
-    /// The folders unfolded, in the order they were (a JS Set).
+    /// The folders unfolded, in the order they were unfolded, each once.
     pub(super) expanded: Vec<String>,
     pub(super) rows: Vec<Entry>,
     pub(super) cursor: i64,
@@ -120,7 +120,7 @@ impl Explorer {
     /// The rows of the tree as the view shows them, the selection kept on its entry (else on the first match, or at
     /// the same place).
     pub(super) fn build_rows(&mut self) {
-        let query = self.state.filter.as_ref().map(|f| js::lower(&f.field.value));
+        let query = self.state.filter.as_ref().map(|f| f.field.value.to_lowercase());
         let expanded = self.state.expanded.clone();
         self.state.rows = self.tree.rows(query.as_deref(), self.state.changed, &expanded);
         let rows = &self.state.rows;
@@ -198,7 +198,7 @@ impl Explorer {
         let Some(file) = &self.save_file else { return };
         let mut all = match exec::read_text(file) {
             Ok(text) => match json::parse(&text) {
-                // The JS threw on null or a value that is not an object, and wrote an array back as it was.
+                // A value that is not an object (null, an array) leaves the file alone.
                 Ok(v @ Value::Obj(_)) => v,
                 _ => return,
             },

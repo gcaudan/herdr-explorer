@@ -44,7 +44,7 @@ pub enum Kind {
     Error,
 }
 
-/// What a tab not shown keeps of its view (the JS's VIEW fields), put away by stash and taken back by unstash. None:
+/// What a tab not shown keeps of its view, put away by stash and taken back by unstash. None:
 /// a tab never shown, which starts from the defaults.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct TabView {

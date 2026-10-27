@@ -1,4 +1,4 @@
-//! The explorer's keyboard and mouse (src/explorer/input.js): a question or a prompt first, then the menu, the
+//! The explorer's keyboard and mouse: a question or a prompt first, then the menu, the
 //! settings, the key help, the filter, and the tree's actions by their keys.
 
 use super::{Act, Explorer, Filter, later};
@@ -129,7 +129,7 @@ impl Explorer {
         } else if k == "enter" {
             let p = self.state.prompt.take().unwrap();
             let v = p.field.value.clone();
-            let blank = v.trim_matches(|c| crate::core::js::is_space(c) || crate::core::js::is_line_terminator(c));
+            let blank = v.trim_matches(|c| crate::unicode::is_space(c) || crate::core::regex::is_line_terminator(c));
             if !blank.is_empty() || p.empty {
                 self.run_action(move |ex| (p.done)(ex, v));
             }

@@ -28,13 +28,13 @@ Plugin id `gcaudan.explorer` · herdr 0.9.4 or later · Linux, macOS and Windows
 - **Review**: the changed files only, `]` and `[` to step through them in the preview, and review notes on lines of
   the preview or the diff, typed together into the agent's prompt (`src/app.js:12-14 (fix): …`) without submitting
   it.
-- **Show a file from an agent**: `src/peek.js file:line`, and a Claude Code skill that calls it, show a file at a
-  line in the tab's preview, so that an agent points you at the code it talks about. `ctrl`+click on a `file://`
-  link in the terminal shows that file the same way.
+- **Show a file from an agent**: `bin/herdr-explorer peek file:line`, and a Claude Code skill that calls it, show a
+  file at a line in the tab's preview, so that an agent points you at the code it talks about. `ctrl`+click on a
+  `file://` link in the terminal shows that file the same way.
 - **Insert into terminal**: types a file's path, relative and quoted, into the terminal next to the explorer;
   prefixed with `@` when an agent such as Claude Code runs there.
 - **Preview**: one pane per tab, with VS Code-style tabs (temporary or kept): syntax highlighting for 27 languages and formats, rendered
-  Markdown (GFM tables, task lists, alerts, simple Mermaid flowcharts, local images, sharp where possible), images in real pixels where the
+  Markdown (GFM tables, task lists with the `[?]`, `[-]` and `[/]` statuses, alerts, simple Mermaid flowcharts, local images, sharp where possible), images in real pixels where the
   terminal has the Kitty graphics protocol (else half blocks), WebP and TIFF included, a hex dump for binary files.
   Reloads as soon as the file changes on disk. Find, wrap, zoom, and mouse selection copied to the clipboard.
   Quick edits in place (`i`, text files up to 2 MB): undo, find and replace, changed lines in the gutter, line endings kept. A **Diff**
@@ -57,8 +57,7 @@ Plugin id `gcaudan.explorer` · herdr 0.9.4 or later · Linux, macOS and Windows
 
 ## Requirements
 
-herdr 0.9.4 or later, Node.js 20 or later (`node` on the `PATH` that herdr gives plugins, for the small scripts that
-start the binary), `curl` to download the binary, and a
+herdr 0.9.4 or later, `curl` to download the binary, and a
 [Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr, or emoji, Unicode or ASCII icons. git, a graphical editor, a clipboard and
 a trash tool, and the [Claude Code](https://claude.com/claude-code) CLI are optional: see
 [Requirements](docs/installation.md#requirements) for what each one adds.
@@ -78,24 +77,27 @@ herdr plugin install gcaudan/herdr-explorer
 ```
 
 herdr downloads the binary (the manifest's build step) and manages this checkout and its updates (`herdr plugin
-update gcaudan.explorer`), but adds no key bindings:
-append the three blocks of [Key bindings](docs/installation.md#key-bindings) to herdr's `config.toml`, then run
-`herdr server reload-config`.
+update gcaudan.explorer`). On its first start, the explorer offers to add the key bindings and, when Claude Code is
+installed, link the `herdr-preview` skill; or run `herdr-explorer setup` from the plugin folder's `bin/` yourself
+(see [Setup](docs/installation.md#setup)).
 
 ### From a git clone
 
-The install script downloads the binary, links the clone to herdr, adds the key bindings and, when Claude Code is
-installed, links the `herdr-preview` skill; the explorer can then update itself. Clone the latest release's tag
-(`v<X.Y.Z>`, from the [releases page](https://github.com/gcaudan/herdr-explorer/releases/latest)):
+Clone the latest release's tag (`v<X.Y.Z>`, from the
+[releases page](https://github.com/gcaudan/herdr-explorer/releases/latest)), download its binary, link the clone to
+herdr, then add the key bindings:
 
 ```sh
 git clone --branch v<X.Y.Z> https://github.com/gcaudan/herdr-explorer.git
 cd herdr-explorer
-./install.sh            # Windows (PowerShell): powershell -ExecutionPolicy Bypass -File .\install.ps1
+sh scripts/fetch-bin.sh     # Windows (PowerShell): powershell -ExecutionPolicy Bypass -File scripts\fetch-bin.ps1
+herdr plugin link .
+bin/herdr-explorer setup    # or accept the explorer's offer on its first start
 ```
 
-Keep the clone where it is: herdr runs the plugin from that folder, and updates move it to each new release. See
-[docs/installation.md](docs/installation.md) for what the script does, updates and uninstalling.
+Keep the clone where it is: herdr runs the plugin from that folder. You update it yourself (`git pull` or another
+tag, then `sh scripts/fetch-bin.sh`). See [docs/installation.md](docs/installation.md) for setup, updates and
+uninstalling.
 
 ## Quick start
 
@@ -128,7 +130,7 @@ See [docs/usage.md](docs/usage.md) for every pane, key, mouse action and menu it
 
 ## Contributing
 
-Install Rust, clone, run the install script, then `scripts/dev-build.sh` after each change and reopen the pane; the
+Install Rust, clone, link it with `herdr plugin link .`, then `scripts/dev-build.sh` after each change and reopen the pane; the
 checks are `sh scripts/check.sh`. Commits follow
 [Conventional Commits](https://www.conventionalcommits.org/), and releases are cut by release-please. See
 [CONTRIBUTING.md](CONTRIBUTING.md).

@@ -1,9 +1,8 @@
-//! Drawing of the explorer's tree view (src/explorer/render.js): the header, the rows with their git decorations, the
+//! Drawing of the explorer's tree view: the header, the rows with their git decorations, the
 //! name being typed, the filter's and the changed files' lines, and the action menu, then a question over them.
 
 use super::{Explorer, Inline};
 use crate::core::icons;
-use crate::core::js;
 use crate::core::paths;
 use crate::core::ui::{self, Seg, c, fg, g, line, seg, text_width};
 use crate::explorer::tree::Entry;
@@ -184,16 +183,16 @@ impl Explorer {
         line(&segs, w, Some(c().header))
     }
 
-    /// Whether the header shows the pill: ! finish when the installer must finish an update, else ↑ and the newer
-    /// release (not a skipped one), else for a while after an update its notes (what's new).
+    /// Whether the header shows the pill: ↑ and the newer release (not a skipped one), else for a while after an
+    /// update its notes (what's new).
     pub(super) fn show_update(&self) -> bool {
-        self.finish.is_some() || self.newer().is_some() || self.notice.is_some()
+        self.newer().is_some() || self.notice.is_some()
     }
 
-    /// The newer release the pill shows: with the update check on, and no update running.
+    /// The newer release the pill shows: with the update check on.
     fn newer(&self) -> Option<&str> {
         let check = self.settings.get("updateCheck").is_some_and(crate::json::Value::truthy);
-        self.latest.as_deref().filter(|_| check && !self.updating)
+        self.latest.as_deref().filter(|_| check)
     }
 
     /// The header's pill; the mark alone in a narrow pane.
@@ -201,10 +200,9 @@ impl Explorer {
         if !self.show_update() {
             return None;
         }
-        let (mark, text, rgb) = match (&self.finish, self.newer()) {
-            (Some(_), _) => ("!", "finish", c().yellow),
-            (None, Some(v)) => ("↑", v, c().green),
-            _ => ("✓", "what's new", c().blue),
+        let (mark, text, rgb) = match self.newer() {
+            Some(v) => ("↑", v, c().green),
+            None => ("✓", "what's new", c().blue),
         };
         let label = if w >= 24 { format!(" {mark} {text} ") } else { format!(" {mark} ") };
         Some(seg(label, format!("\x1b[1m{}{}", ui::bg(ui::shade(rgb)), fg(rgb))))
@@ -305,15 +303,12 @@ impl Explorer {
         let pad = (w as i64 - lead - text_width(&name) as i64 - badge_w - 1).max(0) as usize;
         // The part matching the filter in bold blue, as in Go to file; a folder shown only for what it holds, dimmed.
         let filtering = self.state.filter.as_ref().is_some_and(|f| !f.field.value.is_empty());
-        // The JS's offsets, in UTF-16 units of r.name, applied to the name shown (its chain and its … included).
-        let units = |at: usize| r.name.get(..at).map(|s| s.encode_utf16().count());
-        let hit = r.hit.and_then(|(a, b)| {
-            let (a, b) = (units(a)?, units(b)?);
-            if b > js::utf16_len(&name) {
-                return None;
-            }
-            Some((js::unit_at(&name, a)?, js::unit_at(&name, b)?))
-        });
+        // Offsets in r.name, moved past its chain; none when the name shown is cut before the match ends.
+        let lead = r.chain.as_deref().map_or(0, str::len);
+        let hit = r
+            .hit
+            .map(|(a, b)| (lead + a, lead + b))
+            .filter(|&(a, b)| b <= name.len() && name.is_char_boundary(a) && name.is_char_boundary(b));
         let parts = match hit {
             Some((a, b)) => vec![
                 seg(&name[..a], color.clone()),

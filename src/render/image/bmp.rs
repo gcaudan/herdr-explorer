@@ -58,7 +58,7 @@ pub(super) fn decode_dib(b: &[u8], off: usize, data: Option<usize>, ico: bool) -
     let data = data.unwrap_or(pal + colours * entry);
     let stride = (w * bpp as usize).div_ceil(32) * 4;
     let mut out = vec![0u8; w * h * 4];
-    // Each mask, its shift and its largest value, as the JS computes them in 32 bits.
+    // Each mask, its shift and its largest value, computed in 32 bits.
     let chan = masks.map(|ms| {
         ms.map(|m| {
             let max = (1i32.wrapping_shl(m.count_ones()) as i64) - 1;

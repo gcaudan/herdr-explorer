@@ -1,4 +1,4 @@
-//! The `peek` subcommand (src/peek.js): shows a file in the preview of the tab it runs in, for an agent, a script or a
+//! The `peek` subcommand: shows a file in the preview of the tab it runs in, for an agent, a script or a
 //! key binding.
 //!   peek <file>[:<places>] the file, scrolled to the first place and the places highlighted: 12, 12-14, 12:5-18
 //!                          (columns of line 12), several separated by commas (12-14,30,42:5-18)
@@ -13,7 +13,7 @@
 use crate::core::actions::{self, Shown};
 use crate::core::exec::{self, OWN_PANES, Opts};
 use crate::core::places::{self, Mark};
-use crate::core::{icons, js, paths};
+use crate::core::{icons, paths};
 use crate::json::{self, Value};
 
 /// Why peek stops: the message, after "peek: ", and the exit code.
@@ -52,9 +52,10 @@ fn find_state_dir() -> Result<(), Fail> {
     }
     let id = exec::plugin();
     let out = exec::exec(exec::herdr(), &["plugin", "config-dir", &id], &Opts::default());
-    let config = if out.code == Some(0) { out.out.trim_matches(js::is_space).to_string() } else { String::new() };
+    let config =
+        if out.code == Some(0) { out.out.trim_matches(crate::unicode::is_space).to_string() } else { String::new() };
     let mut dir = std::fs::read_to_string(paths::join(&[&config, "state-dir"]))
-        .map(|d| d.trim_matches(js::is_space).to_string())
+        .map(|d| d.trim_matches(crate::unicode::is_space).to_string())
         .unwrap_or_default();
     if dir.is_empty() {
         let base = if exec::WIN {
@@ -80,14 +81,14 @@ fn origin() -> (Option<String>, String) {
     if let Some(text) = exec::env_var("HERDR_PLUGIN_CONTEXT_JSON") {
         let ctx = json::parse(&text).unwrap_or(Value::Obj(Vec::new()));
         let own = |p: &Value| p.get("label").and_then(Value::as_str).is_some_and(|l| OWN_PANES.contains(&l));
-        // An answer without its panes, on which the JS threw, counts as none.
+        // An answer without its panes counts as none.
         let list = match ctx.get("workspace_id").filter(|w| w.truthy()) {
-            Some(ws) => herdr(&["pane", "list", "--workspace", &js::string(ws)]),
+            Some(ws) => herdr(&["pane", "list", "--workspace", &json::text(ws)]),
             None => Value::Null,
         };
         let all = list.get("panes").and_then(Value::as_array).cloned().unwrap_or_default();
-        let panes: Vec<Value> = all.into_iter().filter(|p| js::strict_eq(p.get("tab_id"), ctx.get("tab_id"))).collect();
-        let focused = panes.iter().find(|p| js::strict_eq(p.get("pane_id"), ctx.get("focused_pane_id")));
+        let panes: Vec<Value> = all.into_iter().filter(|p| p.get("tab_id") == ctx.get("tab_id")).collect();
+        let focused = panes.iter().find(|p| p.get("pane_id") == ctx.get("focused_pane_id"));
         let terminal = focused.filter(|f| !own(f)).or_else(|| panes.iter().find(|p| !own(p)));
         pane = match terminal {
             Some(t) => t.get("pane_id").cloned(),
@@ -95,10 +96,10 @@ fn origin() -> (Option<String>, String) {
         };
         let found = terminal.and_then(|t| t.get("cwd")).filter(|c| c.truthy());
         if let Some(c) = found.or_else(|| ctx.get("workspace_cwd").filter(|c| c.truthy())) {
-            cwd = js::string(c);
+            cwd = json::text(c);
         }
     }
-    (pane.filter(Value::truthy).map(|p| js::string(&p)), cwd)
+    (pane.filter(Value::truthy).map(|p| json::text(&p)), cwd)
 }
 
 /// The changed file of the repository written last: modified, added or untracked, still on disk.
@@ -106,7 +107,7 @@ fn last(cwd: &str) -> Result<String, Fail> {
     let env = exec::git_env(cwd);
     let opts = Opts { cwd: Some(cwd.into()), env: Some(env.clone()), ..Opts::default() };
     let top = exec::run(exec::git(), &["rev-parse", "--show-toplevel"], &opts).unwrap_or_default();
-    let top = top.trim_matches(js::is_space);
+    let top = top.trim_matches(crate::unicode::is_space);
     if top.is_empty() {
         return fail("not in a git repository", 1);
     }
@@ -119,7 +120,7 @@ fn last(cwd: &str) -> Result<String, Fail> {
     while i < parts.len() {
         let p = parts[i];
         i += 1;
-        if p.encode_utf16().count() < 4 {
+        if p.chars().count() < 4 {
             continue;
         }
         // The original path follows (renamed in the index or the tree).
@@ -132,7 +133,7 @@ fn last(cwd: &str) -> Result<String, Fail> {
             continue;
         }
         let Ok(meta) = std::fs::metadata(&abs) else { continue };
-        let time = meta.modified().map_or(f64::NAN, js::time_ms);
+        let time = meta.modified().map_or(f64::NAN, crate::core::clock::ms);
         if meta.is_file() && best.as_ref().is_none_or(|b| time > b.1) {
             best = Some((abs, time));
         }
@@ -170,7 +171,7 @@ fn peek(mut args: Vec<String>) -> Result<(), Fail> {
         args[0] = arg;
     }
     if args.len() != 1 || args[0] == "--help" || args[0] == "-h" {
-        return fail("usage: peek.js [--diff] <file>[:<line>[-<line>][:<col>-<col>],…] | [--diff] --last | --url", 2);
+        return fail("usage: peek [--diff] <file>[:<line>[-<line>][:<col>-<col>],…] | [--diff] --last | --url", 2);
     }
     let (abs, marks) = if args[0] == "--last" {
         (last(&cwd)?, Vec::new())

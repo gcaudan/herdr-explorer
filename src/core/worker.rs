@@ -1,5 +1,5 @@
-//! A pane's worker threads: the JS ran its herdr, git and clipboard calls asynchronously; a pane here runs them on a
-//! thread, a job at a time, and each job's result comes back to the pane's loop (`Then`), which owns all the state.
+//! A pane's worker threads: a pane runs its herdr, git and clipboard calls on a thread, a job at a time, and each
+//! job's result comes back to the pane's loop (`Then`), which owns all the state.
 
 use crate::sys;
 use std::panic::AssertUnwindSafe;
@@ -21,7 +21,7 @@ impl<P: 'static> Worker<P> {
         let (jobs, rx) = channel::<Job<P>>();
         let _ = std::thread::Builder::new().name(NAME.into()).spawn(move || {
             for job in rx {
-                // A job that panicked gives nothing, as a promise whose rejection is ignored.
+                // A job that panicked gives nothing.
                 if let Ok(then) = std::panic::catch_unwind(AssertUnwindSafe(job)) {
                     if tx.send(then).is_err() {
                         break;

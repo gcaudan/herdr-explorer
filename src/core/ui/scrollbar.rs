@@ -77,7 +77,7 @@ impl Scrollbar {
         let mut tints: Vec<Option<BarMark>> = vec![None; track as usize];
         for m in marks {
             let t = (track - 1).min((m.row as f64 * track as f64 / total as f64).floor() as i64);
-            // A mark before the list: tints[-1] is a property the JS's array never shows.
+            // A mark before the list: not shown.
             let Some(cell) = usize::try_from(t).ok().and_then(|t| tints.get_mut(t)) else { continue };
             if cell.is_none_or(|c| c.weight < m.weight) {
                 *cell = Some(*m);
@@ -210,7 +210,7 @@ mod tests {
         Mouse { press, drag, ..Mouse::default() }
     }
 
-    /// A held ▾ scrolls at once, again 450 ms later (the JS's 400 ms timeout, then its first 50 ms interval), then
+    /// A held ▾ scrolls at once, again 450 ms later (a 400 ms delay, then the first 50 ms tick), then
     /// every 50 ms, until the release; the list not taking a move stops it.
     #[test]
     fn a_held_button_repeats_until_released() {
@@ -243,7 +243,7 @@ mod tests {
         assert_eq!(bar.mouse(&press(true, true), 1, true, t), BarHit::Took);
         assert_eq!(bar.due(), None);
         assert_eq!(bar.tick(t + Duration::from_secs(1)), None);
-        // Back on the button: still stopped, as the JS's cleared timer.
+        // Back on the button: still stopped.
         assert_eq!(bar.mouse(&press(true, true), 0, true, t), BarHit::Took);
         assert_eq!(bar.due(), None);
     }

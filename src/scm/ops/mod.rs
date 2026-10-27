@@ -1,4 +1,4 @@
-//! What the source control pane does to the repository (src/scm/ops.js): stage, unstage, discard, commit (with a
+//! What the source control pane does to the repository: stage, unstage, discard, commit (with a
 //! message written by Claude on request), continue or abort an operation, branches, fetch, pull, push, stashes, merge,
 //! rebase, cherry-pick, tags, force push, undo commit and reset --hard; the rows opened, and the menu (m) of these
 //! actions.
@@ -10,6 +10,7 @@ mod branches;
 mod changes;
 mod commit;
 mod history;
+mod pulls;
 
 use super::context::Row;
 use super::parse::{self, Item};
@@ -17,7 +18,7 @@ use super::state::{self, FROM_FILE, GitOpts};
 use super::{Op, Pane, Yes};
 use crate::core::exec::{self, Exec, Opts};
 use crate::core::ui::{Choice, Confirm, Menu, MenuItem};
-use crate::core::{actions, js, paths};
+use crate::core::{actions, paths};
 use crate::diff;
 use history::STRATEGIES;
 
@@ -38,7 +39,7 @@ fn strings(args: &[&str]) -> Vec<String> {
     args.iter().map(|a| a.to_string()).collect()
 }
 
-/// A text of a card, None when empty (the JS's '' left out).
+/// A text of a card, None when empty (left out).
 fn opt(text: String) -> Option<String> {
     (!text.is_empty()).then_some(text)
 }
@@ -48,10 +49,11 @@ fn card(title: impl Into<String>, name: impl Into<String>, action: &str) -> Conf
 }
 
 fn plural(n: f64, word: &str) -> String {
-    format!("{} {word}{}", js_num(n), if n > 1.0 { "s" } else { "" })
+    format!("{} {word}{}", num_text(n), if n > 1.0 { "s" } else { "" })
 }
 
-fn js_num(n: f64) -> String {
+/// A number as text (NaN included).
+fn num_text(n: f64) -> String {
     if n.is_nan() { "NaN".into() } else { crate::json::number(n) }
 }
 
@@ -62,12 +64,12 @@ fn capital(s: &str) -> String {
 }
 
 fn trim(s: &str) -> &str {
-    s.trim_matches(js::is_space)
+    s.trim_matches(crate::unicode::is_space)
 }
 
 /// `+text.trim()`, NaN for a text that is not a number.
 fn count_of(res: &Exec) -> f64 {
-    js::string_to_number(trim(&res.out))
+    trim(&res.out).parse().unwrap_or(f64::NAN)
 }
 
 /// What --continue would run that the hardening cannot stop, from files a repository received with its .git can
@@ -78,11 +80,11 @@ fn unsafe_to_continue(top: &str, gitdir: &str) -> Option<String> {
     let read = |name: &str| exec::read_text(file(name)).unwrap_or_default();
     // /^\s*(x|exec)(\s|$)/m
     let todo = read("rebase-merge/git-rebase-todo");
-    let exec_line = todo.split(js::is_line_terminator).any(|l| {
-        let l = l.trim_start_matches(js::is_space);
-        ["x", "exec"]
-            .iter()
-            .any(|w| l.strip_prefix(w).is_some_and(|rest| rest.is_empty() || rest.starts_with(js::is_space)))
+    let exec_line = todo.split(crate::core::regex::is_line_terminator).any(|l| {
+        let l = l.trim_start_matches(crate::unicode::is_space);
+        ["x", "exec"].iter().any(|w| {
+            l.strip_prefix(w).is_some_and(|rest| rest.is_empty() || rest.starts_with(crate::unicode::is_space))
+        })
     });
     if exec_line {
         return Some("commands (exec lines)".into());
@@ -127,6 +129,10 @@ impl Pane {
                 self.open_item_diff(it);
             }
             return;
+        }
+        if let Some(p) = row.pull.as_ref().filter(|_| row.kind == "pull") {
+            let title = format!("#{} {}", p.number, p.title);
+            return self.show_pull(&row.key.clone(), &title, p.number);
         }
         if let Some((what, title)) = self.show_of(Some(row)) {
             return self.show_diff(&row.key.clone(), &title, diff::show_args(&what), None, "");

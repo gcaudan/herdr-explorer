@@ -1,7 +1,7 @@
-//! test/scm-parse.test.js: the parsers of the source control pane, on output taken from git.
+//! The parsers of the source control pane, on output taken from git.
 
 use herdr_explorer::core::exec::Exec;
-use herdr_explorer::core::{js, paths};
+use herdr_explorer::core::paths;
 use herdr_explorer::scm::parse::{self, Decoration, Dirs, Item, Label, Remote, Stash, Worktree};
 
 const OID: &str = "5de5c897f4428a5692f5231cb6fc7d24c977d804";
@@ -122,7 +122,7 @@ fn log_follow_names() {
 
 #[test]
 fn history_decorations_head_parents_merge_commits() {
-    let now = (js::now_ms() / 1000.0).floor();
+    let now = (herdr_explorer::core::clock::now_ms() / 1000.0).floor();
     let (a, b, c, d) = ("a".repeat(40), "b".repeat(40), "c".repeat(40), "d".repeat(40));
     let rows = [
         [
@@ -156,7 +156,7 @@ fn history_decorations_head_parents_merge_commits() {
 
 #[test]
 fn ago() {
-    let now = js::now_ms() / 1000.0;
+    let now = herdr_explorer::core::clock::now_ms() / 1000.0;
     assert_eq!(parse::ago(now), "1 min");
     assert_eq!(parse::ago(now - 7200.0), "2 h");
     assert_eq!(parse::ago(now - 60.0 * 86400.0), "2 mo");
@@ -216,7 +216,7 @@ fn refs_branches_remote_branches_without_head_tags_remotes_worktrees() {
 
 #[test]
 fn branch_comparison_cherry_marked_commits_counts_numstat_with_binary_and_tab_names() {
-    let now = (js::now_ms() / 1000.0).floor();
+    let now = (herdr_explorer::core::clock::now_ms() / 1000.0).floor();
     let c = parse::parse_compare(&format!(
         ">\x1fd5c4e81\x1f{}\x1ffix: readme\x1f{}\n=\x1fae3311f\x1f{}\x1fchore: z\x1f{}\n",
         "d".repeat(40),

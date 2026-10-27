@@ -1,5 +1,4 @@
-//! The module fixtures recorded from the JS of 0.8.0 (tools/fixtures/gen.js, removed with the JS at the switch to
-//! Rust: see the git history before it), replayed against the Rust port.
+//! Module fixtures, replayed against the Rust.
 //! Recorded on Linux: their paths, links, sort order and fake trash tools are Linux's.
 #![cfg(target_os = "linux")]
 
@@ -7,8 +6,8 @@ mod support;
 
 use herdr_explorer::json::{self, Value};
 
-/// Every fixture file parses, is written back byte for byte (the JSON writer matches JSON.stringify), and each case
-/// has a function, arguments and an outcome.
+/// Every fixture file parses, is written back byte for byte by the JSON writer, and each case has a function,
+/// arguments and an outcome.
 #[test]
 fn fixtures_are_well_formed() {
     let mut count = 0;
@@ -27,7 +26,7 @@ fn fixtures_are_well_formed() {
     assert!(count > 0);
 }
 
-/// A call that panics where the JS throws: its message as the error.
+/// A call that panics: its message as the error.
 #[cfg(unix)]
 fn caught(f: impl FnOnce() -> Value) -> Result<Value, String> {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).map_err(|e| {
@@ -112,7 +111,7 @@ fn core_exec_state() {
                 exec::write_settings(&args[0]);
                 Value::Null
             }
-            // The JS gives '' for an empty id where Rust gives None, both falsy.
+            // The fixtures give '' for an empty id where the Rust gives None, both falsy.
             "paneFile" if s(0).is_empty() && exec::state_dir().is_some() => Value::Str(String::new()),
             "paneFile" => opt(exec::pane_file(&s(0))),
             "readPaneState" => exec::read_pane_state(&s(0)),
@@ -273,12 +272,12 @@ fn core_scope() {
     });
 }
 
-/// Node's own codecs as the JS calls them (tools/fixtures/modules/node.codec.js): inflate's input and output in base64.
+/// The codecs: base64, SHA and zlib's inflate, its input and output in base64.
 #[cfg(unix)]
 #[test]
-fn node_codec() {
+fn codecs() {
     use herdr_explorer::codec::{base64, inflate, sha};
-    support::replay("node/codec", |name, args| {
+    support::replay("codec", |name, args| {
         let text = args[0].as_str().unwrap_or("");
         Ok(match name {
             "base64Encode" => Value::Str(base64::encode(text.as_bytes())),
@@ -298,17 +297,17 @@ fn node_codec() {
     });
 }
 
-/// Node's regular expressions, as the modules use them (tools/fixtures/modules/node.regexp.js).
+/// The regular expressions, as the modules use them.
 #[test]
-fn node_regexp() {
-    use herdr_explorer::core::{js, regex::Regex};
+fn regexps() {
+    use herdr_explorer::core::regex::Regex;
     let opt = |g: Option<&str>| g.map_or(Value::Null, |g| Value::Str(g.into()));
-    support::replay("node/regexp", |name, args| {
+    support::replay("regexp", |name, args| {
         let s = |k: usize| args[k].as_str().unwrap_or("");
         let text = s(2);
         let Ok(re) = Regex::new(s(0), s(1)) else { return Ok(Value::Str("SyntaxError".into())) };
-        // Positions in UTF-16 units, as the JS counts them.
-        let at = |i: usize| Value::Num(js::utf16_len(&text[..i]) as f64);
+        // The fixtures count positions in UTF-16 units.
+        let at = |i: usize| Value::Num(text[..i].encode_utf16().count() as f64);
         Ok(match name {
             "exec" => {
                 // From a position in UTF-16 units, as a byte offset.
@@ -317,7 +316,7 @@ fn node_regexp() {
                     .char_indices()
                     .map(|(i, _)| i)
                     .chain([text.len()])
-                    .find(|&i| js::utf16_len(&text[..i]) >= units);
+                    .find(|&i| text[..i].encode_utf16().count() >= units);
                 match from.and_then(|from| re.exec_at(text, from)) {
                     None => Value::Null,
                     Some(m) => {
@@ -337,12 +336,12 @@ fn node_regexp() {
     });
 }
 
-/// Node's path module, posix and win32 (tools/fixtures/modules/node.path.js).
+/// The paths, posix and win32.
 #[cfg(unix)]
 #[test]
-fn node_path() {
+fn path_flavours() {
     use herdr_explorer::core::paths::{posix, win32};
-    support::replay("node/path", |name, args| {
+    support::replay("path", |name, args| {
         let s: Vec<&str> = args.iter().map(|a| a.as_str().unwrap_or("")).collect();
         let suffix = s.get(1).copied();
         Ok(match name {
@@ -373,7 +372,7 @@ fn node_path() {
 #[test]
 fn core_tabs() {
     use herdr_explorer::core::tabs::{self, Tab, Tabs};
-    // A tab as the JS has it: { file, kept, ...the preview's fields }.
+    // A tab as the fixtures hold it: { file, kept, ...the preview's fields }.
     let tab_of = |v: &Value| Tab {
         file: v.get("file").and_then(Value::as_str).unwrap_or("").to_string(),
         kept: v.get("kept").is_some_and(Value::truthy),
@@ -446,32 +445,6 @@ fn core_viewed() {
 }
 
 #[test]
-fn node_locale() {
-    use herdr_explorer::unicode::locale_compare;
-    support::replay("node/locale", |name, args| {
-        let words = strs(&args[0]);
-        let numeric_base = match name {
-            "variant" => false,
-            "numericBase" => true,
-            _ => return Err(format!("no function {name}")),
-        };
-        Ok(Value::Arr(
-            words
-                .iter()
-                .map(|a| {
-                    let row = words.iter().map(|b| match locale_compare(a, b, numeric_base) {
-                        std::cmp::Ordering::Less => '-',
-                        std::cmp::Ordering::Equal => '0',
-                        std::cmp::Ordering::Greater => '+',
-                    });
-                    Value::Str(row.collect())
-                })
-                .collect(),
-        ))
-    });
-}
-
-#[test]
 fn core_notes() {
     use herdr_explorer::core::notes::{self, Lines, New};
     support::replay("core/notes", |name, args| {
@@ -513,7 +486,7 @@ fn core_notes() {
 
 #[test]
 fn diff_parse() {
-    use herdr_explorer::core::{js, ui};
+    use herdr_explorer::core::ui;
     use herdr_explorer::diff;
     let opt = |s: &Option<String>| s.clone().map_or(Value::Null, Value::Str);
     let num = |n: Option<i64>| n.map_or(Value::Null, |n| Value::Num(n as f64));
@@ -558,16 +531,16 @@ fn diff_parse() {
     let parsed = |v: &Value| match v.as_str() {
         Some(t) => diff::parse(t),
         None => diff::changes_of(&diff::Collected {
-            text: v.get("text").map(js::string).unwrap_or_default(),
-            staged: v.get("staged").map(js::string),
+            text: v.get("text").map(json::text).unwrap_or_default(),
+            staged: v.get("staged").map(json::text),
             ..diff::Collected::default()
         }),
     };
     let ref_of = |v: &Value| diff::Ref {
-        file: v.get("file").map(js::string).unwrap_or_default(),
+        file: v.get("file").map(json::text).unwrap_or_default(),
         from: v.get("from").and_then(Value::as_f64).unwrap_or(0.0) as i64,
         to: v.get("to").and_then(Value::as_f64).unwrap_or(0.0) as i64,
-        sec: v.get("sec").map(js::string).unwrap_or_default(),
+        sec: v.get("sec").map(json::text).unwrap_or_default(),
     };
     let ref_val = |r: &diff::Ref| {
         obj(vec![
@@ -590,7 +563,7 @@ fn diff_parse() {
                 let names: Vec<String> = view
                     .get("viewed")
                     .and_then(Value::as_array)
-                    .map_or(Vec::new(), |a| a.iter().map(js::string).collect());
+                    .map_or(Vec::new(), |a| a.iter().map(json::text).collect());
                 let viewed =
                     |f: &diff::File| names.contains(&f.to.clone().or_else(|| f.from.clone()).unwrap_or_default());
                 let v = diff::View {
@@ -599,9 +572,9 @@ fn diff_parse() {
                     viewed: (!names.is_empty()).then_some(&viewed as &dyn Fn(&diff::File) -> bool),
                 };
                 let rows = diff::render(&d, width, mode, args[3].truthy(), &v);
-                // The JS throws there (String.prototype.repeat of -1): the Rust lays the rows out without failing.
+                // The fixtures hold an error for a split view of no width; the Rust lays the rows out anyway.
                 if width == 0 && mode == "split" {
-                    return Err("Invalid count value: -1".into());
+                    return Err("no width for a split view".into());
                 }
                 let n = |x: usize| Value::Num(x as f64);
                 let segs = |v: &[ui::Seg]| {
@@ -640,7 +613,7 @@ fn diff_parse() {
             "changesOf" => {
                 let d = parsed(&args[0]);
                 let mut v = diff_val(&d);
-                // sec, only with the sections apart (undefined in the JS otherwise).
+                // sec, only with the sections apart (absent otherwise).
                 if let (true, Value::Obj(fields)) = (args[0].get("staged").is_some(), &mut v) {
                     for (k, val) in fields.iter_mut() {
                         if let (true, Value::Arr(files)) = (k == "files", val) {
@@ -788,7 +761,6 @@ fn core_stage() {
 #[cfg(unix)]
 #[test]
 fn core_ui() {
-    use herdr_explorer::core::js;
     use herdr_explorer::core::ui::{self, Ask, BarHit, BarMark, Button, Choice, Confirm, Event, Menu, MenuItem};
     use herdr_explorer::core::ui::{Field, HelpState, Kind, Mouse, Rgb, Scrollbar, Seg};
     use herdr_explorer::obj;
@@ -851,7 +823,7 @@ fn core_ui() {
     fn first(v: &Value) -> Option<char> {
         v.as_str().and_then(|t| t.chars().next())
     }
-    /// A JS string index (UTF-16) of text as a byte offset.
+    /// An index of text in UTF-16 units, as the fixtures count it, as a byte offset.
     fn byte_of(text: &str, unit: usize) -> usize {
         let mut u = 0;
         for (b, ch) in text.char_indices() {
@@ -890,16 +862,16 @@ fn core_ui() {
                 }
                 let mut at = Vec::new();
                 let out = ui::clean_line(&text, tab, Some(&mut at));
-                // The byte offsets as the JS's UTF-16 ones: one per unit of text, then its end.
-                let units = |b: usize| js::utf16_len(&out[..b]) as f64;
-                let mut js_at = Vec::new();
+                // The byte offsets in UTF-16 units, as the fixtures count them: one per unit of text, then its end.
+                let units = |b: usize| out[..b].encode_utf16().count() as f64;
+                let mut unit_at = Vec::new();
                 for (b, ch) in text.char_indices() {
                     for k in 0..ch.len_utf16() {
-                        js_at.push(Value::Num(units(at[b]) + k as f64));
+                        unit_at.push(Value::Num(units(at[b]) + k as f64));
                     }
                 }
-                js_at.push(Value::Num(units(at[text.len()])));
-                Value::Arr(vec![out.into(), Value::Arr(js_at)])
+                unit_at.push(Value::Num(units(at[text.len()])));
+                Value::Arr(vec![out.into(), Value::Arr(unit_at)])
             }
             "cols" => (ui::cols(first(a(0)).unwrap(), first(a(1))) as f64).into(),
             "fit" => {
@@ -1425,7 +1397,7 @@ fn core_icons() {
     });
 }
 
-/// render/graph: the lanes of histories (tools/fixtures/modules/render.graph.js).
+/// render/graph: the lanes of histories.
 #[test]
 fn render_graph() {
     use herdr_explorer::render::graph;
@@ -1456,8 +1428,7 @@ fn render_graph() {
     });
 }
 
-/// render/image: headers of every format, pixels of PNG, GIF, BMP and ICO files built byte by byte
-/// (tools/fixtures/modules/render.image.js).
+/// render/image: headers of every format, pixels of PNG, GIF, BMP and ICO files built byte by byte.
 #[test]
 fn render_image() {
     use herdr_explorer::codec::base64;
@@ -1511,8 +1482,7 @@ fn render_image() {
     });
 }
 
-/// render/highlight: samples of each language in both themes, languages of file names
-/// (tools/fixtures/modules/render.highlight.js).
+/// render/highlight: samples of each language in both themes, languages of file names.
 #[test]
 fn render_highlight() {
     use herdr_explorer::core::ui;
@@ -1550,7 +1520,7 @@ fn render_highlight() {
 }
 
 /// render/markdown: documents at several widths, both themes, with and without highlighting, images drawn by the
-/// caller (tools/fixtures/modules/render.markdown.js).
+/// caller.
 #[test]
 fn render_markdown() {
     use herdr_explorer::core::ui;
@@ -1700,7 +1670,7 @@ fn explorer_tree() {
     }
     fn row(r: &Entry) -> Value {
         let opt = |o: &Option<String>| o.clone().map_or(Value::Null, Value::Str);
-        // The match as the JS gives it: offsets in UTF-16 units.
+        // The match: offsets in UTF-16 units, as the fixtures count them.
         let units = |b: usize| Value::Num(r.name[..b].encode_utf16().count() as f64);
         let hit = r.hit.map_or(Value::Null, |(a, b)| Value::Arr(vec![units(a), units(b)]));
         herdr_explorer::obj! {
@@ -1761,7 +1731,7 @@ fn explorer_tree() {
     });
 }
 
-/// scm/parse: git's output read by the source control pane (tools/fixtures/modules/scm.parse.js).
+/// scm/parse: git's output read by the source control pane.
 #[test]
 fn scm_parse() {
     use herdr_explorer::core::exec::Exec;
@@ -1873,7 +1843,7 @@ fn scm_parse() {
 }
 
 /// scm/state: git's environment in English, paths on stdin, full branch names, and the hardened environment of the
-/// commands that write (tools/fixtures/modules/scm.state.js).
+/// commands that write.
 #[test]
 fn scm_state() {
     use herdr_explorer::obj;

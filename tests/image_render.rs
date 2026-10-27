@@ -1,4 +1,4 @@
-//! render::image: what the fixtures of tests/modules.rs cannot hold: where the Rust parts from the JS on purpose,
+//! render::image: what the fixtures of tests/modules.rs cannot hold: the images refused on purpose,
 //! and the theme's background.
 
 // A little-endian TIFF of one grey row, 2 pixels wide unless width (a rational) says otherwise, rows per strip given.
@@ -38,7 +38,7 @@ fn a_tiff_with_sizes_that_are_not_whole_shows_nothing() {
     let img = decode(&grey_tiff(None, None)).unwrap();
     assert_eq!((img.width, img.height, img.data), (2, 1, vec![0x40, 0x40, 0x40, 255, 0xc0, 0xc0, 0xc0, 255]));
     assert_eq!(decode(&grey_tiff(Some((4, 2)), None)).map(|i| i.width), Some(2));
-    // The JS makes an image of these anyway, with NaN or fractional lengths and indices.
+    // No image of these: they would have fractional lengths and indices.
     assert!(decode(&grey_tiff(Some((5, 2)), None)).is_none());
     assert!(decode(&grey_tiff(None, Some(0))).is_some());
 }

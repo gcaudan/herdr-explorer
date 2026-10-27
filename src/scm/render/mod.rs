@@ -1,4 +1,4 @@
-//! Drawing of the source control pane (src/scm/render.js): the rows of each view, the header, tabs, commit box,
+//! Drawing of the source control pane: the rows of each view, the header, tabs, commit box,
 //! status line and key help, the diff or branch comparison beside the list, and the branch picker.
 //!
 //! This file holds the frame, its header, tabs, commit box, status line and key help; rows.rs the rows of the views,
@@ -88,7 +88,7 @@ fn lane_pill(name: &str, n: usize, style: &str) -> Seg {
 }
 
 pub(super) fn spinner() -> char {
-    SPIN[(crate::core::js::now_ms() / 100.0).floor() as usize % SPIN.len()]
+    SPIN[(crate::core::clock::now_ms() / 100.0).floor() as usize % SPIN.len()]
 }
 
 fn tw(text: &str) -> i64 {
@@ -109,14 +109,14 @@ fn pad(text: &str, w: i64) -> String {
     format!("{t}{}", spaces(n))
 }
 
-/// A count as JS prints a number.
+/// A count as text (NaN included).
 fn num(n: f64) -> String {
     if n.is_nan() { "NaN".into() } else { crate::json::number(n) }
 }
 
-/// `text.padStart(6)`.
+/// Text right-aligned on n columns.
 fn pad_start(text: &str, n: usize) -> String {
-    let len = crate::core::js::utf16_len(text);
+    let len = crate::core::ui::text_width(text);
     format!("{}{text}", " ".repeat(n.saturating_sub(len)))
 }
 
@@ -375,6 +375,28 @@ impl Pane {
                     back,
                 )
             }
+            "pull" => {
+                let p = row.pull.as_ref().expect("a pull request row has its pull request");
+                let (mark, rgb) = match p.checks {
+                    "pass" => ("✓", c().green),
+                    "fail" => ("✗", c().red),
+                    "pending" => ("●", c().yellow),
+                    _ => (" ", c().text),
+                };
+                let mut left = vec![seg(format!(" #{}  ", p.number), fg(c().yellow))];
+                if p.draft {
+                    left.push(seg("draft ", dim()));
+                }
+                left.push(seg(&p.title, if row.current { BOLD } else { "" }));
+                let review = crate::core::gh::review_text(&p.review);
+                let mut right = Vec::new();
+                if !review.is_empty() {
+                    right.push(seg(format!(" {review} ·"), dim()));
+                }
+                right.push(seg(format!(" {} ", p.author), dim()));
+                right.push(seg(format!("{mark} "), fg(rgb)));
+                split(&left, &right, width, back)
+            }
             "branch" => {
                 let b = row.branch().expect("a branch row has its branch");
                 if row.current {
@@ -555,11 +577,17 @@ impl Pane {
             };
             let count = if n > 0 { format!(" {n}") } else { String::new() };
             let width = tw(&format!("{label}{count}")) + 2;
-            self.frame.hits.push(Hit { y: 1, x0: x, x1: x + width, act: Act::View(id) });
+            // A tab cut off by the list's width takes no click past it.
+            if x < w {
+                self.frame.hits.push(Hit { y: 1, x0: x, x1: (x + width).min(w), act: Act::View(id) });
+            }
             segs.push(seg(" ", ""));
             segs.push(seg(label, if id == self.s.view { format!("{BOLD}{}{UNDERLINE}", fg(c().text)) } else { dim() }));
             segs.push(seg(count, dim()));
-            segs.push(seg("  ", ""));
+            // None after the last, which then fits a list as narrow as its labels.
+            if id != VIEWS[VIEWS.len() - 1].0 {
+                segs.push(seg("  ", ""));
+            }
             x += width + 1;
         }
         // List · Tree, the active one filled (ui::segmented's look); a click on the other switches.
@@ -759,6 +787,7 @@ impl Pane {
                 v
             }
             "stashes" => l(&[("n", "stash"), ("a", "apply"), ("o", "pop"), ("d", "drop"), ("⏎", "show")]),
+            "pulls" => l(&[("⏎", "show"), ("o", "open in browser"), ("C", "check out"), ("r", "refresh")]),
             _ => l(&[
                 ("⏎", "checkout"),
                 ("M", "merge"),
@@ -820,6 +849,15 @@ impl Pane {
             "stashes" => g.push(group(
                 "Stashes",
                 &[("n", "stash all changes"), ("a", "apply"), ("o", "pop"), ("d", "drop"), ("⏎", "show")],
+            )),
+            "pulls" => g.push(group(
+                "Pull requests",
+                &[
+                    ("⏎", "show the pull request"),
+                    ("o", "open it in the browser"),
+                    ("C", "check it out (gh pr checkout)"),
+                    ("r", "refresh the list"),
+                ],
             )),
             _ => {
                 g.push(group(
@@ -976,6 +1014,8 @@ impl Pane {
             "history" => "Select a commit to see it".into(),
             "stashes" if !self.s.stashes.is_empty() => "Select a stash to see it".into(),
             "stashes" => "No stashes".into(),
+            "pulls" if rows.iter().any(|r| r.kind == "pull") => "Select a pull request to see it".into(),
+            "pulls" => "No pull request".into(),
             _ if rows.get(self.s.cursor as usize).is_some_and(|r| r.kind == "branch") => {
                 format!("{} is the base: select another branch to compare with it", state::base_name(&self.s))
             }
@@ -989,8 +1029,8 @@ impl Pane {
     fn list_width(&self, w: i64) -> i64 {
         let share = self.s.list_share.iter().find(|(v, _)| v == self.s.view).map(|(_, s)| *s);
         let lw = match share {
-            None => 34.max(70.min(crate::core::js::round(w as f64 * 0.38) as i64)),
-            Some(s) => crate::core::js::round(w as f64 * s) as i64,
+            None => 34.max(70.min((w as f64 * 0.38).round() as i64)),
+            Some(s) => (w as f64 * s).round() as i64,
         };
         MIN_LIST.max((w - 1 - MIN_DIFF).min(lw))
     }
@@ -998,8 +1038,7 @@ impl Pane {
     /// Sets the list's width in columns and keeps it as a share of the width; saved unless a drag is still going on.
     pub(super) fn resize_list(&mut self, cols: i64, save: bool) {
         let w = self.size().0;
-        let share =
-            crate::core::js::round(MIN_LIST.max((w - 1 - MIN_DIFF).min(cols)) as f64 / w as f64 * 1000.0) / 1000.0;
+        let share = (MIN_LIST.max((w - 1 - MIN_DIFF).min(cols)) as f64 / w as f64 * 1000.0).round() / 1000.0;
         let view = self.s.view;
         match self.s.list_share.iter_mut().find(|(v, _)| v == view) {
             Some(e) => e.1 = share,

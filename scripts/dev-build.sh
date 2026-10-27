@@ -1,6 +1,6 @@
 #!/bin/sh
-# Builds the binary (cargo build --release) into bin/, marked as a development one (bin/.dev): fetch-bin,
-# the updater and the shims then leave it alone. Delete bin/.dev to go back to the release binaries.
+# Builds the binary (cargo build --release) into bin/, marked as a development one (bin/.dev): fetch-bin
+# and the launcher then leave it alone. Delete bin/.dev to go back to the release binaries.
 set -eu
 dir=$(cd "$(dirname "$0")/.." && pwd)
 # cargo from PATH, else rustup's own folder (installed without touching the shell's profile).

@@ -1,11 +1,11 @@
-//! What the explorer does with a file or a line, as the JS's src/core/actions.js: open it (editor, application,
+//! What the explorer does with a file or a line: open it (editor, application,
 //! browser, file manager), copy its path, create, rename, duplicate, trash or delete it, stage, unstage or discard its
 //! changes; insert it into the terminal next to the explorer; open the plugin's panes (preview, changes, search, source
 //! control, editor) and keep their widths. Each one returns a short message or None.
 
-use super::exec::{self, Env, Opts, WIN, io_code, node_realpath, read_settings, remote_link, run, words};
+use super::exec::{self, Env, Opts, WIN, io_code, read_settings, remote_link, run, walk_realpath, words};
+use super::paths;
 use super::which::which;
-use super::{js, paths};
 use crate::json::Value;
 use std::process::{Command, Stdio};
 use std::sync::OnceLock;
@@ -27,7 +27,7 @@ const TEXTS: [&str; 8] = ["txt", "md", "csv", "log", "json", "xml", "html", "htm
 const IMAGES: [&str; 8] = ["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "svg"];
 
 fn ext(abs: &str) -> String {
-    js::lower(paths::extname(abs).get(1..).unwrap_or(""))
+    paths::extname(abs).get(1..).unwrap_or("").to_lowercase()
 }
 
 fn system_type(e: &str) -> bool {
@@ -41,7 +41,7 @@ fn safe_type(e: &str) -> bool {
 /// Whether a file may go to its system application: its type and its link's target's are allowed (doc.pdf linking to a
 /// script would be run by macOS's open, which follows it).
 pub fn can_open(abs: &str) -> bool {
-    let real = node_realpath(abs).unwrap_or_else(|_| abs.to_string());
+    let real = walk_realpath(abs).unwrap_or_else(|_| abs.to_string());
     safe_type(&ext(abs)) && safe_type(&ext(&real))
 }
 
@@ -51,12 +51,12 @@ pub fn can_preview(abs: &str) -> bool {
     !system_type(&e) || IMAGES.contains(&e.as_str())
 }
 
-/// A program started on its own, its outputs dropped, not waited for (Node's detached spawn, unref'd): whether it
+/// A program started on its own, its outputs dropped, not waited for (a detached child): whether it
 /// started. env: its whole environment (the process's when None); verbatim: its arguments passed as written, on
-/// Windows (explorer's /select,"…"). A .cmd or .bat cannot run without a shell on Windows: refused, as Node does.
+/// Windows (explorer's /select,"…"). A .cmd or .bat cannot run without a shell on Windows: refused.
 fn detached(cmd: Option<&str>, args: &[&str], env: Option<Env>, verbatim: bool) -> bool {
     let Some(cmd) = cmd else { return false };
-    if WIN && matches!(js::lower(&paths::extname(cmd)).as_str(), ".cmd" | ".bat") {
+    if WIN && matches!(paths::extname(cmd).to_lowercase().as_str(), ".cmd" | ".bat") {
         return false;
     }
     let mut c = Command::new(cmd);
@@ -131,7 +131,7 @@ fn cli_of(cmd: &str) -> Option<&str> {
     None
 }
 
-/// VS Code, found once. On Windows code.cmd runs Code.exe in Node mode on cli.js; done the same, without cmd.
+/// VS Code, found once. On Windows code.cmd runs Code.exe on cli.js (ELECTRON_RUN_AS_NODE); done the same, without cmd.
 fn find_code() -> Option<&'static Code> {
     static CODE: OnceLock<Option<Code>> = OnceLock::new();
     CODE.get_or_init(|| {
@@ -163,7 +163,7 @@ const TERMINAL: [&str; 13] =
     ["vi", "vim", "nvim", "nano", "micro", "hx", "helix", "kak", "emacs", "ne", "joe", "mcedit", "edit"];
 
 fn editor_name(cmd: &str) -> String {
-    let name = js::lower(&paths::basename(cmd, None));
+    let name = paths::basename(cmd, None).to_lowercase();
     name.strip_suffix(".exe").map(String::from).unwrap_or(name)
 }
 
@@ -285,7 +285,7 @@ pub fn app(abs: &str, pane: &str) -> Option<String> {
     } else if MAC {
         let script = "on run argv\ntell application \"Finder\"\nactivate\n\
                       make new Finder window to (POSIX file (item 1 of argv))\nend tell\nend run";
-        let real = node_realpath(abs).unwrap_or_else(|_| abs.to_string());
+        let real = walk_realpath(abs).unwrap_or_else(|_| abs.to_string());
         run(Some("osascript"), &["-e", script, &real], &Opts::default()).is_some()
             || detached(Some("open"), &["-R", abs], None, false)
     } else {
@@ -339,8 +339,12 @@ pub fn clipboard() -> Option<String> {
     let text = if WIN {
         // In base64: Windows PowerShell writes its output in the console's OEM code page, which loses é or €.
         let script = "[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string](Get-Clipboard -Raw)))";
-        run(which("powershell.exe").as_deref(), &["-NoProfile", "-NonInteractive", "-Command", script], &opts)
-            .map(|t| String::from_utf8_lossy(&crate::codec::base64::decode(t.trim_matches(js::is_space))).into_owned())
+        run(which("powershell.exe").as_deref(), &["-NoProfile", "-NonInteractive", "-Command", script], &opts).map(
+            |t| {
+                String::from_utf8_lossy(&crate::codec::base64::decode(t.trim_matches(crate::unicode::is_space)))
+                    .into_owned()
+            },
+        )
     } else if MAC {
         run(which("pbpaste").as_deref(), &[], &opts)
     } else {
@@ -408,7 +412,7 @@ pub fn open_pane(entry: &str, placement: &str, target: &str, env: &[(&str, &str)
     } else if placement == "tab" {
         let me = ask(&["pane", "get", target]);
         let Some(me) = me.get("pane").filter(|p| p.truthy()) else { return Value::Null };
-        workspace = me.get("workspace_id").map_or_else(|| "undefined".into(), js::string);
+        workspace = me.get("workspace_id").map_or_else(|| "undefined".into(), crate::json::text);
         where_ = vec!["--workspace", &workspace];
     }
     let plugin = exec::plugin();
@@ -450,12 +454,12 @@ pub struct Tab {
 
 impl Tab {
     pub fn id(&self) -> String {
-        self.me.get("tab_id").map_or_else(|| "undefined".into(), js::string)
+        self.me.get("tab_id").map_or_else(|| "undefined".into(), crate::json::text)
     }
 }
 
 fn str_of(v: &Value, key: &str) -> String {
-    v.get(key).map_or_else(|| "undefined".into(), js::string)
+    v.get(key).map_or_else(|| "undefined".into(), crate::json::text)
 }
 
 fn label_is(p: &Value, label: &str) -> bool {
@@ -474,16 +478,15 @@ pub fn tab_of(pane: &str) -> Option<Tab> {
     Some(tab_with(pane_of(pane)?))
 }
 
-/// tabOf's first await: the pane itself. Apart for a caller whose other herdr calls go between the two, as the JS's
-/// own did while it waited.
+/// The pane itself, as tab_with's input. Apart for a caller whose other herdr calls go between the two.
 pub fn pane_of(pane: &str) -> Option<Value> {
     ask(&["pane", "get", pane]).get("pane").filter(|p| p.truthy()).cloned()
 }
 
-/// tabOf's second await: the panes of the tab of me (pane_of).
+/// The panes of the tab of me (pane_of).
 pub fn tab_with(me: Value) -> Tab {
     let all = list(ask(&["pane", "list", "--workspace", &str_of(&me, "workspace_id")]), "panes");
-    let panes = all.into_iter().filter(|p| js::strict_eq(p.get("tab_id"), me.get("tab_id"))).collect();
+    let panes = all.into_iter().filter(|p| p.get("tab_id") == me.get("tab_id")).collect();
     Tab { me, panes }
 }
 
@@ -528,8 +531,8 @@ impl Default for Shown {
 
 /// Shows a file in the tab's preview pane, opened next to the terminal when there is none: explorer | terminal |
 /// preview. line: 1-based line to scroll to. focus: give the focus to the preview. open: false to only update a preview
-/// already open, doing nothing without one. The JS ran one at a time, as clicks made while a preview opens would each
-/// find none in the tab and open their own; here each call ends before the next.
+/// already open, doing nothing without one. Each call ends before the next, as clicks made while a preview opens would
+/// otherwise each find none in the tab and open their own.
 #[allow(clippy::too_many_arguments)]
 pub fn preview(abs: &str, root: &str, pane: &str, line: f64, focus: bool, open: bool, o: &Shown) -> Option<String> {
     let tab = if pane.is_empty() { None } else { tab_of(pane) };
@@ -548,7 +551,7 @@ pub fn preview(abs: &str, root: &str, pane: &str, line: f64, focus: bool, open: 
     if o.reveal {
         request.push(("reveal".into(), Value::Bool(true)));
     }
-    request.push(("t".into(), Value::Num(js::now_ms())));
+    request.push(("t".into(), Value::Num(crate::core::clock::now_ms())));
     let request = crate::json::stringify(&Value::Obj(request));
     let file = request_file(&tab.id());
     let write = || file.as_deref().is_some_and(|f| exec::write_atomic(f, &request));
@@ -578,7 +581,7 @@ pub fn preview(abs: &str, root: &str, pane: &str, line: f64, focus: bool, open: 
         .as_deref()
         .and_then(|f| std::fs::metadata(f).ok())
         .and_then(|m| m.modified().ok())
-        .map_or(0.0, js::time_ms);
+        .map_or(0.0, crate::core::clock::ms);
     let (line, seen, tab_id) = (crate::json::number(line), crate::json::number(seen), tab.id());
     let marks = crate::json::stringify(&Value::Arr(o.marks.clone()));
     let tabs = o.tabs.as_ref().map(crate::json::stringify);
@@ -680,7 +683,8 @@ pub fn search(root: &str, pane: &str, mode: &str, query: &str) -> Option<String>
 /// Source control opens a review of the pane's tab: a tab of its own, source control then the preview of the files
 /// chosen, at full height. Selecting the reviewed tab leads back to it while it runs (hook --focused). A review already
 /// open, or source control asked from within one, is focused instead. file: a file or folder to select among the
-/// changes; history: show the commits of that file instead.
+/// changes; history: show the commits of that file instead. Without a file, the tool of the settings (scmCommand)
+/// runs in that tab when there is one (edit::tool).
 pub fn scm(root: &str, pane: &str, file: &str, history: bool) -> Option<String> {
     let from = origin_of(pane);
     let pane = from.as_ref().map_or(pane, |f| f.0.as_str());
@@ -696,8 +700,11 @@ pub fn scm(root: &str, pane: &str, file: &str, history: bool) -> Option<String> 
     }
     let tab_id = tab.id();
     let mut env = vec![("EXPLORER_ROOT", root), ("EXPLORER_PANE", pane), ("EXPLORER_REVIEW", &tab_id)];
+    let tool = read_settings().get("scmCommand").and_then(Value::as_str).unwrap_or("").trim().to_string();
     if !file.is_empty() {
         env.push((if history { "EXPLORER_HISTORY" } else { "EXPLORER_FILE" }, file));
+    } else if !tool.is_empty() {
+        env.push(("EXPLORER_TOOL", &tool));
     }
     (!open_pane("scm", "tab", pane, &env, &["--focus"]).truthy()).then(|| "Cannot open source control".into())
 }
@@ -718,18 +725,18 @@ pub fn origin_of(pane: &str) -> Option<(String, String)> {
     let ws = str_of(&tab.me, "workspace_id");
     let tabs = list(ask(&["tab", "list", "--workspace", &ws]), "tabs");
     for t in &tabs {
-        if js::strict_eq(t.get("tab_id"), tab.me.get("tab_id")) {
+        if t.get("tab_id") == tab.me.get("tab_id") {
             continue;
         }
         let t_id = str_of(t, "tab_id");
         for kind in ["review", "search", "edit"] {
             let Some(saved) = saved_pane(kind, &t_id) else { continue };
-            if !mine.iter().any(|m| js::strict_eq(Some(m), Some(&saved))) {
+            if !mine.iter().any(|m| **m == saved) {
                 continue;
             }
             let panes: Vec<Value> = list(ask(&["pane", "list", "--workspace", &ws]), "panes")
                 .into_iter()
-                .filter(|p| js::strict_eq(p.get("tab_id"), t.get("tab_id")))
+                .filter(|p| p.get("tab_id") == t.get("tab_id"))
                 .collect();
             let p = panes.iter().find(|x| label_is(x, "Explorer")).or_else(|| panes.iter().find(|x| !own_label(x)));
             return p.or(panes.first()).map(|p| (str_of(p, "pane_id"), t_id.clone()));
@@ -782,7 +789,7 @@ pub fn hold_tab(kind: &str, origin: &str, name: &str) {
         {
             let _ = std::fs::remove_file(&file);
         }
-        // execFileSync: a failing call throws, which ends the clean-up.
+        // Synchronous: a failing call ends the clean-up.
         let sync = |args: &[&str]| -> Option<Value> {
             let opts = Opts { timeout: Some(Duration::from_secs(5)), ..Default::default() };
             run(exec::herdr(), args, &opts).map(|out| exec::result(Some(&out)))
@@ -790,23 +797,23 @@ pub fn hold_tab(kind: &str, origin: &str, name: &str) {
         let _ = (|| -> Option<()> {
             let me = sync(&["pane", "get", &pane])?.get("pane").filter(|p| p.truthy())?.clone();
             let workspaces = sync(&["workspace", "list"])?.get("workspaces")?.as_array()?.clone();
-            let shown = workspaces.iter().any(|w| {
-                w.get("focused").is_some_and(Value::truthy) && js::strict_eq(w.get("active_tab_id"), me.get("tab_id"))
-            });
+            let shown = workspaces
+                .iter()
+                .any(|w| w.get("focused").is_some_and(Value::truthy) && w.get("active_tab_id") == me.get("tab_id"));
             if shown {
                 sync(&["tab", "focus", &from]);
             }
             for p in sync(&["pane", "list", "--workspace", &str_of(&me, "workspace_id")])?.get("panes")?.as_array()? {
-                if js::strict_eq(p.get("tab_id"), me.get("tab_id")) && label_is(p, "Preview") {
+                if p.get("tab_id") == me.get("tab_id") && label_is(p, "Preview") {
                     sync(&["pane", "close", &str_of(p, "pane_id")])?;
                 }
             }
             Some(())
         })();
     });
-    // Not waited for, as the JS did not.
+    // Not waited for.
     let (kind_name, origin) = (name.to_string(), origin.to_string());
-    // Once the process is ending, it asks nothing more, as the JS's did not after process.exit: a late focus would
+    // Once the process is ending, it asks nothing more: a late focus would
     // come after the exit's and hand the tab back to the one before it.
     let ask = |args: &[&str]| if exec::exiting() { Value::Null } else { ask(args) };
     std::thread::spawn(move || {
@@ -815,11 +822,11 @@ pub fn hold_tab(kind: &str, origin: &str, name: &str) {
         if !me.truthy() {
             return;
         }
-        let Some(tab_id) = me.get("pane").and_then(|p| p.get("tab_id")).map(js::string) else { return };
+        let Some(tab_id) = me.get("pane").and_then(|p| p.get("tab_id")).map(crate::json::text) else { return };
         if from.truthy() {
-            // from.tab.label: the JS threw without its tab, before focusing.
+            // Without its tab: nothing, not even the focus.
             let Some(tab) = from.get("tab").filter(|t| t.truthy()) else { return };
-            let label = tab.get("label").map_or_else(|| "undefined".into(), js::string);
+            let label = tab.get("label").map_or_else(|| "undefined".into(), crate::json::text);
             ask(&["tab", "rename", &tab_id, &format!("({kind_name} {label})")]);
         }
         ask(&["tab", "focus", &tab_id]);
@@ -841,8 +848,11 @@ pub fn terminal_of(pane: &str) -> (Option<String>, Option<&'static str>) {
                 run(exec::herdr(), &["pane", "neighbor", "--direction", side, "--pane", &from], &Opts::default())
                     .as_deref(),
             );
-            let Some(target) =
-                found.get("neighbor").and_then(|n| n.get("neighbor_pane_id")).filter(|t| t.truthy()).map(js::string)
+            let Some(target) = found
+                .get("neighbor")
+                .and_then(|n| n.get("neighbor_pane_id"))
+                .filter(|t| t.truthy())
+                .map(crate::json::text)
             else {
                 break;
             };
@@ -866,7 +876,8 @@ fn type_into(target: &str, side: &str, pane: &str, text: &str) -> bool {
     for _ in 0..4 {
         let args = ["pane", "focus", "--direction", side, "--pane", &from];
         let res = exec::result(run(exec::herdr(), &args, &Opts::default()).as_deref());
-        let Some(now) = res.get("focus").and_then(|f| f.get("focused_pane_id")).filter(|n| n.truthy()).map(js::string)
+        let Some(now) =
+            res.get("focus").and_then(|f| f.get("focused_pane_id")).filter(|n| n.truthy()).map(crate::json::text)
         else {
             break;
         };
@@ -896,8 +907,11 @@ pub fn insert(abs: &str, pane: &str) -> Option<String> {
         return Some("Not inserted: control character in name".into());
     }
     let agent = p.get("agent").is_some_and(Value::truthy);
-    let text =
-        if agent && !reference.chars().any(js::is_space) { format!("@{reference}") } else { quote(&reference) } + " ";
+    let text = if agent && !reference.chars().any(crate::unicode::is_space) {
+        format!("@{reference}")
+    } else {
+        quote(&reference)
+    } + " ";
     (!type_into(&target, side, pane, &text)).then(|| "Cannot insert".into())
 }
 
@@ -945,7 +959,7 @@ fn num(v: &Value, path: &[&str]) -> f64 {
     for k in path {
         at = at.and_then(|x| x.get(k));
     }
-    js::number(at)
+    crate::json::num(at)
 }
 
 pub fn side_split(layout: &Value, pane: &str) -> Option<Found> {
@@ -961,10 +975,10 @@ pub fn side_split(layout: &Value, pane: &str) -> Option<Found> {
             continue;
         }
         let found = |left| Some(Found { width: w, split_width: sw, ratio, left });
-        if sx == x && (js::round(sw * ratio) - w).abs() <= 1.0 {
+        if sx == x && ((sw * ratio).round() - w).abs() <= 1.0 {
             return found(true);
         }
-        if sx + sw == x + w && (js::round(sw * (1.0 - ratio)) - w).abs() <= 1.0 {
+        if sx + sw == x + w && ((sw * (1.0 - ratio)).round() - w).abs() <= 1.0 {
             return found(false);
         }
     }
@@ -976,7 +990,7 @@ pub fn side_split(layout: &Value, pane: &str) -> Option<Found> {
 pub fn set_width(pane: &str, found: &Found, want: f64) -> f64 {
     let ratio = if found.left { (want + 0.25) / found.split_width } else { 1.0 - (want + 0.25) / found.split_width };
     let delta = ratio - found.ratio;
-    let amount = js::to_fixed(delta.abs(), 6);
+    let amount = format!("{:.6}", delta.abs());
     let direction = if delta > 0.0 { "right" } else { "left" };
     run(
         exec::herdr(),
@@ -999,14 +1013,15 @@ fn resizing_elsewhere(pane: &str) -> bool {
     let Some(text) = resizing_file().and_then(|f| exec::read_text(f).ok()) else { return false };
     let Ok(v) = crate::json::parse(&text) else { return false };
     let moved = v.get("moved").and_then(Value::as_array);
-    moved.is_some_and(|m| m.iter().any(|p| p.as_str() == Some(pane))) && js::now_ms() - js::number(v.get("at")) < 500.0
+    moved.is_some_and(|m| m.iter().any(|p| p.as_str() == Some(pane)))
+        && crate::core::clock::now_ms() - crate::json::num(v.get("at")) < 500.0
 }
 
 fn mark_resizing(moved: &[String]) {
     // Whole or not at all, as the other panes read it at any time.
     if let Some(f) = resizing_file() {
         let moved = Value::Arr(moved.iter().map(|m| Value::Str(m.clone())).collect());
-        let record = Value::Obj(vec![("moved".into(), moved), ("at".into(), Value::Num(js::now_ms()))]);
+        let record = Value::Obj(vec![("moved".into(), moved), ("at".into(), Value::Num(crate::core::clock::now_ms()))]);
         exec::write_atomic(&f, crate::json::stringify(&record));
     }
 }
@@ -1022,10 +1037,10 @@ fn kept_widths(layout: &Value, pane: &str) -> Vec<(String, f64)> {
     let mut out: Vec<(String, f64)> = Vec::new();
     for p in layout.get("panes").and_then(Value::as_array).into_iter().flatten() {
         let Some(id) = p.get("pane_id") else { continue };
-        if id.as_str() == Some(pane) || !keeping.iter().any(|k| js::strict_eq(Some(k), Some(id))) {
+        if id.as_str() == Some(pane) || !keeping.contains(&id) {
             continue;
         }
-        let (id, width) = (js::string(id), num(p, &["rect", "width"]));
+        let (id, width) = (crate::json::text(id), num(p, &["rect", "width"]));
         match out.iter_mut().find(|(k, _)| *k == id) {
             Some(e) => e.1 = width,
             None => out.push((id, width)),
@@ -1061,8 +1076,7 @@ pub trait Kept {
 /// width back when its own split kept its ratio, and takes the new width when that ratio changed (its own border
 /// dragged); check(true) puts it back in any case, as after < > changed the width kept, and puts back the panes this
 /// moves (KEEPING). The width kept is at least 10 columns, and leaves 20 to the other side of the split. side: "left"
-/// or "right", the part of its split the pane must be (None: either). The JS coalesced the checks asked while one ran;
-/// here each runs to its end, and the pane's loop reads its pending events before checking.
+/// or "right", the part of its split the pane must be (None: either). Each check runs to its end, and the pane's loop reads its pending events before checking.
 pub struct WidthKeeper {
     pane: String,
     side: Option<String>,
@@ -1126,14 +1140,16 @@ impl WidthKeeper {
         }
         let border = self.border.unwrap_or(0.0);
         let now = found.width - border;
-        // The JS threw on a layout without its area, the side and border taken, nothing else changed.
-        let Some(area) = layout.get("area").filter(|a| a.truthy()).map(|a| js::number(a.get("width"))) else { return };
+        // A layout without its area: the side and border taken, nothing else changed.
+        let Some(area) = layout.get("area").filter(|a| a.truthy()).map(|a| crate::json::num(a.get("width"))) else {
+            return;
+        };
         let mut ids: Vec<String> = layout
             .get("panes")
             .and_then(Value::as_array)
             .into_iter()
             .flatten()
-            .map(|p| p.get("pane_id").map_or_else(|| "undefined".into(), js::string))
+            .map(|p| p.get("pane_id").map_or_else(|| "undefined".into(), crate::json::text))
             .collect();
         ids.sort();
         let set = ids.join(" ");
@@ -1200,27 +1216,27 @@ impl Sharer {
             return;
         };
         let saved = read_settings();
-        // A number between 0 and 1; the JS also took a numeric string, which a change then turned into nonsense.
-        let stored = saved.get(&self.key).map(|v| js::number(Some(v)));
+        // A number between 0 and 1.
+        let stored = saved.get(&self.key).map(|v| crate::json::num(Some(v)));
         let mut share = stored.filter(|s| *s > 0.0 && *s < 1.0).unwrap_or(0.35);
         if change != 0.0 {
             share += change;
         } else if self.seen.is_some_and(|s| (found.ratio - s).abs() >= 0.005) {
             share = if found.left { found.ratio } else { 1.0 - found.ratio };
         }
-        share = (js::round(share * 1000.0) / 1000.0).clamp(0.15, 0.8);
+        share = ((share * 1000.0).round() / 1000.0).clamp(0.15, 0.8);
         let want = if found.left { share } else { 1.0 - share };
         let delta = want - found.ratio;
         self.seen = Some(found.ratio);
         if delta.abs() >= 0.005 {
-            let amount = js::to_fixed(delta.abs(), 6);
+            let amount = format!("{:.6}", delta.abs());
             let direction = if delta > 0.0 { "right" } else { "left" };
             let args = ["pane", "resize", "--pane", &self.pane, "--direction", direction, "--amount", &amount];
             run(exec::herdr(), &args, &Opts::default());
             // herdr rounds the split to whole columns: the ratio it took is the one kept.
             if let Some(after) = side_split(&layout_of(&self.pane), &self.pane) {
                 self.seen = Some(after.ratio);
-                share = js::round((if after.left { after.ratio } else { 1.0 - after.ratio }) * 1000.0) / 1000.0;
+                share = ((if after.left { after.ratio } else { 1.0 - after.ratio }) * 1000.0).round() / 1000.0;
             }
         }
         if saved.get(&self.key) != Some(&Value::Num(share)) {
@@ -1239,7 +1255,7 @@ fn control(c: char) -> bool {
 
 /// A name typed by the user, relative to a folder: subfolders are allowed (a/b.txt), leaving the folder is not.
 pub fn target(dir: &str, name: &str) -> Option<String> {
-    let name = name.trim_matches(js::is_space);
+    let name = name.trim_matches(crate::unicode::is_space);
     if name.is_empty() || name.chars().any(control) || paths::is_absolute(name) {
         return None;
     }
@@ -1276,7 +1292,7 @@ pub fn rename(abs: &str, name: &str) -> Made {
         return (Some(to), None);
     }
     // A case-only change on a case-insensitive file system finds the file itself: the same file, not another one.
-    // The JS throws when lstat fails otherwise than on a missing file (a file on the way): an error message here.
+    // lstat failing otherwise than on a missing file (a file on the way): an error message.
     match std::fs::symlink_metadata(&to) {
         Ok(_) if !same_file(abs, &to) => return (None, Some("Already exists".into())),
         Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
@@ -1300,8 +1316,8 @@ pub fn same_file(a: &str, b: &str) -> bool {
 
 /// fs.cpSync(src, dest, { recursive, errorOnExist, force: false, verbatimSymlinks }): folders made and their mode set
 /// after their content, files copied with their mode, links made again with their target as written. A special file
-/// (pipe, socket, device) is refused when it is the one copied, passed over inside a folder, as Node 26's native
-/// cpSync does. The error's code as Node names it.
+/// (pipe, socket, device) is refused when it is the one copied, passed over inside a folder. The error is
+/// its code (io_code).
 fn copy_tree(src: &str, dest: &str, top: bool) -> Result<(), String> {
     let code = |e: std::io::Error| io_code(&e);
     let meta = std::fs::symlink_metadata(src).map_err(code)?;
@@ -1355,7 +1371,7 @@ pub fn duplicate(abs: &str) -> Made {
     if remote_link(abs, "") {
         return (None, Some(NETWORK.into()));
     }
-    // The JS throws on a missing file or a broken link (statSync): an error message here.
+    // A missing file or a broken link: an error message.
     let meta = match std::fs::metadata(abs) {
         Ok(m) => m,
         Err(e) => return (None, Some(format!("Cannot duplicate: {}", io_code(&e)))),
@@ -1383,8 +1399,8 @@ pub fn trash(abs: &str) -> bool {
     }
     let none = Opts::default();
     let ok = if WIN {
-        // A link (a junction too) as a file: never its target. The JS's lstatSync throws on a missing file: taken as
-        // a file here.
+        // A link (a junction too) as a file: never its target; a missing file is taken as a
+        // file.
         let what =
             if std::fs::symlink_metadata(abs).is_ok_and(|m| m.is_dir()) { "DeleteDirectory" } else { "DeleteFile" };
         let mut env = exec::process_env();

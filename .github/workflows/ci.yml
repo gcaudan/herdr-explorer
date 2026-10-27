@@ -1,35 +1,20 @@
-# Quick checks on every pull request and push to main: the shims parse on the Node versions the docs give; the Rust
-# crate's format, lints (host and the 5 release targets) and tests.
+# Quick checks on every pull request and push to main: the Rust crate's format, lints (host and the 5 release targets)
+# and tests. Each night, a long pass of the mutation bench (tests/mutate.rs).
 name: ci
 
 on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    - cron: '17 3 * * *'
 
 permissions:
   contents: read
 
 jobs:
-  shims:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        node: [20, 24] # 20 is the minimum the docs give
-    runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: ${{ matrix.node }}
-      # A shim that fails to parse opens no pane; cargo test's tests/shims.rs checks them too, with the runner's node.
-      - run: for f in src/*.js; do node --check "$f"; done
-
   cargo:
+    if: github.event_name != 'schedule'
     strategy:
       fail-fast: false
       matrix:
@@ -52,22 +37,33 @@ jobs:
           done
       # Every failing test binary, not just the first: some fail on one system only.
       - run: cargo test --no-fail-fast
-      # The shell scripts parse: scripts/ as POSIX sh (dash on Ubuntu), the installer as bash; fetch-bin
-      # itself runs in cargo test's tests/fetch_bin.rs.
+      # The shell scripts parse as POSIX sh (dash on Ubuntu); fetch-bin itself runs in cargo test's
+      # tests/fetch_bin.rs.
       - name: Parse the shell scripts
         if: runner.os == 'Linux'
         run: |
           for f in scripts/*.sh; do sh -n "$f"; done
-          bash -n install.sh
       # The PowerShell scripts parse in Windows PowerShell 5.1, which herdr's [[build]] runs.
       - name: Parse the PowerShell scripts
         if: runner.os == 'Windows'
         shell: powershell
         run: |
           $failed = $false
-          foreach ($f in @(Get-Item install.ps1) + @(Get-ChildItem scripts -Filter *.ps1)) {
+          foreach ($f in Get-ChildItem scripts -Filter *.ps1) {
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$null, [ref]$errors) | Out-Null
             foreach ($e in $errors) { Write-Host "::error file=$($f.Name)::$($e.Extent.StartLineNumber): $($e.Message)"; $failed = $true }
           }
           if ($failed) { exit 1 }
+
+  # A new seed each night: a failure gives the seed and rounds that replay it (MUTATE_SEED, MUTATE_ROUNDS).
+  mutate:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup toolchain install
+      - run: cargo test --test mutate
+        env:
+          MUTATE_ROUNDS: 20000
+          MUTATE_SEED: ${{ github.run_id }}

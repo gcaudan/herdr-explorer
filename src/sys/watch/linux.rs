@@ -1,4 +1,4 @@
-//! inotify. A recursive watch adds one watch per folder of the tree, as Node does on Linux, and one more for each
+//! inotify. A recursive watch adds one watch per folder of the tree, and one more for each
 //! folder made or moved in later; a folder of the tree that cannot be read fails the whole watch.
 
 use super::Callback;

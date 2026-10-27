@@ -70,7 +70,7 @@ impl Pane {
     }
 
     /// Does it on a thread of its own: untracked files the trash did not take are deleted for good once asked again.
-    /// The rows were picked from the diff of: the JS's picked holds its objects, which name nothing in a diff
+    /// The rows were picked from the diff of: they name nothing in a diff
     /// read again since (nothing selected then).
     pub(super) fn go(&mut self, picked: Sel, mode: Mode, of: &Arc<Diff>) {
         self.confirm = None;

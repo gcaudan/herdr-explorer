@@ -6,7 +6,7 @@ use super::state::{Asked, Draft};
 use crate::core::scope::{self, RevKey, Scope};
 use crate::core::stage::Mode;
 use crate::core::ui::{self, Event, Field, HelpState, Mouse};
-use crate::core::{actions, js, notes, paths};
+use crate::core::{actions, notes, paths};
 use crate::diff::{self, Row, disk_lines, shown_lines};
 use std::time::Instant;
 
@@ -317,7 +317,7 @@ impl Pane {
             }
             "enter" => {
                 let Some(n) = self.note.take() else { return };
-                if n.field.value.chars().all(js::is_space) {
+                if n.field.value.chars().all(crate::unicode::is_space) {
                     return self.draw();
                 }
                 let r = &n.r#ref;

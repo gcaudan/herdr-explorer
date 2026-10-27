@@ -1,7 +1,6 @@
 //! Branches (checkout, create, rename, delete), the remote (fetch, pull, push) and stashes.
 
-use super::{capital, card, count_of, js_num, opt, strings, trim};
-use crate::core::js;
+use super::{capital, card, count_of, num_text, opt, strings, trim};
 use crate::core::ui::{Confirm, Field};
 use crate::scm::parse::{self, Branch, Stash};
 use crate::scm::state::{self, GitOpts};
@@ -74,7 +73,7 @@ impl Pane {
             let mut out = String::new();
             let mut space = false;
             for ch in value.chars() {
-                if js::is_space(ch) {
+                if crate::unicode::is_space(ch) {
                     if !space {
                         out.push('-');
                     }
@@ -242,7 +241,7 @@ impl Pane {
                 },
                 move |p, n| {
                     let lost = if n != 0.0 && !n.is_nan() {
-                        format!("its {} commit{} will be lost", js_num(n), if n > 1.0 { "s" } else { "" })
+                        format!("its {} commit{} will be lost", num_text(n), if n > 1.0 { "s" } else { "" })
                     } else {
                         "its commits will be lost".into()
                     };
@@ -275,8 +274,8 @@ impl Pane {
                     "{} and {} have diverged (↑{} ↓{}): merge or rebase in the terminal",
                     s.branch,
                     s.upstream,
-                    js_num(s.ahead),
-                    js_num(s.behind)
+                    num_text(s.ahead),
+                    num_text(s.behind)
                 ),
                 true,
             );

@@ -420,7 +420,7 @@ impl Explorer {
     }
 
     /// Runs an action: the menu closed, then its message shown, at once or when its job is done ("Action failed"
-    /// when it panicked, as the JS caught a rejection).
+    /// when it panicked).
     pub(super) fn run_action(&mut self, action: impl FnOnce(&mut Explorer) -> Act) {
         self.state.menu = None;
         self.render();

@@ -1,4 +1,4 @@
-//! test/graph.test.js: the lanes of the history graph: a branch drawn beside its parent's lane, joined back where it
+//! The lanes of the history graph: a branch drawn beside its parent's lane, joined back where it
 //! started, and the second parent of a merge opening a lane.
 
 use herdr_explorer::render::graph::{Row, layout};

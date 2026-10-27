@@ -4,7 +4,6 @@ use super::hints::keys;
 use super::text::{ellipsis, fit, line, seg_width, text_width};
 use super::theme::c;
 use super::{Seg, fg, seg};
-use crate::core::js;
 
 /// An empty area of h lines, width w: what it lacks, dimmed and centred a third of the way down, and under it the
 /// keys that go on from there.
@@ -54,7 +53,7 @@ fn has_word(text: &str, word: &str) -> bool {
     text.match_indices(word).any(|(i, _)| {
         let before = text[..i].chars().next_back();
         let after = text[i + word.len()..].chars().next();
-        !before.is_some_and(js::is_word) && !after.is_some_and(js::is_word)
+        !before.is_some_and(crate::core::regex::is_word) && !after.is_some_and(crate::core::regex::is_word)
     })
 }
 
@@ -115,7 +114,7 @@ pub fn wrap(text: &str, width: i64) -> Vec<String> {
         let mut words = Vec::new();
         let mut start = 0;
         for (i, ch) in para.char_indices() {
-            if js::is_space(ch) {
+            if crate::unicode::is_space(ch) {
                 words.push(&para[start..i + ch.len_utf8()]);
                 start = i + ch.len_utf8();
             }
@@ -129,14 +128,13 @@ pub fn wrap(text: &str, width: i64) -> Vec<String> {
                 continue;
             }
             if !cur.is_empty() {
-                lines.push(cur.trim_end_matches(js::is_space).to_string());
+                lines.push(cur.trim_end_matches(crate::unicode::is_space).to_string());
                 cur.clear();
             }
             let mut rest = word;
             while text_width(rest) > width {
                 let (mut part, _) = fit(rest, width, None);
-                // A character wider than the width never fits: the JS loops forever there; it
-                // goes alone on its line.
+                // A character wider than the width never fits: it goes alone on its line.
                 if part.is_empty() {
                     part = &rest[..rest.chars().next().map_or(0, char::len_utf8)];
                 }
@@ -146,7 +144,7 @@ pub fn wrap(text: &str, width: i64) -> Vec<String> {
             cur = rest.to_string();
             w = text_width(rest);
         }
-        lines.push(cur.trim_end_matches(js::is_space).to_string());
+        lines.push(cur.trim_end_matches(crate::unicode::is_space).to_string());
     }
     lines
 }

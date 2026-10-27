@@ -1,4 +1,4 @@
-//! test/stage.test.js: staging, unstaging and discarding parts of a diff: the patches made from the rows selected,
+//! Staging, unstaging and discarding parts of a diff: the patches made from the rows selected,
 //! applied in a repository.
 
 mod support;

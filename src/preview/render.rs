@@ -1,11 +1,11 @@
-//! Drawing of the preview (src/preview.js): the display rows, the header with the tabs, the body with the find's
+//! Drawing of the preview: the display rows, the header with the tabs, the body with the find's
 //! matches, the marks and the selection, the footer, then the menu and the key help over them.
 
 use super::{Chip, Kind, Preview, Row, Rows};
+use crate::core::paths;
 use crate::core::scope;
 use crate::core::tabs;
 use crate::core::ui::{self, Seg, bg, c, fg, g, seg, text_width};
-use crate::core::{js, paths};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -117,22 +117,9 @@ const HELP: [(&str, &[(&str, &str)]); 10] = [
 /// The columns of ⚙: the glyph and the cell after it, which a Nerd Font glyph often spills over.
 const GEAR: i64 = 3;
 
-/// The byte index of the UTF-16 unit u of a text (its end past it), for the columns of the caller's marks.
+/// The byte index of the character u of a text (its end past it), for the columns of the caller's marks.
 fn byte_of(text: &str, u: i64) -> usize {
-    if u <= 0 {
-        return 0;
-    }
-    js::unit_at(text, u as usize).unwrap_or_else(|| {
-        // Inside a surrogate pair: at the character's start, as a slice of the JS would cut it.
-        let mut n = 0;
-        for (i, ch) in text.char_indices() {
-            n += ch.len_utf16();
-            if n > u as usize {
-                return i;
-            }
-        }
-        text.len()
-    })
+    text.char_indices().nth(u.max(0) as usize).map_or(text.len(), |(i, _)| i)
 }
 
 impl Preview {
@@ -528,7 +515,7 @@ impl Preview {
         let body_h = self.size().1 as i64 - 2;
         let s = &self.state;
         let pos = if len > body_h {
-            format!(" {}%", js::round(100.0 * (1f64).min((s.top + body_h) as f64 / len as f64)))
+            format!(" {}%", (100.0 * (1f64).min((s.top + body_h) as f64 / len as f64)).round())
         } else {
             String::new()
         };

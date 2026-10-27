@@ -1,46 +1,31 @@
-//! test/syntax.test.js: every script of src/ (the shims herdr runs) passes `node --check`: a shim that fails to parse
-//! opens no pane. CI runs it on Node 20 and 24 as well (.github/workflows/ci.yml).
+//! herdr-plugin.toml: every command runs the binary or a script of the plugin; the explorer and the
+//! preview through the binary's `pane` subcommand, their own launcher.
 
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::path::Path;
 
-fn node() -> Option<PathBuf> {
-    let exe = if cfg!(windows) { "node.exe" } else { "node" };
-    std::env::split_paths(&std::env::var_os("PATH")?).map(|d| d.join(exe)).find(|p| p.is_file())
+/// Each command of the manifest, its spaces left out: `["bin/herdr-explorer","hook","--restore"]`.
+fn commands(manifest: &str) -> Vec<String> {
+    manifest
+        .lines()
+        .filter_map(|l| l.split_once('=').filter(|(k, _)| k.trim() == "command"))
+        .map(|(_, v)| v.chars().filter(|c| !c.is_whitespace()).collect())
+        .collect()
 }
 
 #[test]
-fn every_shim_parses() {
-    let Some(node) = node() else {
-        assert!(std::env::var_os("CI").is_none(), "node not found: the shims must be checked in CI");
-        eprintln!("node not found: the shims are not checked");
-        return;
-    };
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let mut scripts = Vec::new();
-    for dir in [root.join("src")] {
-        for e in std::fs::read_dir(&dir).unwrap().filter_map(Result::ok) {
-            if e.path().extension().is_some_and(|x| x == "js") {
-                scripts.push(e.path());
-            }
-        }
-    }
-    assert!(scripts.iter().any(|s| s.ends_with("src/shim.js")), "{scripts:?}");
-    for s in scripts {
-        let out = Command::new(&node).arg("--check").arg(&s).output().unwrap();
-        assert!(out.status.success(), "{}: {}", s.display(), String::from_utf8_lossy(&out.stderr));
-    }
-}
-
-#[test]
-fn every_script_the_manifest_runs_exists() {
+fn every_command_of_the_manifest_runs_the_binary_or_a_script() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let manifest = std::fs::read_to_string(root.join("herdr-plugin.toml")).unwrap();
-    let scripts: Vec<&str> =
-        manifest.split("[\"node\", \"").skip(1).map(|rest| &rest[..rest.find('"').unwrap()]).collect();
-    assert!(scripts.len() > 10, "{scripts:?}");
-    for s in scripts {
-        assert!(root.join(s).is_file(), "herdr-plugin.toml runs {s}, which does not exist");
+    let all = commands(&manifest);
+    assert!(all.len() > 15, "{all:?}");
+    for c in &all {
+        let first = c.trim_start_matches("[\"").split('"').next().unwrap_or("");
+        let script = c.split('"').find(|s| s.starts_with("scripts/"));
+        match first {
+            "bin/herdr-explorer" => {}
+            "sh" | "powershell" => assert!(script.is_some_and(|s| root.join(s).is_file()), "{c}"),
+            _ => panic!("herdr-plugin.toml runs {c}: neither the binary nor a script of scripts/"),
+        }
     }
 }
 
@@ -60,7 +45,7 @@ fn the_manifest_runs_the_binary_for_the_explorer_and_the_preview() {
             (value("id"), value("command"))
         })
         .collect();
-    // Their own launcher: no node process stays in these long-lived panes.
+    // Their own launcher: these panes live long.
     for id in ["tree", "preview"] {
         let command = panes.iter().find(|(i, _)| *i == format!("\"{id}\"")).map(|(_, c)| c.as_str());
         let want = format!("[\"bin/herdr-explorer\",\"pane\",\"{id}\"]");

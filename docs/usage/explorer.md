@@ -9,9 +9,8 @@ same way, in their bottom line, cut to leave room for the pill and the gear on t
 
 | Pill or icon     | Click                                                                  |
 | ---------------- | ---------------------------------------------------------------------- |
-| `↑ 0.9.0`        | the newer release (green, when one exists, is not skipped and **Check for updates** is on): the installed and new versions, its first changes, and `y` update, `r` its notes in the browser, `s` skip this version (no pill until the next one), `n` later |
-| `! finish`       | an update the installer must finish (yellow): its command, `c` copies it to run in a terminal |
-| `✓ what's new`   | for half a minute after an update done here (blue, the new version in a message): the release notes in the browser |
+| `↑ 0.9.0`        | the newer release (green, when one exists, is not skipped and **Check for updates** is on): the installed and new versions, its first changes, and `c` copy herdr's update command, `r` its notes in the browser, `s` skip this version (no pill until the next one), `n` later |
+| `✓ what's new`   | for a minute after an update (blue, the new version in a message): the release notes in the browser |
 | gear             | Settings                                                               |
 
 Below 24 columns, a pill shows its mark only (`↑`, `!`, `✓`).
@@ -211,16 +210,16 @@ setting. The settings are shared by every explorer. See [configuration.md](../co
 | Tree       | Hidden files, Git-ignored files, Compact folders, Follow terminal   |
 | Opening    | Enter opens (preview or editor), Preview follows selection, Editor  |
 | Preview    | Wrap lines, Line numbers, Changes, Images, Diff layout (auto, split, inline) |
-| Review     | Notes prefix                                                        |
+| Review     | Notes prefix, Source control tool                                   |
 | New tabs   | Open automatically, Dock side (left or right)                       |
 | Advanced   | Key bindings, Check for updates                                     |
 
 `up`/`down` (and their bound keys, page and first/last included) move, `/` finds a setting, `right`/`l` and
-`enter` give a setting its next value (on **Icon theme**, **Editor**, **Notes prefix** and **Key bindings**: open its
+`enter` give a setting its next value (on **Icon theme**, **Editor**, **Notes prefix**, **Source control tool** and **Key bindings**: open its
 page or prompt), `left`/`h` its previous one. **Theme** chooses dark or light colours for every pane (VS Code Dark+ or
 Light+, syntax and Markdown included); on **auto**, the default, each pane asks the terminal its background colour at
 start and turns light on a light one. A newer release shows a line under the title, a skipped one too (dimmed): `u`
-opens the update (or the update to finish), as the header's pill does. `escape`, and the keys bound to close and settings, go back to the tree. The wheel moves the selection, a
+opens the update, as the header's pill does. `escape`, and the keys bound to close and settings, go back to the tree. The wheel moves the selection, a
 click on a setting changes it, a click on the title goes back.
 
 **Icon theme** opens a page of its own: the Nerd Font default and the VS Code icon themes installed (see
@@ -283,6 +282,7 @@ collapse and menu; the key of settings opens **Settings…**. A long menu scroll
   remembered per tree root.
 - **Tree root**: the root chosen with **Set as root** or `backspace` comes back after a herdr restart.
 - **Follow the terminal folder**: when on, the explorer checks every 2 s the folder of the terminal next to it
-  (that of its running program when herdr knows it) and reveals it. A folder outside the tree root but inside the
+  (that of its running program when herdr knows it) and reveals it. Only the explorer of the tab herdr shows checks;
+  the others look again as soon as their tab is shown. A folder outside the tree root but inside the
   tab's folder brings the root back to the tab's folder; a folder outside the tab's folder becomes the root, except
   `$HOME`, one of its parents or the filesystem root, which are not followed.

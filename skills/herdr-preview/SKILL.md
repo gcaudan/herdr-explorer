@@ -5,7 +5,7 @@ description: Use inside herdr (HERDR_PANE_ID is set) when you point the user at 
 
 # Show a file in the herdr preview
 
-`peek.js` shows a file in the preview pane of the current herdr tab, scrolled to the first place you name and with
+`herdr-explorer peek` shows a file in the preview pane of the current herdr tab, scrolled to the first place you name and with
 every place highlighted. It opens the preview when there is none and leaves the focus on the terminal, so the user
 keeps typing to you.
 
@@ -20,9 +20,10 @@ keeps typing to you.
 3. **Run it**, with the narrowest places that match what you talk about (see [Places](#places)):
 
    ```sh
-   dir=$(dirname "$(herdr plugin list --plugin gcaudan.explorer --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).result.plugins[0].manifest_path))')")
-   node "$dir/src/peek.js" src/app.js:12-14,42:5-18
-   node "$dir/src/peek.js" --diff src/app.js:40-52
+   manifest=$(herdr plugin list --plugin gcaudan.explorer --json | grep -o '"manifest_path":"[^"]*"' | cut -d'"' -f4 | sed -e 's/[\][\]/\\/g' -e 's/^[\][\]?[\]//')
+   peek="${manifest%herdr-plugin.toml}bin/herdr-explorer"
+   "$peek" peek src/app.js:12-14,42:5-18
+   "$peek" peek --diff src/app.js:40-52
    ```
 
 4. **Read the result**: `Preview: <file>[:<places>]` (`Preview (diff): …`) means done. Otherwise it prints

@@ -4,15 +4,15 @@ use super::jpeg::int32;
 use super::{Image, MAX_RAW, at, bad, byte, round, tiff_tags};
 use crate::codec::inflate::inflate_zlib;
 
-// A whole number, or None: sizes, offsets and rows per strip that are not (rationals, empty tags) give absurd images
-// in the JS (NaN lengths, fractional indices), none here.
+// A whole number, or None: sizes, offsets and rows per strip that are not (rationals, empty tags) give no
+// image (NaN lengths, fractional indices otherwise).
 fn whole(x: f64) -> Option<usize> {
     (x >= 0.0 && x.fract() == 0.0 && x < 9007199254740992.0).then_some(x as usize)
 }
 
 pub(super) fn decode_tiff(b: &[u8]) -> Option<Image> {
     let t = tiff_tags(b)?;
-    // A tag's first value, d when the tag is absent; NaN when it has no value (undefined in the JS).
+    // A tag's first value, d when the tag is absent; NaN when it has no value.
     let one = |tag: u32, d: f64| t.get(tag).map_or(d, |v| v.first().copied().unwrap_or(f64::NAN));
     let (w, h, spp, bps) = (one(256, 0.0), one(257, 0.0), one(277, 1.0), one(258, 1.0));
     let (comp, photo, pred) = (one(259, 1.0), one(262, 1.0), one(317, 1.0));
@@ -104,7 +104,7 @@ pub(super) fn decode_tiff(b: &[u8]) -> Option<Image> {
     let map = t.get(320);
     let extra = t.get(338).and_then(|v| v.first().copied()).unwrap_or(f64::NAN);
     let has_extra = extra != 0.0 && !extra.is_nan();
-    // A colour of the map, as the JS reads it: 0 past its end or at a fractional index.
+    // A colour of the map: 0 past its end or at a fractional index.
     let colour = |i: f64| {
         let v = map.and_then(|m| (i.fract() == 0.0).then(|| m.get(i as usize)).flatten());
         v.map_or(0.0, |&v| (int32(v) >> 8) as f64)

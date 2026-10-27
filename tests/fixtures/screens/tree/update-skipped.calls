@@ -2,5 +2,4 @@ pane	get	w1:p2
 pane	input	w1:p2	--right-click	pane
 pane	layout	--pane	w1:p2
 pane	layout	--pane	w1:p2
-plugin	list	--plugin	gcaudan.explorer	--json
 pane	layout	--pane	w1:p2

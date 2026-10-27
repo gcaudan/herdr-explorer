@@ -83,7 +83,7 @@ pub fn target(arg: &str, cwd: &str) -> Result<(String, Vec<Mark>), String> {
 /// another host is refused (on Windows it would reach a network share); so is any other scheme. Returns the argument,
 /// or None.
 pub fn clicked(url: &str, hostname: &str) -> Option<String> {
-    let url = url.trim_matches(super::js::is_space);
+    let url = url.trim_matches(crate::unicode::is_space);
     if !has_scheme(url) {
         return (!url.is_empty()).then(|| url.to_string());
     }
@@ -132,7 +132,7 @@ fn fragment_lines(hash: &str) -> Option<(&str, Option<&str>)> {
     (n > 0 && n == rest.len()).then_some((a, Some(rest)))
 }
 
-/// A file URL as the WHATWG parser reads it (`new URL`), as far as `clicked` needs: the scheme, the host (lowercased,
+/// A file URL as the WHATWG parser reads it, as far as `clicked` needs: the scheme, the host (lowercased,
 /// "localhost" kept for the caller), the path's segments with `.` and `..` resolved (percent escapes left as typed),
 /// and the fragment.
 struct FileUrl {

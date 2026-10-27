@@ -1,12 +1,12 @@
-//! State of the source control pane (src/scm/state.js): git run in the repository, the loaders that fill S (status,
-//! history, stashes, refs, the branch picker, diffs and branch comparisons), and the view switches. The JS awaited
-//! git in the pane's loop; here the loaders block, run on the pane's worker (`load`), and their result is applied to
-//! S in the loop (`apply`). The refresh, the watch of the git folder and what is drawn are the pane's (case 17).
+//! State of the source control pane: git run in the repository, the loaders that fill S (status,
+//! history, stashes, refs, the branch picker, diffs and branch comparisons), and the view switches. The loaders
+//! block, run on the pane's worker (`load`), and their result is applied to
+//! S in the loop (`apply`). The refresh, the watch of the git folder and what is drawn are the pane's.
 
 use super::context::{Cmp, DiffView, Hist, Pick, PickItem, Picker, Repo, RepoState, Row, State};
 use super::parse::{self, Branch, Dirs, Item, Refs, Stash, error_of};
 use crate::core::exec::{self, Env, Exec, Opts};
-use crate::core::{js, paths};
+use crate::core::paths;
 use crate::diff::{self, DIFF_OPTS, Diff};
 use crate::json::Value;
 use std::time::Duration;
@@ -306,7 +306,7 @@ pub fn fork_point(top: &str, has_head: bool) -> Option<String> {
     }
     let out = |args: &[&str]| {
         let r = run(top, args);
-        if r.code == Some(0) { r.out.trim_matches(js::is_space).to_string() } else { String::new() }
+        if r.code == Some(0) { r.out.trim_matches(crate::unicode::is_space).to_string() } else { String::new() }
     };
     let name = diff::default_branch(out);
     if name.is_empty() {
@@ -537,7 +537,8 @@ pub fn continues(s: &State) -> bool {
     let Some(o) = ongoing(s) else { return false };
     o.cont.is_some()
         && !s.amend
-        && (s.repo().is_some_and(|r| r.state == "REBASING") || s.field.value.trim_matches(js::is_space).is_empty())
+        && (s.repo().is_some_and(|r| r.state == "REBASING")
+            || s.field.value.trim_matches(crate::unicode::is_space).is_empty())
 }
 
 pub fn head_name(repo: &Repo) -> &str {
@@ -558,7 +559,7 @@ fn set_picker_all(s: &mut State) {
 }
 
 pub fn filter_picker(p: &mut Picker) {
-    let q = js::lower(&p.field.value);
+    let q = p.field.value.to_lowercase();
     let mut items = Vec::new();
     if p.mode.is_none() {
         items.push(PickItem::Create(if q.is_empty() {
@@ -568,7 +569,11 @@ pub fn filter_picker(p: &mut Picker) {
         }));
     }
     items.extend(
-        p.all.iter().filter(|b| q.is_empty() || js::lower(&b.branch.name).contains(&q)).cloned().map(PickItem::Branch),
+        p.all
+            .iter()
+            .filter(|b| q.is_empty() || b.branch.name.to_lowercase().contains(&q))
+            .cloned()
+            .map(PickItem::Branch),
     );
     p.items = items;
     p.sel = 0.max(p.sel.min(p.items.len() as i64 - 1));
@@ -751,7 +756,7 @@ pub fn comparable(s: &State, row: Option<&Row>) -> bool {
 }
 
 pub fn diffable(s: &State, row: Option<&Row>) -> bool {
-    row.is_some_and(|r| ["file", "commit", "stash", "tag"].contains(&r.kind)) || comparable(s, row)
+    row.is_some_and(|r| ["file", "commit", "stash", "tag", "pull"].contains(&r.kind)) || comparable(s, row)
 }
 
 /// The diff on the right of the list stands for this row: its own, or a commit opened from its comparison.

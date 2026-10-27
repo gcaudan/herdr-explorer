@@ -1,12 +1,12 @@
 //! The explorer's settings view, in place of the tree, and the pages opened from it: the icon themes and the key
-//! bindings (src/explorer/settings.js). Each page has its view, its keys and its mouse.
+//! bindings. Each page has its view, its keys and its mouse.
 
 use super::render::chevron;
 use super::{Act, Explorer, HELP, later};
+use crate::core::actions;
 use crate::core::exec::{self, KeyMap};
 use crate::core::icons::{self, Loaded};
 use crate::core::ui::{self, Field, Hints, Mouse, Rgb, Seg, c, fg, g, line, seg, text_width};
-use crate::core::{actions, js};
 use crate::json::{self, Value};
 use crate::sys;
 
@@ -47,6 +47,7 @@ enum Change {
     DiffLayout(Option<usize>),
     IconThemes,
     Editor,
+    ScmCommand,
     Prefix,
     Keys,
 }
@@ -85,7 +86,7 @@ impl Row {
 
 /// The rows a find keeps: those whose label, value or help has the text typed (any case), under their group title.
 fn found(list: &[Row], find: &Option<Field>) -> Vec<Row> {
-    let Some(q) = find.as_ref().filter(|f| !f.value.is_empty()).map(|f| js::lower(&f.value)) else {
+    let Some(q) = find.as_ref().filter(|f| !f.value.is_empty()).map(|f| f.value.to_lowercase()) else {
         return list.to_vec();
     };
     let mut out = Vec::new();
@@ -102,7 +103,7 @@ fn found(list: &[Row], find: &Option<Field>) -> Vec<Row> {
             r.help.as_deref().unwrap_or(""),
             r.action.as_deref().unwrap_or("")
         );
-        if !js::lower(&text).contains(&q) {
+        if !text.to_lowercase().contains(&q) {
             continue;
         }
         if let Some(g) = group.take() {
@@ -308,7 +309,7 @@ fn key_text(list: &[String]) -> String {
 
 /// The text of a setting, as `settings.x || fallback` shows it.
 fn or(v: Option<&Value>, fallback: &str) -> String {
-    v.filter(|v| v.truthy()).map_or_else(|| fallback.to_string(), js::string)
+    v.filter(|v| v.truthy()).map_or_else(|| fallback.to_string(), crate::json::text)
 }
 
 /// Bindings changed: each action given its keys, or its default ones (None), in the order first changed.
@@ -382,7 +383,7 @@ impl Explorer {
         (seg(shown(values[now]), fg(c().blue)), Change::Pick(name, values, now))
     }
 
-    /// diffLayout: one value, or { narrow, wide } once v chose a layout in a diff (diff.js saveMode), read again as
+    /// diffLayout: one value, or { narrow, wide } once v chose a layout in a diff (diff::save_mode), read again as
     /// other panes write it. Both shown when they differ; a choice here holds for both.
     fn diff_layout(&self) -> (Seg, Change) {
         const VALUES: [&str; 3] = ["", "split", "inline"];
@@ -504,6 +505,11 @@ impl Explorer {
                 "Text typed before the review notes sent to the agent (A), such as an instruction: \"Fix these:\", or a command of the agent.",
                 blue(or(s.get("reviewPrefix"), "none"), Change::Prefix),
             ),
+            Row::setting(
+                "Source control tool",
+                "Command run by prefix+d in the review tab, at the explorer's root (lazygit, gitui, tig…). Empty: the plugin's source control. An external tool runs the repository's hooks and filters.",
+                blue(or(s.get("scmCommand"), "default"), Change::ScmCommand),
+            ),
             Row::group("NEW TABS"),
             Row::setting(
                 "Open automatically",
@@ -559,6 +565,12 @@ impl Explorer {
                     v => format!("Editor: {v}"),
                 });
             }
+            Change::ScmCommand => {
+                return self.ask_text("Source control tool", "scmCommand", |v| match v {
+                    "" => "Source control tool: default".into(),
+                    v => format!("Source control tool: {v}"),
+                });
+            }
             Change::Prefix => {
                 return self.ask_text("Notes prefix", "reviewPrefix", |v| match v {
                     "" => "Notes prefix: none".into(),
@@ -569,9 +581,9 @@ impl Explorer {
         Act::Now(None)
     }
 
-    /// A text setting asked for, saved trimmed. A value that is not a text (a settings.json edited by hand) failed in
-    /// the JS's ask: null before the prompt opened; a number, a boolean or an object after, the prompt left open and
-    /// empty; an array not at all (its prompt opens empty here).
+    /// A text setting asked for, saved trimmed. A value that is not a text (a settings.json edited by hand) fails
+    /// ("Action failed"): null before the prompt opens; a number, a boolean or an object after, the prompt left open
+    /// and empty; an array does not fail, its prompt opens empty.
     fn ask_text(&mut self, label: &str, name: &'static str, said: fn(&str) -> String) -> Act {
         let value = exec::read_settings().get(name).cloned().unwrap_or(Value::Null);
         let failed = match &value {
@@ -583,7 +595,7 @@ impl Explorer {
             _ => true,
         };
         let done = move |ex: &mut Explorer, text: String| {
-            let text = text.trim_matches(js::is_space).to_string();
+            let text = text.trim_matches(crate::unicode::is_space).to_string();
             ex.settings.set(name, text.clone().into());
             let mut saved = exec::read_settings();
             saved.set(name, text.clone().into());
@@ -594,24 +606,15 @@ impl Explorer {
         Act::Now(failed.then(|| "Action failed".into()))
     }
 
-    /// The update to install, or the one the installer must finish: its text, colour, key label, and whether it is
-    /// the finish.
-    fn pending_update(&self) -> Option<(String, Rgb, &'static str, bool)> {
-        if self.finish.is_some() {
-            return Some(("! Finish the update".into(), c().yellow, "finish", true));
-        }
-        if self.updating || !self.settings.get("updateCheck").is_some_and(Value::truthy) {
+    /// The newer release to install: its text, colour and key label.
+    fn pending_update(&self) -> Option<(String, Rgb, &'static str)> {
+        if !self.settings.get("updateCheck").is_some_and(Value::truthy) {
             return None;
         }
         if let Some(v) = &self.latest {
-            return Some((format!("↑ {v} available"), c().green, "update", false));
+            return Some((format!("↑ {v} available"), c().green, "update"));
         }
-        self.skipped.as_ref().map(|v| (format!("{v} skipped"), c().dim, "update anyway", false))
-    }
-
-    /// The update installed, or finished (askUpdate, finishUpdate).
-    fn update_action(&mut self, finish: bool) -> Act {
-        if finish { self.finish_update() } else { self.ask_update() }
+        self.skipped.as_ref().map(|v| (format!("{v} skipped"), c().dim, "update anyway"))
     }
 
     /// The settings view: the find when open and the update when there is one under the title, the settings, the
@@ -647,7 +650,7 @@ impl Explorer {
         if s.find.is_some() {
             lines.push(find_line(s, &list, w));
         }
-        if let Some((text, rgb, label, _)) = &up {
+        if let Some((text, rgb, label)) = &up {
             // The key on the right, left out when it does not fit.
             let mut hint = ui::keys(&[("u", *label)], usize::MAX).segs;
             if text_width(text) + 2 + ui::seg_width(&hint) > w {
@@ -698,8 +701,7 @@ impl Explorer {
         if k == "escape" || matches!(action.as_deref(), Some("close" | "settings")) {
             self.state.settings = None;
         } else if k == "u" && up.is_some() {
-            let finish = up.is_some_and(|u| u.3);
-            return self.run_action(|ex| ex.update_action(finish));
+            return self.run_action(|ex| ex.ask_update());
         } else if let Some(d) = to.and_then(|t| moves(n, t)) {
             move_in(&list, &mut view.page, d);
         } else if let Some(change) = r.as_ref().and_then(|r| r.change.clone()) {
@@ -721,7 +723,6 @@ impl Explorer {
         let w = self.size().0;
         let (w80, h80) = size80();
         let (at_row, n, update, detail) = self.settings_layout(h80, w80);
-        let up = self.pending_update();
         let y = m.y - 1;
         let Some(view) = &mut self.state.settings else { return };
         let s = &mut view.page;
@@ -742,8 +743,7 @@ impl Explorer {
             return self.render();
         }
         if update > 0 && y == update {
-            let finish = up.is_some_and(|u| u.3);
-            return self.run_action(|ex| ex.update_action(finish));
+            return self.run_action(|ex| ex.ask_update());
         }
         let i = s.top + y - at_row;
         if y >= at_row
@@ -778,11 +778,11 @@ impl Explorer {
         let id = current.get("id");
         let mut list = vec![nerd];
         // The saved theme kept in the list when the scan misses it (an editor folder out of reach).
-        if id.is_some_and(Value::truthy) && !found.iter().any(|t| js::strict_eq(t.get("id"), id)) {
+        if id.is_some_and(Value::truthy) && !found.iter().any(|t| t.get("id") == id) {
             list.push(current.clone());
         }
         list.extend(found);
-        let sel = list.iter().position(|t| js::strict_eq(t.get("id"), id)).unwrap_or(0) as i64;
+        let sel = list.iter().position(|t| t.get("id") == id).unwrap_or(0) as i64;
         if let Some(view) = &mut self.state.settings {
             view.icons = Some(Icons { page: Page { sel, top: 0, find: None }, list, loaded: Vec::new() });
         }
@@ -833,7 +833,7 @@ impl Explorer {
             .list
             .iter()
             .map(|t| {
-                let on = js::strict_eq(t.get("id"), Some(&saved));
+                let on = t.get("id") == Some(&saved);
                 Row::item(&label_of(t), seg(if on { "✓" } else { "" }, fg(c().green)))
             })
             .collect()
@@ -1107,7 +1107,7 @@ impl Explorer {
                 return self.render();
             }
             let k = k.to_string();
-            // The row gone meanwhile (keys.json read again, the find open): the JS's r.action failed.
+            // The row gone meanwhile (keys.json read again, the find open): the action fails.
             return self.run_action(|ex| match r {
                 None => Act::Now(Some("Action failed".into())),
                 Some(a) => Act::Now(a.and_then(|a| ex.bind_key(&a, &k))),
@@ -1200,11 +1200,11 @@ impl Explorer {
 
 /// A theme's label, as `${t.label}` gives it.
 fn label_of(t: &Value) -> String {
-    t.get("label").map_or_else(|| "undefined".into(), js::string)
+    t.get("label").map_or_else(|| "undefined".into(), crate::json::text)
 }
 
-/// `text.padEnd(n)`, n in UTF-16 units.
+/// Text left-aligned on n columns.
 fn pad_end(text: &str, n: usize) -> String {
-    let len = js::utf16_len(text);
+    let len = ui::text_width(text);
     format!("{text}{}", " ".repeat(n.saturating_sub(len)))
 }

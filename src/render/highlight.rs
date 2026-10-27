@@ -2,7 +2,6 @@
 //! numbers), not a parser. Strings and comments spanning lines carry a state from one line to the next.
 //! Output: one list of (text, style) segments per source line, ready for `ui::line`.
 
-use crate::core::js;
 use crate::core::regex::{Match, Regex};
 use crate::core::ui::{self, Rgb, Seg};
 use std::collections::HashSet;
@@ -52,7 +51,7 @@ pub const COLORS_LIGHT: &[(&str, Rgb)] = &[
     ("meta", [110, 110, 110]),
 ];
 
-/// The styles of a theme by name (the JS's `STYLES`), the colours as escapes; heading in bold, bold, italic.
+/// The styles of a theme by name, the colours as escapes; heading in bold, bold, italic.
 pub struct Styles(Vec<(&'static str, String)>);
 
 impl Styles {
@@ -73,7 +72,7 @@ impl Styles {
         self.0.iter().find(|(k, _)| *k == name).map(|(_, s)| s.as_str())
     }
 
-    /// Every style, by name, in the JS's order.
+    /// Every style, by name, in a fixed order.
     pub fn all(&self) -> &[(&'static str, String)] {
         &self.0
     }
@@ -208,7 +207,7 @@ fn compile(spec: &'static Spec) -> Compiled {
         opens.push((esc(o), open(c, "string", e, flags.contains('m'), false, spec.keys)));
     }
     // Longer delimiters first: """ before ", --[[ before --.
-    opens.sort_by_key(|(re, _)| std::cmp::Reverse(js::utf16_len(re)));
+    opens.sort_by_key(|(re, _)| std::cmp::Reverse(re.chars().count()));
     let mut sources: Vec<String> = Vec::new();
     let mut rules = Vec::new();
     for (re, o) in opens {
@@ -282,7 +281,7 @@ fn close(line: &str, from: usize, o: &Open, mut add: impl FnMut(&str, &str)) -> 
 fn word_style<'a>(c: &Compiled, s: &'a Styles, line: &str, w: &str, start: usize, end: usize) -> &'a str {
     let lowered;
     let k = if c.spec.ci {
-        lowered = js::lower(w);
+        lowered = w.to_lowercase();
         lowered.as_str()
     } else {
         w
@@ -537,8 +536,7 @@ static DECL: LazyLock<Regex> = LazyLock::new(|| sticky(r"<[!?][\w-]*"));
 static ENTITY: LazyLock<Regex> = LazyLock::new(|| re(r"&(?:#\d+|#x[\da-fA-F]+|\w+);", "g"));
 static ATTRIBUTE: LazyLock<Regex> = LazyLock::new(|| re(r"^[^\s=]", ""));
 
-/// Where `needle` (ASCII, lower case) starts in the text from `from`, ignoring the ASCII case, as the JS finds it in
-/// the text lowered.
+/// Where `needle` (ASCII, lower case) starts in the text from `from`, ignoring the ASCII case.
 pub(crate) fn find_lower(text: &str, needle: &str, from: usize) -> Option<usize> {
     let (t, n) = (text.as_bytes(), needle.as_bytes());
     (from..=t.len().checked_sub(n.len())?).find(|&j| t[j..j + n.len()].eq_ignore_ascii_case(n))
@@ -649,7 +647,7 @@ fn html(line: &str, st: Option<State>) -> (Vec<Seg>, Option<State>) {
             add(&mut out, &format!("<{slash}"), s.s("punctuation"));
             add(&mut out, name, s.s("tag"));
             i += m.as_str().len();
-            st = Html { tag: js::lower(name), closing: !slash.is_empty(), ..Html::mode(Mode::Tag) };
+            st = Html { tag: name.to_lowercase(), closing: !slash.is_empty(), ..Html::mode(Mode::Tag) };
         } else if let Some(m) = DECL.exec_at(line, i) {
             add(&mut out, m.as_str(), s.s("keyword"));
             i += m.as_str().len();
@@ -697,18 +695,13 @@ static CSS_SELECTOR: LazyLock<Regex> = LazyLock::new(|| re(r"^#|^-?\d", ""));
 static CSS_SPACE: LazyLock<Regex> = LazyLock::new(|| re(r"^\s", ""));
 static CSS_PUNCT: LazyLock<Regex> = LazyLock::new(|| re(r"^[{};\s]", ""));
 
-// `/^\s*:/.test(line.slice(end, end + 40))`: a ':' after white space, within 40 UTF-16 units.
+// A ':' after white space, within 40 characters.
 fn colon_after(line: &str, end: usize) -> bool {
-    let mut units = 0;
-    for c in line[end..].chars() {
-        units += c.len_utf16();
-        if units > 40 {
-            return false;
-        }
+    for c in line[end..].chars().take(40) {
         if c == ':' {
             return true;
         }
-        if !js::is_space(c) {
+        if !crate::unicode::is_space(c) {
             return false;
         }
     }
@@ -853,7 +846,7 @@ pub fn language(file_name: &str) -> Option<&'static str> {
     if file_name.is_empty() {
         return None;
     }
-    let base = js::lower(file_name.rsplit(['\\', '/']).next().unwrap_or(""));
+    let base = file_name.rsplit(['\\', '/']).next().unwrap_or("").to_lowercase();
     if let Some(id) = lookup(NAMES, &base) {
         return Some(id);
     }
@@ -879,7 +872,7 @@ pub fn highlight(text: &str, lang: Option<&str>) -> Vec<Vec<Seg>> {
         .map(|l| {
             let line = ui::clean_line(l, 4, None);
             let Some(id) = lang else { return vec![(line, String::new())] };
-            if js::utf16_len(&line) > LONG {
+            if line.chars().count() > LONG {
                 return vec![(line, String::new())];
             }
             let segs;
@@ -889,7 +882,7 @@ pub fn highlight(text: &str, lang: Option<&str>) -> Vec<Vec<Seg>> {
         .collect()
 }
 
-// --- language tables (generated from the JS's)
+// --- language tables
 
 const JS_: Spec = Spec {
     line: &["//"],
@@ -1352,3 +1345,15 @@ const ALIAS: &[(&str, &str)] = &[
     ("json", "json"),
     ("jsonc", "json"),
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_language_compiles() {
+        for (_, spec) in SPECS {
+            compile(spec);
+        }
+    }
+}

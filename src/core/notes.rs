@@ -2,12 +2,12 @@
 //! then typed together into the agent's prompt next to the explorer, without submitting it.
 //! Stored in notes-<tab id>.json in the state folder, so that every pane of the tab sees the same list. Each note keeps
 //! the text of its lines (anchor), so that it follows them when lines are added or removed above, and is marked stale
-//! once they are gone (current). A note stays the JSON object the JS wrote, with any field it holds.
+//! once they are gone (current). A note stays the JSON object written, with any field it holds.
 
 use super::actions::relative_to;
 use super::exec::{real_path, tab_file, write_atomic};
-use super::js;
 use crate::json::{self, Value};
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -43,7 +43,7 @@ pub fn write(tab: &str, list: &[Value]) -> bool {
 pub fn clean(text: &str) -> String {
     let spaced: String =
         text.chars().map(|c| if matches!(c, '\0'..='\x1f' | '\x7f'..='\u{9f}') { ' ' } else { c }).collect();
-    spaced.trim_matches(js::is_space).to_string()
+    spaced.trim_matches(crate::unicode::is_space).to_string()
 }
 
 const MAX_ANCHOR: u64 = 200; // lines kept as a note's anchor
@@ -90,12 +90,12 @@ pub fn locate(n: &Value, lines: &Lines) -> Option<Value> {
         return None;
     }
     let len = anchor.len();
-    let was = js::number(n.get("from")) - 1.0;
+    let was = json::num(n.get("from")) - 1.0;
     let lines = match lines {
         Lines::Lines(l) => Some(l),
         _ => None,
     };
-    // The anchor is at line index i (as lines[i + k] reads: undefined off the list).
+    // The anchor is at line index i (None off the list).
     let at = |lines: &[String], i: f64| {
         i >= 0.0
             && i.fract() == 0.0
@@ -162,7 +162,7 @@ pub fn current(tab: &str, only: Option<&str>) -> Vec<Value> {
 
 /// The same note in two readings of the list: taken at the same time, on the same file, with the same text.
 fn same(a: &Value, b: &Value) -> bool {
-    ["t", "file", "text"].iter().all(|k| js::strict_eq(a.get(k), b.get(k)))
+    ["t", "file", "text"].iter().all(|k| a.get(k) == b.get(k))
 }
 
 /// Writes the notes moved into the list read again just before, so that a note taken, sent or removed meanwhile by
@@ -201,7 +201,7 @@ pub struct New {
 /// Adds a note, its file named by its real path (real_path), so that the preview (from the explorer's folder, maybe
 /// through a symbolic link such as /home → /var/home) and the diff (from the repository's real folder) agree.
 pub fn add(tab: &str, note: New) -> String {
-    add_at(tab, note, js::now_ms())
+    add_at(tab, note, crate::core::clock::now_ms())
 }
 
 /// `add`, the note taken at t.
@@ -270,8 +270,9 @@ pub fn where_(n: &Value, dir: Option<&str>, resolved: bool) -> String {
     if !from.is_some_and(Value::truthy) {
         return reference;
     }
-    let field = |v: Option<&Value>| v.map_or("undefined".into(), js::string);
-    let range = if js::greater(n.get("to"), from) { format!("-{}", field(n.get("to"))) } else { String::new() };
+    let field = |v: Option<&Value>| v.map_or("undefined".into(), json::text);
+    let range =
+        if json::num(n.get("to")) > json::num(from) { format!("-{}", field(n.get("to"))) } else { String::new() };
     format!("{reference}:{}{range}", field(from))
 }
 
@@ -281,20 +282,18 @@ pub fn items(list: &[Value], dir: Option<&str>) -> Vec<String> {
     let at = dir.filter(|d| !d.is_empty()).map(real_path);
     let mut sorted: Vec<&Value> = list.iter().collect();
     let text = |n: &Value, k: &str| n.get(k).and_then(Value::as_str).unwrap_or("").to_string();
-    js::sort_by(&mut sorted, |a, b| {
-        let file = js::locale_compare(&text(a, "file"), &text(b, "file"), false) as i8 as f64;
-        js::or(file, || {
-            js::or(js::number(a.get("from")) - js::number(b.get("from")), || {
-                js::number(a.get("t")) - js::number(b.get("t"))
-            })
-        })
+    sorted.sort_by(|a, b| {
+        let num = |n: &Value, k: &str| json::num(n.get(k));
+        crate::unicode::natural_cmp(&text(a, "file"), &text(b, "file"))
+            .then_with(|| num(a, "from").partial_cmp(&num(b, "from")).unwrap_or(Ordering::Equal))
+            .then_with(|| num(a, "t").partial_cmp(&num(b, "t")).unwrap_or(Ordering::Equal))
     });
     sorted
         .into_iter()
         .map(|n| {
             let mut tags = Vec::new();
             if let Some(kind) = n.get("kind").filter(|k| k.truthy()) {
-                tags.push(js::string(kind));
+                tags.push(json::text(kind));
             }
             if n.get("stale").is_some_and(Value::truthy) {
                 tags.push("stale".into());
@@ -333,7 +332,7 @@ pub fn send(tab: &str, pane: &str) -> String {
         return "No note to send".into();
     }
     let settings = super::exec::read_settings();
-    let prefix = settings.get("reviewPrefix").filter(|p| p.truthy()).map_or(String::new(), js::string);
+    let prefix = settings.get("reviewPrefix").filter(|p| p.truthy()).map_or(String::new(), json::text);
     let text = |dir: Option<&str>| format(&list, dir, &prefix);
     if let Some(err) = super::actions::type_text(super::actions::Line::Of(&text), pane) {
         return err;
@@ -346,11 +345,11 @@ pub fn send(tab: &str, pane: &str) -> String {
     format!("{n} note{} sent", if n > 1 { "s" } else { "" })
 }
 
-/// `Set.has`: SameValueZero (NaN equal to itself), an object read again never the same.
+/// Equal values, NaN equal to itself; an object read again never the same.
 fn same_value(a: Option<&Value>, b: Option<&Value>) -> bool {
     match (a, b) {
         (Some(Value::Num(x)), Some(Value::Num(y))) => x == y || (x.is_nan() && y.is_nan()),
-        _ => js::strict_eq(a, b),
+        _ => a == b,
     }
 }
 

@@ -3,9 +3,9 @@
 //! file was opened, and the file read and written back as it was (line endings, final newline, byte order mark).
 //! Offsets in a line are in bytes, always at the start of a character.
 
-use super::exec::{io_code, node_realpath};
+use super::exec::{io_code, walk_realpath};
+use super::paths;
 use super::ui::cols;
-use super::{js, paths};
 use crate::unicode;
 use std::collections::{BTreeSet, HashMap};
 use std::fs::Metadata;
@@ -65,12 +65,12 @@ impl Doc {
     }
 }
 
-/// The file read whole, as parse() gives it, with its stat; or why not (Node's error code).
+/// The file read whole, as parse() gives it, with its stat; or why not (the error's code, io_code).
 pub fn read(file: &str) -> Result<(Doc, Metadata), String> {
     use std::io::Read;
     let mut opts = std::fs::OpenOptions::new();
     opts.read(true);
-    // A folder opens too (FILE_FLAG_BACKUP_SEMANTICS), as Node's open does: it is then not a regular file.
+    // A folder opens too (FILE_FLAG_BACKUP_SEMANTICS): it is then not a regular file.
     #[cfg(windows)]
     std::os::windows::fs::OpenOptionsExt::custom_flags(&mut opts, 0x0200_0000);
     let mut f = opts.open(file).map_err(|e| io_code(&e))?;
@@ -101,7 +101,7 @@ fn mine(real: &str, stat: &Metadata) -> bool {
     }
 }
 
-/// `n.toString(36)`.
+/// n in base 36, lowercase digits.
 fn base36(mut n: u128) -> String {
     let digits = b"0123456789abcdefghijklmnopqrstuvwxyz";
     let mut out = Vec::new();
@@ -149,7 +149,7 @@ fn replace_file(real: &str, tmp: &str, text: &str, stat: Option<&Metadata>) -> s
 /// owned by another user, or in a folder that cannot be written, is written in place instead, which keeps all of
 /// that. Returns the file's new stat.
 pub fn save(file: &str, text: &str) -> std::io::Result<Metadata> {
-    let (real, stat) = match node_realpath(file) {
+    let (real, stat) = match walk_realpath(file) {
         Ok(real) => {
             let stat = std::fs::metadata(&real).ok();
             (real, stat)
@@ -326,7 +326,7 @@ pub fn at_col(text: &str, want: usize) -> usize {
 fn kind(c: char) -> u8 {
     if unicode::is_letter(c) || unicode::is_number(c) || unicode::is_mark(c) || c == '_' || c == '$' {
         1
-    } else if js::is_space(c) {
+    } else if crate::unicode::is_space(c) {
         0
     } else {
         2
@@ -516,8 +516,8 @@ pub struct Match {
     pub b: usize,
 }
 
-/// A character as a regular expression with the i flag (and no u) compares it: its upper case when that is one
-/// UTF-16 unit, never a non-ASCII character made ASCII; a character past the BMP as it is.
+/// A character as a regular expression with the i flag (and no u) compares it: its upper case when that is in
+/// the BMP, never a non-ASCII character made ASCII; a character past the BMP as it is.
 fn canon(c: char) -> char {
     if c as u32 > 0xffff {
         return c;
@@ -537,7 +537,7 @@ pub fn matches(lines: &[String], query: &str) -> Vec<Match> {
     if query.is_empty() {
         return out;
     }
-    let exact = query != js::lower(query);
+    let exact = query != query.to_lowercase();
     let canon = |c: char| if exact { c } else { canon(c) };
     let q: Vec<char> = query.chars().map(canon).collect();
     for (line, l) in lines.iter().enumerate() {
@@ -762,11 +762,14 @@ impl Editor {
         }
         self.redos.clear();
         self.goal = None;
-        let starts_space = changes[0].inserted.chars().next().is_some_and(js::is_space);
+        let starts_space = changes[0].inserted.chars().next().is_some_and(crate::unicode::is_space);
         let joinable = self.undos.last().filter(|last| {
             let word = kind == "type"
                 && starts_space
-                && !last.changes.last().is_some_and(|c| c.inserted.chars().next_back().is_some_and(js::is_space));
+                && !last
+                    .changes
+                    .last()
+                    .is_some_and(|c| c.inserted.chars().next_back().is_some_and(crate::unicode::is_space));
             !kind.is_empty() && last.kind == kind && !self.sealed && last.id != self.saved && !word
         });
         let after = Place { cur: self.cur, anchor: None };
@@ -1106,5 +1109,5 @@ impl Editor {
 
 /// `line.search(/\S|$/)`: where the first character that is not a space starts, or the end.
 fn first_non_space(line: &str) -> usize {
-    line.char_indices().find(|&(_, c)| !js::is_space(c)).map_or(line.len(), |(i, _)| i)
+    line.char_indices().find(|&(_, c)| !crate::unicode::is_space(c)).map_or(line.len(), |(i, _)| i)
 }

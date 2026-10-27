@@ -65552,7 +65552,7 @@
     "",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65562,7 +65562,7 @@
     "a",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65572,7 +65572,7 @@
     "abc",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65582,7 +65582,7 @@
     "const x = /ab+c/gi.test(s) // re",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65592,7 +65592,7 @@
     "a / b / c",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65602,7 +65602,7 @@
     "return /x\\/y[/]z/.source",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65612,7 +65612,7 @@
     "f(/[a-z]/)",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65622,7 +65622,7 @@
     "  # comment",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65632,7 +65632,7 @@
     "echo $HOME ${PATH} $1 --flag -x a#b",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65642,7 +65642,7 @@
     "#include <stdio.h>",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65652,7 +65652,7 @@
     "  #  define X 1",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65662,7 +65662,7 @@
     "key: value # note",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65672,7 +65672,7 @@
     "- item: \"x\"",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65682,7 +65682,7 @@
     "--- ",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65692,7 +65692,7 @@
     "!!str &anchor *ref",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65702,7 +65702,7 @@
     "[section]",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65712,7 +65712,7 @@
     "export A.B=1",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65722,7 +65722,7 @@
     "name = \"v\"",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65732,7 +65732,7 @@
     "FROM node AS build",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65742,7 +65742,7 @@
     "RUN --mount=x echo",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65752,7 +65752,7 @@
     "all: $(CC) ${X} $@",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65762,7 +65762,7 @@
     "CC := gcc",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65772,7 +65772,7 @@
     "target: dep",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65782,7 +65782,7 @@
     ":symbol foo?",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65792,7 +65792,7 @@
     "@@cls $glob @inst",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65802,7 +65802,7 @@
     "r\"raw\" b'x' f\"{y}\"",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65812,7 +65812,7 @@
     "'a' b'\\n' 'lifetime",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65822,7 +65822,7 @@
     "#[derive(Debug)]",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65832,7 +65832,7 @@
     "println!(\"x\")",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65842,7 +65842,7 @@
     "-eq -NotMatch [string] Get-Item $true",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65852,7 +65852,7 @@
     "<?php $x ?>",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65862,7 +65862,7 @@
     "#[attr] # c",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65872,7 +65872,7 @@
     "0x1F 0b101 1_000.5e-3 42u8 .5",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65882,7 +65882,7 @@
     "éclair été 界 under_score",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65892,7 +65892,7 @@
     "Ünïcödé ŞŠ ſ K",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65902,7 +65902,7 @@
     "tab\there\u000bx\fy\r\n",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65912,7 +65912,7 @@
     "**bold** __b__ *it* `code` ``a`b`` ![img](u.png) [l](http://x) <https://a.b> <!-- c --> <b>t</b>",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65922,7 +65922,7 @@
     "<a href=\"x\" title='t' data-x=y>",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65932,7 +65932,7 @@
     "&amp; &#123; &#x1F600; &bogus;",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65942,7 +65942,7 @@
     "https://ex.am/ple(1)).",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65952,7 +65952,7 @@
     "    code",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65962,7 +65962,7 @@
     "```js",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65972,7 +65972,7 @@
     "~~~",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65982,7 +65982,7 @@
     "## Heading ##",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -65992,7 +65992,7 @@
     "***",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66002,7 +66002,7 @@
     "- - -",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66012,7 +66012,7 @@
     "> quote",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66022,7 +66022,7 @@
     "1. item",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66032,7 +66032,7 @@
     "10) x",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66042,7 +66042,7 @@
     "- [x] task",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66052,7 +66052,7 @@
     "| a | b |",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66062,7 +66062,7 @@
     "|:--|--:|",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66072,7 +66072,7 @@
     ":---:",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66082,7 +66082,7 @@
     "[ref]: <http://x> \"t\"",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66092,7 +66092,7 @@
     "<!-- x",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66102,7 +66102,7 @@
     "Title\n===",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66112,7 +66112,7 @@
     "graph TD",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66122,7 +66122,7 @@
     "  A[Start] --> B{Is it?}",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66132,7 +66132,7 @@
     "  B -- yes --> C(Done)",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66142,7 +66142,7 @@
     "C -.-> D((x))",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66152,7 +66152,7 @@
     "A ==> B",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66162,7 +66162,7 @@
     "A --o B |lbl|",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66172,7 +66172,7 @@
     "aaa",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66182,7 +66182,7 @@
     "aaaa",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66192,7 +66192,7 @@
     "xyzxyz",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66202,7 +66202,7 @@
     "foobar",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66212,7 +66212,7 @@
     "foo bar",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66222,7 +66222,7 @@
     "1053",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66232,7 +66232,7 @@
     " x ",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -66242,7 +66242,7 @@
     "  ﻿",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72374,7 +72374,7 @@
     "",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72384,7 +72384,7 @@
     "a",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72394,7 +72394,7 @@
     "abc",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72404,7 +72404,7 @@
     "const x = /ab+c/gi.test(s) // re",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72414,7 +72414,7 @@
     "a / b / c",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72424,7 +72424,7 @@
     "return /x\\/y[/]z/.source",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72434,7 +72434,7 @@
     "f(/[a-z]/)",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72444,7 +72444,7 @@
     "  # comment",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72454,7 +72454,7 @@
     "echo $HOME ${PATH} $1 --flag -x a#b",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72464,7 +72464,7 @@
     "#include <stdio.h>",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72474,7 +72474,7 @@
     "  #  define X 1",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72484,7 +72484,7 @@
     "key: value # note",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72494,7 +72494,7 @@
     "- item: \"x\"",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72504,7 +72504,7 @@
     "--- ",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72514,7 +72514,7 @@
     "!!str &anchor *ref",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72524,7 +72524,7 @@
     "[section]",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72534,7 +72534,7 @@
     "export A.B=1",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72544,7 +72544,7 @@
     "name = \"v\"",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72554,7 +72554,7 @@
     "FROM node AS build",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72564,7 +72564,7 @@
     "RUN --mount=x echo",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72574,7 +72574,7 @@
     "all: $(CC) ${X} $@",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72584,7 +72584,7 @@
     "CC := gcc",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72594,7 +72594,7 @@
     "target: dep",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72604,7 +72604,7 @@
     ":symbol foo?",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72614,7 +72614,7 @@
     "@@cls $glob @inst",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72624,7 +72624,7 @@
     "r\"raw\" b'x' f\"{y}\"",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72634,7 +72634,7 @@
     "'a' b'\\n' 'lifetime",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72644,7 +72644,7 @@
     "#[derive(Debug)]",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72654,7 +72654,7 @@
     "println!(\"x\")",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72664,7 +72664,7 @@
     "-eq -NotMatch [string] Get-Item $true",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72674,7 +72674,7 @@
     "<?php $x ?>",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72684,7 +72684,7 @@
     "#[attr] # c",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72694,7 +72694,7 @@
     "0x1F 0b101 1_000.5e-3 42u8 .5",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72704,7 +72704,7 @@
     "éclair été 界 under_score",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72714,7 +72714,7 @@
     "Ünïcödé ŞŠ ſ K",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72724,7 +72724,7 @@
     "tab\there\u000bx\fy\r\n",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72734,7 +72734,7 @@
     "**bold** __b__ *it* `code` ``a`b`` ![img](u.png) [l](http://x) <https://a.b> <!-- c --> <b>t</b>",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72744,7 +72744,7 @@
     "<a href=\"x\" title='t' data-x=y>",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72754,7 +72754,7 @@
     "&amp; &#123; &#x1F600; &bogus;",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72764,7 +72764,7 @@
     "https://ex.am/ple(1)).",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72774,7 +72774,7 @@
     "    code",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72784,7 +72784,7 @@
     "```js",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72794,7 +72794,7 @@
     "~~~",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72804,7 +72804,7 @@
     "## Heading ##",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72814,7 +72814,7 @@
     "***",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72824,7 +72824,7 @@
     "- - -",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72834,7 +72834,7 @@
     "> quote",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72844,7 +72844,7 @@
     "1. item",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72854,7 +72854,7 @@
     "10) x",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72864,7 +72864,7 @@
     "- [x] task",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72874,7 +72874,7 @@
     "| a | b |",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72884,7 +72884,7 @@
     "|:--|--:|",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72894,7 +72894,7 @@
     ":---:",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72904,7 +72904,7 @@
     "[ref]: <http://x> \"t\"",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72914,7 +72914,7 @@
     "<!-- x",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72924,7 +72924,7 @@
     "Title\n===",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72934,7 +72934,7 @@
     "graph TD",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72944,7 +72944,7 @@
     "  A[Start] --> B{Is it?}",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72954,7 +72954,7 @@
     "  B -- yes --> C(Done)",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72964,7 +72964,7 @@
     "C -.-> D((x))",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72974,7 +72974,7 @@
     "A ==> B",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72984,7 +72984,7 @@
     "A --o B |lbl|",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -72994,7 +72994,7 @@
     "aaa",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73004,7 +73004,7 @@
     "aaaa",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73014,7 +73014,7 @@
     "xyzxyz",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73024,7 +73024,7 @@
     "foobar",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73034,7 +73034,7 @@
     "foo bar",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73044,7 +73044,7 @@
     "1053",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73054,7 +73054,7 @@
     " x ",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73064,7 +73064,7 @@
     "  ﻿",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73074,7 +73074,7 @@
     "",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73084,7 +73084,7 @@
     "a",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73094,7 +73094,7 @@
     "abc",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73104,7 +73104,7 @@
     "const x = /ab+c/gi.test(s) // re",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73114,7 +73114,7 @@
     "a / b / c",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73124,10 +73124,7 @@
     "return /x\\/y[/]z/.source",
     0
    ],
-   "out": [
-    15,
-    "z"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73137,10 +73134,7 @@
     "f(/[a-z]/)",
     0
    ],
-   "out": [
-    5,
-    "-z"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73150,7 +73144,7 @@
     "  # comment",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73160,10 +73154,7 @@
     "echo $HOME ${PATH} $1 --flag -x a#b",
     0
    ],
-   "out": [
-    20,
-    "1"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73173,7 +73164,7 @@
     "#include <stdio.h>",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73183,10 +73174,7 @@
     "  #  define X 1",
     0
    ],
-   "out": [
-    14,
-    "1"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73196,7 +73184,7 @@
     "key: value # note",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73206,10 +73194,7 @@
     "- item: \"x\"",
     0
    ],
-   "out": [
-    0,
-    "-"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73219,10 +73204,7 @@
     "--- ",
     0
    ],
-   "out": [
-    0,
-    "---"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73232,7 +73214,7 @@
     "!!str &anchor *ref",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73242,7 +73224,7 @@
     "[section]",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73252,10 +73234,7 @@
     "export A.B=1",
     0
    ],
-   "out": [
-    11,
-    "1"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73265,7 +73244,7 @@
     "name = \"v\"",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73275,7 +73254,7 @@
     "FROM node AS build",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73285,10 +73264,7 @@
     "RUN --mount=x echo",
     0
    ],
-   "out": [
-    4,
-    "--"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73298,7 +73274,7 @@
     "all: $(CC) ${X} $@",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73308,7 +73284,7 @@
     "CC := gcc",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73318,7 +73294,7 @@
     "target: dep",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73328,7 +73304,7 @@
     ":symbol foo?",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73338,7 +73314,7 @@
     "@@cls $glob @inst",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73348,7 +73324,7 @@
     "r\"raw\" b'x' f\"{y}\"",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73358,7 +73334,7 @@
     "'a' b'\\n' 'lifetime",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73368,7 +73344,7 @@
     "#[derive(Debug)]",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73378,7 +73354,7 @@
     "println!(\"x\")",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73388,10 +73364,7 @@
     "-eq -NotMatch [string] Get-Item $true",
     0
    ],
-   "out": [
-    0,
-    "-"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73401,7 +73374,7 @@
     "<?php $x ?>",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73411,7 +73384,7 @@
     "#[attr] # c",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73421,10 +73394,7 @@
     "0x1F 0b101 1_000.5e-3 42u8 .5",
     0
    ],
-   "out": [
-    0,
-    "0"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73434,7 +73404,7 @@
     "éclair été 界 under_score",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73444,7 +73414,7 @@
     "Ünïcödé ŞŠ ſ K",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73454,7 +73424,7 @@
     "tab\there\u000bx\fy\r\n",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73464,10 +73434,7 @@
     "**bold** __b__ *it* `code` ``a`b`` ![img](u.png) [l](http://x) <https://a.b> <!-- c --> <b>t</b>",
     0
    ],
-   "out": [
-    79,
-    "--"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73477,10 +73444,7 @@
     "<a href=\"x\" title='t' data-x=y>",
     0
    ],
-   "out": [
-    26,
-    "-"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73490,10 +73454,7 @@
     "&amp; &#123; &#x1F600; &bogus;",
     0
    ],
-   "out": [
-    8,
-    "123"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73503,10 +73464,7 @@
     "https://ex.am/ple(1)).",
     0
    ],
-   "out": [
-    18,
-    "1"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73516,7 +73474,7 @@
     "    code",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73526,7 +73484,7 @@
     "```js",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73536,7 +73494,7 @@
     "~~~",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73546,7 +73504,7 @@
     "## Heading ##",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73556,7 +73514,7 @@
     "***",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73566,10 +73524,7 @@
     "- - -",
     0
    ],
-   "out": [
-    0,
-    "-"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73579,7 +73534,7 @@
     "> quote",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73589,10 +73544,7 @@
     "1. item",
     0
    ],
-   "out": [
-    0,
-    "1"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73602,10 +73554,7 @@
     "10) x",
     0
    ],
-   "out": [
-    0,
-    "10"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73615,10 +73564,7 @@
     "- [x] task",
     0
    ],
-   "out": [
-    0,
-    "-"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73628,7 +73574,7 @@
     "| a | b |",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73638,10 +73584,7 @@
     "|:--|--:|",
     0
    ],
-   "out": [
-    2,
-    "--"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73651,10 +73594,7 @@
     ":---:",
     0
    ],
-   "out": [
-    1,
-    "---"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73664,7 +73604,7 @@
     "[ref]: <http://x> \"t\"",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73674,10 +73614,7 @@
     "<!-- x",
     0
    ],
-   "out": [
-    2,
-    "--"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73687,7 +73624,7 @@
     "Title\n===",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73697,7 +73634,7 @@
     "graph TD",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73707,10 +73644,7 @@
     "  A[Start] --> B{Is it?}",
     0
    ],
-   "out": [
-    11,
-    "--"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73720,10 +73654,7 @@
     "  B -- yes --> C(Done)",
     0
    ],
-   "out": [
-    4,
-    "--"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73733,10 +73664,7 @@
     "C -.-> D((x))",
     0
    ],
-   "out": [
-    2,
-    "-"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73746,7 +73674,7 @@
     "A ==> B",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73756,10 +73684,7 @@
     "A --o B |lbl|",
     0
    ],
-   "out": [
-    2,
-    "--"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73769,7 +73694,7 @@
     "aaa",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73779,7 +73704,7 @@
     "aaaa",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73789,10 +73714,7 @@
     "xyzxyz",
     0
    ],
-   "out": [
-    2,
-    "z"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73802,7 +73724,7 @@
     "foobar",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73812,7 +73734,7 @@
     "foo bar",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73822,10 +73744,7 @@
     "1053",
     0
    ],
-   "out": [
-    0,
-    "1053"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73835,7 +73754,7 @@
     " x ",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -73845,7 +73764,7 @@
     "  ﻿",
     0
    ],
-   "out": null
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -77123,7 +77042,10 @@
     "const x = /ab+c/gi.test(s) // re",
     0
    ],
-   "out": null
+   "out": [
+    3,
+    "s"
+   ]
   },
   {
    "fn": "exec",
@@ -77143,7 +77065,10 @@
     "return /x\\/y[/]z/.source",
     0
    ],
-   "out": null
+   "out": [
+    18,
+    "s"
+   ]
   },
   {
    "fn": "exec",
@@ -77183,7 +77108,10 @@
     "#include <stdio.h>",
     0
    ],
-   "out": null
+   "out": [
+    10,
+    "s"
+   ]
   },
   {
    "fn": "exec",
@@ -77236,7 +77164,10 @@
     "!!str &anchor *ref",
     0
    ],
-   "out": null
+   "out": [
+    2,
+    "s"
+   ]
   },
   {
    "fn": "exec",
@@ -77246,7 +77177,10 @@
     "[section]",
     0
    ],
-   "out": null
+   "out": [
+    1,
+    "s"
+   ]
   },
   {
    "fn": "exec",
@@ -77276,7 +77210,10 @@
     "FROM node AS build",
     0
    ],
-   "out": null
+   "out": [
+    11,
+    "S"
+   ]
   },
   {
    "fn": "exec",
@@ -77326,7 +77263,10 @@
     ":symbol foo?",
     0
    ],
-   "out": null
+   "out": [
+    1,
+    "s"
+   ]
   },
   {
    "fn": "exec",
@@ -77336,7 +77276,10 @@
     "@@cls $glob @inst",
     0
    ],
-   "out": null
+   "out": [
+    4,
+    "s"
+   ]
   },
   {
    "fn": "exec",
@@ -77386,7 +77329,10 @@
     "-eq -NotMatch [string] Get-Item $true",
     0
    ],
-   "out": null
+   "out": [
+    15,
+    "s"
+   ]
   },
   {
    "fn": "exec",
@@ -77426,7 +77372,10 @@
     "éclair été 界 under_score",
     0
    ],
-   "out": null
+   "out": [
+    19,
+    "s"
+   ]
   },
   {
    "fn": "exec",
@@ -77459,7 +77408,10 @@
     "**bold** __b__ *it* `code` ``a`b`` ![img](u.png) [l](http://x) <https://a.b> <!-- c --> <b>t</b>",
     0
    ],
-   "out": null
+   "out": [
+    68,
+    "s"
+   ]
   },
   {
    "fn": "exec",
@@ -77479,7 +77431,10 @@
     "&amp; &#123; &#x1F600; &bogus;",
     0
    ],
-   "out": null
+   "out": [
+    28,
+    "s"
+   ]
   },
   {
    "fn": "exec",
@@ -77489,7 +77444,10 @@
     "https://ex.am/ple(1)).",
     0
    ],
-   "out": null
+   "out": [
+    4,
+    "s"
+   ]
   },
   {
    "fn": "exec",
@@ -77509,7 +77467,10 @@
     "```js",
     0
    ],
-   "out": null
+   "out": [
+    4,
+    "s"
+   ]
   },
   {
    "fn": "exec",
@@ -77590,8 +77551,8 @@
     0
    ],
    "out": [
-    9,
-    "k"
+    8,
+    "s"
    ]
   },
   {
@@ -77672,7 +77633,10 @@
     "  A[Start] --> B{Is it?}",
     0
    ],
-   "out": null
+   "out": [
+    4,
+    "S"
+   ]
   },
   {
    "fn": "exec",
@@ -77682,7 +77646,10 @@
     "  B -- yes --> C(Done)",
     0
    ],
-   "out": null
+   "out": [
+    9,
+    "s"
+   ]
   },
   {
    "fn": "exec",
@@ -84024,7 +83991,10 @@
     "a",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "a"
+   ]
   },
   {
    "fn": "exec",
@@ -84034,7 +84004,10 @@
     "abc",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "a"
+   ]
   },
   {
    "fn": "exec",
@@ -84044,7 +84017,10 @@
     "const x = /ab+c/gi.test(s) // re",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "c"
+   ]
   },
   {
    "fn": "exec",
@@ -84054,7 +84030,10 @@
     "a / b / c",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "a"
+   ]
   },
   {
    "fn": "exec",
@@ -84064,7 +84043,10 @@
     "return /x\\/y[/]z/.source",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "r"
+   ]
   },
   {
    "fn": "exec",
@@ -84074,7 +84056,10 @@
     "f(/[a-z]/)",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "f"
+   ]
   },
   {
    "fn": "exec",
@@ -84084,7 +84069,10 @@
     "  # comment",
     0
    ],
-   "out": null
+   "out": [
+    4,
+    "c"
+   ]
   },
   {
    "fn": "exec",
@@ -84094,7 +84082,10 @@
     "echo $HOME ${PATH} $1 --flag -x a#b",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "e"
+   ]
   },
   {
    "fn": "exec",
@@ -84104,7 +84095,10 @@
     "#include <stdio.h>",
     0
    ],
-   "out": null
+   "out": [
+    1,
+    "i"
+   ]
   },
   {
    "fn": "exec",
@@ -84114,7 +84108,10 @@
     "  #  define X 1",
     0
    ],
-   "out": null
+   "out": [
+    5,
+    "d"
+   ]
   },
   {
    "fn": "exec",
@@ -84124,7 +84121,10 @@
     "key: value # note",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "k"
+   ]
   },
   {
    "fn": "exec",
@@ -84134,7 +84134,10 @@
     "- item: \"x\"",
     0
    ],
-   "out": null
+   "out": [
+    2,
+    "i"
+   ]
   },
   {
    "fn": "exec",
@@ -84154,7 +84157,10 @@
     "!!str &anchor *ref",
     0
    ],
-   "out": null
+   "out": [
+    2,
+    "s"
+   ]
   },
   {
    "fn": "exec",
@@ -84164,7 +84170,10 @@
     "[section]",
     0
    ],
-   "out": null
+   "out": [
+    1,
+    "s"
+   ]
   },
   {
    "fn": "exec",
@@ -84174,7 +84183,10 @@
     "export A.B=1",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "e"
+   ]
   },
   {
    "fn": "exec",
@@ -84184,7 +84196,10 @@
     "name = \"v\"",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "n"
+   ]
   },
   {
    "fn": "exec",
@@ -84194,7 +84209,10 @@
     "FROM node AS build",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "F"
+   ]
   },
   {
    "fn": "exec",
@@ -84204,7 +84222,10 @@
     "RUN --mount=x echo",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "R"
+   ]
   },
   {
    "fn": "exec",
@@ -84214,7 +84235,10 @@
     "all: $(CC) ${X} $@",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "a"
+   ]
   },
   {
    "fn": "exec",
@@ -84224,7 +84248,10 @@
     "CC := gcc",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "C"
+   ]
   },
   {
    "fn": "exec",
@@ -84234,7 +84261,10 @@
     "target: dep",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "t"
+   ]
   },
   {
    "fn": "exec",
@@ -84244,7 +84274,10 @@
     ":symbol foo?",
     0
    ],
-   "out": null
+   "out": [
+    1,
+    "s"
+   ]
   },
   {
    "fn": "exec",
@@ -84254,7 +84287,10 @@
     "@@cls $glob @inst",
     0
    ],
-   "out": null
+   "out": [
+    2,
+    "c"
+   ]
   },
   {
    "fn": "exec",
@@ -84264,7 +84300,10 @@
     "r\"raw\" b'x' f\"{y}\"",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "r"
+   ]
   },
   {
    "fn": "exec",
@@ -84274,7 +84313,10 @@
     "'a' b'\\n' 'lifetime",
     0
    ],
-   "out": null
+   "out": [
+    1,
+    "a"
+   ]
   },
   {
    "fn": "exec",
@@ -84284,7 +84326,10 @@
     "#[derive(Debug)]",
     0
    ],
-   "out": null
+   "out": [
+    2,
+    "d"
+   ]
   },
   {
    "fn": "exec",
@@ -84294,7 +84339,10 @@
     "println!(\"x\")",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "p"
+   ]
   },
   {
    "fn": "exec",
@@ -84304,7 +84352,10 @@
     "-eq -NotMatch [string] Get-Item $true",
     0
    ],
-   "out": null
+   "out": [
+    1,
+    "e"
+   ]
   },
   {
    "fn": "exec",
@@ -84314,7 +84365,10 @@
     "<?php $x ?>",
     0
    ],
-   "out": null
+   "out": [
+    2,
+    "p"
+   ]
   },
   {
    "fn": "exec",
@@ -84324,7 +84378,10 @@
     "#[attr] # c",
     0
    ],
-   "out": null
+   "out": [
+    2,
+    "a"
+   ]
   },
   {
    "fn": "exec",
@@ -84334,7 +84391,10 @@
     "0x1F 0b101 1_000.5e-3 42u8 .5",
     0
    ],
-   "out": null
+   "out": [
+    1,
+    "x"
+   ]
   },
   {
    "fn": "exec",
@@ -84344,7 +84404,10 @@
     "éclair été 界 under_score",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "é"
+   ]
   },
   {
    "fn": "exec",
@@ -84354,7 +84417,10 @@
     "Ünïcödé ŞŠ ſ K",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "Ü"
+   ]
   },
   {
    "fn": "exec",
@@ -84364,7 +84430,10 @@
     "tab\there\u000bx\fy\r\n",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "t"
+   ]
   },
   {
    "fn": "exec",
@@ -84374,7 +84443,10 @@
     "**bold** __b__ *it* `code` ``a`b`` ![img](u.png) [l](http://x) <https://a.b> <!-- c --> <b>t</b>",
     0
    ],
-   "out": null
+   "out": [
+    2,
+    "b"
+   ]
   },
   {
    "fn": "exec",
@@ -84384,7 +84456,10 @@
     "<a href=\"x\" title='t' data-x=y>",
     0
    ],
-   "out": null
+   "out": [
+    1,
+    "a"
+   ]
   },
   {
    "fn": "exec",
@@ -84394,7 +84469,10 @@
     "&amp; &#123; &#x1F600; &bogus;",
     0
    ],
-   "out": null
+   "out": [
+    1,
+    "a"
+   ]
   },
   {
    "fn": "exec",
@@ -84404,7 +84482,10 @@
     "https://ex.am/ple(1)).",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "h"
+   ]
   },
   {
    "fn": "exec",
@@ -84414,7 +84495,10 @@
     "    code",
     0
    ],
-   "out": null
+   "out": [
+    4,
+    "c"
+   ]
   },
   {
    "fn": "exec",
@@ -84424,7 +84508,10 @@
     "```js",
     0
    ],
-   "out": null
+   "out": [
+    3,
+    "j"
+   ]
   },
   {
    "fn": "exec",
@@ -84444,7 +84531,10 @@
     "## Heading ##",
     0
    ],
-   "out": null
+   "out": [
+    3,
+    "H"
+   ]
   },
   {
    "fn": "exec",
@@ -84474,7 +84564,10 @@
     "> quote",
     0
    ],
-   "out": null
+   "out": [
+    2,
+    "q"
+   ]
   },
   {
    "fn": "exec",
@@ -84484,7 +84577,10 @@
     "1. item",
     0
    ],
-   "out": null
+   "out": [
+    3,
+    "i"
+   ]
   },
   {
    "fn": "exec",
@@ -84494,7 +84590,10 @@
     "10) x",
     0
    ],
-   "out": null
+   "out": [
+    4,
+    "x"
+   ]
   },
   {
    "fn": "exec",
@@ -84504,7 +84603,10 @@
     "- [x] task",
     0
    ],
-   "out": null
+   "out": [
+    3,
+    "x"
+   ]
   },
   {
    "fn": "exec",
@@ -84514,7 +84616,10 @@
     "| a | b |",
     0
    ],
-   "out": null
+   "out": [
+    2,
+    "a"
+   ]
   },
   {
    "fn": "exec",
@@ -84544,7 +84649,10 @@
     "[ref]: <http://x> \"t\"",
     0
    ],
-   "out": null
+   "out": [
+    1,
+    "r"
+   ]
   },
   {
    "fn": "exec",
@@ -84554,7 +84662,10 @@
     "<!-- x",
     0
    ],
-   "out": null
+   "out": [
+    5,
+    "x"
+   ]
   },
   {
    "fn": "exec",
@@ -84564,7 +84675,10 @@
     "Title\n===",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "T"
+   ]
   },
   {
    "fn": "exec",
@@ -84574,7 +84688,10 @@
     "graph TD",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "g"
+   ]
   },
   {
    "fn": "exec",
@@ -84584,7 +84701,10 @@
     "  A[Start] --> B{Is it?}",
     0
    ],
-   "out": null
+   "out": [
+    2,
+    "A"
+   ]
   },
   {
    "fn": "exec",
@@ -84594,7 +84714,10 @@
     "  B -- yes --> C(Done)",
     0
    ],
-   "out": null
+   "out": [
+    2,
+    "B"
+   ]
   },
   {
    "fn": "exec",
@@ -84604,7 +84727,10 @@
     "C -.-> D((x))",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "C"
+   ]
   },
   {
    "fn": "exec",
@@ -84614,7 +84740,10 @@
     "A ==> B",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "A"
+   ]
   },
   {
    "fn": "exec",
@@ -84624,7 +84753,10 @@
     "A --o B |lbl|",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "A"
+   ]
   },
   {
    "fn": "exec",
@@ -84634,7 +84766,10 @@
     "aaa",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "a"
+   ]
   },
   {
    "fn": "exec",
@@ -84644,7 +84779,10 @@
     "aaaa",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "a"
+   ]
   },
   {
    "fn": "exec",
@@ -84654,7 +84792,10 @@
     "xyzxyz",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "x"
+   ]
   },
   {
    "fn": "exec",
@@ -84664,7 +84805,10 @@
     "foobar",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "f"
+   ]
   },
   {
    "fn": "exec",
@@ -84674,7 +84818,10 @@
     "foo bar",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "f"
+   ]
   },
   {
    "fn": "exec",
@@ -84694,7 +84841,10 @@
     " x ",
     0
    ],
-   "out": null
+   "out": [
+    1,
+    "x"
+   ]
   },
   {
    "fn": "exec",
@@ -86294,7 +86444,11 @@
     "ſS",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "ſS",
+    "ſ"
+   ]
   },
   {
    "fn": "exec",
@@ -86455,7 +86609,10 @@
     "𐐨",
     0
    ],
-   "out": null
+   "out": [
+    0,
+    "𐐨"
+   ]
   },
   {
    "fn": "exec",
@@ -86485,10 +86642,7 @@
     "a",
     0
    ],
-   "out": [
-    0,
-    ""
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -86498,10 +86652,7 @@
     "b",
     0
    ],
-   "out": [
-    0,
-    "b"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -86581,10 +86732,7 @@
     "{,2}",
     0
    ],
-   "out": [
-    0,
-    "{,2}"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -86594,10 +86742,7 @@
     "{a}",
     0
    ],
-   "out": [
-    0,
-    "{a}"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -86607,10 +86752,7 @@
     "{",
     0
    ],
-   "out": [
-    0,
-    "{"
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "exec",
@@ -86633,10 +86775,7 @@
     "a",
     0
    ],
-   "out": [
-    0,
-    ""
-   ]
+   "out": "SyntaxError"
   },
   {
    "fn": "split",

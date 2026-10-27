@@ -1,10 +1,9 @@
-//! What the search finds (src/search.js): the files of the folder, the fuzzy match of Go to file, the globs and the
-//! matches of Search in files. Paths and matched lines are kept in UTF-16 units, as the JS indexes them, so that the
-//! scores, the cuts and the marks fall where the JS's do.
+//! What the search finds: the files of the folder, the fuzzy match of Go to file, the globs and the
+//! matches of Search in files. Matched positions and ranges are byte offsets into the path or line.
 
 use crate::core::exec::{self, Opts};
+use crate::core::paths;
 use crate::core::regex::Regex;
-use crate::core::{js, paths};
 use std::collections::HashSet;
 
 /// Walk without git.
@@ -17,24 +16,9 @@ pub const MAX_ROWS: usize = 1000;
 /// Files read at once.
 pub const BATCH: usize = 24;
 
-pub fn utf16(s: &str) -> Vec<u16> {
-    s.encode_utf16().collect()
-}
-
-pub fn from_utf16(u: &[u16]) -> String {
-    String::from_utf16_lossy(u)
-}
-
-/// The UTF-16 index of each byte of s, and of its end.
-fn units_of(s: &str) -> Vec<usize> {
-    let mut at = Vec::with_capacity(s.len() + 1);
-    let mut u = 0;
-    for ch in s.chars() {
-        at.extend(std::iter::repeat_n(u, ch.len_utf8()));
-        u += ch.len_utf16();
-    }
-    at.push(u);
-    at
+/// The byte offset of the n-th character of s, or its length.
+pub fn char_at(s: &str, n: usize) -> usize {
+    s.char_indices().nth(n).map_or(s.len(), |(b, _)| b)
 }
 
 // --- file list
@@ -53,8 +37,8 @@ pub fn git_files(root: &str) -> Option<Vec<String>> {
 }
 
 /// Without git, or to include ignored and hidden files: the folder itself, without .git (nor node_modules and
-/// dot-folders unless hidden), symbolic links followed once (real paths remembered against loops), capped. The JS
-/// read 16 folders at once, in no set order; here one after the other, the list sorted after anyway.
+/// dot-folders unless hidden), symbolic links followed once (real paths remembered against loops), capped. The
+/// folders read one after the other, the list sorted after.
 pub fn walk(root: &str, hidden: bool) -> (Vec<String>, bool) {
     let mut files = Vec::new();
     let mut seen = HashSet::new();
@@ -64,7 +48,7 @@ pub fn walk(root: &str, hidden: bool) -> (Vec<String>, bool) {
             break;
         }
         let abs = paths::join(&[root, &rel]);
-        let Ok(real) = exec::node_realpath(&abs) else { continue };
+        let Ok(real) = exec::walk_realpath(&abs) else { continue };
         if !seen.insert(real) {
             continue;
         }
@@ -117,32 +101,21 @@ const NAME: i64 = 4;
 const CASE: i64 = 1;
 const NEG: i64 = -100_000_000;
 
-/// A UTF-16 unit as a character; a lone surrogate is none.
-fn unit_char(u: Option<u16>) -> Option<char> {
-    u.and_then(|u| char::from_u32(u as u32))
+/// The character is its own lower case (a missing one never is).
+fn is_lower(c: Option<char>) -> bool {
+    c.is_some_and(|ch| {
+        let mut l = ch.to_lowercase();
+        l.next() == Some(ch) && l.next().is_none()
+    })
 }
 
-/// `c === c.toLowerCase()` for one unit (a missing one reads as the JS's undefined: never lower).
-fn is_lower(u: Option<u16>) -> bool {
-    match u {
-        Some(u) => match char::from_u32(u as u32) {
-            Some(ch) => {
-                let mut l = ch.to_lowercase();
-                l.next() == Some(ch) && l.next().is_none()
-            }
-            None => true,
-        },
-        None => false,
-    }
-}
-
-fn bonus(s: &[u16], j: usize, base: usize) -> i64 {
-    let p = if j > 0 { s.get(j - 1).copied() } else { Some(b'/' as u16) };
+fn bonus(s: &[char], j: usize, base: usize) -> i64 {
+    let p = if j > 0 { s.get(j - 1).copied() } else { Some('/') };
     let mut b = if j >= base { NAME } else { 0 };
-    if p == Some(b'/' as u16) || p == Some(b'\\' as u16) {
+    if p == Some('/') || p == Some('\\') {
         b += SEGMENT;
-    } else if !unit_char(p).is_some_and(|ch| crate::unicode::is_letter(ch) || crate::unicode::is_number(ch)) {
-        // undefined (a path shorter than its lower case) tests as the text "undefined": letters.
+    } else if !p.is_some_and(|ch| crate::unicode::is_letter(ch) || crate::unicode::is_number(ch)) {
+        // None (a path shorter than its lower case) counts as a letter.
         if p.is_some() {
             b += WORD;
         }
@@ -152,21 +125,26 @@ fn bonus(s: &[u16], j: usize, base: usize) -> i64 {
     b
 }
 
-/// Score of the query q (ql in lower case) in the path s (sl), or None; with positions: also the matched indexes.
-pub fn fuzzy(q: &[u16], ql: &[u16], s: &[u16], sl: &[u16], base: usize, positions: bool) -> Option<(i64, Vec<usize>)> {
-    let (m, n) = (ql.len(), sl.len());
-    let mut i = 0;
-    for &c in sl {
-        if i == m {
-            break;
-        }
-        if c == ql[i] {
-            i += 1;
+/// Score of the query q (ql in lower case, both as characters) in the path s (sl), whose name starts at byte base,
+/// or None; with positions: also the byte offsets in s of the matched characters.
+pub fn fuzzy(q: &[char], ql: &[char], s: &str, sl: &str, base: usize, positions: bool) -> Option<(i64, Vec<usize>)> {
+    let mut want = ql.iter().peekable();
+    for c in sl.chars() {
+        match want.peek() {
+            None => break,
+            Some(&&w) if w == c => {
+                want.next();
+            }
+            _ => {}
         }
     }
-    if i < m {
+    if want.peek().is_some() {
         return None;
     }
+    let path = s;
+    let base = path[..base].chars().count();
+    let (s, sl): (Vec<char>, Vec<char>) = (s.chars().collect(), sl.chars().collect());
+    let (m, n) = (ql.len(), sl.len());
     let mut cells = vec![0i64; m * n];
     let mut from = vec![0u8; m * n];
     for (i, &qc) in ql.iter().enumerate() {
@@ -179,7 +157,7 @@ pub fn fuzzy(q: &[u16], ql: &[u16], s: &[u16], sl: &[u16], base: usize, position
             }
             let (mut v, mut f) = (NEG, 0);
             if sl[j] == qc {
-                let b = SCORE + bonus(s, j, base) + if s.get(j) == q.get(i) { CASE } else { 0 };
+                let b = SCORE + bonus(&s, j, base) + if s.get(j) == q.get(i) { CASE } else { 0 };
                 if i == 0 {
                     v = b;
                 } else {
@@ -230,20 +208,26 @@ pub fn fuzzy(q: &[u16], ql: &[u16], s: &[u16], sl: &[u16], base: usize, position
         pos.push(end.max(0) as usize);
     }
     pos.reverse();
-    Some((best, pos))
+    let at: Vec<usize> = path.char_indices().map(|(b, _)| b).chain([path.len()]).collect();
+    Some((best, pos.into_iter().map(|j| at[j.min(s.len())]).collect()))
 }
 
 /// `path:line` (or path:line:column) jumps to a line: the query without blanks, / for \, and the line (0: none).
-pub fn parse_query(text: &str) -> (Vec<u16>, f64) {
+pub fn parse_query(text: &str) -> (String, f64) {
     static LINE: std::sync::LazyLock<Regex> =
         std::sync::LazyLock::new(|| Regex::new(r"^(.*?):(\d+)(?::\d+)?$", "").expect("regex"));
     static BLANKS: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"\s+", "g").expect("regex"));
-    let trimmed = text.trim_matches(|c| js::is_space(c) || js::is_line_terminator(c));
+    let trimmed = text.trim_matches(|c| crate::unicode::is_space(c) || crate::core::regex::is_line_terminator(c));
     let m = LINE.exec(trimmed);
     let q = m.as_ref().and_then(|m| m.get(1)).unwrap_or(text);
     let q = BLANKS.replace_with(q, true, "").replace('\\', "/");
-    let line = m.as_ref().and_then(|m| m.get(2)).map_or(0.0, js::string_to_number);
-    (utf16(&q), line)
+    let line = m.as_ref().and_then(|m| m.get(2)).map_or(0.0, |s| s.parse().unwrap_or(0.0));
+    (q, line)
+}
+
+/// A query as characters, and in lower case.
+pub fn query_chars(q: &str) -> (Vec<char>, Vec<char>) {
+    (q.chars().collect(), q.to_lowercase().chars().collect())
 }
 
 // --- search in files
@@ -251,7 +235,9 @@ pub fn parse_query(text: &str) -> (Vec<u16>, f64) {
 /// Glob to RegExp on '/' paths: * and ? within a segment, ** across segments, {a,b}, [abc]. A pattern without a
 /// leading ./ or / matches at any depth, and a folder matches its contents (VS Code behaviour).
 fn glob_source(glob: &str) -> String {
-    let g = glob.trim_matches(|c| js::is_space(c) || js::is_line_terminator(c)).replace('\\', "/");
+    let g = glob
+        .trim_matches(|c| crate::unicode::is_space(c) || crate::core::regex::is_line_terminator(c))
+        .replace('\\', "/");
     let g = if let Some(rest) = g.strip_prefix("./").or_else(|| g.strip_prefix('/')) {
         rest.to_string()
     } else if g.starts_with("**/") {
@@ -326,7 +312,9 @@ pub fn globs(text: &str) -> Option<Regex> {
     parts.push(cur);
     let sources: Vec<String> = parts
         .iter()
-        .filter(|p| !p.trim_matches(|c| js::is_space(c) || js::is_line_terminator(c)).is_empty())
+        .filter(|p| {
+            !p.trim_matches(|c| crate::unicode::is_space(c) || crate::core::regex::is_line_terminator(c)).is_empty()
+        })
         .map(|p| glob_source(p))
         .collect();
     if sources.is_empty() {
@@ -335,7 +323,7 @@ pub fn globs(text: &str) -> Option<Regex> {
     Regex::new(&format!("^(?:{})$", sources.join("|")), if exec::WIN { "i" } else { "" }).ok()
 }
 
-/// The text's matcher; the message the JS shows when it is not a valid regular expression.
+/// The text's matcher; the message shown when it is not a valid regular expression.
 pub fn matcher(text: &str, case: bool, word: bool, regex: bool) -> Result<Regex, String> {
     let mut src = text.to_string();
     if !regex {
@@ -351,7 +339,7 @@ pub fn matcher(text: &str, case: bool, word: bool, regex: bool) -> Result<Regex,
         src = format!("\\b(?:{src})\\b");
     }
     Regex::new(&src, if case { "gm" } else { "gmi" }).map_err(|e| {
-        // V8's wording: "Invalid regular expression: /src/flags: Unterminated group", shown without its start.
+        // The engine's wording: "Invalid regular expression: /src/flags: Unterminated group", shown without its start.
         let msg = e.strip_prefix("Invalid regular expression: ").unwrap_or(&e);
         let mut chars = msg.chars();
         let msg = match chars.next() {
@@ -403,14 +391,14 @@ pub fn ranges(re: &Regex, text: &str, max: usize) -> Vec<(usize, usize)> {
     found
 }
 
-/// A matching line: its number, its text (long lines cut around the first match) and the matches in it, in UTF-16
-/// units; cut: its start left out.
+/// A matching line: its number, its text (long lines cut around the first match) and the byte ranges of the
+/// matches in it; cut: its start left out.
 #[derive(Clone, Debug)]
 pub struct Hit {
     pub n: usize,
-    pub text: Vec<u16>,
+    pub text: String,
     pub cut: bool,
-    pub ranges: Vec<(i64, i64)>,
+    pub ranges: Vec<(usize, usize)>,
 }
 
 #[derive(Clone, Debug)]
@@ -438,17 +426,18 @@ pub fn grep(root: &str, rel: &str, re: &Regex, room: usize) -> Option<Group> {
             continue;
         }
         count += r.len();
-        let at = units_of(l);
-        let units = utf16(l);
-        let r: Vec<(i64, i64)> = r.iter().map(|&(a, b)| (at[a] as i64, at[b] as i64)).collect();
-        // Long lines (minified files) kept around the first match only.
-        let start = if units.len() > 1000 { (r[0].0 - 100).max(0) } else { 0 };
-        let end = (start as usize + 1000).min(units.len());
+        // Long lines (minified files) kept around the first match only: 1000 characters from 100 before it.
+        let (start, end) = if l.len() > 1000 && l.chars().count() > 1000 {
+            let start = char_at(l, l[..r[0].0].chars().count().saturating_sub(100));
+            (start, start + char_at(&l[start..], 1000))
+        } else {
+            (0, l.len())
+        };
         matches.push(Hit {
             n: n + 1,
-            text: units[start as usize..end].to_vec(),
+            text: l[start..end].to_string(),
             cut: start > 0,
-            ranges: r.iter().map(|&(a, b)| (a - start, b - start)).filter(|&(a, _)| a < 1000).collect(),
+            ranges: r.iter().filter(|&&(a, _)| a < end).map(|&(a, b)| (a - start, b.min(end) - start)).collect(),
         });
     }
     (!matches.is_empty()).then(|| Group { rel: rel.to_string(), matches, count, collapsed: false })
@@ -459,25 +448,25 @@ mod tests {
     use super::*;
 
     fn score(q: &str, s: &str) -> Option<(i64, Vec<usize>)> {
-        let base = s.rfind('/').map_or(0, |i| utf16(&s[..i]).len() + 1);
-        fuzzy(&utf16(q), &utf16(&q.to_lowercase()), &utf16(s), &utf16(&s.to_lowercase()), base, true)
+        let base = s.rfind('/').map_or(0, |i| i + 1);
+        let (q, ql) = query_chars(q);
+        fuzzy(&q, &ql, s, &s.to_lowercase(), base, true)
     }
 
-    // Values from the JS (node, src/search.js's fuzzy).
     #[test]
-    fn fuzzy_scores_as_the_js() {
+    fn fuzzy_scores() {
         assert_eq!(score("fb", "src/fooBar.js"), Some((53, vec![4, 7])));
         assert_eq!(score("fb", "fb.txt"), Some((64, vec![0, 1])));
         assert_eq!(score("ma", "beta/main.rs"), Some((64, vec![5, 6])));
         assert_eq!(score("bma", "beta/main.rs"), Some((85, vec![0, 5, 6])));
         assert_eq!(score("zz", "beta/main.rs"), None);
-        assert_eq!(score("fb", "x/ä/fb-é.txt"), Some((64, vec![4, 5])));
+        assert_eq!(score("fb", "x/ä/fb-é.txt"), Some((64, vec![5, 6])));
         assert_eq!(score("fb", "Fab/FB.txt"), Some((62, vec![4, 5])));
         assert_eq!(score("ab", "aXbYab/cab"), Some((54, vec![8, 9])));
     }
 
     #[test]
-    fn globs_as_the_js() {
+    fn globs_match_names_and_folders() {
         let g = globs("*.rs,*.{ts,txt}").unwrap();
         assert!(g.test("src/a.rs") && g.test("e.ts") && g.test("d.txt") && !g.test("a.js"));
         let g = globs("src/deep,mod*").unwrap();
@@ -488,12 +477,12 @@ mod tests {
 
     #[test]
     fn query_with_a_line() {
-        assert_eq!(parse_query(" a b:12:3 "), (utf16("ab"), 12.0));
-        assert_eq!(parse_query("a\\b"), (utf16("a/b"), 0.0));
+        assert_eq!(parse_query(" a b:12:3 "), ("ab".into(), 12.0));
+        assert_eq!(parse_query("a\\b"), ("a/b".into(), 0.0));
     }
 
     #[test]
-    fn regex_errors_in_v8_words() {
+    fn regex_errors_shown_short() {
         assert_eq!(matcher("(fo", false, false, true).err().unwrap(), "Invalid regex: Unterminated group");
         assert!(matcher("(fo", false, false, false).is_ok());
     }

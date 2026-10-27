@@ -60,7 +60,7 @@ pub enum Input {
     /// The terminal's size changed: the next frame is painted whole.
     Resize,
     /// The theme followed the terminal's background (theme on auto): the pane works out its styles again and
-    /// paints (the JS calls its theme handler, else its resize one).
+    /// paints (its theme handler, else its resize one).
     Theme,
     /// A `sys::Waker` was called.
     Wake,
@@ -71,7 +71,7 @@ pub enum Input {
 /// The input as it comes, read by read, cut into what can be decoded now. A long paste arrives in several reads:
 /// held until its end marker, so that its text never reads as keys. So does a terminal's answer (OSC, APC) cut
 /// between reads, for 100 ms at most: alt+] or alt+_ alone then reads as keys. A character cut between two reads
-/// waits for its other bytes, as Node's UTF-8 decoding of stdin does.
+/// waits for its other bytes.
 #[derive(Debug, Default)]
 pub struct Splitter {
     pending: String,
@@ -190,6 +190,7 @@ impl Screen {
         // What can fail first: the modes once set are always put back.
         let events = sys::Events::new()?;
         let raw = if sys::stdin_is_tty() { Some(sys::RawMode::enable()?) } else { None };
+        super::watch::wake_with(events.waker());
         let screen = Screen { events, raw, off, shown: Vec::new(), split: Splitter::default() };
         let ask = if ui::theme_setting() == "auto" { "\x1b]11;?\x07" } else { "" };
         sys::write_stdout(format!("{on}{ask}").as_bytes())?;
@@ -211,7 +212,7 @@ impl Screen {
             (a, b) => a.or(b),
         };
         let mut out = Vec::new();
-        // An answer held past its time is decoded before the next read, as Node runs its timer first.
+        // An answer held past its time is decoded before the next read.
         self.held(&mut out);
         for e in self.events.wait(timeout) {
             match e {
@@ -330,7 +331,7 @@ impl Drop for Screen {
 /// this one starts do not take themselves for the launcher's child.
 pub static IPC_FILE: std::sync::OnceLock<std::ffi::OsString> = std::sync::OnceLock::new();
 
-/// A message to the launcher (the JS's process.send): a line of JSON appended to the file EXPLORER_IPC_FILE names;
+/// A message to the launcher: a line of JSON appended to the file EXPLORER_IPC_FILE names;
 /// dropped without one.
 pub fn send(message: &Value) {
     use std::io::Write;

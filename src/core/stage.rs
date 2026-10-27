@@ -6,7 +6,7 @@
 //!   discard  lines of the Unstaged section, taken out of the working tree (the caller confirms first)
 //! Files, hunks and lines are named by their place in the diff: file index, (file, hunk), (file, hunk, line).
 
-use super::exec::{Env, Exec, Opts, WIN, env_set, exec, git, git_env, io_code, node_realpath};
+use super::exec::{Env, Exec, Opts, WIN, env_set, exec, git, git_env, io_code, walk_realpath};
 use super::paths;
 use crate::diff::{self, Diff, Line};
 use std::collections::HashSet;
@@ -171,7 +171,7 @@ pub fn quote(p: &str) -> String {
     out
 }
 
-/// The name of a target's file: `f.to || f.from` (null in the JS when neither is known).
+/// The name of a target's file: `to`, else `from`; "null" when neither is known.
 fn name_of(f: &diff::File) -> String {
     let given = |s: &Option<String>| s.clone().filter(|s| !s.is_empty());
     given(&f.to).or_else(|| given(&f.from)).unwrap_or_else(|| "null".into())
@@ -372,7 +372,7 @@ pub fn apply(
     env_set(&mut env, "GIT_LITERAL_PATHSPECS", "1");
     let why = |res: &Exec| {
         let text = if res.err.is_empty() { &res.out } else { &res.err };
-        let first = text.trim_matches(super::js::is_space).split('\n').next().unwrap_or("").to_string();
+        let first = text.trim_matches(crate::unicode::is_space).split('\n').next().unwrap_or("").to_string();
         if first.is_empty() { "git failed".to_string() } else { first }
     };
     let name = mode.name();
@@ -511,7 +511,7 @@ pub fn apply(
     chars.next().map_or_else(String::new, |c| c.to_uppercase().chain(chars).collect())
 }
 
-/// The files that could not be deleted, in order: name → reason (the JS's Map: set again, a name keeps its place).
+/// The files that could not be deleted, in order: name → reason (set again, a name keeps its place).
 pub type Failed = Vec<(String, String)>;
 
 fn set_failed(failed: &mut Failed, name: &str, why: String) {
@@ -659,7 +659,7 @@ pub fn refused(abs: &str, top: &str, folder: Option<bool>) -> Option<String> {
 /// naming sub/x while sub links to the home folder is not). A folder gone is judged by the nearest one left; one that
 /// is there but cannot be followed (a link to nothing) is not in it.
 fn inside(abs: &str, top: &str) -> bool {
-    let real = |p: &str| node_realpath(p).ok();
+    let real = |p: &str| walk_realpath(p).ok();
     let sep = paths::SEP;
     let Some(root) = real(top) else { return false };
     let resolved = paths::resolve(&[abs]);

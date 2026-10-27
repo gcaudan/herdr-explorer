@@ -1,4 +1,4 @@
-//! The launcher (src/launch.js): the child started again on code 75, with what it asked for (environment, folder),
+//! The launcher: the child started again on code 75, with what it asked for (environment, folder),
 //! the ending signals passed on, and its last code given back. One test: the launcher changes the folder of the process
 //! and catches its signals. The child is a script; no herdr is involved.
 #![cfg(unix)]

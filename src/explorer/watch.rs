@@ -4,8 +4,8 @@
 use super::{Explorer, big, inside, mtime_ms, rel_of};
 use crate::core::actions;
 use crate::core::exec::{self, Opts};
+use crate::core::paths;
 use crate::core::screen::{self};
-use crate::core::{js, paths};
 use crate::json::{self, Value};
 use crate::sys::Watcher;
 use std::time::{Duration, Instant};
@@ -43,7 +43,7 @@ fn repos_in(root: &str) -> Vec<(String, String)> {
 
 impl Explorer {
     /// Also called when a .git folder appears (git init, clone, archive extracted) in a folder that had none; then
-    /// what follows (the JS's `.then`).
+    /// what follows (`after`).
     pub(super) fn init_git(&mut self, after: AfterGit) {
         if self.tree.git.top.is_some() || self.probing {
             return self.after_git(after);
@@ -79,7 +79,7 @@ impl Explorer {
         self.tree.git.prefix = prefix.strip_suffix('/').unwrap_or(prefix).to_string();
         self.tree.git.repos.clear();
         self.repos.clear();
-        // The JS's fs.watch(undefined) threw, and was caught.
+        // No git folder in the answer: none watched.
         self.git_watcher = gitdir.and_then(|gitdir| self.watch_git(gitdir, None));
     }
 
@@ -297,29 +297,62 @@ impl Explorer {
         let on = follow.truthy();
         self.settings.set("follow", follow);
         // One look at a time: a slow herdr would otherwise fill the worker's queue, the preview and the copy waiting
-        // behind (the JS's own awaits only held this loop).
+        // behind.
         if !on || self.pane.is_empty() || self.follow_busy {
             return;
         }
         self.follow_busy = true;
         let pane = self.pane.clone();
+        // Its tab, needed once the hook tells the tab shown.
+        let learn = self.tab.is_none() && self.shown.is_some();
         self.herdr.send(Box::new(move || {
+            let get = |id: &str| {
+                let res = exec::result(exec::run(exec::herdr(), &["pane", "get", id], &Opts::default()).as_deref());
+                res.get("pane").filter(|p| p.truthy()).cloned()
+            };
+            let tab = || get(&pane).and_then(|p| p.get("tab_id").filter(|t| t.truthy()).map(crate::json::text));
+            let tab = if learn { std::panic::catch_unwind(tab).ok().flatten() } else { None };
             let look = || {
                 let (target, _) = actions::terminal_of(&pane);
-                let p = target.and_then(|t| {
-                    let res = exec::result(exec::run(exec::herdr(), &["pane", "get", &t], &Opts::default()).as_deref());
-                    res.get("pane").filter(|p| p.truthy()).cloned()
-                });
-                p.and_then(|p| {
-                    ["foreground_cwd", "cwd"].iter().find_map(|k| p.get(k).filter(|v| v.truthy()).map(js::string))
+                target.and_then(|t| get(&t)).and_then(|p| {
+                    ["foreground_cwd", "cwd"]
+                        .iter()
+                        .find_map(|k| p.get(k).filter(|v| v.truthy()).map(crate::json::text))
                 })
             };
             let cwd = std::panic::catch_unwind(look).ok().flatten();
             Box::new(move |ex: &mut Explorer| {
                 ex.follow_busy = false;
+                ex.tab = ex.tab.take().or(tab);
                 ex.followed(cwd)
             })
         }));
+    }
+
+    /// The explorer's tab asked of herdr again; a look at once if it is the one shown.
+    pub(super) fn learn_tab(&mut self) {
+        let pane = self.pane.clone();
+        if pane.is_empty() {
+            return;
+        }
+        self.herdr.send(Box::new(move || {
+            let res = exec::result(exec::run(exec::herdr(), &["pane", "get", &pane], &Opts::default()).as_deref());
+            let tab = res.get("pane").and_then(|p| p.get("tab_id")).filter(|t| t.truthy()).map(crate::json::text);
+            Box::new(move |ex: &mut Explorer| {
+                if tab.is_some() && tab != ex.tab {
+                    ex.tab = tab;
+                    if !ex.asleep() {
+                        ex.follow_at.get_or_insert(Instant::now());
+                    }
+                }
+            })
+        }));
+    }
+
+    /// Follow asleep: herdr shows another tab than the explorer's. Never before the first look once the hook told the
+    /// tab shown in this session, which learns the explorer's tab and notes the terminal's folder.
+    pub(super) fn asleep(&self) -> bool {
+        matches!((&self.tab, &self.shown), (Some(t), Some(s)) if t != s)
     }
 
     fn followed(&mut self, cwd: Option<String>) {

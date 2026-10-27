@@ -351,7 +351,7 @@ pub fn ask(lines: &mut Vec<String>, w: i64, h: i64, q: &mut Ask) {
 pub fn ask_key(k: &str, q: &mut Ask) -> Option<String> {
     let n = q.buttons.len();
     if matches!(k, "left" | "right" | "tab" | "shift+tab") {
-        // No buttons: the JS's focus becomes NaN.
+        // No buttons: no focus to move.
         if n > 0 {
             q.focus = (q.focus + if k == "left" || k == "shift+tab" { n - 1 } else { 1 }) % n;
         }

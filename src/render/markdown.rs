@@ -2,7 +2,6 @@
 //! highlighted by `render::highlight`, GFM tables and task lists, simple Mermaid flowcharts. A small CommonMark-like
 //! parser, not a complete one. Output: lines of (text, style) segments that fit the width, for `ui::line`.
 
-use crate::core::js;
 use crate::core::regex::Regex;
 use crate::core::ui::{self, Rgb, Seg};
 use crate::render::highlight;
@@ -95,7 +94,7 @@ fn border() -> String {
 const BULLETS: [&str; 3] = ["•", "◦", "▪"];
 const MAX_INLINE: usize = 20000; // longer paragraphs are shown without inline markup
 const MAX_DEPTH: usize = 16; // nested inline spans
-const MAX_NEST: usize = 100; // nested quotes and lists (the JS's stack holds 1500 to 3800 of them)
+const MAX_NEST: usize = 100; // nested quotes and lists
 
 /// What the caller hangs on a line of an image (a picture placed in pixels over blank lines), kept whatever prefix a
 /// list or a quote adds.
@@ -148,7 +147,7 @@ fn prefixed(lines: Vec<Line>, first: &[Seg], rest: &[Seg]) -> Vec<Line> {
         .map(|(k, l)| {
             let mut segs = if k > 0 { rest.to_vec() } else { first.to_vec() };
             segs.extend(l.segs);
-            // An empty anchor (a heading of punctuation only) is dropped, as the JS's tests of it.
+            // An empty anchor (a heading of punctuation only) is dropped.
             Line { segs, anchor: l.anchor.filter(|a| !a.is_empty()), figure: l.figure }
         })
         .collect()
@@ -319,8 +318,8 @@ static URL_END: LazyLock<Regex> = LazyLock::new(|| re(r#"[.,:;!?"'*_~]+$"#, ""))
 static IMAGE_LABEL: LazyLock<Regex> = LazyLock::new(|| re(r"^\s*!\[", ""));
 static LINK_URL: LazyLock<Regex> = LazyLock::new(|| re(r"^\s*(?:<([^>]*)>|(\S*))", ""));
 
-// The style of a formatting tag. The JS works them out when the module loads, before any theme is chosen: the code
-// and link styles are always the dark theme's.
+// The style of a formatting tag. The code and link styles are always the dark theme's,
+// whatever theme is chosen.
 fn tag_style(name: &str) -> Option<String> {
     Some(match name {
         "b" | "strong" | "summary" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => BOLD.into(),
@@ -345,12 +344,12 @@ fn run(text: &str, i: usize, ch: u8) -> usize {
 }
 
 fn is_space(ch: Option<char>) -> bool {
-    ch.is_none_or(js::is_space)
+    ch.is_none_or(crate::unicode::is_space)
 }
 
-// `[\p{L}\p{N}]` on a UTF-16 unit: a character outside the BMP is half a pair there, never a word character.
+// A letter or a digit.
 fn is_word(ch: Option<char>) -> bool {
-    ch.is_some_and(|c| (c as u32) < 0x10000 && unicode::is_alnum(c))
+    ch.is_some_and(unicode::is_alnum)
 }
 
 fn char_before(text: &str, i: usize) -> Option<char> {
@@ -465,7 +464,7 @@ fn link(text: &str, i: usize, base: &str, ctx: &mut Ctx, depth: usize, image: bo
             }
             end = k + 1;
         }
-        ctx.refs.get(&js::lower(r.trim_matches(js::is_space)))?.clone()
+        ctx.refs.get(&r.trim_matches(crate::unicode::is_space).to_lowercase())?.clone()
     };
     if image {
         if let Some(found) = ctx.found.as_mut().filter(|_| !url.is_empty()) {
@@ -547,7 +546,7 @@ fn tag(text: &str, i: usize, base: &str, ctx: &mut Ctx, depth: usize) -> Option<
     }
     let m = TAG.exec_at(text, i)?;
     let end = m.end();
-    let name = js::lower(m.get(2).unwrap_or(""));
+    let name = m.get(2).unwrap_or("").to_lowercase();
     let attrs = m.get(3).unwrap_or("");
     if !m.get(1).unwrap_or("").is_empty() {
         return Some((end, vec![]));
@@ -599,7 +598,7 @@ fn entity(e: &str) -> Option<String> {
 
 // Segments of a paragraph text; '\n' marks hard line breaks.
 fn inline(text: &str, base: &str, ctx: &mut Ctx, depth: usize) -> Vec<Seg> {
-    if depth > MAX_DEPTH || js::utf16_len(text) > MAX_INLINE {
+    if depth > MAX_DEPTH || text.chars().count() > MAX_INLINE {
         return vec![seg(text, base)];
     }
     let mut out = Vec::new();
@@ -624,10 +623,10 @@ fn inline(text: &str, base: &str, ctx: &mut Ctx, depth: usize) -> Vec<Seg> {
                 let n = run(text, i, b'`');
                 if k > 0 {
                     let mut code = text[i + n..k - n].replace('\n', " ");
-                    if js::utf16_len(&code) > 2
+                    if code.chars().count() > 2
                         && code.starts_with(' ')
                         && code.ends_with(' ')
-                        && !code.trim_matches(js::is_space).is_empty()
+                        && !code.trim_matches(crate::unicode::is_space).is_empty()
                     {
                         code = code[1..code.len() - 1].to_string();
                     }
@@ -685,9 +684,20 @@ enum Align {
     Right,
 }
 
+/// A task list item's box: GFM's `[ ]` and `[x]`, and the statuses of Obsidian's themes: `[?]` to check, `[-]`
+/// dropped, `[/]` or `[~]` in progress.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Task {
+    Open,
+    Done,
+    Check,
+    Dropped,
+    Doing,
+}
+
 #[derive(Debug, Clone)]
 struct Item {
-    task: Option<bool>,
+    task: Option<Task>,
     loose: bool,
     blocks: Vec<Block>,
 }
@@ -721,7 +731,7 @@ static CLOSING_FENCE: LazyLock<Regex> = LazyLock::new(|| re(r"^ {0,3}(`{3,}|~{3,
 static INDENTED: LazyLock<Regex> = LazyLock::new(|| re(r"^ {4}", ""));
 static ATX_END: LazyLock<Regex> = LazyLock::new(|| re(r"(?:^|[ \t]+)#+[ \t]*$", ""));
 static HARD_BREAK: LazyLock<Regex> = LazyLock::new(|| re(r" {2,}$", ""));
-static TASK: LazyLock<Regex> = LazyLock::new(|| re(r"^\[([ xX])\](?: +|$)", ""));
+static TASK: LazyLock<Regex> = LazyLock::new(|| re(r"^\[([ xX?/~-])\](?: +|$)", ""));
 
 struct Fence {
     indent: usize,
@@ -735,8 +745,8 @@ fn fence(l: &str) -> Option<Fence> {
     if mark.starts_with('`') && info.contains('`') {
         return None;
     }
-    let lang = FENCE_LANG.replace_with(info.trim_matches(js::is_space), true, "");
-    let lang = js::lower(LANG_END.split(&lang).first().copied().flatten().unwrap_or(""));
+    let lang = FENCE_LANG.replace_with(info.trim_matches(crate::unicode::is_space), true, "");
+    let lang = LANG_END.split(&lang).first().copied().flatten().unwrap_or("").to_lowercase();
     Some(Fence { indent: m.get(1).unwrap_or("").len(), mark: mark.into(), lang })
 }
 
@@ -750,19 +760,12 @@ fn interrupts(l: &str) -> bool {
 }
 
 fn trim(s: &str) -> &str {
-    s.trim_matches(js::is_space)
+    s.trim_matches(crate::unicode::is_space)
 }
 
-// The text after `units` UTF-16 units (`s.slice(units)`).
-fn from16(s: &str, units: usize) -> &str {
-    let mut n = 0;
-    for (i, c) in s.char_indices() {
-        if n >= units {
-            return &s[i..];
-        }
-        n += c.len_utf16();
-    }
-    ""
+// The text after its first n characters.
+fn skip(s: &str, n: usize) -> &str {
+    s.char_indices().nth(n).map_or("", |(i, _)| &s[i..])
 }
 
 // Cells of a table row, split at unescaped pipes.
@@ -840,7 +843,7 @@ fn parse_list(lines: &[String], mut i: usize, ctx: &mut Ctx) -> (Block, usize) {
         let pad = m.get(3).unwrap_or("").len();
         let rest = &lines[i][marker + pad..];
         let indent = if pad == 0 || pad > 4 || BLANK.test(rest) { marker + 1 } else { marker + pad };
-        let mut body = vec![from16(&lines[i], indent).to_string()];
+        let mut body = vec![skip(&lines[i], indent).to_string()];
         let mut blank = false;
         let mut in_fence = fence(&body[0]).is_some();
         i += 1;
@@ -852,11 +855,11 @@ fn parse_list(lines: &[String], mut i: usize, ctx: &mut Ctx) -> (Block, usize) {
                 i += 1;
                 continue;
             }
-            let ind = js::utf16_len(l) - js::utf16_len(l.trim_start_matches(js::is_space));
+            let ind = l.chars().count() - l.trim_start_matches(crate::unicode::is_space).chars().count();
             if ind >= indent {
-                body.push(from16(l, indent).to_string());
+                body.push(skip(l, indent).to_string());
                 blank = false;
-                if fence(from16(l, indent)).is_some() {
+                if fence(skip(l, indent)).is_some() {
                     in_fence = !in_fence;
                 }
                 i += 1;
@@ -866,7 +869,7 @@ fn parse_list(lines: &[String], mut i: usize, ctx: &mut Ctx) -> (Block, usize) {
                 break;
             }
             // Lazy continuation of a paragraph.
-            body.push(l.trim_start_matches(js::is_space).to_string());
+            body.push(l.trim_start_matches(crate::unicode::is_space).to_string());
             i += 1;
         }
         let mut trailing = false;
@@ -877,7 +880,13 @@ fn parse_list(lines: &[String], mut i: usize, ctx: &mut Ctx) -> (Block, usize) {
         let item_loose = body.iter().any(String::is_empty);
         let mut task = None;
         if let Some(t) = TASK.exec(&body[0]) {
-            task = Some(t.get(1) != Some(" "));
+            task = Some(match t.get(1) {
+                Some("x" | "X") => Task::Done,
+                Some("?") => Task::Check,
+                Some("-") => Task::Dropped,
+                Some("/" | "~") => Task::Doing,
+                _ => Task::Open,
+            });
             let n = t.end();
             body[0] = body[0][n..].to_string();
         }
@@ -933,7 +942,7 @@ fn parse_blocks(lines: &[String], ctx: &mut Ctx) -> Vec<Block> {
         } else if INDENTED.test(l) {
             let mut code = Vec::new();
             while i < lines.len() && (INDENTED.test(&lines[i]) || BLANK.test(&lines[i])) {
-                code.push(from16(&lines[i], 4).to_string());
+                code.push(skip(&lines[i], 4).to_string());
                 i += 1;
             }
             while code.last().is_some_and(|c| BLANK.test(c)) {
@@ -991,7 +1000,7 @@ fn parse_blocks(lines: &[String], ctx: &mut Ctx) -> Vec<Block> {
             }
             blocks.push(Block::Table { head, rows, align });
         } else if let Some(m) = REF.exec(l) {
-            let key = js::lower(trim(m.get(1).unwrap_or("")));
+            let key = trim(m.get(1).unwrap_or("")).to_lowercase();
             ctx.refs.entry(key).or_insert_with(|| m.get(2).unwrap_or("").to_string());
             i += 1;
         } else {
@@ -1030,7 +1039,7 @@ static SLUG_DROP: LazyLock<Regex> = LazyLock::new(|| re(r"[^\p{L}\p{N}\s_-]", "g
 static SLUG_SPACE: LazyLock<Regex> = LazyLock::new(|| re(r"\s", "g"));
 
 fn slug(text: &str, ctx: &mut Ctx) -> String {
-    let lowered = js::lower(text);
+    let lowered = text.to_lowercase();
     let base = SLUG_DROP.replace_with(trim(&lowered), true, "");
     let base = SLUG_SPACE.replace_with(&base, true, "-");
     let n = ctx.slugs.entry(base.clone()).and_modify(|n| *n += 1).or_insert(0);
@@ -1314,7 +1323,7 @@ fn block(b: &Block, width: usize, ctx: &mut Ctx, level: usize, tight: bool) -> V
             if let Some(Block::Para(text)) = inner.first()
                 && let Some(a) = ALERT.exec(text)
             {
-                let kind = js::lower(a.get(1).unwrap_or(""));
+                let kind = a.get(1).unwrap_or("").to_lowercase();
                 if let Some(&(_, title, rgb)) = p.alerts.iter().find(|(k, _, _)| *k == kind) {
                     color = rgb;
                     alert = Some(title);
@@ -1341,18 +1350,30 @@ fn block(b: &Block, width: usize, ctx: &mut Ctx, level: usize, tight: bool) -> V
             let mw = marks.iter().map(|m| ui::text_width(m)).max().unwrap_or(0);
             let mut out = Vec::new();
             for (k, it) in items.iter().enumerate() {
-                let pad = mw.saturating_sub(js::utf16_len(&marks[k]));
+                let pad = mw.saturating_sub(ui::text_width(&marks[k]));
                 let mark = if *ordered {
                     format!("{}{}", " ".repeat(pad), marks[k])
                 } else {
                     format!("{}{}", marks[k], " ".repeat(pad))
                 };
                 let mut first = vec![seg(format!("{mark} "), ui::fg(p.marker))];
-                if let Some(done) = it.task {
-                    first.push(if done { seg("☑ ", ui::fg(p.green)) } else { seg("☐ ", dim()) });
+                if let Some(task) = it.task {
+                    first.push(match task {
+                        Task::Done => seg("☑ ", ui::fg(p.green)),
+                        Task::Open => seg("☐ ", dim()),
+                        Task::Check => seg("? ", ui::fg(p.alerts[3].2)),
+                        Task::Dropped => seg("⊟ ", dim()),
+                        Task::Doing => seg("◐ ", ui::fg(p.alerts[0].2)),
+                    });
                 }
                 let indent = width_of(&first);
                 let mut lines = blocks(&it.blocks, width as i64 - indent as i64, ctx, level + 1, !it.loose && !loose);
+                // A dropped task's text struck through, its nested items with it.
+                if it.task == Some(Task::Dropped) {
+                    for (_, style) in lines.iter_mut().flat_map(|l| l.segs.iter_mut()) {
+                        style.push_str(STRIKE);
+                    }
+                }
                 if lines.is_empty() {
                     lines = vec![Line::default()];
                 }
@@ -1399,8 +1420,8 @@ fn clamp(l: Line, width: usize) -> Line {
     Line { segs: out, anchor: l.anchor.filter(|a| !a.is_empty()), figure: l.figure }
 }
 
-/// Rendered lines, and the line of each heading by its slug (GitHub style: "## Some title" → "some-title"), in the
-/// order a JS object lists them.
+/// Rendered lines, and the line of each heading by its slug (GitHub style: "## Some title" → "some-title"), slugs
+/// that are array indexes ("1", "2024") first, in numeric order, then the others as they come.
 pub struct Rendered {
     pub lines: Vec<Line>,
     pub anchors: Vec<(String, usize)>,
@@ -1409,7 +1430,7 @@ pub struct Rendered {
 /// Draws an image: its url and the width, to the lines that show it.
 pub type ImageFn<'a> = dyn FnMut(&str, usize) -> Option<Vec<Line>> + 'a;
 
-/// How to render: code highlighted (the JS's `highlight` module given, or null); image(url, width): the lines
+/// How to render: code highlighted (highlight given, or not); image(url, width): the lines
 /// drawing an image of the text, or None to show its name only; a line's figure is kept, whatever prefix a list or a
 /// quote adds.
 pub struct Options<'a> {
@@ -1428,7 +1449,7 @@ static FRONT_END: LazyLock<Regex> = LazyLock::new(|| re(r"^(?:---|\.\.\.)\s*$", 
 static NEWLINES: LazyLock<Regex> = LazyLock::new(|| re(r"\r\n?", "g"));
 
 /// The lines of a Markdown text rendered for width columns (at least 1); None when its quotes and lists nest deeper
-/// than MAX_NEST (the JS overflows its stack, and the preview shows the text plain).
+/// than MAX_NEST (the preview then shows the text plain).
 pub fn render(text: &str, width: f64, opts: Options) -> Option<Rendered> {
     let width = if width.is_finite() && width.floor() >= 1.0 { width.floor() as usize } else { 1 };
     let mut ctx = Ctx {
@@ -1455,7 +1476,7 @@ pub fn render(text: &str, width: f64, opts: Options) -> Option<Rendered> {
     }
     let lines: Vec<Line> =
         blocks(&tree, width as i64, &mut ctx, 0, false).into_iter().map(|l| clamp(l, width)).collect();
-    // In the order of a JS object's keys: array indexes ("1", "2024") first.
+    // Array indexes ("1", "2024") first, in numeric order (json::insert).
     let mut keys: Vec<(String, crate::json::Value)> = Vec::new();
     for (k, l) in lines.iter().enumerate() {
         if let Some(a) = l.anchor.as_ref().filter(|a| !a.is_empty())
@@ -1479,5 +1500,26 @@ mod tests {
             assert!(render(&format!("{}x", unit.repeat(n + 1)), 80.0, Options::default()).is_none(), "{unit:?}");
         }
         assert!(render(&"> ".repeat(5000), 80.0, Options::default()).is_none());
+    }
+
+    #[test]
+    fn task_statuses_have_their_own_box() {
+        let text = "- [ ] open
+- [x] done
+- [?] check
+- [-] dropped
+- [/] doing
+- [~] doing too
+- [!] other";
+        let r = render(text, 80.0, Options::default()).unwrap();
+        let shown: Vec<String> =
+            r.lines.iter().map(|l| l.segs.iter().map(|(t, _)| t.as_str()).collect::<String>()).collect();
+        assert_eq!(
+            shown,
+            ["• ☐ open", "• ☑ done", "• ? check", "• ⊟ dropped", "• ◐ doing", "• ◐ doing too", "• [!] other"]
+        );
+        let struck = |k: usize| r.lines[k].segs.iter().skip(2).all(|(_, s)| s.contains(STRIKE));
+        assert!(struck(3));
+        assert!(!struck(2) && !struck(4));
     }
 }

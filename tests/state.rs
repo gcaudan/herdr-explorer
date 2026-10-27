@@ -1,4 +1,4 @@
-//! test/state.test.js: the state files that tabs and panes leave behind once closed.
+//! The state files that tabs and panes leave behind once closed.
 
 use herdr_explorer::core::exec::stale_state;
 use herdr_explorer::core::paths;

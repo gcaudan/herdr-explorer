@@ -1,22 +1,16 @@
 //! The subcommands, one per entry of the manifest: `pane <id>` for the panes, `hook` for the events and actions,
-//! `peek` for agents and links. Each keeps the arguments and the `EXPLORER_*` variables of the JS entry it replaces.
+//! `peek` for agents and links, `setup` for the key bindings and the skill.
 
 use std::ffi::OsString;
 use std::process::ExitCode;
 
-/// The panes of the manifest, by id, and the JS script each replaces.
-pub const PANES: [(&str, &str); 6] = [
-    ("tree", "explorer.js"),
-    ("preview", "preview.js"),
-    ("search", "search.js"),
-    ("scm", "scm.js"),
-    ("diff", "diff.js"),
-    ("edit", "edit.js"),
-];
+/// The panes of the manifest, by id.
+pub const PANES: [&str; 6] = ["tree", "preview", "search", "scm", "diff", "edit"];
 
 const USAGE: &str = "usage: herdr-explorer pane <tree|preview|search|scm|diff|edit> [args]
        herdr-explorer hook [--restore|--closed|--agent|--focused|--toggle|--search|--scm]
        herdr-explorer peek <file>[:<places>] | --last | --diff ... | --url
+       herdr-explorer setup
        herdr-explorer --version";
 
 /// What the command line asks for.
@@ -26,6 +20,7 @@ pub enum Command {
     Pane(&'static str, Vec<OsString>),
     Hook(Vec<OsString>),
     Peek(Vec<OsString>),
+    Setup,
 }
 
 /// Reads the command line (without the program's name); `Err` holds the message for a wrong use.
@@ -38,7 +33,7 @@ pub fn parse(mut args: Vec<OsString>) -> Result<Command, String> {
         Some("--version" | "-V") => Ok(Command::Version),
         Some("pane") => {
             let id = args.first().and_then(|a| a.to_str()).unwrap_or("");
-            let Some(&(id, _)) = PANES.iter().find(|(p, _)| *p == id) else {
+            let Some(&id) = PANES.iter().find(|p| **p == id) else {
                 return Err(format!("unknown pane {id:?}\n{USAGE}"));
             };
             args.remove(0);
@@ -46,11 +41,12 @@ pub fn parse(mut args: Vec<OsString>) -> Result<Command, String> {
         }
         Some("hook") => Ok(Command::Hook(args)),
         Some("peek") => Ok(Command::Peek(args)),
+        Some("setup") if args.is_empty() => Ok(Command::Setup),
         _ => Err(USAGE.into()),
     }
 }
 
-/// The binaries set aside by fetch-bin, dev-build and the updater (`<name>.old-*` next to this one), removed when
+/// The binaries set aside by fetch-bin and dev-build (`<name>.old-*` next to this one), removed when
 /// they can be: Windows keeps one that still runs, until a later start.
 fn remove_old(exe: &std::path::Path) {
     let (Some(dir), Some(name)) = (exe.parent(), exe.file_name().and_then(|n| n.to_str())) else { return };
@@ -78,20 +74,34 @@ pub fn run(args: Vec<OsString>) -> ExitCode {
         }
         Ok(Command::Hook(args)) => done(crate::hook::run(&strings(args))),
         Ok(Command::Peek(args)) => done(crate::peek::run(strings(args))),
+        Ok(Command::Setup) => done(crate::core::setup::run()),
         Ok(cmd @ Command::Pane(..)) => {
             // The explorer's and the preview's first process stays as their launcher; the child runs the pane. The
-            // other panes are short-lived and ran without one in the JS; under a shim (EXPLORER_IPC_FILE), every
-            // pane is the child of the shim.
-            if (matches!(cmd, Command::Pane("tree" | "preview", _)) || std::env::var_os("EXPLORER_IPC_FILE").is_some())
-                && let Some(code) = crate::launch::launch()
-            {
+            // other panes are short-lived and run without one.
+            let launched = matches!(cmd, Command::Pane("tree" | "preview", _));
+            if launched && let Some(code) = crate::launch::launch() {
                 return ExitCode::from(u8::try_from(code).unwrap_or(1));
+            }
+            // A short-lived pane is its own first process, whose folder herdr reads: the root's, or the editor's
+            // file's without one. The launcher's child keeps the folder its launcher gives it.
+            if !launched {
+                let file_dir = match cmd {
+                    Command::Pane("edit", _) if crate::core::exec::env_var("EXPLORER_ROOT").is_none() => {
+                        crate::core::exec::env_var("EXPLORER_FILE")
+                            .and_then(|f| std::path::Path::new(&f).parent().map(|d| d.to_string_lossy().into_owned()))
+                    }
+                    _ => None,
+                };
+                crate::core::exec::home(file_dir.as_deref());
             }
             match cmd {
                 Command::Pane("tree", args) => return done(crate::explorer::run(&strings(args))),
                 Command::Pane("preview", args) => return done(crate::preview::run(&strings(args))),
                 Command::Pane("search", args) => return done(crate::search::run(&strings(args))),
                 Command::Pane("diff", args) => return done(crate::changes::run(&strings(args))),
+                Command::Pane("scm", _) if crate::core::exec::env_var("EXPLORER_TOOL").is_some() => {
+                    return done(crate::edit::tool());
+                }
                 Command::Pane("scm", args) => return done(crate::scm::run(&strings(args))),
                 Command::Pane("edit", args) => return done(crate::edit::run(&strings(args))),
                 _ => {}
@@ -106,12 +116,12 @@ pub fn run(args: Vec<OsString>) -> ExitCode {
     }
 }
 
-/// The arguments as the JS read them from process.argv: what is not Unicode replaced.
+/// The arguments as strings: what is not Unicode replaced.
 fn strings(args: Vec<OsString>) -> Vec<String> {
     args.into_iter().map(|a| a.to_string_lossy().into_owned()).collect()
 }
 
-/// The exit code, once the work given to `exec::at_exit` is done (the JS's process.on('exit')).
+/// The exit code, once the work given to `exec::at_exit` is done.
 fn done(code: i32) -> ExitCode {
     crate::core::exec::exit_hooks();
     ExitCode::from(u8::try_from(code).unwrap_or(1))

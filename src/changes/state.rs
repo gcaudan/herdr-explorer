@@ -5,7 +5,7 @@ use super::Pane;
 use crate::core::scope::{self, Pick};
 use crate::core::stage::{Mode, Sel};
 use crate::core::ui::Field;
-use crate::core::{exec, js, notes, paths, viewed};
+use crate::core::{exec, notes, paths, viewed};
 use crate::diff::{self, Diff, File, Ref, changes_of, collect, disk_lines};
 use crate::json::Value;
 use std::sync::Arc;
@@ -145,9 +145,9 @@ impl Pane {
         self.tab_notes.iter().any(|n| {
             n.get("from").is_some_and(Value::truthy)
                 && !n.get("stale").is_some_and(Value::truthy)
-                && js::strict_eq(n.get("file"), Some(&real))
-                && from as f64 >= js::number(n.get("from"))
-                && to as f64 <= js::number(n.get("to"))
+                && n.get("file") == Some(&real)
+                && from as f64 >= crate::json::num(n.get("from"))
+                && to as f64 <= crate::json::num(n.get("to"))
         })
     }
 

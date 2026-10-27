@@ -1,6 +1,5 @@
-//! Base64 as Node's Buffer reads and writes it: `toString('base64')` pads with =; `Buffer.from(s, 'base64')` takes
-//! the URL-safe alphabet too, skips characters outside the alphabet and stops at the first =. It reads the text's
-//! UTF-16 units cut to their low byte, as Node does: a character outside ASCII may read as a letter or as =.
+//! Base64: written padded with =; read with the URL-safe alphabet too, skipping characters outside the alphabet (any non-ASCII one included) and stops at the
+//! first =.
 
 const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -33,8 +32,7 @@ fn value(c: u8) -> Option<u32> {
 pub fn decode(text: &str) -> Vec<u8> {
     let mut out = Vec::with_capacity(text.len() / 4 * 3);
     let (mut n, mut k) = (0u32, 0);
-    for unit in text.encode_utf16() {
-        let c = unit as u8;
+    for c in text.bytes() {
         if c == b'=' {
             break;
         }

@@ -1,4 +1,4 @@
-//! test/docs.test.js: the relative links of the Markdown docs, files and #anchors, point at something that exists.
+//! The relative links of the Markdown docs, files and #anchors, point at something that exists.
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -27,7 +27,7 @@ fn anchors(file: &Path) -> HashSet<String> {
     std::fs::read_to_string(file).unwrap_or_default().split('\n').filter(|l| is_heading(l)).map(slug).collect()
 }
 
-/// The targets of `](…)` links, as the JS's /\]\(([^)\s]+)\)/g.
+/// The targets of `](…)` links: what follows `](` up to `)` or a space.
 fn links(text: &str) -> Vec<&str> {
     let mut out = Vec::new();
     let mut rest = text;

@@ -1,10 +1,10 @@
-//! A parsed diff laid out in rows (src/diff.js): the commit's header and stat, a row per file and per hunk, then the
+//! A parsed diff laid out in rows: the commit's header and stat, a row per file and per hunk, then the
 //! lines, inline or side by side, the changed words on a stronger background; long lines wrapped or cut from a column.
 
 use super::{Diff, File, Line};
 use crate::core::exec;
+use crate::core::regex::Regex;
 use crate::core::ui::{self, Rgb, Seg, bg, c, fg, seg};
-use crate::core::{js, regex::Regex};
 use crate::json::Value;
 use crate::unicode;
 use std::rc::Rc;
@@ -84,7 +84,7 @@ fn tokens(s: &str) -> Vec<&str> {
     let kind = |ch: char| {
         if word(ch) {
             1
-        } else if js::is_space(ch) {
+        } else if crate::unicode::is_space(ch) {
             2
         } else {
             3
@@ -109,9 +109,9 @@ fn tokens(s: &str) -> Vec<&str> {
     out
 }
 
-/// JS's trim: white space and line terminators at both ends.
+/// White space and line terminators trimmed at both ends.
 fn trimmed_len(s: &str) -> usize {
-    js::utf16_len(s.trim_matches(js::is_space))
+    s.trim_matches(crate::unicode::is_space).chars().count()
 }
 
 /// Changed words of a removed line and its added counterpart: spans for each, or None when the lines have little in
@@ -233,7 +233,7 @@ fn file_row(f: &File, width: usize, viewed: bool) -> Row {
         status += "  ✓ viewed";
     }
     let counts = format!(" +{} −{} ", f.add, f.del);
-    let (wi, cl, sl) = (width as i64, js::utf16_len(&counts) as i64, js::utf16_len(&status) as i64);
+    let (wi, cl, sl) = (width as i64, ui::text_width(&counts) as i64, ui::text_width(&status) as i64);
     let label = format!(" {}", ui::ellipsis(&ui::clean_line(&name, 4, None), (wi - cl - sl - 2).max(1)));
     let pad = " ".repeat((wi - ui::text_width(&label) as i64 - sl - cl).max(0) as usize);
     Row {

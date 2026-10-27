@@ -1,9 +1,8 @@
 //! Running external programs safely, and helpers shared by the plugin's panes: files written atomically, git's
 //! environment for untrusted repositories, versions, the settings, the state kept per pane and per tab, the key
-//! bindings. The state and config folders are read from the environment at each call (the JS read them when the
-//! module loaded, before any change: peek sets the state folder before loading it).
+//! bindings. The state and config folders are read from the environment at each call, so that a change made
+//! by the process counts (peek sets the state folder).
 
-use super::js;
 use super::paths;
 use super::which::which;
 use crate::json::{self, Value};
@@ -19,7 +18,7 @@ pub fn plugin() -> String {
     std::env::var("HERDR_PLUGIN_ID").ok().filter(|s| !s.is_empty()).unwrap_or_else(|| "gcaudan.explorer".into())
 }
 
-/// A variable of the environment, None when unset or empty (as `process.env.X && …`).
+/// A variable of the environment, None when unset or empty.
 pub fn env_var(name: &str) -> Option<String> {
     std::env::var(name).ok().filter(|s| !s.is_empty())
 }
@@ -37,7 +36,7 @@ pub fn home(dir: Option<&str>) {
 type Hook = Box<dyn FnOnce() + Send>;
 static EXIT_HOOKS: Mutex<Vec<Hook>> = Mutex::new(Vec::new());
 
-/// Work to do when the process ends (the JS's process.on('exit')): run by `exit_hooks`, which the screen calls before
+/// Work to do when the process ends: run by `exit_hooks`, which the screen calls before
 /// exiting, restart included.
 pub fn at_exit(f: impl FnOnce() + Send + 'static) {
     static PANIC: std::sync::Once = std::sync::Once::new();
@@ -60,8 +59,7 @@ pub fn exiting() -> bool {
     EXITING.load(std::sync::atomic::Ordering::SeqCst)
 }
 
-/// Runs the work given to `at_exit`, once, in the order given. Also run on a panic of the main thread, as the JS's
-/// hooks ran on a crash.
+/// Runs the work given to `at_exit`, once, in the order given. Also run on a panic of the main thread.
 pub fn exit_hooks() {
     EXITING.store(true, std::sync::atomic::Ordering::SeqCst);
     let hooks = std::mem::take(&mut *EXIT_HOOKS.lock().unwrap_or_else(|e| e.into_inner()));
@@ -80,7 +78,7 @@ pub fn config_dir() -> Option<String> {
     env_var("HERDR_PLUGIN_CONFIG_DIR")
 }
 
-/// A symbolic link's target as Node's readlink gives it: on Windows without the `\\?\` prefix Rust adds (and a
+/// A symbolic link's target as written: on Windows without the `\\?\` prefix Rust adds (and a
 /// `\\?\UNC\` share back to `\\server\share`).
 pub fn read_link(p: &str) -> std::io::Result<String> {
     let t = std::fs::read_link(p)?.to_string_lossy().into_owned();
@@ -106,7 +104,7 @@ pub fn strip_verbatim(p: String) -> String {
 /// and a repository can hold such a link. The links are read (readlink), never followed; the folders of top (the
 /// tree's root, trusted) and above are not looked at. A loop of links counts as remote.
 pub fn remote_link(p: &str, top: &str) -> bool {
-    let trusted = (!top.is_empty()).then(|| format!("{}{}", js::lower(&paths::resolve(&[top])), paths::SEP));
+    let trusted = (!top.is_empty()).then(|| format!("{}{}", paths::resolve(&[top]).to_lowercase(), paths::SEP));
     let mut cur = paths::resolve(&[p]);
     for _ in 0..=32 {
         let root = paths::root(&cur);
@@ -117,7 +115,7 @@ pub fn remote_link(p: &str, top: &str) -> bool {
         for (i, part) in parts.iter().enumerate() {
             at = paths::join(&[&at, part]);
             if let Some(t) = &trusted
-                && t.starts_with(&format!("{}{}", js::lower(&at), paths::SEP))
+                && t.starts_with(&format!("{}{}", at.to_lowercase(), paths::SEP))
             {
                 continue;
             }
@@ -160,7 +158,7 @@ pub fn real_path(p: &str) -> String {
         return paths::resolve(&[p]);
     }
     fn real(q: &str) -> String {
-        match node_realpath(q) {
+        match walk_realpath(q) {
             Ok(r) => r,
             Err(_) => {
                 let up = paths::dirname(q);
@@ -184,10 +182,10 @@ fn pipe_or_socket(m: &std::fs::Metadata) -> bool {
     }
 }
 
-/// Node's `fs.realpathSync` (its JS walk, not the system's realpath): the path resolved first (`..` taken off by
+/// A real path walked by name (not the system's realpath): the path resolved first (`..` taken off by
 /// name), then each part lstat'ed from the root, a link read and followed, and the walk started over from its target.
 /// On Windows the case, short names and mapped drives stay as written.
-pub fn node_realpath(p: &str) -> std::io::Result<String> {
+pub fn walk_realpath(p: &str) -> std::io::Result<String> {
     let is_sep = |c: u8| c == b'/' || (WIN && c == b'\\');
     // The root: / on Unix; C:, \\server\share and the separators after it on Windows.
     let split_root = |s: &str| -> usize {
@@ -263,7 +261,7 @@ pub fn node_realpath(p: &str) -> std::io::Result<String> {
     Ok(p)
 }
 
-/// An environment for a child, in order, as `{ ...process.env }`.
+/// An environment for a child, in order.
 pub type Env = Vec<(String, String)>;
 
 /// The process's environment.
@@ -289,7 +287,7 @@ pub fn env_remove(env: &mut Env, key: &str) {
 
 /// [key, value] pairs added to env as git config (GIT_CONFIG_KEY_n, GIT_CONFIG_VALUE_n), after those already there.
 pub fn add_config(env: &mut Env, pairs: &[(&str, &str)]) {
-    let mut n = js::int_or_zero(env_get(env, "GIT_CONFIG_COUNT").unwrap_or(""));
+    let mut n = leading_int(env_get(env, "GIT_CONFIG_COUNT").unwrap_or("")).unwrap_or(0.0);
     for (key, value) in pairs {
         env_set(env, &format!("GIT_CONFIG_KEY_{}", json::number(n)), key);
         env_set(env, &format!("GIT_CONFIG_VALUE_{}", json::number(n)), value);
@@ -348,7 +346,7 @@ pub fn words(s: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut i = 0;
     while i < chars.len() {
-        if js::is_space(chars[i]) {
+        if crate::unicode::is_space(chars[i]) {
             i += 1;
             continue;
         }
@@ -356,14 +354,14 @@ pub fn words(s: &str) -> Vec<String> {
         let quoted = (c == '"' || c == '\'').then(|| chars[i + 1..].iter().position(|&x| x == c)).flatten();
         let end = match quoted {
             Some(k) => i + 1 + k + 1,
-            None => i + chars[i..].iter().position(|&x| js::is_space(x)).unwrap_or(chars.len() - i),
+            None => i + chars[i..].iter().position(|&x| crate::unicode::is_space(x)).unwrap_or(chars.len() - i),
         };
         let w = &chars[i..end];
         // The quotes taken off a word wholly in one kind of them, as /^(["'])(.*)\1$/ (no line break inside).
         let strip = w.len() >= 2
             && (w[0] == '"' || w[0] == '\'')
             && w[w.len() - 1] == w[0]
-            && !w[1..w.len() - 1].iter().any(|&x| js::is_line_terminator(x));
+            && !w[1..w.len() - 1].iter().any(|&x| crate::core::regex::is_line_terminator(x));
         out.push(if strip { w[1..w.len() - 1].iter().collect() } else { w.iter().collect() });
         i = end;
     }
@@ -395,7 +393,7 @@ struct Outcome {
     failed: Option<String>,
 }
 
-/// Node's message for a program that could not start: "spawn git ENOENT".
+/// The message for a program that could not start: "spawn git ENOENT".
 fn spawn_error(cmd: &str, e: &std::io::Error) -> String {
     match e.raw_os_error() {
         Some(n) => format!("spawn {cmd} {}", errno_name(n)),
@@ -403,7 +401,7 @@ fn spawn_error(cmd: &str, e: &std::io::Error) -> String {
     }
 }
 
-/// An error's code as Node gives it (`e.code`): libuv's name of the OS error, else the error's text.
+/// An error's code: libuv's name of the OS error, else the error's text.
 pub fn io_code(e: &std::io::Error) -> String {
     e.raw_os_error().map_or_else(|| e.to_string(), errno_name)
 }
@@ -518,7 +516,7 @@ fn errno_name(n: i32) -> String {
 
 fn command(cmd: &str, args: &[&str], opts: &Opts) -> Command {
     let mut c = if opts.shell {
-        // As Node: the command and its arguments joined by spaces, run by the system's shell.
+        // The command and its arguments joined by spaces, run by the system's shell.
         let line = std::iter::once(cmd).chain(args.iter().copied()).collect::<Vec<_>>().join(" ");
         if WIN {
             #[allow(unused_mut)]
@@ -653,7 +651,7 @@ fn spawn(cmd: &str, args: &[&str], opts: &Opts, kill_on_overflow: bool) -> Outco
         std::thread::sleep(Duration::from_millis(5));
     };
     if timed_out {
-        // As Node: the end is reported at once, with what came so far; the child is reaped in the background.
+        // The end is reported at once, with what came so far; the child is reaped in the background.
         std::thread::spawn(move || {
             let _ = child.wait();
         });
@@ -863,7 +861,9 @@ pub fn git_operation(gitdir: &str) -> &'static str {
     let next = || read_text(paths::join(&[gitdir, "sequencer", "todo"])).unwrap_or_default();
     // /^\s*revert\s/
     let reverts = |t: &str| {
-        t.trim_start_matches(js::is_space).strip_prefix("revert").is_some_and(|r| r.starts_with(js::is_space))
+        t.trim_start_matches(crate::unicode::is_space)
+            .strip_prefix("revert")
+            .is_some_and(|r| r.starts_with(crate::unicode::is_space))
     };
     if has("MERGE_HEAD") {
         "MERGING"
@@ -886,7 +886,7 @@ pub fn git_operation(gitdir: &str) -> &'static str {
 
 /// Dotted versions as numbers: "1.10.0" → [1, 10, 0], a part that is no number 0.
 pub fn version(v: &str) -> Vec<f64> {
-    v.split('.').map(js::int_or_zero).collect()
+    v.split('.').map(|p| leading_int(p).unwrap_or(0.0)).collect()
 }
 
 /// Dotted versions compared number by number: newer("1.10.0", "1.9.2") is true.
@@ -908,14 +908,27 @@ pub fn width_file() -> Option<String> {
 
 pub fn read_width() -> f64 {
     let Some(text) = width_file().and_then(|f| read_text(f).ok()) else { return DEFAULT_WIDTH };
-    match js::parse_int(&text) {
+    match leading_int(&text) {
         Some(n) => n.max(10.0),
         None => DEFAULT_WIDTH,
     }
 }
 
+/// The leading ASCII digits of s (after white space, with an optional sign) as a number; None without any.
+fn leading_int(s: &str) -> Option<f64> {
+    let s = s.trim();
+    let (neg, rest) = match s.as_bytes().first() {
+        Some(b'-') => (true, &s[1..]),
+        Some(b'+') => (false, &s[1..]),
+        _ => (false, s),
+    };
+    let digits = rest.bytes().take_while(u8::is_ascii_digit).count();
+    let n: f64 = rest[..digits].parse().ok()?;
+    Some(if neg { -n } else { n })
+}
+
 /// User settings, shared by the explorer, the preview and the hook (settings.json in the state folder): the
-/// defaults, in the JS's order.
+/// defaults, in the order settings.json lists them.
 pub fn defaults() -> Value {
     crate::obj! {
         "hidden" => true,       // show dot files
@@ -936,7 +949,8 @@ pub fn defaults() -> Value {
         "images" => "auto",     // preview images: 'auto' (pixels when the terminal has the Kitty graphics protocol, else
                                 // half blocks), 'blocks' (half blocks), 'pixels' (pixels without waiting for the answer)
         "reviewPrefix" => "",   // review notes: text typed before them when sent to the agent (A), such as an instruction
-        "diffLayout" => "",     // diffs 'inline' or 'split' (side by side), or { narrow, wide } (diff.js); empty: by width
+        "scmCommand" => "",     // source control tool run by prefix+d ("lazygit", "gitui", "tig"); empty: the plugin's
+        "diffLayout" => "",     // diffs 'inline' or 'split' (side by side), or { narrow, wide }; empty: by width
         "updateCheck" => true,  // check GitHub once a day for a newer release
         "scmTree" => false,     // source control: the changes as a folder tree rather than a list
         "scmGraphAll" => true,  // source control history: every branch, or only the current one
@@ -990,7 +1004,12 @@ pub fn panes_dir() -> Option<String> {
 }
 
 fn pane_name(pane: &str) -> String {
-    format!("{}.json", js::replace_chars(pane, |c| js::is_word(c) || c == '.' || c == '-'))
+    format!(
+        "{}.json",
+        pane.chars()
+            .map(|c| if crate::core::regex::is_word(c) || c == '.' || c == '-' { c } else { '_' })
+            .collect::<String>()
+    )
 }
 
 pub fn pane_file(pane: &str) -> Option<String> {
@@ -1014,7 +1033,10 @@ pub fn write_pane_state(pane: &str, data: &Value) {
 pub const TAB_KINDS: [&str; 8] = ["edit", "notes", "preview", "review", "scope", "search", "turn", "viewed"];
 
 fn tab_name(kind: &str, tab: &str) -> String {
-    format!("{kind}-{}.json", js::replace_chars(tab, |c| js::is_word(c) || c == '-'))
+    format!(
+        "{kind}-{}.json",
+        tab.chars().map(|c| if crate::core::regex::is_word(c) || c == '-' { c } else { '_' }).collect::<String>()
+    )
 }
 
 pub fn tab_file(kind: &str, tab: &str) -> Option<String> {
@@ -1038,7 +1060,7 @@ pub fn stale_state(
             n.strip_prefix(k)
                 .and_then(|r| r.strip_prefix('-'))
                 .and_then(|r| r.strip_suffix(".json"))
-                .is_some_and(|mid| !mid.is_empty() && !mid.chars().any(js::is_line_terminator))
+                .is_some_and(|mid| !mid.is_empty() && !mid.chars().any(crate::core::regex::is_line_terminator))
         })
     };
     let keep_panes: Vec<String> = live_panes.iter().map(|p| pane_name(p)).collect();
@@ -1101,7 +1123,7 @@ pub fn keys_file() -> Option<String> {
 /// A pane's actions and their keys, in order.
 pub type Bindings = Vec<(String, Vec<String>)>;
 
-/// Key name → action, in the order the keys were first bound (a JS Map).
+/// Key name → action, in the order the keys were first bound.
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct KeyMap(pub Vec<(String, String)>);
 
@@ -1127,7 +1149,7 @@ fn bindings_value(defaults: &Bindings) -> Value {
     )
 }
 
-/// The value of a key of a parsed JSON value, as `v[key]` reads it (an array's or a string's index too).
+/// The value of a key of a parsed JSON value (an array's index too); null otherwise.
 fn member(v: &Value, key: &str) -> Value {
     match v {
         Value::Obj(_) => v.get(key).cloned().unwrap_or(Value::Null),
@@ -1137,12 +1159,12 @@ fn member(v: &Value, key: &str) -> Value {
 }
 
 /// Key name → action. A key the user gives to an action is taken from the action that had it by default. A pane's
-/// entry that is a string, a number or true throws in the JS (`in` on a primitive): the pane ends.
+/// entry that is a string, a number or true is a panic: the pane ends.
 pub fn read_keys(pane: &str, defaults: &Bindings) -> KeyMap {
     let parsed = keys_file().and_then(|f| read_text(f).ok()).and_then(|t| json::parse(&t).ok());
     let user = parsed.map(|v| member(&v, pane)).filter(Value::truthy).unwrap_or(Value::Obj(Vec::new()));
-    if let (Value::Str(_) | Value::Num(_) | Value::Bool(_), Some((first, _))) = (&user, defaults.first()) {
-        panic!("Cannot use 'in' operator to search for '{first}' in {}", js::string(&user));
+    if let (Value::Str(_) | Value::Num(_) | Value::Bool(_), Some(_)) = (&user, defaults.first()) {
+        panic!("keys.json: the {pane} entry is not an object: {}", json::text(&user));
     }
     let entries = spread(&user);
     let has = |a: &str| entries.iter().any(|(k, _)| k == a);
@@ -1179,8 +1201,8 @@ fn read_all_keys(file: &str) -> Result<Value, bool> {
     }
 }
 
-/// `all[pane] = value` on what keys.json held: an array takes it as a property; null or another value throws in the
-/// JS (strict mode), and the pane ends.
+/// value set as the pane's entry of what keys.json held: an array takes it as a property; null or another value is a panic,
+/// and the pane ends.
 fn assign(all: Value, pane: &str, value: Value) -> Value {
     let mut fields = match all {
         Value::Obj(f) => f,
@@ -1191,7 +1213,7 @@ fn assign(all: Value, pane: &str, value: Value) -> Value {
                 Value::Str(_) => "string",
                 _ => "boolean",
             };
-            panic!("Cannot create property '{pane}' on {kind} '{}'", js::string(&other))
+            panic!("keys.json is a {kind}, not an object: {}", json::text(&other))
         }
     };
     json::insert(&mut fields, pane.to_string(), value);
@@ -1208,7 +1230,7 @@ pub fn keys_template(pane: &str, defaults: &Bindings) -> Option<String> {
         Err(false) => return Some(file),
     };
     if all.is_null() {
-        panic!("Cannot read properties of null (reading '{pane}')");
+        panic!("keys.json is null, not an object");
     }
     let own = member(&all, pane);
     let keys = merge(&bindings_value(defaults), if own.truthy() { &own } else { &Value::Null });
@@ -1230,7 +1252,7 @@ pub fn write_keys(pane: &str, changes: &[(String, Option<Value>)]) -> bool {
         Err(false) => return false,
     };
     if all.is_null() {
-        panic!("Cannot read properties of null (reading '{pane}')");
+        panic!("keys.json is null, not an object");
     }
     let mut own = Value::Obj(spread(&member(&all, pane)));
     for (action, keys) in changes {
@@ -1245,7 +1267,7 @@ pub fn write_keys(pane: &str, changes: &[(String, Option<Value>)]) -> bool {
 }
 
 /// keys.json written with one action per line, through a temporary file renamed, so that a pane never reads it
-/// half-written. A pane's entry that is null throws in the JS (Object.entries), and the pane ends.
+/// half-written. A pane's entry that is null is a panic, and the pane ends.
 fn save_keys(all: &Value) -> bool {
     let Some(file) = keys_file() else { return false };
     let quote = |s: &str| {
@@ -1257,7 +1279,7 @@ fn save_keys(all: &Value) -> bool {
         .iter()
         .map(|(p, actions)| {
             if actions.is_null() {
-                panic!("Cannot convert undefined or null to object");
+                panic!("keys.json: the {p} entry is null");
             }
             let body: Vec<String> =
                 spread(actions).iter().map(|(a, k)| format!("    {}: {}", quote(a), json::stringify(k))).collect();
@@ -1334,15 +1356,15 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("hx-real-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("a/b")).unwrap();
-        let d = node_realpath(dir.to_str().unwrap()).unwrap();
+        let d = walk_realpath(dir.to_str().unwrap()).unwrap();
         std::os::unix::fs::symlink(format!("{d}/a/b"), dir.join("l")).unwrap();
         std::os::unix::fs::symlink("l", dir.join("m")).unwrap();
         std::os::unix::fs::symlink("loop", dir.join("loop")).unwrap();
-        assert_eq!(node_realpath(&format!("{d}/m")).unwrap(), format!("{d}/a/b"));
+        assert_eq!(walk_realpath(&format!("{d}/m")).unwrap(), format!("{d}/a/b"));
         // `..` is taken off by name first: l/.. is the folder holding l, not a.
-        assert_eq!(node_realpath(&format!("{d}/l/..")).unwrap(), d);
-        assert!(node_realpath(&format!("{d}/loop")).is_err());
-        assert!(node_realpath(&format!("{d}/none")).is_err());
+        assert_eq!(walk_realpath(&format!("{d}/l/..")).unwrap(), d);
+        assert!(walk_realpath(&format!("{d}/loop")).is_err());
+        assert!(walk_realpath(&format!("{d}/none")).is_err());
         assert_eq!(real_path(&format!("{d}/m/x/y")), format!("{d}/a/b/x/y"));
         let _ = std::fs::remove_dir_all(&dir);
     }

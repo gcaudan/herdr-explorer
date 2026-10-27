@@ -1,6 +1,4 @@
-//! What the integration tests share: temporary folders, and the replay of the module fixtures that
-//! tools/fixtures/gen.js recorded from the JS (removed with it at the switch to Rust; its header in the git history
-//! gives the format).
+//! What the integration tests share: temporary folders, and the replay of the module fixtures.
 
 #![allow(dead_code)]
 
@@ -16,7 +14,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 /// Held by every test that sets environment variables: the tests of a binary run in parallel threads.
 pub static ENV: Mutex<()> = Mutex::new(());
 
-/// A fresh folder, removed when dropped; `path` has its symbolic links resolved, as the JS's `fs.realpathSync`.
+/// A fresh folder, removed when dropped; `path` has its symbolic links resolved.
 pub struct TempDir {
     pub path: PathBuf,
 }
@@ -41,7 +39,7 @@ impl Drop for TempDir {
 
 fn herdr_explorer_canonical(p: &Path) -> PathBuf {
     let real = std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
-    // canonicalize gives \\?\C:\… on Windows, which the JS never writes.
+    // canonicalize gives \\?\C:\… on Windows, which the fixtures never hold.
     match real.to_str().and_then(|s| s.strip_prefix(r"\\?\")) {
         Some(s) if !s.starts_with("UNC") => PathBuf::from(s),
         _ => real,
@@ -52,14 +50,14 @@ pub fn fixtures_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/modules")
 }
 
-/// The fixture file of a JS module, such as "core/places".
+/// The fixture file of a module, such as "core/places".
 pub fn load(module: &str) -> Value {
     let file = fixtures_dir().join(format!("{}.json", module.replace('/', ".")));
     let text = std::fs::read_to_string(&file).unwrap_or_else(|e| panic!("{}: {e}", file.display()));
     json::parse(&text).unwrap_or_else(|e| panic!("{}: {e}", file.display()))
 }
 
-/// Every string of v, keys included, with `from` replaced by `to` (gen.js replaces in the whole JSON text).
+/// Every string of v, keys included, with `from` replaced by `to` (as a replace in the whole JSON text).
 pub fn replace(v: &Value, from: &str, to: &str) -> Value {
     match v {
         Value::Str(s) => Value::Str(s.replace(from, to)),
@@ -79,7 +77,7 @@ pub fn replace(v: &Value, from: &str, to: &str) -> Value {
 struct EnvBack(Vec<(std::ffi::OsString, Option<std::ffi::OsString>)>);
 
 impl EnvBack {
-    /// Removes herdr's and the explorer's variables (those of a real session, as gen.js does), then sets `set`.
+    /// Removes herdr's and the explorer's variables (those of a real session), then sets `set`.
     fn new(set: &[(String, String)]) -> EnvBack {
         let mut saved: Vec<_> = std::env::vars_os()
             .filter(|(k, _)| k.to_str().is_some_and(|k| k.starts_with("HERDR_") || k.starts_with("EXPLORER_")))
@@ -136,11 +134,14 @@ fn setup(root: &Path, files: Option<&Value>) {
 }
 
 /// Replays every case (Unix only: the fixtures were recorded on Linux, with its paths; Windows is covered by the
-/// ported unit tests) of a module's fixture: `call(fn, args)` gives what the Rust port returns, `Err` for what the
-/// JS threw. Panics with the list of the cases that differ.
+/// unit tests) of a module's fixture: `call(fn, args)` gives what the Rust returns, `Err` for an error. Panics with
+/// the list of the cases that differ; with `HX_RECORD=1`, writes what the Rust returns as the
+/// outcome of those that differ only by it, for a change of behaviour its commit explains.
 pub fn replay(module: &str, call: impl Fn(&str, &[Value]) -> Result<Value, String>) {
     let _env = ENV.lock().unwrap_or_else(|e| e.into_inner());
-    let fixture = load(module);
+    let mut fixture = load(module);
+    let record = std::env::var_os("HX_RECORD").is_some();
+    let mut recorded = Vec::new();
     let mut failures = Vec::new();
     for (i, case) in fixture.get("cases").and_then(Value::as_array).unwrap().iter().enumerate() {
         let dir = TempDir::new("fixture");
@@ -156,6 +157,7 @@ pub fn replay(module: &str, call: impl Fn(&str, &[Value]) -> Result<Value, Strin
         let args = replace(case.get("args").unwrap(), "$ROOT", &root);
         let got = call(name, args.as_array().unwrap());
         drop(back);
+        let outcome = got.clone().map(|v| replace(&v, &root, "$ROOT"));
         let got = match got {
             Ok(v) => json::stringify(&replace(&v, &root, "$ROOT")),
             Err(e) => format!("throws {e:?}"),
@@ -166,7 +168,11 @@ pub fn replay(module: &str, call: impl Fn(&str, &[Value]) -> Result<Value, Strin
         };
         let mut diff = Vec::new();
         if got != want {
-            diff.push(format!("got {got}, want {want}"));
+            // Recorded when the outcome keeps its kind: a result for a result, an error for an error.
+            match outcome {
+                o if record && o.is_err() == case.get("throws").is_some() => recorded.push((i, o)),
+                _ => diff.push(format!("got {got}, want {want}")),
+            }
         }
         if let Some(after) = case.get("after").and_then(Value::as_object) {
             for (file, want) in after {
@@ -179,6 +185,20 @@ pub fn replay(module: &str, call: impl Fn(&str, &[Value]) -> Result<Value, Strin
         if !diff.is_empty() {
             failures.push(format!("#{i} {name}({}): {}", json::stringify(case.get("args").unwrap()), diff.join("; ")));
         }
+    }
+    if !recorded.is_empty() {
+        if let Value::Obj(fields) = &mut fixture
+            && let Some((_, Value::Arr(cases))) = fields.iter_mut().find(|(k, _)| k == "cases")
+        {
+            for (i, outcome) in recorded {
+                match outcome {
+                    Ok(out) => cases[i].set("out", out),
+                    Err(e) => cases[i].set("throws", Value::Str(e)),
+                }
+            }
+        }
+        let file = fixtures_dir().join(format!("{}.json", module.replace('/', ".")));
+        std::fs::write(file, format!("{}\n", json::stringify_pretty(&fixture, 1))).unwrap();
     }
     assert!(failures.is_empty(), "{module}: {} case(s) differ\n{}", failures.len(), failures.join("\n"));
 }

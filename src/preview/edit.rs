@@ -1,4 +1,4 @@
-//! The preview's edit mode (src/preview.js): i, or Edit here in the View menu, edits a text file in the pane: read
+//! The preview's edit mode: i, or Edit here in the View menu, edits a text file in the pane: read
 //! again whole (buffer::read: UTF-8 only, up to buffer::MAX_BYTES), shown as its source without wrapping,
 //! highlighted, with the terminal's cursor. The edit lives in its tab (TabView), so that the other tabs keep working.
 //! state.top and state.left are then a line and a column of the text. ctrl+s writes it back (save_edit), esc leaves
@@ -9,9 +9,9 @@ use super::{Kind, Preview};
 use crate::core::actions;
 use crate::core::buffer::{self, Editor, LineKind, Match, Pos};
 use crate::core::exec;
+use crate::core::paths;
 use crate::core::screen;
 use crate::core::ui::{self, Ask, Button, Hints, Mouse, Rgb, Seg, bg, c, fg, g, seg, text_width};
-use crate::core::{js, paths};
 use crate::sys;
 use std::cell::RefCell;
 use std::fs::Metadata;
@@ -101,7 +101,7 @@ impl Edit {
     }
 }
 
-/// An edit shared by the state and its tab, as the JS's object: equal when the same.
+/// An edit shared by the state and its tab: equal when the same one.
 #[derive(Clone)]
 pub struct Shared(pub Rc<RefCell<Edit>>);
 
@@ -124,7 +124,7 @@ impl Shared {
 }
 
 fn same_stat(a: Option<&Metadata>, b: &Metadata) -> bool {
-    let ms = |m: &Metadata| m.modified().ok().map(js::time_ms);
+    let ms = |m: &Metadata| m.modified().ok().map(crate::core::clock::ms);
     a.is_some_and(|a| ms(a) == ms(b) && a.len() == b.len())
 }
 
@@ -418,7 +418,7 @@ impl Preview {
         self.ask(Question { ask, on, dropped: None });
     }
 
-    /// The process ends, its tabs saved for the next one (the JS's process.exit and its exit handler).
+    /// The process ends, its tabs saved for the next one.
     fn exit(&mut self) {
         self.save_file();
         self.screen.exit(0)
@@ -871,10 +871,10 @@ impl Preview {
         let Some(p) = e.prompt.as_mut() else { return };
         if p.kind == PromptKind::Line {
             if k == "enter" {
-                let n = js::parse_int(&p.field.value);
+                let n = p.field.value.trim().parse::<usize>().ok();
                 e.prompt = None;
-                if let Some(n) = n.filter(|&n| n > 0.0) {
-                    let line = (n as usize).min(e.ed.lines.len());
+                if let Some(n) = n.filter(|&n| n > 0) {
+                    let line = n.min(e.ed.lines.len());
                     e.ed.goto(line);
                 }
                 drop(guard);

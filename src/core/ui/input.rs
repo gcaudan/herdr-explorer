@@ -89,10 +89,8 @@ pub fn key_name(k: &str) -> Option<String> {
     {
         return Some(format!("ctrl+{}", char::from(ch as u8 + 96)));
     }
-    // ESC and one UTF-16 unit.
-    if let (Some('\x1b'), Some(ch), None) = (first, second, third)
-        && ch.len_utf16() == 1
-    {
+    // ESC and one character.
+    if let (Some('\x1b'), Some(ch), None) = (first, second, third) {
         return Some(format!("alt+{ch}"));
     }
     if k.starts_with('\x1b') {
@@ -130,7 +128,7 @@ pub enum Event {
     Reply(String),
 }
 
-/// `+digits`, then ToInt32, as the JS's `b & 64` reads a button number.
+/// The digits as a number wrapped to 32 bits (signed), as a button number's bits are tested.
 fn int32(digits: &str) -> i64 {
     let n = digits.bytes().fold(0.0, |n, d| n * 10.0 + (d - b'0') as f64);
     (n % 4294967296.0) as u32 as i32 as i64
@@ -141,7 +139,7 @@ fn number(digits: &str) -> i64 {
     digits.parse().unwrap_or(i64::MAX)
 }
 
-/// One token of the input at its start, as the JS's TOKEN regex reads it, and the event it gives.
+/// One token of the input at its start, and the event it gives.
 fn token(s: &str) -> (usize, Option<Event>) {
     let digits = |t: &str| t.bytes().take_while(u8::is_ascii_digit).count();
     if let Some(body) = s.strip_prefix("\x1b[200~")

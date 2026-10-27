@@ -1,11 +1,11 @@
-//! Search opened from the explorer, in a tab of its own (actions.search; src/search.js): Go to file (fuzzy match on
+//! Search opened from the explorer, in a tab of its own (actions.search): Go to file (fuzzy match on
 //! paths, ctrl+p) and Search in files (text or regex in the contents, ctrl+f), the selected result in the tab's preview
 //! on the right. Enter opens the file in the preview of the tab it was opened from, at the line; Esc closes the search
 //! and its tab.
 //!
 //! As in the other panes, the herdr and clipboard calls run on a worker thread, the file list, the search and the
-//! files previewed on threads of their own; their results come back to the pane's loop, the JS's timers are deadlines
-//! of that loop.
+//! files previewed on threads of their own; their results come back to the pane's loop, timers are deadlines of
+//! that loop.
 
 mod find;
 mod render;
@@ -15,7 +15,7 @@ use crate::core::actions::{self, Sharer};
 use crate::core::exec;
 use crate::core::screen::{self, Input, Screen};
 use crate::core::ui::{self, Event, HelpState, Hints, Mouse, Scrollbar, Seg};
-use crate::core::{js, paths, worker};
+use crate::core::{paths, worker};
 use crate::json::{self, Value};
 use crate::sys;
 use find::{Group, MAX_MATCHES};
@@ -99,7 +99,7 @@ impl Search {
             .and_then(|t| json::parse(&t).ok())
             .filter(Value::truthy)
             .unwrap_or(Value::Null);
-        let text = |k: &str| saved.get(k).filter(|v| v.truthy()).map_or(String::new(), js::string);
+        let text = |k: &str| saved.get(k).filter(|v| v.truthy()).map_or(String::new(), crate::json::text);
         let truthy = |k: &str| saved.get(k).is_some_and(Value::truthy);
         let mode =
             if exec::env_var("EXPLORER_MODE").as_deref() == Some("content") { Mode::Content } else { Mode::Files };
@@ -177,7 +177,7 @@ impl Search {
     }
 
     fn start(&mut self) {
-        // The JS's process.on('exit', save), a signal included.
+        // The state saved at exit, a signal included.
         let (file, snapshot) = (self.save_file.clone(), self.snapshot.clone());
         exec::at_exit(move || {
             if let (Some(file), Some(data)) = (file, snapshot.lock().unwrap_or_else(|e| e.into_inner()).take()) {
@@ -315,13 +315,11 @@ impl Search {
                     capped = Some(c);
                 }
                 let mut list = files.unwrap_or_default();
-                // JS strings sort by UTF-16 units.
-                list.sort_by(|a, b| a.encode_utf16().cmp(b.encode_utf16()));
-                let units: Vec<Vec<u16>> = list.iter().map(|f| find::utf16(f)).collect();
-                let lower = list.iter().map(|f| find::utf16(&js::lower(f))).collect();
-                let base =
-                    units.iter().map(|u| u.iter().rposition(|&c| c == b'/' as u16).map_or(0, |i| i + 1)).collect();
-                let files = Files { list: Arc::new(list), units, lower, base };
+                list.sort();
+                let lower = list.iter().map(|f| f.to_lowercase()).collect();
+                let len = list.iter().map(|f| f.chars().count()).collect();
+                let base = list.iter().map(|f| f.rfind('/').map_or(0, |i| i + 1)).collect();
+                let files = Files { list: Arc::new(list), lower, len, base };
                 Box::new(move |s: &mut Search| {
                     if let Some(c) = capped {
                         s.state.capped = c;
@@ -353,11 +351,12 @@ impl Search {
             s.prev = None;
             return;
         }
-        let ql = find::utf16(&js::lower(&find::from_utf16(&q)));
-        let prev = s.prev.as_ref().filter(|(pq, _)| ql.starts_with(pq)).map(|(_, idx)| idx.clone());
+        let lower = q.to_lowercase();
+        let prev = s.prev.as_ref().filter(|(pq, _)| lower.starts_with(pq.as_str())).map(|(_, idx)| idx.clone());
+        let (qc, ql) = find::query_chars(&q);
         let (mut idx, mut scored) = (Vec::new(), Vec::new());
         let mut each = |i: usize| {
-            if let Some((score, _)) = find::fuzzy(&q, &ql, &files.units[i], &files.lower[i], files.base[i], false) {
+            if let Some((score, _)) = find::fuzzy(&qc, &ql, &files.list[i], &files.lower[i], files.base[i], false) {
                 idx.push(i);
                 scored.push(Scored { i, score, pos: None });
             }
@@ -367,15 +366,11 @@ impl Search {
             None => (0..files.list.len()).for_each(&mut each),
         }
         scored.sort_by(|a, b| {
-            // The JS gave 1 for two equal paths (names read lossily may repeat): equal here, a sort needing a total
-            // order.
-            b.score
-                .cmp(&a.score)
-                .then(files.units[a.i].len().cmp(&files.units[b.i].len()))
-                .then(files.units[a.i].cmp(&files.units[b.i]))
+            // Best score first, then the shorter path, then by name (names read lossily may repeat).
+            b.score.cmp(&a.score).then(files.len[a.i].cmp(&files.len[b.i])).then(files.list[a.i].cmp(&files.list[b.i]))
         });
         scored.truncate(find::MAX_ROWS);
-        s.prev = Some((ql, idx));
+        s.prev = Some((lower, idx));
         s.results = scored;
     }
 
@@ -498,7 +493,7 @@ impl Search {
     fn rows(&self) -> Vec<Row> {
         let s = &self.state;
         if s.mode == Mode::Files {
-            // The JS crashed on results kept while the list is read again (alt+h): none shown meanwhile.
+            // The list read again (alt+h): no results shown meanwhile.
             if s.files.is_none() {
                 return Vec::new();
             }
@@ -552,7 +547,7 @@ impl Search {
                     let body = text.strip_suffix('\n').map(|t| t.strip_suffix('\r').unwrap_or(t)).unwrap_or(&text);
                     let lines: Vec<String> =
                         body.split('\n').map(|l| l.strip_suffix('\r').unwrap_or(l).to_string()).collect();
-                    let segs = coloured(&rel, &lines, js::utf16_len(&text));
+                    let segs = coloured(&rel, &lines, text.chars().count());
                     Shown::Text { lines, segs }
                 }
             };

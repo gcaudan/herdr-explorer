@@ -7,11 +7,11 @@
 //!   rev     a commit (its own changes) or a range, a..b or a...b; rev the text typed
 //!   ref     a branch (or any commit) compared with the working tree; rev its name
 //!
-//! The menu b opens (the JS's items, menu and revKey) comes with the ui layer.
+//! The menu b opens comes with the ui layer.
 
 use super::exec::{self, Env, Opts, env_remove, env_set, git, run, tab_file, write_atomic};
+use super::paths;
 use super::ui::{self, Field, Menu, MenuItem};
-use super::{js, paths};
 use crate::codec::sha;
 use crate::json::{self, Value};
 use std::time::Duration;
@@ -81,11 +81,10 @@ pub fn watch(tab: &str) -> Option<super::watch::Watch> {
     tab_file("scope", tab).map(|f| super::watch::Watch::new(&f, Duration::from_millis(500)))
 }
 
-/// `a.kind === b.kind && (a.rev || '') === (b.rev || '')`: strict equality, an object never equal to another.
+/// The same kind and the same rev, a missing rev as an empty one.
 pub fn same(a: &Scope, b: &Scope) -> bool {
-    let strict = super::js::strict_eq;
     let rev = |s: &Scope| s.0.get("rev").filter(|r| r.truthy()).cloned().unwrap_or(Value::Str(String::new()));
-    strict(a.0.get("kind"), b.0.get("kind")) && strict(Some(&rev(a)), Some(&rev(b)))
+    a.0.get("kind") == b.0.get("kind") && rev(a) == rev(b)
 }
 
 /// The scope in a few words, for a header: HEAD, main base, last turn, abc123, a..b, vs feature.
@@ -134,8 +133,8 @@ pub fn items(scope: &Scope, base_name: &str) -> Vec<Option<MenuItem<Pick>>> {
         Some(MenuItem { label, key: String::new(), value, danger: false, keep: false, run })
     };
     let base = if base_name.is_empty() { "main" } else { base_name };
-    // A scope without its rev shows "undefined", as the JS's template does.
-    let rev = scope.0.get("rev").map_or("undefined".into(), js::string);
+    // A scope without its rev shows "undefined".
+    let rev = scope.0.get("rev").map_or("undefined".into(), json::text);
     let typed = |kind: &str| if scope.kind() == kind { format!("  {rev}") } else { String::new() };
     let kind = |k: &str| Scope::new(k, None);
     vec![
@@ -194,7 +193,7 @@ pub fn rev_key(field: &mut Field, k: &str) -> RevKey {
         return RevKey::Done(String::new());
     }
     if k == "enter" {
-        return RevKey::Done(field.value.trim_matches(js::is_space).to_string());
+        return RevKey::Done(field.value.trim_matches(crate::unicode::is_space).to_string());
     }
     RevKey::Changed(field.key(k))
 }
@@ -223,7 +222,7 @@ pub fn branches(cwd: &str) -> Vec<String> {
             let remote_head = full.strip_prefix("refs/remotes/").is_some_and(|r| {
                 !sym.is_empty() || r.strip_suffix("/HEAD").is_some_and(|r| !r.is_empty() && !r.contains('/'))
             });
-            (!short.is_empty() && !remote_head).then(|| short.trim_matches(js::is_space).to_string())
+            (!short.is_empty() && !remote_head).then(|| short.trim_matches(crate::unicode::is_space).to_string())
         })
         .collect()
 }
@@ -257,7 +256,7 @@ pub fn worktree(top: &str, env: &Env, keep: bool, only: Option<&str>) -> Option<
         run(git(), args, &Opts { cwd: Some(top.into()), env: Some(e), ..Default::default() })
     };
     let index = git_in(&["rev-parse", "--git-path", "index"], None).unwrap_or_default();
-    let index = index.trim_matches(js::is_space);
+    let index = index.trim_matches(crate::unicode::is_space);
     if index.is_empty() {
         return None;
     }
@@ -283,7 +282,7 @@ pub fn worktree(top: &str, env: &Env, keep: bool, only: Option<&str>) -> Option<
         let from_of = |st: &Option<std::fs::Metadata>| match st {
             Some(m) => format!(
                 "{}:{}",
-                json::number(m.modified().map(js::time_ms).unwrap_or(0.0)),
+                json::number(m.modified().map(crate::core::clock::ms).unwrap_or(0.0)),
                 json::number(m.len() as f64)
             ),
             None => "none".into(),
@@ -331,7 +330,7 @@ pub fn worktree(top: &str, env: &Env, keep: bool, only: Option<&str>) -> Option<
         }
         if git_in(&add, Some(&kept)).is_some() {
             let tree = git_in(&["write-tree"], Some(&kept)).unwrap_or_default();
-            let tree = tree.trim_matches(js::is_space);
+            let tree = tree.trim_matches(crate::unicode::is_space);
             // Marked used through .from (sweep_state removes the copy a week after it): git rewrites neither file
             // when nothing changed, and the copy's own mtime is git's to judge its racily clean entries.
             if let Ok(f) = std::fs::File::options().write(true).open(format!("{kept}.from")) {
@@ -351,7 +350,7 @@ pub fn worktree(top: &str, env: &Env, keep: bool, only: Option<&str>) -> Option<
         let _ = copy_index(&real_index, &tmp, &st, &tmp);
     }
     let tree = git_in(&add, Some(&tmp)).and_then(|_| git_in(&["write-tree"], Some(&tmp))).and_then(|t| {
-        let t = t.trim_matches(js::is_space);
+        let t = t.trim_matches(crate::unicode::is_space);
         (!t.is_empty()).then(|| t.to_string())
     });
     let _ = std::fs::remove_dir_all(&dir);
@@ -425,7 +424,7 @@ pub fn read_turn(tab: &str) -> Value {
 /// write made from an older read would undo the other's (a tree taken back to null, an end lost). Read back after,
 /// to write again if another hook wrote over it meanwhile. False when the turn is no longer that one.
 pub fn update_turn(tab: &str, t: Option<&Value>, fields: &[(&str, Value)]) -> bool {
-    let same_t = |v: &Value| js::strict_eq(v.get("t"), t);
+    let same_t = |v: &Value| v.get("t") == t;
     for _ in 0..3 {
         let now = read_turn(tab);
         if !now.truthy() || !same_t(&now) {
@@ -439,7 +438,7 @@ pub fn update_turn(tab: &str, t: Option<&Value>, fields: &[(&str, Value)]) -> bo
             write_atomic(&f, json::stringify(&next));
         }
         let back = read_turn(tab);
-        if back.truthy() && same_t(&back) && fields.iter().all(|(k, v)| js::strict_eq(back.get(k), Some(v))) {
+        if back.truthy() && same_t(&back) && fields.iter().all(|(k, v)| back.get(k) == Some(v)) {
             return true;
         }
     }
@@ -469,13 +468,13 @@ pub fn agent_status(tab: &str, pane: &str, status: &str, cwd: &str) -> &'static 
         &Opts { cwd: Some(cwd.into()), env: Some(env.clone()), ..Default::default() },
     )
     .unwrap_or_default();
-    let top = top.trim_matches(js::is_space);
+    let top = top.trim_matches(crate::unicode::is_space);
     if top.is_empty() {
         return "not a repository";
     }
     // The turn is written at once, its tree once taken: the hooks of the events that follow, run while git hashes the
     // files, see the turn started (a working one keeps it, an idle one ends it), and the tree does not undo them.
-    let t = Value::Num(js::now_ms());
+    let t = Value::Num(crate::core::clock::now_ms());
     if let Some(f) = tab_file("turn", tab) {
         let turn = crate::obj! {
             "pane" => pane, "top" => paths::resolve(&[top]), "tree" => Value::Null, "t" => t.clone(), "ended" => false,

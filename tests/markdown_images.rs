@@ -1,4 +1,4 @@
-//! test/markdown-images.test.js: the images of rendered Markdown in pixels: the part of each one that shows for a
+//! The images of rendered Markdown in pixels: the part of each one that shows for a
 //! scroll position, and the lines that carry them through lists and quotes.
 
 use herdr_explorer::render::image::{Crop, Pic, crop, shown};

@@ -1,13 +1,13 @@
-//! The launcher (src/launch.js): the first process of an explorer or preview pane stays as a small launcher of the
+//! The launcher: the first process of an explorer or preview pane stays as a small launcher of the
 //! real one, which runs as its child. Restarting on new code (`Screen::restart`), the child exits with code 75 and
 //! the launcher starts it again in the same terminal, the same program: the path of this binary resolved once, at the
-//! start, before an update renames it. Before each restart, the binary there is made the manifest's version, as the
-//! shim did (`ready`): herdr's update and the plugin's change the manifest before they put the new binary.
+//! start, before an update renames it. Before each restart, the binary there is made the manifest's version
+//! (`ready`): a git pull changes the manifest, and fetch-bin puts the binary of its version.
 //!
 //! The child is told by `EXPLORER_IPC_FILE`, the file where it writes its messages (`screen::send`), a line of JSON
 //! each: `{restart}`, what the next child must show, added to its environment; `{cwd}`, the folder to announce after
-//! Set as root. Started with that variable by another launcher (the node shim, or the old launch.js), this binary is
-//! the child; started without, it is the launcher and the pane's first process.
+//! Set as root. Started with that variable, this binary is the child; started without, it is the launcher and the
+//! pane's first process.
 
 use crate::core::exec::{self, Opts, WIN};
 use crate::core::screen::RESTART;
@@ -17,20 +17,22 @@ use crate::sys;
 use std::ffi::OsString;
 use std::path::Path;
 use std::process::Command;
+use std::sync::mpsc;
 use std::time::Duration;
 
 /// The launcher's exit code, once its last child ended; `None` in the child, which goes on to run the pane.
 pub fn launch() -> Option<i32> {
     if let Some(ipc) = std::env::var_os("EXPLORER_IPC_FILE") {
         let launcher = std::env::var("EXPLORER_LAUNCHER").ok().and_then(|p| p.parse().ok());
-        // SAFETY: at the start, before any thread: the processes this one starts are not the launcher's children
-        // (Node keeps its channel to itself as well).
+        let lifeline = std::env::var("EXPLORER_LIFELINE").ok().and_then(|p| p.parse().ok());
+        // SAFETY: at the start, before any thread: the processes this one starts are not the launcher's children.
         unsafe {
             std::env::remove_var("EXPLORER_IPC_FILE");
             std::env::remove_var("EXPLORER_LAUNCHER");
+            std::env::remove_var("EXPLORER_LIFELINE");
         }
         let _ = crate::core::screen::IPC_FILE.set(ipc);
-        watch_parent(launcher);
+        watch_parent(launcher, lifeline);
         return None;
     }
     exec::home(None);
@@ -40,11 +42,12 @@ pub fn launch() -> Option<i32> {
 }
 
 /// The launcher gone (killed), the child goes too, instead of running on in a terminal that nobody shows. On Unix, the
-/// parent's end is seen by the parent's id changing, from the launcher's id it was given (EXPLORER_LAUNCHER), as it
-/// may be gone already, else from the parent it has at the start (the node shim). On Windows, the launcher's process
-/// is waited for, by the id it was given; one that cannot be opened (gone already, or with other rights) is left
-/// unwatched rather than ending a pane that may well have its launcher.
-fn watch_parent(launcher: Option<u32>) {
+/// launcher's end is the end of file of its lifeline (EXPLORER_LIFELINE), waited for without waking. On Windows, the
+/// launcher's process is waited for, by the id it was given (EXPLORER_LAUNCHER); one that cannot be opened (gone
+/// already, or with other rights) is left unwatched rather than ending a pane that may well have its launcher.
+// The launcher's id serves on Windows, the lifeline on Unix.
+#[allow(unused_variables)]
+fn watch_parent(launcher: Option<u32>, lifeline: Option<i32>) {
     #[cfg(windows)]
     if let Some(pid) = launcher {
         std::thread::spawn(move || {
@@ -55,32 +58,68 @@ fn watch_parent(launcher: Option<u32>) {
         });
     }
     #[cfg(unix)]
-    {
-        let parent = launcher.unwrap_or_else(sys::getppid);
+    if let Some(fd) = lifeline.filter(|&fd| sys::adopt_lifeline(fd)) {
         std::thread::spawn(move || {
-            loop {
-                std::thread::sleep(Duration::from_millis(500));
-                if sys::getppid() != parent {
-                    exec::exit_hooks();
-                    std::process::exit(0);
-                }
+            if sys::wait_lifeline(fd) {
+                exec::exit_hooks();
+                std::process::exit(0);
             }
         });
     }
 }
 
+/// What the launcher waits for, from the threads that wait for it: the child's end, a message written, a signal.
+enum Wake {
+    Ended(Option<std::process::ExitStatus>),
+    Message,
+    #[cfg(unix)]
+    Signal(sys::Signal),
+}
+
 /// Runs exe with args until it ends with another code than 75, and gives that code (1 when it was killed by a
-/// signal, or could not start). The ending signals it gets are passed on to the child.
+/// signal, or could not start). The ending signals it gets are passed on to the child. Nothing is polled: a thread
+/// waits for the child, the messages' folder is watched, the signals come from their own thread; this one sleeps
+/// until one of them wakes it.
 pub fn launcher(exe: &Path, args: &[OsString]) -> i32 {
     // Raw mode from one child to the next, never read here: in line mode, a ctrl+c typed while the next one starts
     // would kill the pane on Unix. Each child restores at exit the mode it found; this one when dropped.
     let _raw = if sys::stdin_is_tty() { sys::RawMode::enable().ok() } else { None };
+    let (tx, rx) = mpsc::channel();
     #[cfg(unix)]
-    let mut events = sys::Events::signals().ok();
+    if let Ok(mut events) = sys::Events::signals() {
+        let tx = tx.clone();
+        std::thread::spawn(move || {
+            loop {
+                for e in events.wait(None) {
+                    if let sys::Event::Signal(sig) = e
+                        && tx.send(Wake::Signal(sig)).is_err()
+                    {
+                        return;
+                    }
+                }
+            }
+        });
+    }
     // In a folder of its own, made new, only the user's on Unix: in a shared temporary folder, another user could
     // write the messages first (an environment for the next child).
     let Some(folder) = private_dir() else { return 1 };
+    // Held until the last child ended: its read end, inherited by each child, tells it when this process is gone.
+    #[cfg(unix)]
+    let lifeline = sys::lifeline().ok();
+    #[cfg(unix)]
+    let lifeline_fd = lifeline.as_ref().map(|(r, _)| std::os::fd::AsRawFd::as_raw_fd(r).to_string());
+    #[cfg(not(unix))]
+    let lifeline_fd: Option<String> = None;
     let ipc = folder.join("ipc");
+    // Without a watch (an unsupported system), the messages are read once a second, and at each child's end.
+    let watcher = {
+        let tx = tx.clone();
+        sys::Watcher::new(&folder.to_string_lossy(), false, move |_| {
+            let _ = tx.send(Wake::Message);
+        })
+        .ok()
+    };
+    let tick = if watcher.is_some() { None } else { Some(Duration::from_secs(1)) };
     let mut env: Vec<(String, String)> = Vec::new();
     let mut restart = false;
     let code = loop {
@@ -96,6 +135,7 @@ pub fn launcher(exe: &Path, args: &[OsString]) -> i32 {
                 .envs(env.iter().cloned())
                 .env("EXPLORER_IPC_FILE", &ipc)
                 .env("EXPLORER_LAUNCHER", std::process::id().to_string())
+                .envs(lifeline_fd.iter().map(|fd| ("EXPLORER_LIFELINE", fd)))
                 .spawn();
             match started {
                 // A restart can fall while the binary is being put (renamed into place, the old one moved away on
@@ -109,23 +149,30 @@ pub fn launcher(exe: &Path, args: &[OsString]) -> i32 {
             }
         };
         let Ok(mut child) = started else { break 1 };
+        #[cfg(unix)]
+        let pid = child.id();
+        {
+            let tx = tx.clone();
+            std::thread::spawn(move || {
+                let _ = tx.send(Wake::Ended(child.wait().ok()));
+            });
+        }
         let status = loop {
-            messages(&ipc, &mut seen, &mut env);
-            match child.try_wait() {
-                Ok(Some(status)) => break Some(status),
-                Ok(None) => {}
-                Err(_) => break None,
+            let wake = match tick {
+                None => rx.recv().ok(),
+                Some(t) => match rx.recv_timeout(t) {
+                    Err(mpsc::RecvTimeoutError::Timeout) => Some(Wake::Message),
+                    r => r.ok(),
+                },
+            };
+            match wake {
+                Some(Wake::Ended(status)) => break status,
+                Some(Wake::Message) => messages(&ipc, &mut seen, &mut env),
+                #[cfg(unix)]
+                Some(Wake::Signal(sig)) => sys::send_signal(pid, sig),
+                // Never: this function keeps a sender.
+                None => break None,
             }
-            #[cfg(unix)]
-            if let Some(events) = events.as_mut() {
-                for e in events.wait(Some(Duration::from_millis(100))) {
-                    if let sys::Event::Signal(sig) = e {
-                        sys::send_signal(child.id(), sig);
-                    }
-                }
-                continue;
-            }
-            std::thread::sleep(Duration::from_millis(100));
         };
         messages(&ipc, &mut seen, &mut env);
         match status.and_then(|s| s.code()) {
@@ -134,12 +181,15 @@ pub fn launcher(exe: &Path, args: &[OsString]) -> i32 {
             None => break 1,
         }
     };
+    drop(watcher);
+    #[cfg(unix)]
+    drop(lifeline);
     let _ = std::fs::remove_dir_all(&folder);
     code
 }
 
-/// The binary at exe of the manifest's version, else fetched (scripts/fetch-bin), as the shim's ready(): fetch-bin
-/// waits for bin/.fetch.lock, held by `herdr plugin update`'s build or the plugin's update until the binary is put,
+/// The binary at exe of the manifest's version, else fetched (scripts/fetch-bin): fetch-bin
+/// waits for bin/.fetch.lock, held by `herdr plugin update`'s build or another fetch until the binary is put,
 /// then fetches it only when still missing. Never over a development binary (bin/.dev). On failure (no network), the
 /// binary there starts all the same: a pane on the old code rather than a closed one.
 fn ready(exe: &Path) {
@@ -196,7 +246,7 @@ fn messages(ipc: &Path, seen: &mut usize, env: &mut Vec<(String, String)>) {
         let Ok(m) = json::parse(line) else { continue };
         if let Some(restart) = m.get("restart").filter(|r| r.truthy()) {
             for (k, v) in exec::spread(restart) {
-                let v = crate::core::js::string(&v);
+                let v = crate::json::text(&v);
                 match env.iter_mut().find(|(name, _)| *name == k) {
                     Some(slot) => slot.1 = v,
                     None => env.push((k, v)),

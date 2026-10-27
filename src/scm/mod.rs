@@ -1,11 +1,11 @@
-//! The source control pane (src/scm.js): the repository's changes, history, stashes and refs, in a review tab opened
+//! The source control pane: the repository's changes, history, stashes and refs, in a review tab opened
 //! from the explorer. This file holds the pane, its loop and timers, the refresh, git run for an operation, and the
 //! selection that the diff or the preview follows. parse turns git's output into data, context holds the state S,
-//! the settings and what the modules share, state runs git and the loaders; ops, render and input hold what the JS's
-//! scm/ops.js, render.js and input.js did.
+//! the settings and what the modules share, state runs git and the loaders; ops holds the operations, render the
+//! drawing, input the keys and mouse.
 //!
 //! As in the other panes, git runs on worker threads (the loads on one, the operations on another), herdr on a third;
-//! their results come back to the pane's loop, the JS's timers are deadlines of that loop.
+//! their results come back to the pane's loop, timers are deadlines of that loop.
 
 pub mod context;
 mod input;
@@ -18,7 +18,7 @@ use crate::core::exec::{self, Exec};
 use crate::core::screen::{self, Input, Screen};
 use crate::core::ui::{self, Event, Field, HelpState, Menu, Scrollbar};
 use crate::core::watch::Watch;
-use crate::core::{actions, icons, js, paths, worker};
+use crate::core::{actions, icons, paths, worker};
 use crate::json::Value;
 use crate::sys::{self, Watcher};
 use context::{Hist, Repo, RepoState, Row, State};
@@ -159,11 +159,13 @@ pub struct Pane {
     last_click: Option<(i64, Instant)>,
     list_bar: Scrollbar,
     diff_bar: Scrollbar,
-    /// The refresh: due, running, asked again while running; poll_at: the next look at the working tree (5 s).
+    /// The refresh: due, running, asked again while running; poll_at: the next look at the working tree, every
+    /// poll_every (5 s, 30 s once the working tree is watched).
     refresh_at: Option<Instant>,
     loading: bool,
     again: bool,
     poll_at: Instant,
+    poll_every: Duration,
     /// The file or folder selected in the explorer, selected here once the changes are loaded.
     reveal_file: Option<String>,
     follow_at: Option<Instant>,
@@ -253,6 +255,7 @@ impl Pane {
             loading: false,
             again: false,
             poll_at: Instant::now() + Duration::from_secs(5),
+            poll_every: Duration::from_secs(5),
             reveal_file: exec::env_var("EXPLORER_FILE").filter(|f| !f.is_empty()),
             follow_at: None,
             compare_at: None,
@@ -271,7 +274,7 @@ impl Pane {
         })
     }
 
-    /// What the JS does as its script loads, once the screen is set up.
+    /// What the pane does first, once the screen is set up.
     fn start(&mut self) {
         self.draw();
         self.refresh();
@@ -323,7 +326,7 @@ impl Pane {
             spin,
             self.list_bar.due(),
             self.diff_bar.due(),
-            self.settings_watch.as_ref().map(Watch::due),
+            self.settings_watch.as_ref().and_then(Watch::due),
         ]
         .into_iter()
         .flatten()
@@ -336,9 +339,9 @@ impl Pane {
             self.refresh_at = None;
             self.refresh();
         }
-        // The working tree is not watched: edits show up within 5 s.
+        // A safety net in case a file event is lost, or the only look at the working tree when it is not watched.
         if self.poll_at <= now {
-            self.poll_at = now + Duration::from_secs(5);
+            self.poll_at = now + self.poll_every;
             self.schedule();
         }
         if self.flash_at.is_some_and(|t| t <= now) {
@@ -520,6 +523,10 @@ impl Pane {
                 self.watch_git();
             }
         }
+        // The PRs view opened before the repository was found.
+        if self.s.view == "pulls" && self.s.pulls.is_none() {
+            self.load_pulls();
+        }
         self.loading = false;
         match self.reveal_file.take() {
             Some(f) if self.repo().is_some() => self.reveal(&f),
@@ -550,13 +557,15 @@ impl Pane {
         }));
     }
 
-    /// Commits, staging, branch switches and fetches change files of the git folder, not the working tree.
+    /// Commits, staging, branch switches and fetches change files of the git folder; edits, the working tree, watched
+    /// apart without its `.git` (which `git status` itself writes to). A working tree that cannot be watched (too many
+    /// folders for inotify) is looked at every 5 s instead.
     fn watch_git(&mut self) {
         if !self.git_watchers.is_empty() {
             return;
         }
         let Some(r) = self.repo() else { return };
-        let (gitdir, common) = (r.gitdir.clone(), r.common.clone());
+        let (gitdir, common, top) = (r.gitdir.clone(), r.common.clone(), r.top.clone());
         let on = |names: bool| {
             let (tx, waker) = (self.tx.clone(), self.waker.clone());
             move |f: Option<String>| {
@@ -576,6 +585,19 @@ impl Pane {
             list.extend(Watcher::new(&common, false, on(true)));
         }
         list.extend(Watcher::new(&paths::join(&[&common, "refs"]), true, on(false)));
+        let (tx, waker) = (self.tx.clone(), self.waker.clone());
+        let tree = Watcher::new(&top, true, move |f: Option<String>| {
+            let in_git = f.as_deref().is_some_and(|f| f == ".git" || f.starts_with(".git/") || f.starts_with(".git\\"));
+            if !in_git {
+                let _ = tx.send(Box::new(|p: &mut Pane| p.schedule()));
+                waker.wake();
+            }
+        });
+        if let Ok(tree) = tree {
+            list.push(tree);
+            self.poll_every = Duration::from_secs(30);
+            self.poll_at = self.poll_at.min(Instant::now() + self.poll_every);
+        }
         self.git_watchers = list;
     }
 
@@ -764,6 +786,12 @@ impl Pane {
                 let title = format!("{} {}", s.r#ref, s.subject);
                 Some((crate::obj! { "kind" => "stash", "ref" => s.r#ref.as_str(), "title" => title.as_str() }, title))
             }
+            "pull" => {
+                let p = row.pull.as_ref()?;
+                let title = format!("#{} {}", p.number, p.title);
+                let number = p.number.to_string();
+                Some((crate::obj! { "kind" => "pull", "ref" => number.as_str(), "title" => title.as_str() }, title))
+            }
             "tag" => {
                 let b = row.branch()?;
                 let title = format!("tag {}", b.name);
@@ -813,7 +841,7 @@ impl Pane {
     fn show_diff(&mut self, key: &str, title: &str, args: Option<Vec<String>>, item: Option<Item>, tag: &'static str) {
         state::show_diff(&mut self.s, key, title, item, tag);
         self.draw();
-        // diff::show_args gives none for a request not well formed: the JS's git(null) threw, the diff left loading.
+        // diff::show_args gives none for a request not well formed: the diff left loading.
         let Some(args) = args else { return };
         let key = key.to_string();
         self.query(
@@ -872,7 +900,7 @@ impl Pane {
         let (known, pane, review) = (self.my_tab.clone(), self.pane.clone(), self.review.clone());
         self.herdr.send(Box::new(move || {
             let mine = known.unwrap_or_else(|| {
-                actions::tab_of(&pane).and_then(|t| t.me.get("tab_id").filter(|v| v.truthy()).map(js::string))
+                actions::tab_of(&pane).and_then(|t| t.me.get("tab_id").filter(|v| v.truthy()).map(crate::json::text))
             });
             let scope = crate::core::scope::Scope::new("rev", Some(&rev));
             let mut tabs: Vec<&str> = Vec::new();
@@ -891,6 +919,9 @@ impl Pane {
     /// The view shown: drawn, then loaded.
     fn set_view(&mut self, id: &'static str) {
         if state::set_view(&mut self.s, id) {
+            if id == "pulls" {
+                self.load_pulls();
+            }
             self.draw();
             self.schedule();
         }

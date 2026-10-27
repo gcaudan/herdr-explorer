@@ -27,7 +27,7 @@ pub fn clean_line(text: &str, tab: usize, mut at: Option<&mut Vec<usize>>) -> St
             at.extend(std::iter::repeat_n(s.len(), ch.len_utf8()));
         }
         if ch == '\t' {
-            // A tab stop of 0: the JS repeats NaN times, nothing.
+            // A tab stop of 0: nothing.
             let n = if tab == 0 { 0 } else { tab - count % tab };
             s.extend(std::iter::repeat_n(' ', n));
             count += n;

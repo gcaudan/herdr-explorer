@@ -1,6 +1,6 @@
 size 120x20
 ⟪bg=#252526 b⟫ work ⟪bg=#252526⟫ ⟪fg=#519aba bg=#2b3d45⟫ ⎇ main ⟪fg=#8c8c8c bg=#252526⟫  not published⟪bg=#252526⟫                                                    ⟪fg=#ffffff bg=#0e639c b⟫ ↑ Publish branch ⟪fg=#d4d4d4 bg=#252526 b⟫ ⇣ Fetch  Actions ▾ ⟪⟫
- ⟪fg=#8c8c8c⟫Changes 2⟪⟫   ⟪fg=#d4d4d4 b u⟫History⟪⟫   ⟪fg=#8c8c8c⟫Stashes⟪⟫   ⟪fg=#8c8c8c⟫Refs⟪⟫         ⟪fg=#8c8c8c⟫│⟪bg=#252526 b⟫ 547485f second⟪fg=#8dc149 bg=#252526⟫  +1⟪fg=#c74e39 bg=#252526⟫ −0⟪bg=#252526⟫                                               ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪bg=#252526⟫ ⟪⟫
+ ⟪fg=#8c8c8c⟫Changes 2⟪⟫   ⟪fg=#d4d4d4 b u⟫History⟪⟫   ⟪fg=#8c8c8c⟫Stashes⟪⟫   ⟪fg=#8c8c8c⟫Refs⟪⟫   ⟪fg=#8c8c8c⟫PRs⟪⟫   ⟪fg=#8c8c8c⟫│⟪bg=#252526 b⟫ 547485f second⟪fg=#8dc149 bg=#252526⟫  +1⟪fg=#c74e39 bg=#252526⟫ −0⟪bg=#252526⟫                                               ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪bg=#252526⟫ ⟪⟫
 ⟪fg=#8c8c8c⟫╭ 547485f second ───────────╮⟪bg=#04395e⟫ ⟪fg=#8c8c8c bg=#04395e⟫ 1 min  ⟪fg=#cbcb41 bg=#04395e⟫547485f ⟪fg=#8c8c8c⟫│⟪fg=#cbcb41⟫commit 547485f9f2ed432046eb394e837d367b3250b34e (HEAD -> main, tag: v1)⟪⟫
 ⟪fg=#8c8c8c⟫│⟪bg=#04395e⟫ Create tag…⟪fg=#8c8c8c bg=#04395e⟫  t⟪bg=#04395e⟫            ⟪fg=#8c8c8c⟫│⟪⟫ ⟪fg=#8c8c8c⟫ 1 min  ⟪fg=#cbcb41⟫ccbc1e9 ⟪fg=#8c8c8c⟫│Author:     Ada <ada@example.com>⟪⟫
 ⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ Cherry-pick onto main⟪fg=#8c8c8c bg=#37373d⟫  C⟪bg=#37373d⟫  ⟪fg=#8c8c8c⟫│⟪⟫ ⟪fg=#8c8c8c⟫ 1 min  ⟪fg=#cbcb41⟫77650cf ⟪fg=#8c8c8c⟫│AuthorDate: Fri Jan 2 03:04:05 2099 +0000⟪⟫

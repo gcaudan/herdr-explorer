@@ -1,6 +1,5 @@
-//! test/editor.test.js: the file written back as it was read, the cursor's columns over wide characters, marks and
-//! tabs, undo steps, find and replace, and the lines marked as changed. Offsets are in bytes where the JS counts
-//! UTF-16 units.
+//! The file written back as it was read, the cursor's columns over wide characters, marks and
+//! tabs, undo steps, find and replace, and the lines marked as changed. Offsets are in bytes.
 
 mod support;
 

@@ -4,7 +4,7 @@
 //! settings (`ui::g().set`): emoji, or a Unicode or ASCII mark in the colour of the file's type.
 
 use super::ui::{self, Rgb};
-use super::{exec, js, paths, which};
+use super::{exec, paths, which};
 use crate::json::{self, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -226,13 +226,13 @@ fn language(ext: &str) -> Option<&'static str> {
     LANGUAGES.iter().rev().find(|(_, exts)| exts.split(' ').any(|e| e == ext)).map(|&(l, _)| l)
 }
 
-/// `os.homedir()`: HOME, but USERPROFILE on Windows (libuv never reads HOME there).
+/// The home folder: HOME, but USERPROFILE on Windows (libuv never reads HOME there).
 pub fn homedir() -> String {
     let var = |k: &str| std::env::var(k).ok().filter(|v| !v.is_empty());
     var(if cfg!(windows) { "USERPROFILE" } else { "HOME" }).unwrap_or_default()
 }
 
-/// A folder's names in Node's readdir order (sorted by bytes), empty when it cannot be read.
+/// A folder's names sorted by bytes, empty when it cannot be read.
 fn read_dir(dir: &str) -> Option<Vec<String>> {
     let mut names: Vec<String> =
         std::fs::read_dir(dir).ok()?.filter_map(|e| e.ok()?.file_name().into_string().ok()).collect();
@@ -250,7 +250,7 @@ fn extension_dirs() -> Vec<String> {
     // folder holding it (VS Code on Windows).
     for dir in which::path_dirs() {
         for command in COMMANDS {
-            let Ok(real) = exec::node_realpath(&paths::join(&[&dir, command])) else { continue };
+            let Ok(real) = exec::walk_realpath(&paths::join(&[&dir, command])) else { continue };
             let up = paths::dirname(&paths::dirname(&real));
             roots.push(paths::join(&[&up, "extensions"]));
             roots.push(paths::join(&[&up, "resources", "app", "extensions"]));
@@ -290,9 +290,9 @@ impl Theme {
     }
 }
 
-/// `${x}` of a value that may be missing (undefined).
+/// A value as text, "undefined" when missing.
 fn tpl(v: Option<&Value>) -> String {
-    v.map_or_else(|| "undefined".into(), js::string)
+    v.map_or_else(|| "undefined".into(), json::text)
 }
 
 /// Icon themes installed, by label, from the newest version of each extension.
@@ -316,16 +316,17 @@ pub fn themes() -> Vec<Theme> {
             }
             // path.join throws on anything but a string.
             let Some(tpath) = tpath.as_str() else { continue };
-            let id = js::lower(&format!("{}.{}/{}", tpl(pkg.get("publisher")), tpl(pkg.get("name")), js::string(tid)));
+            let id =
+                format!("{}.{}/{}", tpl(pkg.get("publisher")), tpl(pkg.get("name")), json::text(tid)).to_lowercase();
             // A translated label: a string, or { message, comment }.
             let text = |key: &str| {
                 let v = nls.get(key)?;
                 if matches!(v, Value::Obj(_) | Value::Arr(_)) { v.get("message").cloned() } else { Some(v.clone()) }
             };
-            let raw = js::string(t.get("label").filter(|l| l.truthy()).unwrap_or(tid));
+            let raw = json::text(t.get("label").filter(|l| l.truthy()).unwrap_or(tid));
             let label = match raw.strip_prefix('%').and_then(|r| r.strip_suffix('%')) {
-                Some(key) if !key.is_empty() && !key.chars().any(js::is_line_terminator) => {
-                    text(key).filter(Value::truthy).map_or(raw.clone(), |v| js::string(&v))
+                Some(key) if !key.is_empty() && !key.chars().any(crate::core::regex::is_line_terminator) => {
+                    text(key).filter(Value::truthy).map_or(raw.clone(), |v| json::text(&v))
                 }
                 _ => raw.clone(),
             };
@@ -338,7 +339,7 @@ pub fn themes() -> Vec<Theme> {
             }
         }
     }
-    found.sort_by(|a, b| js::locale_compare(&a.label, &b.label, false));
+    found.sort_by(|a, b| crate::unicode::natural_cmp(&a.label, &b.label));
     found
 }
 
@@ -358,7 +359,7 @@ fn string_at(s: &str) -> Option<usize> {
         match c {
             '"' => return Some(i + 1),
             '\\' => match it.next() {
-                Some((_, n)) if !js::is_line_terminator(n) => {}
+                Some((_, n)) if !crate::core::regex::is_line_terminator(n) => {}
                 _ => return None,
             },
             _ => {}
@@ -407,7 +408,7 @@ fn trailing_commas(text: &str) -> String {
             continue;
         }
         if let Some(after) = rest.strip_prefix(',') {
-            let end = after.trim_start_matches(js::is_space);
+            let end = after.trim_start_matches(crate::unicode::is_space);
             if end.starts_with('}') || end.starts_with(']') {
                 i += 1;
                 continue;
@@ -442,7 +443,7 @@ fn fills(svg: &str) -> Vec<Rgb> {
         let rest = &svg[i..];
         let hit = rest.get(..4).filter(|p| p.eq_ignore_ascii_case("fill")).and_then(|_| {
             let r = rest[4..].strip_prefix(['=', ':'])?;
-            let r = r.trim_start_matches(js::is_space);
+            let r = r.trim_start_matches(crate::unicode::is_space);
             let r = r.strip_prefix(['"', '\'']).unwrap_or(r);
             let r = r.strip_prefix('#')?;
             let hex = hex_at(r, true)?;
@@ -478,7 +479,7 @@ fn lowered(map: Option<&Value>) -> HashMap<String, Value> {
     let mut m = HashMap::new();
     if let Some(Value::Obj(fields)) = map {
         for (k, v) in fields {
-            m.entry(js::lower(k)).or_insert_with(|| v.clone());
+            m.entry(k.to_lowercase()).or_insert_with(|| v.clone());
         }
     }
     m
@@ -519,7 +520,7 @@ impl Loaded {
     /// itself), the most saturated for a file (the logo rather than a grey detail). None for the icons drawn in the
     /// text colour.
     fn colour(&self, icon: &Value, folder: bool) -> Option<Rgb> {
-        let key = js::string(icon);
+        let key = json::text(icon);
         if let Some(c) = self.colours.borrow().get(&key) {
             return *c;
         }
@@ -527,12 +528,12 @@ impl Loaded {
         let font = def
             .and_then(|d| d.get("fontColor"))
             .filter(|c| c.truthy())
-            .and_then(|c| js::string(c).strip_prefix('#').and_then(|h| hex_at(h, false).map(str::to_string)));
+            .and_then(|c| json::text(c).strip_prefix('#').and_then(|h| hex_at(h, false).map(str::to_string)));
         let mut all = font.as_deref().map(rgb).into_iter().collect::<Vec<_>>();
         let icon_path = def.and_then(|d| d.get("iconPath")).filter(|p| p.truthy());
         if font.is_none()
             && let Some(p) = icon_path
-            && js::lower(&js::string(p)).ends_with(".svg")
+            && json::text(p).to_lowercase().ends_with(".svg")
             && let Some(p) = p.as_str()
         {
             let file = paths::join(&[&paths::dirname(&self.file), p]);
@@ -553,15 +554,15 @@ impl Loaded {
 
     /// A folder's glyph (when its icon has one of its own) and colour.
     pub fn folder(&self, name: &str) -> (Option<u32>, Option<Rgb>) {
-        let icon = self.folders.get(&js::lower(name)).filter(|v| v.truthy()).or_else(|| self.theme.get("folder"));
+        let icon = self.folders.get(&name.to_lowercase()).filter(|v| v.truthy()).or_else(|| self.theme.get("folder"));
         let Some(icon) = icon.filter(|v| v.truthy()) else { return (None, None) };
-        (lookup(FOLDERS, &js::string(icon), false), self.colour(icon, true))
+        (lookup(FOLDERS, &json::text(icon), false), self.colour(icon, true))
     }
 
     /// A file's glyph and colour, by its name, else its longest known extension ("d.ts" before "ts"), else its
     /// language; None for an unknown file, which keeps its colour.
     pub fn file(&self, name: &str) -> Option<(Option<u32>, Option<Rgb>)> {
-        let lower = js::lower(name);
+        let lower = name.to_lowercase();
         let parts: Vec<&str> = lower.split('.').collect();
         let mut icon = self.names.get(&lower).filter(|v| v.truthy()).cloned();
         for i in 1..parts.len() {
@@ -576,7 +577,7 @@ impl Loaded {
             icon = self.theme.get("languageIds").and_then(|l| l.get(key)).filter(|v| v.truthy()).cloned();
         }
         let icon = icon?;
-        Some((lookup(FILES, &js::string(&icon), false), self.colour(&icon, false)))
+        Some((lookup(FILES, &json::text(&icon), false), self.colour(&icon, false)))
     }
 }
 
@@ -598,13 +599,13 @@ pub fn icon(theme: Option<&Loaded>, name: &str, dir: bool, open: bool) -> (Strin
     let known = if dir {
         None
     } else {
-        lookup(NAMES, &js::lower(name), false).or_else(|| {
+        lookup(NAMES, &name.to_lowercase(), false).or_else(|| {
             let ext = paths::extname(name);
-            lookup(EXTS, &js::lower(ext.get(1..).unwrap_or("")), true)
+            lookup(EXTS, &ext.get(1..).unwrap_or("").to_lowercase(), true)
         })
     };
     let own = if dir { FOLDER[open as usize] } else { known.unwrap_or(FILE) };
-    // Every colour of the tables is one of the palette (the JS would give undefined).
+    // Every colour of the tables is one of the palette.
     let palette = |n: &str| ui::c().get(n).unwrap_or_else(|| panic!("no colour {n} in the palette"));
     if set == "emoji" {
         return (format!("{} ", own.2), palette(own.1));

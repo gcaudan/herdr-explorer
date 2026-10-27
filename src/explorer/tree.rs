@@ -1,9 +1,9 @@
-//! The explorer's tree, apart from the terminal (src/explorer/tree.js): the folders read (cache), the git status of the
+//! The explorer's tree, apart from the terminal: the folders read (cache), the git status of the
 //! root, the rows of a view (folders expanded, filter, changed files only) and the order of the entries. `Tree::new`
 //! makes the tree of a root; the explorer changes `root` (Set as root) and `settings` as they change.
 
-use crate::core::{exec, js, paths};
-use crate::unicode::locale_compare;
+use crate::core::{exec, paths};
+use crate::unicode::natural_cmp;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
@@ -39,7 +39,7 @@ pub struct Entry {
     pub open: bool,
 }
 
-/// A Map of the JS: lookups by key, iteration in the order keys were first set.
+/// A map with lookups by key, iteration in the order keys were first set.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Ordered<V> {
     keys: Vec<String>,
@@ -136,9 +136,9 @@ pub fn holds(row: &Entry, rel: &str) -> bool {
         })
 }
 
-/// Names in the tree's order, numbers in their order (localeCompare, numeric, base sensitivity).
+/// Names in the tree's order, numbers in their order.
 pub fn name_order(a: &str, b: &str) -> Ordering {
-    locale_compare(a, b, true)
+    natural_cmp(a, b)
 }
 
 /// Folders first, then names, numbers in their order.
@@ -186,19 +186,17 @@ fn parse_into(git: &mut Status, status: &str, prefix: &str, base: &str) {
     while i < parts.len() {
         let p = parts[i];
         i += 1;
-        if p.encode_utf16().count() < 4 {
+        let mut chars = p.chars();
+        let (Some(x), Some(y)) = (chars.next(), chars.next()) else { continue };
+        if p.len() < 4 {
             continue;
         }
-        let units: Vec<u16> = p.encode_utf16().take(2).collect();
-        let unit = |u: u16| char::from_u32(u as u32).unwrap_or('\u{fffd}');
-        let (x, y) = (unit(units[0]), unit(units[1]));
         let c = code(x, y);
         // The original path follows (renamed in the index or the tree).
         if "RC".contains(x) || "RC".contains(y) {
             i += 1;
         }
-        // From the 4th UTF-16 unit, as slice(3); a cut inside a surrogate pair skips the line.
-        let Some(mut rel) = js::unit_at(p, 3).map(|at| &p[at..]) else { continue };
+        let Some(mut rel) = p.get(3..) else { continue };
         if !prefix.is_empty() {
             let Some(r) = rel.strip_prefix(prefix).and_then(|r| r.strip_prefix('/')) else { continue };
             rel = r;
@@ -273,24 +271,20 @@ pub struct Tree {
     check: HashSet<String>,
 }
 
-/// `name.toLowerCase().indexOf(query)`, as byte offsets in name: the JS took the UTF-16 offsets of the lowered name
-/// for the name itself.
+/// Where the query (lower case) first appears in name, case ignored: byte offsets in name.
 fn hit_of(name: &str, query: &str) -> Option<(usize, usize)> {
-    let lower = js::lower(name);
-    let at = lower.find(query)?;
-    let from = lower[..at].encode_utf16().count();
-    let to = from + query.encode_utf16().count();
-    let byte = |units: usize| {
-        let mut n = 0;
-        for (i, c) in name.char_indices() {
-            if n >= units {
-                return i;
+    name.char_indices().find_map(|(at, _)| {
+        let mut rest = query;
+        let mut end = at;
+        for (i, c) in name[at..].char_indices() {
+            if rest.is_empty() {
+                break;
             }
-            n += c.len_utf16();
+            rest = rest.strip_prefix(c.to_lowercase().collect::<String>().as_str())?;
+            end = at + i + c.len_utf8();
         }
-        name.len()
-    };
-    Some((byte(from), byte(to)))
+        rest.is_empty().then_some((at, end))
+    })
 }
 
 impl Tree {
@@ -310,7 +304,7 @@ impl Tree {
     }
 
     fn mtime(&self, rel: &str) -> Option<f64> {
-        std::fs::metadata(self.full(rel)).ok()?.modified().ok().map(js::time_ms)
+        std::fs::metadata(self.full(rel)).ok()?.modified().ok().map(crate::core::clock::ms)
     }
 
     /// Whether a link leads to a folder; a link to a network share stays a plain entry, never followed (remote_link).
@@ -335,7 +329,7 @@ impl Tree {
             }
         }
         let t = self.mtime(rel);
-        self.stamps.insert(rel.to_string(), t.filter(|t| js::now_ms() - t > 2000.0));
+        self.stamps.insert(rel.to_string(), t.filter(|t| crate::core::clock::now_ms() - t > 2000.0));
         let mut entries = Vec::new();
         if let Ok(list) = std::fs::read_dir(self.full(rel)) {
             for e in list.flatten() {
@@ -350,7 +344,7 @@ impl Tree {
                 let rel = if rel.is_empty() { name.clone() } else { format!("{rel}/{name}") };
                 entries.push(Entry { name, dir, rel, link, ..Entry::default() });
             }
-            // Node reads the names sorted byte by byte (libuv's scandir): names equal for the tree keep that order.
+            // The names sorted byte by byte first: names equal for the tree keep that order.
             entries.sort_by(|a, b| a.name.as_bytes().cmp(b.name.as_bytes()));
             entries.sort_by(entry_order);
         }

@@ -1,37 +1,36 @@
 # How it works
 
 The plugin is one binary, `bin/herdr-explorer`, written in Rust with no crate beyond the standard library (`src/`).
-`herdr-plugin.toml` runs the explorer and preview panes as the binary itself (`bin/herdr-explorer pane tree`,
-`bin/herdr-explorer pane preview`; herdr resolves the relative path from the plugin's folder), so that no Node
-process stays in those long-lived panes. Its other commands are `node src/<script>.js`: each of those scripts is a
-small shim that starts the binary with the matching subcommand (`pane <id>`, `hook`, `peek`), downloading it first
-when it is missing or of another version ([The binary](installation.md#the-binary)). The manifest's `[[build]]`
-steps run `scripts/fetch-bin` for `herdr plugin install` and `update`.
+`herdr-plugin.toml` runs the binary for every command, with a subcommand: `pane <id>` for the panes, `hook` for the
+startup, the events and three actions, `peek` for the other two; `setup` adds the key bindings and links the skill
+([Setup](installation.md#setup)). herdr resolves the relative path `bin/herdr-explorer`
+from the plugin's folder (`bin\herdr-explorer.exe` on Windows). The manifest's `[[build]]` steps run
+`scripts/fetch-bin` for `herdr plugin install` and `update` ([The binary](installation.md#the-binary)).
 
 `herdr-explorer --version` (or `-V`) prints the version that `build.rs` embeds from the manifest; a command line it
 does not know prints the usage and exits with code 2. Each start of `hook`, `peek` or `pane` deletes the binaries
-set aside next to it (`herdr-explorer.old-*`) by fetch-bin, dev-build and the updater; Windows keeps one that still
+set aside next to it (`herdr-explorer.old-*`) by fetch-bin and dev-build; Windows keeps one that still
 runs until a later start.
 
-| Kind      | Id         | Command                       | Placement                 |
-| --------- | ---------- | ----------------------------- | ------------------------- |
-| startup   |            | `node src/hook.js --restore` |                           |
-| event     | `tab.created` | `node src/hook.js`       |                           |
-| event     | `tab.closed`, `workspace.closed` | `node src/hook.js --closed` |        |
-| event     | `pane.agent_status_changed` | `node src/hook.js --agent` |              |
-| event     | `tab.focused` | `node src/hook.js --focused` |                         |
-| pane      | `tree`     | `bin/herdr-explorer pane tree` | split                  |
-| pane      | `preview`  | `bin/herdr-explorer pane preview` | split               |
-| pane      | `search`   | `node src/search.js`        | tab                       |
-| pane      | `scm`      | `node src/scm.js`           | tab                       |
-| pane      | `diff`     | `node src/diff.js`          | split                     |
-| pane      | `edit`     | `node src/edit.js`          | tab                       |
-| action    | `toggle`   | `node src/hook.js --toggle` | tab context               |
-| action    | `search`   | `node src/hook.js --search` | tab context               |
-| action    | `scm`      | `node src/hook.js --scm`    | tab context               |
-| action    | `peek`     | `node src/peek.js --last`   | tab context               |
-| action    | `open-link` | `node src/peek.js --url`   | link handler `file`       |
-| link      | `file`     | `^file://` → `open-link`      | ctrl+click on a link      |
+| Kind    | Id                               | Command                             | Placement            |
+| ------- | -------------------------------- | ----------------------------------- | -------------------- |
+| startup |                                  | `bin/herdr-explorer hook --restore` |                      |
+| event   | `tab.created`                    | `bin/herdr-explorer hook`           |                      |
+| event   | `tab.closed`, `workspace.closed` | `bin/herdr-explorer hook --closed`  |                      |
+| event   | `pane.agent_status_changed`      | `bin/herdr-explorer hook --agent`   |                      |
+| event   | `tab.focused`                    | `bin/herdr-explorer hook --focused` |                      |
+| pane    | `tree`                           | `bin/herdr-explorer pane tree`      | split                |
+| pane    | `preview`                        | `bin/herdr-explorer pane preview`   | split                |
+| pane    | `search`                         | `bin/herdr-explorer pane search`    | tab                  |
+| pane    | `scm`                            | `bin/herdr-explorer pane scm`       | tab                  |
+| pane    | `diff`                           | `bin/herdr-explorer pane diff`      | split                |
+| pane    | `edit`                           | `bin/herdr-explorer pane edit`      | tab                  |
+| action  | `toggle`                         | `bin/herdr-explorer hook --toggle`  | tab context          |
+| action  | `search`                         | `bin/herdr-explorer hook --search`  | tab context          |
+| action  | `scm`                            | `bin/herdr-explorer hook --scm`     | tab context          |
+| action  | `peek`                           | `bin/herdr-explorer peek --last`    | tab context          |
+| action  | `open-link`                      | `bin/herdr-explorer peek --url`     | link handler `file`  |
+| link    | `file`                           | `^file://` → `open-link`            | ctrl+click on a link |
 
 In `src/`, `cli.rs` reads the subcommand; `hook.rs`, `peek.rs`, `launch.rs` (the launcher of the explorer and
 preview, see [Launcher and self-restart](#launcher-and-self-restart)) and `edit.rs` are entries of their own, and each
@@ -64,7 +63,7 @@ Changes, Editor). [CONTRIBUTING.md](../CONTRIBUTING.md#project-structure) gives 
 
 ## Placement
 
-**Explorer** (`hook.js`, which exits at once when herdr is not found). When a tab is created, the hook skips the
+**Explorer** (`hook`, which exits at once when herdr is not found). When a tab is created, the hook skips the
 tab unless `autoOpen` is on and the tab has a single pane that is not already an explorer. `--toggle` opens the
 tab's explorer when it has none, and closes it, with its preview, when it has one. The hook and `--toggle` open no
 explorer in a tab holding only the plugin's panes (the editor's).
@@ -90,7 +89,7 @@ it was opened from, recorded in `search-<tab id>.json`, `actions::hold_tab`), be
 which keeps its share of the width (`searchShare`, the setting it keeps); the result opened goes to the origin's preview. The changes
 pane opens on the right of the terminal, in place of the preview (`actions::side_pane`). Source control opens a review
 in a tab of its own (`actions::scm`, `EXPLORER_REVIEW`: the tab reviewed), renamed `(SC <label>)`, and records it in
-`review-<tab id>.json`; the `tab.focused` event leads from the tab reviewed to its review (`hook.js --focused`), and
+`review-<tab id>.json`; the `tab.focused` event leads from the tab reviewed to its review (`hook --focused`), and
 the review's exit, whatever its cause, removes the record and closes the review's previews, so its tab. The selection there shows in
 a preview on the right of source control (`beside`, which also tells it that `q` closes it; a commit as a `show`
 request, `diff::show_args`; another line as a blank one), opened by the first selection and then by `Enter` only, which keeps its share of the width (`keep_share`,
@@ -141,7 +140,7 @@ The notes of a tab are kept in `notes-<tab id>.json` in the state folder, writte
 a list of `{ file, from, to, kind, text, t, anchor, stale }`, the file's real path (symbolic links resolved) and the
 lines 1-based (0 for the whole file). `anchor` holds the text of the lines when the note was taken (up to 200 lines);
 `notes::current`, called when the notes or the file are read again, looks for it in the file as it is (the nearest
-place to the old one), moves the note there, or marks it `stale`, and saves the list when a note changed. The preview and the Changes pane add to it and poll it every 500 ms (`core::watch`, polling as `fs.watchFile` did), so that
+place to the old one), moves the note there, or marks it `stale`, and saves the list when a note changed. The preview and the Changes pane add to it and watch it (`core::watch`: its folder watched, the file read again when its name changes there), so that
 a note taken in one shows in the other. Sending (`notes::send`) finds the terminal next to the explorer as **Insert into terminal** does,
 builds one line with the paths relative to that terminal's folder, types it with `herdr pane send-text` (no newline,
 so nothing is submitted, and control characters are removed from the notes), then removes the notes sent. Copying
@@ -165,7 +164,7 @@ The preview asks the terminal, at start, whether it handles the Kitty graphics p
 a cell in pixels (`CSI 16 t`); `screen::Splitter` passes the answers to a `reply` handler instead of reading them as keys.
 herdr answers for the outer terminal. The `images` setting chooses: pixels when the terminal answered (`auto`, the
 default: until the answer, or for 500 ms, an image is not drawn), half blocks (`blocks`), or pixels without waiting
-(`pixels`); `p` overrides it in one pane, and each preview polls `settings.json` every second for a new value. The
+(`pixels`); `p` overrides it in one pane, and each preview watches `settings.json` for a new value. The
 explorer sends the same query, only to tell in its settings whether the terminal has the protocol. In pixels, the
 image is decoded, scaled to the pane's size in pixels (box filter), sent once as zlib-compressed RGBA in 4096-byte
 chunks (`a=t`, image id `0x4846`), then placed over blank rows (`a=p`, `C=1` so that the cursor stays); it is placed
@@ -179,19 +178,19 @@ decoded like any PNG.
 
 ## Preview requests
 
-Each tab has at most one preview, reused for every file. To show a file, the explorer, the search, `peek.js` and
-`hook.js --restore` call `actions::preview`, which looks for a pane labelled *Preview* in the tab (source control and
+Each tab has at most one preview, reused for every file. To show a file, the explorer, the search, `peek` and
+`hook --restore` call `actions::preview`, which looks for a pane labelled *Preview* in the tab (source control and
 the Changes pane show files only through the search they open). If there is one, it writes `{ file, root, line, marks, view, keep, t }` to
-`preview-<tab id>.json` in the state folder, which the preview polls every 200 ms (`core::watch`, polling as `fs.watchFile` did), loading each
+`preview-<tab id>.json` in the state folder, which the preview watches (`core::watch`), loading each
 new request at its line; otherwise it opens a new preview pane with the file in its environment. Calls run one at a time, so that clicks made
 while a preview opens find it rather than each opening their own. `marks`, from
-`peek.js` only, are the parts to highlight, `{ from, to, a, b }` (lines, and columns, 0 for whole lines): the preview
+`peek` only, are the parts to highlight, `{ from, to, a, b }` (lines, and columns, 0 for whole lines): the preview
 keeps at most 200 well-formed ones (`EXPLORER_MARKS` for a new pane). `view: 'diff'` opens the Diff view
 (`EXPLORER_VIEW`), whose changes come from `diff::collect`, the function the Changes pane uses too, run from the
 nearest folder of the file still on disk. `keep` opens the file in a kept tab; otherwise it replaces the temporary
 tab. The tab list itself (`src/core/tabs.rs`: open, keep, close, next, the strip's layout for a width) is pure and
 tested; the preview keeps each tab's scroll, view and marks beside it, and saves the list with its pane state, which
-`hook.js --restore` gives back as `EXPLORER_TABS`. At most 50 tabs: past it, the one furthest from the new tab goes.
+`hook --restore` gives back as `EXPLORER_TABS`. At most 50 tabs: past it, the one furthest from the new tab goes.
 
 Editing (`i`) keeps a `buffer::Editor` in the tab: the lines, the cursor and selection, and the undo history. Its
 pure logic is in `src/core/buffer.rs` and tested: reading (UTF-8 only, at most 2 MB, line endings detected),
@@ -204,7 +203,7 @@ The preview watches the folder of the file it shows rather than the file itself,
 agents often replace a file by renaming a new one over it. It reloads 80 ms after a change, keeping
 the scroll position.
 
-`peek.js` (an agent's call, or the **peek** action) makes the same request from outside the plugin. It runs in the
+`peek` (an agent's call, or the **peek** action) makes the same request from outside the plugin. It runs in the
 agent's pane, where herdr gives `HERDR_PANE_ID` but not the plugin's state folder: it reads that folder's path from
 `state-dir` in the config folder (`herdr plugin config-dir`), which every hook run saves, else takes herdr's usual
 place. As the action, it takes the focused pane of the tab from `HERDR_PLUGIN_CONTEXT_JSON`, or the tab's first
@@ -220,14 +219,15 @@ they showed, each pane writes its state to `panes/<pane id>.json`:
 - the preview: `file`, `root` and `line`, and its tabs (`tabs`: `{ list, current }`, each tab's file, kept flag,
   scroll and view).
 
-At startup, `hook.js --restore` closes, in every workspace, the panes labelled as the plugin's whose foreground
-process is neither `node` nor `herdr-explorer`. In each tab that had an explorer, it opens a new one, at the saved root when both saved
+At startup, `hook --restore` closes, in every workspace, the panes labelled as the plugin's whose foreground
+process is neither `herdr-explorer` nor, in a pane opened by a manifest of 0.8.0 or earlier, `node`. In
+each tab that had an explorer, it opens a new one, at the saved root when both saved
 folders still exist; in each tab that had a preview, it reopens the saved tabs whose file still exists, on the
 current one. The other plugin panes are not reopened. It then deletes the state files of tabs and panes that no longer exist, as `--closed` does on the
 `tab.closed` and `workspace.closed` events.
 herdr keeps pane ids across a restart, which is what lets each pane find its saved state.
 
-`hook.js --agent` follows the agents' turns for the [Last agent turn](usage/changes.md#diff-scope) scope
+`hook --agent` follows the agents' turns for the [Last agent turn](usage/changes.md#diff-scope) scope
 (`core/scope.rs`): when an agent starts working after having been idle or done, or another agent of the tab does, it
 writes the tree of the repository's working tree to `turn-<tab id>.json`. The tree is made from a copy of the index
 (`GIT_INDEX_FILE`, `git add -A`, `git write-tree`), so the real index is left alone and git rehashes only the files
@@ -241,13 +241,11 @@ The startup and `tab.created` hooks, never the panes, run the update check (`upd
 `updateCheck` is off, at most once a day, it asks the GitHub releases API for the latest release and saves it in
 `update.json`, with the changes its text lists (`update::release_notes`: the bullets of release-please's notes, links
 and emphasis dropped) and its page. The explorers poll it to show `↑` and the version when it is newer than the
-version in `herdr-plugin.toml` and not the one skipped (`skip`). Updating (`update::install`, on a worker thread) is
-one at a time across tabs (`update.lock`, taken over after 15 minutes): it downloads the release's binary into `bin/`
-and checks it against `SHA256SUMS`, moves the clone to the release's tag, then puts the binary in place by renaming,
-holding `bin/.fetch.lock` from the move to the rename; it writes `updated` (`{ from, to, t }`), so that the explorers
-restarting on the new code show it for a while. When the manifest, other than its version, or the installer changed,
-`update.json` gets `finish` and the explorer shows `! finish`. The panes then restart on the new code (see
-[Launcher and self-restart](#launcher-and-self-restart)).
+version in `herdr-plugin.toml` and not the one skipped (`skip`). The plugin installs no update itself: the explorer
+copies `herdr plugin update gcaudan.explorer` (`update::herdr_update`), herdr's plugin index being the only channel. At
+each start, an explorer notes the version it runs (`update::note_version`, `seen`); one newer than the last seen
+writes `updated` (`{ from, to, t }`), so that the explorers show `✓ what's new` for a while. A linked clone's panes
+restart on the new code when its version changes (see [Launcher and self-restart](#launcher-and-self-restart)).
 
 ## Refresh and watchers
 
@@ -256,10 +254,16 @@ restarting on the new code show it for a while. When the manifest, other than it
 | Explorer        | a watch on the root (`sys::watch`: inotify, FSEvents, ReadDirectoryChangesW), recursive unless the root is `$HOME`, a parent of it or the filesystem root (then top level only, or when the recursive watch fails). Changes inside `.git` or in collapsed ignored folders are skipped |
 | Explorer        | a watch on the git folder for `index` and `HEAD` (commit, stage, branch switch); outside a repository, on that of each repository of the root's folders, whose status alone is read again, as after a change in its folder |
 | Explorer        | a 30 s safety rescan, every repository read again. A `.git` appearing later (`git init`, clone), in the root or one of its folders, is detected |
-| Explorer        | `settings.json`, `keys.json` and `update.json`, polled every second                         |
-| Explorer        | the folder of the neighbouring terminal, polled every 2 s when **Follow** is on             |
-| Preview         | the file's folder, the tab's request file every 200 ms, `settings.json` every second (Images) |
-| Source control  | the git folder (`index`, `HEAD`, `ORIG_HEAD`, `FETCH_HEAD`, `MERGE_HEAD`, `packed-refs`, `stash`, `CHERRY_PICK_HEAD`, `REVERT_HEAD`), the common git folder and `refs/` (worktrees), a 5 s poll, and focus |
+| Explorer        | `settings.json`, `keys.json` and `update.json`, watched through their folder (`core::watch`) |
+| Explorer        | the folder of the neighbouring terminal, polled every 2 s when **Follow** is on and herdr shows the explorer's tab (`shown-tab`, below) |
+| Preview         | the file's folder, the tab's request file and `settings.json` (Images), watched through their folder |
+| Source control  | the git folder (`index`, `HEAD`, `ORIG_HEAD`, `FETCH_HEAD`, `MERGE_HEAD`, `packed-refs`, `stash`, `CHERRY_PICK_HEAD`, `REVERT_HEAD`), the common git folder and `refs/` (worktrees), the working tree (`.git` left out: `git status` 250 ms after a change), a 30 s poll (5 s without the working tree's watch), and focus |
+
+The tab herdr shows is noted by the hook in `shown-tab` in the state folder (`core::shown`): at each `tab.focused`
+event and at the toggle action, the session's socket (`HERDR_SOCKET_PATH`) and the tab's id, written only when they
+change. Each explorer watches the file: **Follow** asks herdr nothing while another tab of its session is shown, and
+looks at once when its own is. Its tab is learned at its first look once the file exists, and asked again when another tab is shown, as
+its pane may have moved there. Without the file, or with another session's, every explorer follows.
 
 Refreshes are debounced to one every 250 ms and never overlap. A file written continuously, such as a
 log, cannot postpone them forever. Git status runs with `GIT_OPTIONAL_LOCKS=0`, so it never takes
@@ -283,15 +287,17 @@ put back by the same pane, so that they are not moved twice (herdr resizes by a 
 ## Launcher and self-restart
 
 The explorer and preview panes run through a small launcher. The pane's first process, the binary started by the
-manifest without `EXPLORER_IPC_FILE` (or, in a pane opened by an earlier manifest, the shim `src/explorer.js` or
-`src/preview.js`), stays as the launcher and runs the binary as a child process, with `EXPLORER_IPC_FILE` naming the
-file where the child writes its messages, a line of JSON each, and `EXPLORER_LAUNCHER` giving the launcher's pid.
+manifest without `EXPLORER_IPC_FILE`, stays as the launcher and runs the binary as a child process, with `EXPLORER_IPC_FILE` naming the
+file where the child writes its messages, a line of JSON each, `EXPLORER_LAUNCHER` giving the launcher's pid, and on
+Unix `EXPLORER_LIFELINE`, the read end of a pipe whose write end only the launcher holds.
 The file sits in a new folder of its own (mode 0700 on Unix), so that another user cannot write the messages first.
+The launcher polls nothing: a thread waits for the child, the folder is watched for new messages, and the
+signals come from a thread of their own.
 
 - The launcher keeps the terminal in raw mode between children, so a `ctrl+c` typed during a restart
   cannot kill the pane, and forwards `SIGTERM`, `SIGHUP` and `SIGINT` to the child. If it is killed, the child
-  exits too.
-- `update::VersionWatch` polls the `version` line of `herdr-plugin.toml` every 2 s. When it differs from the
+  exits too: it sees the end of the pipe on Unix, the end of the launcher's process on Windows, without polling.
+- `update::VersionWatch` watches the `version` line of `herdr-plugin.toml`. When it differs from the
   version the process started with, the pane waits 2 s, so that an update has written every file. Then
   it checks every second until the pane is idle (see [Pane restart](installation.md#pane-restart)).
 - To restart, the child releases the terminal and sends the launcher what the next process must show
@@ -300,9 +306,9 @@ The file sits in a new folder of its own (mode 0700 on Unix), so that another us
   **75**. The launcher starts the binary again with that environment, in the same terminal, so the pane keeps its
   id, place and width. It starts `bin/herdr-explorer` by its path, which after an update is the new binary (the old
   one renamed aside).
-- Before that restart, as the shims do, the launcher runs `scripts/fetch-bin` when the binary's `--version` is not
-  the manifest's (never with `bin/.dev`): `herdr plugin update` and the plugin's update change the manifest before
-  they put the binary, and fetch-bin waits for their `bin/.fetch.lock`, then fetches only what is still missing.
+- Before that restart, the launcher runs `scripts/fetch-bin` when the binary's `--version` is not
+  the manifest's (never with `bin/.dev`): `herdr plugin update` and a `git pull` change the manifest before
+  the binary is put there, and fetch-bin waits for their `bin/.fetch.lock`, then fetches only what is still missing.
   When fetch-bin fails, the binary there starts all the same. A restart that cannot start the binary (being renamed
   into place) tries again 5 times, 1 s apart, before it ends the pane.
 - A `{cwd}` message (after *Set as root*) has the launcher move to that folder, since herdr reads a pane's folder
@@ -312,9 +318,8 @@ The file sits in a new folder of its own (mode 0700 on Unix), so that another us
 A process cannot replace itself on Windows, and one that only waited for its successor would keep its memory,
 one more at each update. The launcher does nothing else, so it stays on the code it started with.
 
-The search, source control, changes and editor panes are short-lived and have no launcher: their shim runs the
-binary once and gives back its code. The shims `src/explorer.js` and `src/preview.js` stay for the panes opened
-under an earlier manifest: the one that ran them still runs them at a restart. In a pane opened before the update to
-the binary, the launcher of 0.8.0 (Node) still runs, and the shim is its child: it hands the binary's messages on to
-it and gives back the code, 75 included, so that the launcher starts the shim again. A pane started by a version
-without the launcher (0.4.0 and earlier) is the exception, see [Limitations](troubleshooting.md#limitations).
+The search, source control, changes and editor panes are short-lived and have no launcher: the binary runs once,
+as the pane's first process, and first moves to `EXPLORER_ROOT` so that herdr reads that folder (the editor, without
+one, to its file's folder). A pane opened by a manifest of 0.8.0 or earlier still runs `node src/explorer.js` (or
+another `src/*.js`), which the update removed: close and reopen it. A pane started by a version without the launcher
+(0.4.0 and earlier) is the exception, see [Limitations](troubleshooting.md#limitations).

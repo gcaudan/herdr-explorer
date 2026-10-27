@@ -1,6 +1,6 @@
 size 120x20
 ⟪bg=#252526 b⟫ work ⟪bg=#252526⟫ ⟪fg=#519aba bg=#2b3d45⟫ ⎇ main ⟪fg=#8c8c8c bg=#252526⟫  not published⟪bg=#252526⟫                                                    ⟪fg=#ffffff bg=#0e639c b⟫ ↑ Publish branch ⟪fg=#d4d4d4 bg=#252526 b⟫ ⇣ Fetch  Actions ▾ ⟪⟫
- ⟪fg=#8c8c8c⟫Changes 2⟪⟫   ⟪fg=#8c8c8c⟫History⟪⟫   ⟪fg=#8c8c8c⟫Stashes⟪⟫   ⟪fg=#d4d4d4 b u⟫Refs⟪⟫         ⟪fg=#8c8c8c⟫│⟪bg=#04395e b⟫ feat⟪fg=#8c8c8c bg=#04395e⟫  ↔  ⟪bg=#04395e b⟫main⟪bg=#04395e⟫                                        ⟪fg=#cbcb41 bg=#04395e⟫1 ahead · 1 behind ⟪⟫
+ ⟪fg=#8c8c8c⟫Changes 2⟪⟫   ⟪fg=#8c8c8c⟫History⟪⟫   ⟪fg=#8c8c8c⟫Stashes⟪⟫   ⟪fg=#d4d4d4 b u⟫Refs⟪⟫   ⟪fg=#8c8c8c⟫PRs⟪⟫   ⟪fg=#8c8c8c⟫│⟪bg=#04395e b⟫ feat⟪fg=#8c8c8c bg=#04395e⟫  ↔  ⟪bg=#04395e b⟫main⟪bg=#04395e⟫                                        ⟪fg=#cbcb41 bg=#04395e⟫1 ahead · 1 behind ⟪⟫
 ⟪fg=#8c8c8c⟫ ▾ ⟪b⟫LOCAL BRANCHES⟪fg=#8c8c8c⟫  2⟪⟫                          ⟪fg=#8c8c8c⟫│⟪bg=#1e242c b⟫ Only on feat⟪fg=#8c8c8c bg=#1e242c⟫  1⟪bg=#1e242c⟫                                                         ⟪⟫
 ⟪bg=#37373d⟫    feat⟪fg=#8c8c8c bg=#37373d⟫  feature⟪bg=#37373d⟫              ⟪fg=#8c8c8c bg=#37373d⟫ in the future ⟪fg=#8c8c8c⟫│     ⟪fg=#cbcb41⟫ccbc1e9  ⟪⟫feature                                            ⟪fg=#8c8c8c⟫  1 min ⟪⟫
    ⟪fg=#8dc149 bg=#3a4729 b⟫ main ⟪fg=#8c8c8c⟫  current · not publi… in the future │⟪⟫

@@ -1,8 +1,9 @@
-//! What the modules of the source control pane share (src/scm/context.js): its folder, settings and constants, the
-//! state S, and the small helpers of names. The JS's late-bound drawing and selection are the pane's own methods.
+//! What the modules of the source control pane share: its folder, settings and constants, the
+//! state S, and the small helpers of names. Drawing and selection are the pane's own methods.
 
 use super::parse::{Branch, Commit, Item, Refs, Remote, Stash, Status, Worktree};
 use crate::core::exec;
+use crate::core::gh::Pull;
 use crate::core::ui::Field;
 use crate::diff::Diff;
 use crate::json::Value;
@@ -29,8 +30,8 @@ pub fn split(review: &str) -> f64 {
 /// Characters of diff sent to Claude.
 pub const MAX_PROMPT: usize = 60000;
 pub const NET_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(120000);
-pub const VIEWS: [(&str, &str); 4] =
-    [("changes", "Changes"), ("history", "History"), ("stashes", "Stashes"), ("refs", "Refs")];
+pub const VIEWS: [(&str, &str); 5] =
+    [("changes", "Changes"), ("history", "History"), ("stashes", "Stashes"), ("refs", "Refs"), ("pulls", "PRs")];
 
 /// Share of the width taken by the list beside the diff, per view ({ changes: 0.3, history: 0.6 }); a view left out
 /// has the default width.
@@ -136,10 +137,11 @@ pub struct Row {
     pub author_w: usize,
     pub graph_w: usize,
     pub stash: Option<Stash>,
+    pub pull: Option<Pull>,
 }
 
 impl Row {
-    /// A section or a folder: it folds (`row.open !== undefined`).
+    /// A section or a folder: it folds.
     pub fn foldable(&self) -> bool {
         self.kind == "section" || self.kind == "folder"
     }
@@ -233,7 +235,7 @@ pub struct Picker {
     pub items: Vec<PickItem>,
 }
 
-/// The state S of the pane. The JS's confirm, inline, menu, lastClick and pulse are the pane's (pane.rs).
+/// The state S of the pane. The confirm, inline, menu, last click and pulse are the pane's (pane.rs).
 #[derive(Debug, Clone, Default)]
 pub struct State {
     pub view: &'static str,
@@ -272,6 +274,9 @@ pub struct State {
     pub history: Vec<Hist>,
     pub stashes: Vec<Stash>,
     pub refs: Option<Refs>,
+    /// Pull requests: gh's list, or why there is none (gh missing, not logged in); None before the first answer.
+    pub pulls: Option<Result<Vec<Pull>, String>>,
+    pub pulls_loading: bool,
 }
 
 impl State {

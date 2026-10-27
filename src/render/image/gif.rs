@@ -42,7 +42,7 @@ pub(super) fn decode_gif(b: &[u8]) -> Option<Image> {
             if bad(sw as f64, sh as f64) {
                 return None;
             }
-            // No code size: the JS makes an array of negative length, and fails.
+            // No code size: no image.
             let min = *b.get(pos)? as u32;
             pos += 1;
             let end = skip_blocks(b, pos);

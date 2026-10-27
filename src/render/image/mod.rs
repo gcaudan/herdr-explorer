@@ -1,8 +1,8 @@
 //! Image preview: format and size read from the header (PNG, JPEG, GIF, BMP, WebP, TIFF, ICO, SVG), decoders for PNG,
 //! JPEG, GIF, BMP, TIFF and ICO, the image drawn in half blocks or scaled for the Kitty graphics protocol, and the part
 //! of an image that shows in scrolled text. WebP goes through dwebp, when installed, which turns it into a PNG.
-//! Files are untrusted: sizes are checked before allocating, every loop is bounded and nothing panics. Where the JS
-//! reads past the end of a buffer (undefined, 0 in bitwise operations), the reads here give 0.
+//! Files are untrusted: sizes are checked before allocating, every loop is bounded and nothing panics. A read
+//! past the end of a buffer gives 0.
 
 mod bmp;
 mod gif;
@@ -17,7 +17,7 @@ pub use scale::{Pixels, pixels};
 
 use crate::core::exec::{self, Opts};
 use crate::core::regex::Regex;
-use crate::core::{js, paths, which};
+use crate::core::{paths, which};
 use bmp::{decode_dib, decode_ico};
 use gif::decode_gif;
 use jpeg::decode_jpeg;
@@ -91,7 +91,7 @@ fn byte(x: f64) -> u8 {
     if x.is_finite() { (x.trunc() as i64).rem_euclid(256) as u8 } else { 0 }
 }
 
-/// What the header tells: the format, the size in pixels and a note (`note` absent where the JS has no key).
+/// What the header tells: the format, the size in pixels and a note (None when there is none).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Info {
     pub format: &'static str,
@@ -233,7 +233,7 @@ fn svg_size(b: &[u8]) -> Option<Info> {
     let length = |v: Option<String>| {
         let v = v.unwrap_or_default();
         let Some(m) = SVG_LENGTH.exec(&v) else { return 0.0 };
-        let unit = match js::lower(m.get(2).unwrap_or("")).as_str() {
+        let unit = match m.get(2).unwrap_or("").to_lowercase().as_str() {
             "pt" => 4.0 / 3.0,
             "pc" => 16.0,
             "mm" => 96.0 / 25.4,
@@ -241,15 +241,15 @@ fn svg_size(b: &[u8]) -> Option<Info> {
             "in" => 96.0,
             _ => 1.0,
         };
-        let x = js::string_to_number(m.get(1).unwrap_or("")) * unit;
+        let x = m.get(1).unwrap_or("").trim().parse::<f64>().unwrap_or(f64::NAN) * unit;
         if x.is_nan() || x == 0.0 { 0.0 } else { x }
     };
     let (mut w, mut h) = (length(attr(0)), length(attr(1)));
     let vb_text = attr(2).unwrap_or_default();
     let vb: Vec<f64> = SVG_SEP
-        .split(vb_text.trim_matches(js::is_space))
+        .split(vb_text.trim_matches(crate::unicode::is_space))
         .into_iter()
-        .map(|s| js::string_to_number(s.unwrap_or("")))
+        .map(|s| s.unwrap_or("").trim().parse::<f64>().unwrap_or(f64::NAN))
         .collect();
     if vb.len() == 4 && vb[2] > 0.0 && vb[3] > 0.0 {
         if w == 0.0 && h == 0.0 {
@@ -289,8 +289,8 @@ fn ico_entry(b: &[u8]) -> Option<IcoEntry> {
     best
 }
 
-// The tags read from a TIFF, and how many values they may hold together: the JS keeps every tag, each up to 2^24
-// values, enough to fill memory with a small file.
+// The tags read from a TIFF, and how many values they may hold together: every tag kept, each up to 2^24
+// values, would fill memory with a small file.
 const TIFF_TAGS: [u32; 13] = [256, 257, 258, 259, 262, 273, 277, 278, 279, 284, 317, 320, 338];
 
 const MAX_TIFF_VALUES: usize = 1 << 22;

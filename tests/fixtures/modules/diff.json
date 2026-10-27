@@ -1091,7 +1091,7 @@
    "args": [
     "\"😀\""
    ],
-   "out": "��"
+   "out": "😀"
   },
   {
    "fn": "unquote",
@@ -34124,7 +34124,7 @@
      "left": 400
     }
    ],
-   "throws": "Invalid count value: -1"
+   "throws": "no width for a split view"
   },
   {
    "fn": "changesOf",

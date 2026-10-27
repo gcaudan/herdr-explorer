@@ -61,7 +61,7 @@ jobs:
             | grep -qx "version = \"$version\"" || fail "herdr-plugin.toml at $TAG is not $version"
           echo "release $TAG verified"
 
-  # The assets of the contract fetch-bin, the updater and the shims read: bare binaries named after their target,
+  # The assets of the contract fetch-bin, the updater and the launcher read: bare binaries named after their target,
   # built at the tag with the toolchain of rust-toolchain.toml. x86_64-apple-darwin is cross-compiled, no Intel macOS
   # runner being left.
   build:

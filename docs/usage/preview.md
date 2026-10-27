@@ -1,7 +1,7 @@
 # Preview
 
 The preview, one per herdr tab, keeps its files in tabs, as VS Code's editors. A file opened by a single click,
-by following the selection, with `]`/`[`, from the search or by an agent (`peek.js`) replaces the **temporary** tab,
+by following the selection, with `]`/`[`, from the search or by an agent (`peek`) replaces the **temporary** tab,
 its name in italics; `enter`, a double-click, the explorer's `p` or its menu's **Preview** open a **kept** tab, which
 the next file does not replace. In the preview, `t`, a double-click on the tab, `i`, `e`, `E`, `o` or a review note keep the
 temporary tab. Each tab keeps its scroll, line, File or Diff view, comparison, Markdown mode and marks; the tabs come
@@ -45,7 +45,7 @@ a click runs, and the scroll percentage.
 | `home` `g` / `end` `G`       | top / bottom                                             |
 | `left` `h` / `right` `l`     | scroll 8 columns sideways (when not wrapping), also in the Diff view |
 | `/`                          | find in file                                             |
-| `n` / `N`                    | next / previous match; without a find, next / previous mark of [`peek.js`](../usage.md#show-a-file-from-an-agent-or-a-script), else hunk in the Diff view |
+| `n` / `N`                    | next / previous match; without a find, next / previous mark of [`peek`](../usage.md#show-a-file-from-an-agent-or-a-script), else hunk in the Diff view |
 | `d`                          | the file or its changes ([Diff view](#diff-view))        |
 | `b` / `v`                    | Diff view: what to compare with ([diff scope](changes.md#diff-scope)) / inline or split (saved by width) |
 | `s` / `u` / `D`              | Diff view, compared with HEAD: stage / unstage / discard the lines selected with the mouse, else the hunk `n` went to ([Staging parts](changes.md#staging-parts)) |
@@ -180,7 +180,7 @@ between hunks, `a` notes the lines of the rows selected with the mouse (or of th
 file. Find (`/`) works in the file only.
 
 The explorer opens it with `d` and **View changes** on a file, and among the changed files with `]`, `[` and the
-selection; `peek.js --diff` too.
+selection; `peek --diff` too.
 
 ## What it shows
 
@@ -188,7 +188,9 @@ selection; `peek.js --diff` too.
   Kotlin, Swift, PHP, Ruby, Lua, SQL, HTML/XML, CSS, YAML, INI/TOML, Markdown, diff, Dockerfile and
   Makefile. Past 8 MB, only the start shows; past 1 MB, and on lines over 2000 characters, the text stays plain.
 - **Markdown** (`md markdown mdx mkd`): headings, inline styles, lists, quotes, highlighted code
-  blocks, GFM tables and task lists, alerts, and simple Mermaid flowcharts.
+  blocks, GFM tables and task lists, alerts, and simple Mermaid flowcharts. Besides `[ ]` and `[x]`, a task can be
+  `[?]` to check (a yellow `?`), `[-]` dropped (a grey `⊟`, its text struck through) or `[/]` and `[~]` in progress (a
+  blue `◐`): statuses of herdr-explorer and Obsidian, which GitHub shows as typed.
 - **Markdown images**: a local image of a paragraph (Markdown image syntax, or `<img src>`), relative to the Markdown file,
   is drawn under it, 60 columns and 20 rows at most: in pixels or with half blocks, like an image file (see
   [Sharp images](#sharp-images)). Links to the web are never fetched, nor images outside the project (outside the

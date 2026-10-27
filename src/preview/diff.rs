@@ -1,4 +1,4 @@
-//! The preview's git views (src/preview.js): the Diff view, the file's changes compared with the tab's scope (b),
+//! The preview's git views: the Diff view, the file's changes compared with the tab's scope (b),
 //! staged, unstaged or discarded by the rows selected (s, u, D); a commit, stash or tag of source control shown over
 //! the tabs (enter_show); and the lines changed since HEAD beside the File view's lines (c, ] [).
 //!
@@ -61,7 +61,7 @@ pub enum DiffData {
 
 /// A commit, stash or tag shown over the tabs: what source control asked for (diff::show_args's, with title and cwd;
 /// or { blank } when nothing with changes is selected there), the parsed diff, the scroll of the tab under it. id:
-/// the JS's identity of the object, for the answers of git that come after another one took its place.
+/// which show this is, for the answers of git that come after another one took its place.
 pub struct Show {
     pub what: Value,
     pub parsed: Option<Arc<Diff>>,
@@ -154,19 +154,16 @@ fn clean_show(s: Option<&Value>) -> Option<Value> {
         let text = s
             .get("text")
             .filter(|t| t.truthy())
-            .map_or("Select a file, commit, stash or tag".into(), crate::core::js::string);
-        // .slice(0, 80): 80 UTF-16 units.
-        let (mut text, mut n) = (ui::clean_line(&text, 4, None), 0);
-        if let Some((i, _)) = text.char_indices().find(|(_, ch)| {
-            n += ch.len_utf16();
-            n > 80
-        }) {
+            .map_or("Select a file, commit, stash or tag".into(), crate::json::text);
+        // 80 characters at most.
+        let mut text = ui::clean_line(&text, 4, None);
+        if let Some((i, _)) = text.char_indices().nth(80) {
             text.truncate(i);
         }
         return Some(crate::obj! { "blank" => true, "text" => text, "title" => "", "cwd" => cwd });
     }
     let mut what = Value::Obj(Vec::new());
-    // Fields left out when missing, as JSON.stringify leaves out undefined ones.
+    // Fields left out when missing.
     for k in ["kind", "ref"] {
         if let Some(v) = s.get(k) {
             what.set(k, v.clone());
@@ -175,12 +172,12 @@ fn clean_show(s: Option<&Value>) -> Option<Value> {
     let paths = s.get("paths").filter(|p| matches!(p, Value::Arr(_))).cloned().unwrap_or(Value::Arr(Vec::new()));
     what.set("paths", paths);
     let title = match s.get("title").filter(|t| t.truthy()).or(s.get("ref")) {
-        Some(t) => crate::core::js::string(t),
+        Some(t) => crate::json::text(t),
         None => "undefined".into(),
     };
     what.set("title", Value::Str(title));
     what.set("cwd", Value::Str(cwd.into()));
-    diff::show_args(&what).map(|_| what)
+    (diff::show_args(&what).is_some() || diff::pull_of(&what).is_some()).then_some(what)
 }
 
 impl Preview {
@@ -820,13 +817,20 @@ impl Preview {
         });
     }
 
-    /// diff::show on the git worker, then on the pane.
+    /// diff::show on the git worker, then on the pane; a pull request's on a thread of its own, so that gh and the
+    /// network never hold up git's answers.
     fn git_show(&mut self, what: Value, then: impl FnOnce(&mut Preview, Option<Arc<Diff>>) + Send + 'static) {
-        self.git.send(Box::new(move || {
+        let pull = diff::pull_of(&what).is_some();
+        let job: super::Job = Box::new(move || {
             let cwd = what.get("cwd").and_then(Value::as_str).unwrap_or("").to_string();
             let parsed = std::panic::catch_unwind(|| diff::show(&cwd, &what)).ok().flatten().map(Arc::new);
             Box::new(move |p: &mut Preview| then(p, parsed))
-        }));
+        });
+        if pull {
+            worker::spawn(self.tx.clone(), self.waker.clone(), job);
+        } else {
+            self.git.send(job);
+        }
     }
 
     /// The tab under it shown again, where it was.

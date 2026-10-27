@@ -1,6 +1,6 @@
 //! A minimal terminal emulator for the screen captures: what a pane wrote, played on a grid of cells (text and SGR
-//! attributes), then written out as text. JS and Rust captures go through the same emulator, so it only needs to be
-//! deterministic and to keep what a user sees: cursor moves, erases, scrolling, alternate screen, colours. Queries,
+//! attributes), then written out as text. Recorded and new captures go through the same emulator, so it only needs to
+//! be deterministic and to keep what a user sees: cursor moves, erases, scrolling, alternate screen, colours. Queries,
 //! OSC and DCS are skipped; the Kitty graphics commands (APC) are listed, without their data, which depends on the
 //! compressor.
 

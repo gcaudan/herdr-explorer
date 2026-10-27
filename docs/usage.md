@@ -5,7 +5,7 @@ The plugin has six panes, the first five described on a page of their own:
 | Pane            | Opens as                     | Opened by                                                     |
 | --------------- | ---------------------------- | ------------------------------------------------------------- |
 | [Explorer](usage/explorer.md) | split, left or right of tab  | new tab with a single pane (**Open automatically**), `prefix+f` |
-| [Preview](usage/preview.md) | split, right of the terminal | `Enter`/double-click on a file, `p`, `d` (its diff), search results, [`peek.js`](#show-a-file-from-an-agent-or-a-script) |
+| [Preview](usage/preview.md) | split, right of the terminal | `Enter`/double-click on a file, `p`, `d` (its diff), search results, [`peek`](#show-a-file-from-an-agent-or-a-script) |
 | [Search](usage/search.md) | tab of its own               | `ctrl+p`, `ctrl+f`, `prefix+a`                                |
 | [Source Control](usage/source-control.md) | tab of its own, the review   | `s`, `prefix+d`                                               |
 | [Changes](usage/changes.md) | right of the terminal        | `d` or **View changes** on a folder                           |
@@ -14,19 +14,21 @@ The plugin has six panes, the first five described on a page of their own:
 Its four herdr actions can be bound to keys (see [Key bindings](installation.md#key-bindings)):
 `gcaudan.explorer.toggle` opens the explorer, or closes it when it is open (`prefix+f`), `gcaudan.explorer.search` opens Go to file
 (`prefix+a`), `gcaudan.explorer.scm` source control (`prefix+d`), and `gcaudan.explorer.peek` previews the changed
-file written last (left unbound by the installer).
+file written last (left unbound by [setup](installation.md#setup)).
 
 Key names in these pages are those of [configuration.md](configuration.md#key-names). Only the explorer's
 keys can be rebound.
 
 ## Show a file from an agent or a script
 
-`src/peek.js` shows a file in the preview of the tab it runs in, scrolled to a line, opening the preview next to the
-terminal when there is none, without taking the focus. Run it from a herdr pane, such as the terminal of an agent:
+`bin/herdr-explorer peek` shows a file in the preview of the tab it runs in, scrolled to a line, opening the preview
+next to the terminal when there is none, without taking the focus. Run it from a herdr pane, such as the terminal of
+an agent:
 
 ```sh
-dir=$(dirname "$(herdr plugin list --plugin gcaudan.explorer --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).result.plugins[0].manifest_path))')")
-node "$dir/src/peek.js" src/app.js:42
+manifest=$(herdr plugin list --plugin gcaudan.explorer --json | grep -o '"manifest_path":"[^"]*"' | cut -d'"' -f4 | sed -e 's/[\][\]/\\/g' -e 's/^[\][\]?[\]//')
+dir="${manifest%?herdr-plugin.toml}"
+"$dir/bin/herdr-explorer" peek src/app.js:42
 ```
 
 - The argument is `file`, or `file:places`, relative to the current folder or absolute. Places are separated by
@@ -44,17 +46,17 @@ node "$dir/src/peek.js" src/app.js:42
 - `herdr plugin list` gives the plugin's folder (`manifest_path`) whether it was installed from the index or from a
   clone, so the command works in both cases.
 
-**Peek action**: `gcaudan.explorer.peek` runs `peek.js --last` for the focused tab, in the folder of its focused
+**Peek action**: `gcaudan.explorer.peek` runs `peek --last` for the focused tab, in the folder of its focused
 terminal: bind it to a key to see what an agent just wrote (see [Key bindings](installation.md#key-bindings)).
 
 **Links in the terminal** (herdr 0.9.4 or later, with herdr's mouse capture on): `ctrl`+click on a `file://`
 hyperlink (OSC 8, as `ls --hyperlink` or some agents print them) shows the file in the tab's preview, at the line of a
-`#L12` or `#L12-L14` fragment. It runs `peek.js --url` through the `gcaudan.explorer.open-link` action. A link to
+`#L12` or `#L12-L14` fragment. It runs `peek --url` through the `gcaudan.explorer.open-link` action. A link to
 another host is refused. herdr makes links only of URLs, so a plain `src/app.js:12` in the text cannot be clicked.
 
 **Claude Code skill**: [`skills/herdr-preview`](../skills/herdr-preview/SKILL.md) tells Claude Code when and how to
-call it, to show you the code it talks about or a file it just wrote. The install script links it into
-`~/.claude/skills`; installed from the plugin index, link it yourself:
+call it, to show you the code it talks about or a file it just wrote. [Setup](installation.md#setup) links it into
+`~/.claude/skills`; or link it yourself:
 
 ```sh
 ln -s "$dir/skills/herdr-preview" ~/.claude/skills/herdr-preview

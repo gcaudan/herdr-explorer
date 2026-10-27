@@ -1,13 +1,17 @@
-//! JS regular expressions, the subset the JS's modules use: alternatives, capturing and plain groups, greedy and
-//! lazy quantifiers, classes, `\d \w \s \b`, `\p{L}`-style properties (u flag), back references, lookahead and
-//! lookbehind (matched backwards, as the JS does), flags i m s u y. A backtracking matcher on an explicit stack, so
-//! that long lines never run out of the thread's stack; positions are byte offsets of the text, and a character is a
-//! code point, where the JS without the u flag steps over UTF-16 units.
+//! Regular expressions in the ECMAScript syntax with the u flag, the subset the panes use: alternatives, capturing and
+//! plain groups, greedy and lazy quantifiers, classes, `\d \w \s \b`, `\p{L}`-style properties, back references,
+//! lookahead and lookbehind (matched backwards), flags i m s y. A backtracking matcher on an explicit stack, so that
+//! long lines never run out of the thread's stack; positions are byte offsets of the text, a character is a code point
+//! and the i flag compares simple case foldings.
 
-use crate::core::js;
 use crate::unicode;
 use std::collections::HashMap;
 use std::sync::LazyLock;
+
+/// The characters `.` does not match, and that `^` and `$` stand after and before with the m flag.
+pub fn is_line_terminator(c: char) -> bool {
+    matches!(c, '\n' | '\r' | '\u{2028}' | '\u{2029}')
+}
 
 /// A compiled regular expression.
 #[derive(Debug, Clone)]
@@ -16,7 +20,6 @@ pub struct Regex {
     groups: usize,
     regs: usize,
     ci: bool,
-    unicode: bool,
     multiline: bool,
     dot_all: bool,
     sticky: bool,
@@ -45,7 +48,7 @@ impl<'s> Match<'s> {
         &self.text[self.start()..self.end()]
     }
 
-    /// The text of group n (`m[n]`), None when it took no part in the match (undefined).
+    /// The text of group n (`m[n]`), None when it took no part in the match.
     pub fn get(&self, n: usize) -> Option<&'s str> {
         self.range(n).map(|(a, b)| &self.text[a..b])
     }
@@ -139,7 +142,6 @@ struct Prog {
 struct Parser {
     src: Vec<char>,
     at: usize,
-    unicode: bool,
     groups: usize,
     total: usize,
 }
@@ -182,8 +184,7 @@ impl Parser {
             }
             let before = self.groups;
             let atom = self.atom()?;
-            let quantifiable = !matches!(atom, Ast::Bol | Ast::Eol | Ast::Boundary(_) | Ast::Look { ahead: false, .. })
-                && !(self.unicode && matches!(atom, Ast::Look { .. }));
+            let quantifiable = !matches!(atom, Ast::Bol | Ast::Eol | Ast::Boundary(_) | Ast::Look { .. });
             match self.quantifier()? {
                 Some((min, max, greedy)) => {
                     if !quantifiable {
@@ -229,12 +230,12 @@ impl Parser {
                 self.at += 1;
                 let Some(min) = self.number() else {
                     self.at = save;
-                    return if self.unicode { err("incomplete quantifier") } else { Ok(None) };
+                    return err("incomplete quantifier");
                 };
                 let max = if self.eat(',') { self.number() } else { Some(min) };
                 if !self.eat('}') {
                     self.at = save;
-                    return if self.unicode { err("incomplete quantifier") } else { Ok(None) };
+                    return err("incomplete quantifier");
                 }
                 self.at -= 1;
                 if max.is_some_and(|m| m < min) {
@@ -286,17 +287,7 @@ impl Parser {
             ')' => return err("unmatched ')'"),
             '[' => Ast::Class(self.class()?),
             '*' | '+' | '?' => return err("nothing to repeat"),
-            '{' if self.unicode => return err("lone quantifier brackets"),
-            '{' => {
-                // Annex B: a lone { is a character, a whole {n,m} has nothing to repeat.
-                self.at -= 1;
-                if self.quantifier()?.is_some() {
-                    return err("nothing to repeat");
-                }
-                self.at += 1;
-                Ast::Char('{')
-            }
-            '}' | ']' if self.unicode => return err("lone quantifier brackets"),
+            '{' | '}' | ']' => return err("lone quantifier brackets"),
             '\\' => self.escape()?,
             c => Ast::Char(c),
         })
@@ -324,19 +315,14 @@ impl Parser {
                     self.at += 1;
                     char::from((l as u8) % 32)
                 }
-                _ => {
-                    // \c without a letter: a backslash, the c read again.
-                    self.at -= 1;
-                    '\\'
-                }
+                _ => return err("invalid unicode escape"),
             },
             'x' => match self.hex(2) {
                 Some(v) => char::from_u32(v).unwrap_or('x'),
-                None if self.unicode => return err("invalid escape"),
-                None => 'x',
+                None => return err("invalid escape"),
             },
             'u' => {
-                if self.unicode && self.peek() == Some('{') {
+                if self.peek() == Some('{') {
                     let end = self.src[self.at..].iter().position(|&c| c == '}');
                     let digits: String = match end {
                         Some(e) => self.src[self.at + 1..self.at + e].iter().collect(),
@@ -351,26 +337,11 @@ impl Parser {
                 } else {
                     match self.hex(4) {
                         Some(v) => char::from_u32(v).unwrap_or('\u{fffd}'),
-                        None if self.unicode => return err("invalid unicode escape"),
-                        None => 'u',
+                        None => return err("invalid unicode escape"),
                     }
                 }
             }
-            '0'..='7' if !self.unicode => {
-                // Annex B: a legacy octal escape, up to \377.
-                let mut v = c as u32 - '0' as u32;
-                for _ in 0..2 {
-                    match self.peek() {
-                        Some(d @ '0'..='7') if v * 8 + (d as u32 - '0' as u32) <= 0o377 => {
-                            v = v * 8 + (d as u32 - '0' as u32);
-                            self.at += 1;
-                        }
-                        _ => break,
-                    }
-                }
-                char::from_u32(v).unwrap_or('\0')
-            }
-            c if self.unicode && !"^$\\.*+?()[]{}|/-".contains(c) => return err("invalid escape"),
+            c if !"^$\\.*+?()[]{}|/-".contains(c) => return err("invalid escape"),
             c => c,
         })
     }
@@ -400,7 +371,7 @@ impl Parser {
             'd' => Builtin::Digit,
             'w' => Builtin::Word,
             's' => Builtin::Space,
-            'p' if self.unicode => self.property()?,
+            'p' => self.property()?,
             _ => return Ok(None),
         };
         Ok(Some(Item::Builtin(b, c.is_ascii_uppercase())))
@@ -419,13 +390,7 @@ impl Parser {
                 if n <= self.total {
                     return Ok(Ast::Ref(n));
                 }
-                if self.unicode {
-                    return err("invalid escape");
-                }
-                self.at = start + 1;
-                if c >= '8' {
-                    return Ok(Ast::Char(c));
-                }
+                return err("invalid escape");
             }
             _ => {}
         }
@@ -455,13 +420,7 @@ impl Parser {
                         }
                         items.push(Item::Range(x, y));
                     }
-                    // Annex B: a class escape at either end makes the '-' a plain character.
-                    (a, b) => {
-                        if self.unicode {
-                            return err("invalid character class");
-                        }
-                        items.extend([a, Item::Range('-', '-'), b]);
-                    }
+                    _ => return err("invalid character class"),
                 }
             } else {
                 items.push(a);
@@ -483,7 +442,6 @@ impl Parser {
         }
         let ch = match e {
             '-' => '-',
-            '8' | '9' if !self.unicode => e,
             _ => self.char_escape(e, true)?,
         };
         Ok(Item::Range(ch, ch))
@@ -591,7 +549,7 @@ impl Compiler {
                 let split = |at: usize, body: usize, out: usize| {
                     if *greedy { (at, Inst::Split(body, out)) } else { (at, Inst::Split(out, body)) }
                 };
-                // An optional iteration: skipped, or matched, but never empty (the JS's rule once min is reached).
+                // An optional iteration: skipped, or matched, but never empty once min is reached.
                 let optional = |this: &mut Self, code: &mut Vec<Inst>| {
                     let reg = this.regs;
                     this.regs += 1;
@@ -641,38 +599,21 @@ fn single(mut it: impl Iterator<Item = char>) -> Option<char> {
     }
 }
 
-/// The JS's Canonicalize. Without the u flag: the upper case when it is one character, not an ASCII one for a
-/// non-ASCII character, and none outside the BMP (the JS compares UTF-16 units). With it: simple case folding, as
-/// the lower case of the upper case.
-fn canon(c: char, unicode: bool) -> char {
-    if unicode {
-        return single(c.to_uppercase())
-            .and_then(|u| single(u.to_lowercase()))
-            .or(single(c.to_lowercase()))
-            .unwrap_or(c);
-    }
-    if c.is_ascii() {
-        return c.to_ascii_uppercase();
-    }
-    match single(c.to_uppercase()) {
-        Some(u) if !u.is_ascii() && c <= '\u{ffff}' => u,
-        _ => c,
-    }
+/// Simple case folding: the lower case of the upper case, when each is one character.
+fn canon(c: char) -> char {
+    single(c.to_uppercase()).and_then(|u| single(u.to_lowercase())).or(single(c.to_lowercase())).unwrap_or(c)
 }
 
-// The characters of each canonical form other than itself, without and with the u flag.
-static SAME: [LazyLock<HashMap<char, Vec<char>>>; 2] = [LazyLock::new(|| same(false)), LazyLock::new(|| same(true))];
-
-fn same(unicode: bool) -> HashMap<char, Vec<char>> {
+// The characters of each canonical form other than itself (none has a case past U+1FFFF).
+static SAME: LazyLock<HashMap<char, Vec<char>>> = LazyLock::new(|| {
     let mut map: HashMap<char, Vec<char>> = HashMap::new();
-    let last = if unicode { char::MAX } else { '\u{ffff}' };
-    for c in ('\0'..=last).filter(|&c| canon(c, unicode) != c) {
-        map.entry(canon(c, unicode)).or_default().push(c);
+    for c in ('\0'..='\u{1ffff}').filter(|&c| canon(c) != c) {
+        map.entry(canon(c)).or_default().push(c);
     }
     map
-}
+});
 
-fn is_word(c: char) -> bool {
+pub fn is_word(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '_'
 }
 
@@ -681,14 +622,14 @@ impl Builtin {
         match self {
             Builtin::Digit => c.is_ascii_digit(),
             Builtin::Word => is_word(c),
-            Builtin::Space => js::is_space(c),
+            Builtin::Space => unicode::is_space(c),
             Builtin::Letter => unicode::is_letter(c),
             Builtin::Number => unicode::is_number(c),
             Builtin::Mark => unicode::is_mark(c),
             Builtin::Emoji => unicode::is_emoji(c),
             Builtin::EmojiPresentation => unicode::is_emoji_presentation(c),
             Builtin::RegionalIndicator => unicode::is_regional_indicator(c),
-            Builtin::Any => dot_all || !js::is_line_terminator(c),
+            Builtin::Any => dot_all || !is_line_terminator(c),
         }
     }
 }
@@ -703,10 +644,10 @@ impl Class {
     }
 
     // With the i flag: some member has the same canonical form as c.
-    fn has_ci(&self, c: char, dot_all: bool, unicode: bool) -> bool {
-        let u = canon(c, unicode);
+    fn has_ci(&self, c: char, dot_all: bool) -> bool {
+        let u = canon(c);
         let mut forms = vec![c, u];
-        forms.extend(SAME[unicode as usize].get(&u).into_iter().flatten().filter(|&&f| f != c));
+        forms.extend(SAME.get(&u).into_iter().flatten().filter(|&&f| f != c));
         let any = |cls: &Class| {
             forms.iter().any(|&f| {
                 cls.items.iter().any(|it| match *it {
@@ -761,16 +702,14 @@ impl Run<'_, '_> {
                     return Some(i);
                 }
                 Inst::Char(c) => match self.next(i, back) {
-                    Some((d, j)) if d == *c || (re.ci && canon(d, re.unicode) == canon(*c, re.unicode)) => {
+                    Some((d, j)) if d == *c || (re.ci && canon(d) == canon(*c)) => {
                         i = j;
                         true
                     }
                     _ => false,
                 },
                 Inst::Class(cls) => match self.next(i, back) {
-                    Some((d, j))
-                        if if re.ci { cls.has_ci(d, re.dot_all, re.unicode) } else { cls.has(d, re.dot_all) } =>
-                    {
+                    Some((d, j)) if if re.ci { cls.has_ci(d, re.dot_all) } else { cls.has(d, re.dot_all) } => {
                         i = j;
                         true
                     }
@@ -800,12 +739,10 @@ impl Run<'_, '_> {
                     }
                     true
                 }
-                Inst::Bol => {
-                    i == 0 || (re.multiline && self.next(i, true).is_some_and(|(c, _)| js::is_line_terminator(c)))
-                }
+                Inst::Bol => i == 0 || (re.multiline && self.next(i, true).is_some_and(|(c, _)| is_line_terminator(c))),
                 Inst::Eol => {
                     i == self.text.len()
-                        || (re.multiline && self.next(i, false).is_some_and(|(c, _)| js::is_line_terminator(c)))
+                        || (re.multiline && self.next(i, false).is_some_and(|(c, _)| is_line_terminator(c)))
                 }
                 Inst::Boundary(b) => (self.word_at(i, true) != self.word_at(i, false)) == *b,
                 Inst::Ref(n) => match (self.slots[2 * n], self.slots[2 * n + 1]) {
@@ -814,7 +751,7 @@ impl Run<'_, '_> {
                         let mut j = i;
                         let mut ok = true;
                         let mut each = |want: char| match self.next(j, back) {
-                            Some((d, k)) if d == want || (re.ci && canon(d, re.unicode) == canon(want, re.unicode)) => {
+                            Some((d, k)) if d == want || (re.ci && canon(d) == canon(want)) => {
                                 j = k;
                             }
                             _ => ok = false,
@@ -872,8 +809,8 @@ impl Run<'_, '_> {
 }
 
 impl Regex {
-    /// `new RegExp(src, flags)`; the message the JS would throw for a pattern it rejects (or one outside the
-    /// subset, such as named groups).
+    /// The pattern compiled with its flags; or why not, for a pattern the syntax rejects (or one outside the subset,
+    /// such as named groups).
     pub fn new(src: &str, flags: &str) -> Result<Regex, String> {
         let has = |f: char| flags.contains(f);
         if let Some(f) = flags.chars().find(|f| !"dgimsuvy".contains(*f)) {
@@ -881,7 +818,7 @@ impl Regex {
         }
         let chars: Vec<char> = src.chars().collect();
         let total = count_groups(&chars);
-        let mut p = Parser { src: chars, at: 0, unicode: has('u') || has('v'), groups: 0, total };
+        let mut p = Parser { src: chars, at: 0, groups: 0, total };
         let ast = p.alternatives()?;
         if p.at < p.src.len() {
             return err("unmatched ')'");
@@ -893,7 +830,6 @@ impl Regex {
             groups: p.groups,
             regs: c.regs,
             ci: has('i'),
-            unicode: has('u') || has('v'),
             multiline: has('m'),
             dot_all: has('s'),
             sticky: has('y'),
@@ -986,7 +922,7 @@ impl Regex {
         self.replace(text, all, |_| s.to_string())
     }
 
-    /// `text.split(re)`: the pieces between matches, each followed by the groups of the match (None: undefined).
+    /// `text.split(re)`: the pieces between matches, each followed by the groups of the match (None: a group that took no part).
     pub fn split<'s>(&self, text: &'s str) -> Vec<Option<&'s str>> {
         let mut run = self.runner(text);
         if text.is_empty() {
@@ -1026,7 +962,7 @@ mod tests {
         assert_eq!(find("a*?b", "", "aaab").unwrap()[0].as_deref(), Some("aaab"));
         assert_eq!(find("(a)|b", "", "b").unwrap()[1], None);
         assert_eq!(find("x{2,3}", "", "xxxx").unwrap()[0].as_deref(), Some("xxx"));
-        assert_eq!(find("x{,3}", "", "x{,3}").unwrap()[0].as_deref(), Some("x{,3}"));
+        assert!(Regex::new("x{,3}", "").is_err() && Regex::new("a{", "").is_err());
         // An iteration matching nothing ends the loop, and the groups of each iteration start afresh.
         assert_eq!(find("(a|)*b", "", "aab").unwrap()[0].as_deref(), Some("aab"));
         assert_eq!(find("(?:(a)|b)+", "", "ab").unwrap()[1], None);

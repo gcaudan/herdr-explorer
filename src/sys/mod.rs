@@ -1,4 +1,4 @@
-//! The terminal and the process, as Node gave them to the JS: raw mode (libuv's), the terminal's size, input read
+//! The terminal and the process: raw mode (as libuv sets it), the terminal's size, input read
 //! without blocking, resizes and signals, all waited for in one place (`Events::wait`), which other threads can wake
 //! (`Waker`). Hand-written FFI: `unix.rs` (Linux and macOS, termios declared per target) and `windows.rs` (console).
 
@@ -8,7 +8,8 @@ mod unix;
 use unix as imp;
 #[cfg(unix)]
 pub use unix::{
-    SIGHUP, SIGINT, SIGTERM, executable, getppid, getuid, hostname, kill_group, send_signal, setsid, terminate,
+    SIGHUP, SIGINT, SIGTERM, adopt_lifeline, executable, getppid, getuid, hostname, kill_group, lifeline, send_signal,
+    setsid, terminate, wait_lifeline,
 };
 
 #[cfg(windows)]
@@ -27,7 +28,7 @@ pub use watch::Watcher;
 use std::io;
 use std::time::Duration;
 
-/// A signal that ends a pane: the JS listens to SIGTERM, SIGHUP and SIGINT (on Windows, the console's close and
+/// A signal that ends a pane: SIGTERM, SIGHUP and SIGINT (on Windows, the console's close and
 /// ctrl+c / ctrl+break events, as libuv maps them).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Signal {
@@ -58,22 +59,22 @@ pub fn file_id(path: &str) -> Option<(u64, u64)> {
     std::fs::symlink_metadata(path).ok().map(|m| (m.dev(), m.ino()))
 }
 
-/// Whether stdin is a terminal (`process.stdin.isTTY`).
+/// Whether stdin is a terminal.
 pub fn stdin_is_tty() -> bool {
     imp::stdin_is_tty()
 }
 
-/// Whether stdout is a terminal (`process.stdout.isTTY`).
+/// Whether stdout is a terminal.
 pub fn stdout_is_tty() -> bool {
     imp::stdout_is_tty()
 }
 
-/// The terminal's size, columns and rows, from stdout; `None` when it is not a terminal (the JS then takes 80x24).
+/// The terminal's size, columns and rows, from stdout; `None` when it is not a terminal.
 pub fn size() -> Option<(u16, u16)> {
     imp::size()
 }
 
-/// The JS's `ui.size()`: the terminal's size, 80 columns and 24 rows when unknown.
+/// The terminal's size, 80 columns and 24 rows when unknown.
 pub fn size_or_default() -> (u16, u16) {
     match size() {
         Some((w, h)) => (if w == 0 { 80 } else { w }, if h == 0 { 24 } else { h }),
@@ -81,8 +82,7 @@ pub fn size_or_default() -> (u16, u16) {
     }
 }
 
-/// The terminal in raw mode, as `process.stdin.setRawMode(true)` sets it; the mode it found is restored when dropped
-/// (Node restores it at exit).
+/// The terminal in raw mode; the mode it found is restored when dropped.
 pub struct RawMode(imp::Saved);
 
 impl RawMode {

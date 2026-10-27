@@ -133,7 +133,7 @@ pub fn file_id(path: &str) -> Option<(u64, u64)> {
     Some((info.volume as u64, (info.index[0] as u64) << 32 | info.index[1] as u64))
 }
 
-/// The machine's name, as os.hostname() (libuv's GetHostNameW gives the DNS host name).
+/// The machine's name (libuv's GetHostNameW gives the DNS host name).
 pub fn hostname() -> String {
     const COMPUTER_NAME_DNS_HOSTNAME: u32 = 1;
     let mut buf = [0u16; 256];
@@ -238,7 +238,7 @@ impl Shared {
 static SHARED: OnceLock<Arc<Shared>> = OnceLock::new();
 
 unsafe extern "system" fn on_ctrl(kind: u32) -> Bool {
-    // As libuv: ctrl+c is SIGINT, the console's close SIGHUP; ctrl+break (SIGBREAK, which the JS does not listen to),
+    // As libuv: ctrl+c is SIGINT, the console's close SIGHUP; ctrl+break (SIGBREAK, not listened to),
     // logoff and shutdown are left to the default handler, which ends the process.
     let sig = match kind {
         CTRL_C_EVENT => Signal::Int,
@@ -351,19 +351,23 @@ impl Events {
         let reader = shared.clone();
         std::thread::spawn(move || read_input(reader));
         // A window resized without its screen buffer (conhost with scrollback) sends no record: its size is
-        // watched instead, as libuv does with a console layout hook.
+        // watched instead, as libuv does with a console layout hook. Not in a herdr pane: its pseudo console sends a
+        // record for each resize, and the watch would wake the pane 4 times a second for nothing.
         let watcher = shared.clone();
-        std::thread::spawn(move || {
-            let mut last = size();
-            loop {
-                std::thread::sleep(Duration::from_millis(250));
-                let now = size();
-                if now != last {
-                    last = now;
-                    watcher.post(Event::Resize);
+        let pseudo_console = std::env::var_os("HERDR_PANE_ID").is_some();
+        if !pseudo_console {
+            std::thread::spawn(move || {
+                let mut last = size();
+                loop {
+                    std::thread::sleep(Duration::from_millis(250));
+                    let now = size();
+                    if now != last {
+                        last = now;
+                        watcher.post(Event::Resize);
+                    }
                 }
-            }
-        });
+            });
+        }
         Ok(Events { shared })
     }
 

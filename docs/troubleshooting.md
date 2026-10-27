@@ -20,7 +20,7 @@
 | Changes pane      | 200 untracked files shown in full, then a count. 200,000 diff rows, then *diff too long, truncated* |
 | Source control    | History: last 500 commits. Comparison: 300 commits per side. Fetch, pull and push time out after 120 s |
 | Claude message    | 60,000 characters of diff sent (then *[diff truncated]*), at most 20 untracked files, 90 s timeout, 200-character message |
-| Update            | check once a day, 3 s timeout. Pull timeout 60 s. `update.lock` taken over after 15 min, `bin/.fetch.lock` after 2 min |
+| Update            | check once a day, 3 s timeout. `bin/.fetch.lock` taken over after 2 min |
 | Program output    | 64 MB read from any git command                                                               |
 
 ## Limitations
@@ -50,32 +50,27 @@
   `&`, `|`, `<`, `>`, `^` or `%` could still run a command once `Enter` is pressed.
 - ***Open in app*** opens HTML and SVG files in the browser, and Office documents in Office, which asks before
   enabling macros.
-- **Updates** from the explorer need a git clone without changes to tracked files and, unless `bin/.dev` marks a
-  binary of your own, a release binary for the platform and `curl` (see [Refusals](installation.md#refusals)). They move the clone to the release's tag: work of
-  your own on the branch is never merged.
+- **Updates**: the explorer installs none itself. It copies `herdr plugin update gcaudan.explorer`; a linked git
+  clone is yours to update (see [Updating](installation.md#updating)).
 - **Platforms**: release binaries exist for Linux and macOS on x86_64 and arm64, and Windows on x86_64 (arm64 runs
   it in emulation). Elsewhere (32-bit, armv7, BSD…), build the binary with `scripts/dev-build.sh`, which needs Rust.
 - **Old panes**: an explorer or preview started by a version without the launcher (0.4.0 and earlier) keeps its old
   waiting `node` processes after updating, until it is closed. Close and reopen it (`prefix+f` twice for the
-  explorer) to start from the launcher.
+  explorer) to start from the launcher. A pane opened by a version of 0.8.0 or earlier still runs
+  `node src/<pane>.js`, which the update removed: close and reopen it too.
 
 ## Common problems
 
-- **Nothing opens at all, or a pane closes right after opening**: `node` is not on the `PATH` that herdr gives
-  plugins, or `bin/herdr-explorer` is missing and could not be downloaded: run `scripts/fetch-bin.sh` (or
-  `scripts\fetch-bin.ps1`) in the plugin folder to see why (see [Installation](#installation)). The hooks also exit silently when they cannot find `herdr` in an absolute folder of `PATH` (set
+- **Nothing opens at all, or a pane closes right after opening**: `bin/herdr-explorer` is missing and
+  could not be downloaded: run `scripts/fetch-bin.sh` (or `scripts\fetch-bin.ps1`) in the plugin folder to see why (see [Installation](#installation)). The hooks also exit silently when they cannot find `herdr` in an absolute folder of `PATH` (set
   `HERDR_BIN_PATH` to its path).
 - **No git colours, no source control**: `git` is not on `PATH`, or the folder is not inside a repository.
 - **The explorer does not open in new tabs**: it opens only in a tab that has a single pane, and only when *Open
   automatically* is on. Press `prefix+f` to open it by hand.
 - **`prefix+f`, `prefix+a` or `prefix+d` do nothing**: check the `[[keys.command]]` blocks in `config.toml` (a plugin
-  index install does not add them, see [From the herdr plugin index](installation.md#from-the-herdr-plugin-index)), run
-  `herdr server reload-config`, and check that `herdr plugin list` shows `gcaudan.explorer`. From a git clone, run
-  the install script again.
-- **Key bindings or skill missing after running `install.sh` on Windows** (Git Bash): it writes to
-  `~/.config/herdr/config.toml`, not `%APPDATA%\herdr\config.toml`, and Git Bash's `ln -s` copies the skill folder
-  unless Developer Mode and `MSYS=winsymlinks:nativestrict` let it make a real link (the copy misses updates, and later
-  runs leave it alone). Use `install.ps1`, which makes a junction.
+  index install does not add them: run `bin/herdr-explorer setup` in the plugin folder, see
+  [Setup](installation.md#setup)), run `herdr server reload-config`, and check that `herdr plugin list` shows
+  `gcaudan.explorer`.
 - **Explorer panes show a shell after a herdr restart**: herdr did not run the startup hook, usually because the
   plugin was linked before the hook existed. Run `herdr plugin link .` in the plugin folder, then restart herdr
   (`herdr server stop`, then `herdr`). `herdr plugin log list --plugin gcaudan.explorer` shows whether the hook
@@ -120,7 +115,6 @@
 | `fetch-bin: <asset> is not in SHA256SUMS`, `fetch-bin: <asset> does not match its SHA256SUMS: not installed` | the download is incomplete or the release is broken: nothing was replaced. Run the script again later |
 | `fetch-bin: cannot create <folder>/bin/.fetch.lock` | `bin/` cannot be written: fix its rights                                            |
 | `fetch-bin: no version in <folder>/herdr-plugin.toml` | the manifest is missing or damaged: restore it with git                           |
-| `herdr-explorer: no binary of version X.Y.Z in <folder>/bin: run scripts/fetch-bin to see why` | a shim found no binary of the manifest's version and could not fetch one, or `bin/.dev` is there without a binary: run `scripts/fetch-bin.sh` (or `scripts/dev-build.sh`) |
 | `dev-build: cargo not found: install Rust (https://rustup.rs)` | install Rust, then run `scripts/dev-build.sh` again                         |
 
 ### Explorer and preview
@@ -175,13 +169,9 @@
 
 | Message                                     | Meaning and fix                                                           |
 | ------------------------------------------- | ------------------------------------------------------------------------- |
-| `Update command copied`                     | installed by herdr: run `herdr plugin update gcaudan.explorer`            |
-| `<git error>: update command copied`        | git's fetch or move failed (`Update failed` when git said nothing). Run the copied commands in a terminal: the git step, then `scripts/fetch-bin` |
-| `The X.Y.Z binary could not be put in bin: update command copied` | the binary was downloaded but could not replace the old one (a locked file, rights on `bin/`): the clone was moved back. Run the copied commands |
-| `Already up to date`, `Updated to X.Y.Z`    | done; the explorer and preview restart on the new code                   |
-| `Updated to X.Y.Z: rerun the installer`     | click the `!` (or **! Finish the update**) and run the copied command     |
-| `Installer command copied`                  | run it in a terminal                                                      |
-| refusals                                    | see [installation.md](installation.md#refusals)                           |
+| `Update command copied: run it, then reopen the panes` | run `herdr plugin update gcaudan.explorer` in a terminal |
+| `X.Y.Z skipped: Settings to update anyway`  | no `↑` for that version; `u` in the settings still opens the update       |
+| `Key bindings added`                        | the setup offered on the first start ran (see [Setup](installation.md#setup)) |
 
 ### Search
 
@@ -225,7 +215,7 @@
 
 ### peek
 
-`peek.js` prints `peek: <reason>` on stderr and exits with code 1 (2 for a wrong use).
+`peek` prints `peek: <reason>` on stderr and exits with code 1 (2 for a wrong use).
 
 | Message                                                                 | Meaning and fix                                                    |
 | ----------------------------------------------------------------------- | ------------------------------------------------------------------ |

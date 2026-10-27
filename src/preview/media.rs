@@ -1,10 +1,10 @@
-//! Images in the preview (src/preview.js): an image file in pixels with the Kitty graphics protocol, else drawn with
+//! Images in the preview: an image file in pixels with the Kitty graphics protocol, else drawn with
 //! half blocks; and the images of rendered Markdown, under their paragraph.
 
 use super::{Chip, Kind, Preview, Row, ext, within};
 use crate::codec::{base64, deflate};
 use crate::core::ui::{self, Seg, c, fg, seg, text_width};
-use crate::core::{actions, exec, js, paths, worker};
+use crate::core::{actions, exec, paths, worker};
 use crate::render::image::{self, Pixels};
 use crate::render::markdown;
 use std::collections::HashMap;
@@ -143,6 +143,27 @@ fn strip_query(url: &str) -> &str {
     url
 }
 
+/// Its %XX escapes decoded as UTF-8; None for a % not followed by two hex digits, or bytes that are not UTF-8.
+fn decode_uri_component(s: &str) -> Option<String> {
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'%' {
+            let hex = b.get(i + 1..i + 3).and_then(|h| std::str::from_utf8(h).ok())?;
+            if !hex.bytes().all(|c| c.is_ascii_hexdigit()) {
+                return None;
+            }
+            out.push(u8::from_str_radix(hex, 16).ok()?);
+            i += 3;
+        } else {
+            out.push(b[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8(out).ok()
+}
+
 /// What picture needs of the pane.
 struct Ask<'a> {
     file: &'a str,
@@ -166,7 +187,7 @@ fn picture(url: &str, width: usize, a: &Ask, kitty: &mut Kitty, pics: &mut Pictu
         return None;
     }
     let rel = strip_query(url);
-    let rel = js::decode_uri_component(rel).unwrap_or_else(|| rel.to_string());
+    let rel = decode_uri_component(rel).unwrap_or_else(|| rel.to_string());
     if rel.is_empty() || !image::FORMATS.contains(&ext(&rel).as_str()) || ext(&rel) == "svg" {
         return None;
     }
@@ -185,7 +206,7 @@ fn picture(url: &str, width: usize, a: &Ask, kitty: &mut Kitty, pics: &mut Pictu
     }
     let stat = if exec::remote_link(&abs, &base) { None } else { std::fs::metadata(&abs).ok() };
     let sig = stat.as_ref().map_or(String::new(), |s| {
-        let ms = s.modified().map_or(0.0, js::time_ms);
+        let ms = s.modified().map_or(0.0, crate::core::clock::ms);
         format!("{}:{}", crate::json::number(ms), s.len())
     });
     if let Some(old) = pics.stale.get(&key).filter(|o| o.sig == sig) {

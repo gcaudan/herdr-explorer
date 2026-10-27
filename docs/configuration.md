@@ -27,6 +27,7 @@ follow the groups of the settings view: Appearance, Tree, Opening, Preview, Revi
 | `images` | `"auto"` | Images; preview `p` (that pane only), the line under a pixelated image | `"blocks"` (pixelated), `"auto"` (sharp when the terminal has the Kitty graphics protocol) or `"pixels"` (always sharp), see [Sharp images](usage/preview.md#sharp-images) | previews within a second |
 | `diffLayout` | `""` | Diff layout (auto, split, inline); `v` in every diff (source control, Changes pane, preview's Diff view), **View** menu (`⚙`) | `""`: inline under 120 columns (a preview beside the terminal), side by side from 120 (zoomed, full tab). `"inline"` or `"split"`, as the settings view sets it: every diff. `{ "narrow": …, "wide": … }`, as `v` and the View menu write it: one layout per size (under 120 columns, from 120), a size left out laid out by width; `v` on a single value keeps it for the other size. The settings view shows both sizes when they differ, and a choice there holds for both | other diffs at their next redraw |
 | `reviewPrefix` | `""` | Notes prefix | text typed before the [review notes](usage/preview.md#review-notes) sent to the agent (`A`), such as an instruction | at once (read at each use) |
+| `scmCommand` | `""` | Source control tool | a command run instead of the plugin's source control by `prefix+d` (and **Source control** of the menu), in the review tab at the explorer's root: `lazygit`, `gitui`, `tig`, with its arguments, split at spaces outside quotes and run without a shell. Empty: the plugin's. An external tool runs the repository's hooks and filters ([SECURITY.md](../SECURITY.md#running-programs)) | at the next opening |
 | `autoOpen` | `true` | Open automatically | open the explorer in every new tab that has a single pane; off: only with `prefix+f` | new tabs only |
 | `side` | `"left"` | Dock side | `"left"` or `"right"`: where new explorers dock; an open explorer keeps its side | new tabs only |
 | `updateCheck` | `true` | Check for updates | check GitHub once a day for a newer release | explorers within a second |
@@ -102,11 +103,11 @@ saved, and the explorer's width falls back to 32 columns.
 | `background`           | `dark` or `light`: the terminal's background, as the last pane opened on the auto theme read it |
 | `expanded.json`        | expanded folders, per tree root                                                              |
 | `search.json`          | last Go to file query, search query, include/exclude globs, case/word/regex options          |
-| `update.json`          | `checkedAt`, the repository checked (`repo`), the `latest` release found with its changes (`notes`) and page (`url`), the version skipped (`skip`), the last update done (`updated`: `{ from, to, t }`), and `finish` (an update the installer must finish) |
+| `update.json`          | `checkedAt`, the repository checked (`repo`), the `latest` release found with its changes (`notes`) and page (`url`), the version skipped (`skip`), the version the explorers last ran (`seen`), and the last update seen (`updated`: `{ from, to, t }`) |
 | `resizing`             | the pane resizing itself, for half a second: the panes it moves let it put them back         |
-| `update.lock`          | present while an update runs; taken over after 15 minutes (a killed update)                  |
+| `setup-offered`        | present once the explorer has offered the [setup](installation.md#setup)                    |
 | `panes/<pane id>.json` | per pane: the explorer's tab folder (`home`) and tree root (`root`), the preview's `file`, `root`, `line` and tabs (`tabs`) |
-| `preview-<tab id>.json`| the last file the explorer, the search or `peek.js` asked the tab's preview to show        |
+| `preview-<tab id>.json`| the last file the explorer, the search or `peek` asked the tab's preview to show           |
 | `notes-<tab id>.json`  | the tab's review notes, removed once sent, each with the text of its lines (`anchor`) and `stale` once they are gone |
 | `scope-<tab id>.json`  | the tab's [diff scope](usage/changes.md#diff-scope), `{ kind, rev }`, absent for HEAD                |
 | `turn-<tab id>.json`   | the working tree when the tab's agent last started working: `{ pane, top, tree, t, ended }`  |
@@ -125,7 +126,7 @@ except those written in the last 10 seconds, which a tab opened meanwhile may al
 | File        | Content                                                                                           |
 | ----------- | ------------------------------------------------------------------------------------------------- |
 | `keys.json` | the explorer's key bindings, see below                                                            |
-| `state-dir` | the state folder's path, written by the hook for `peek.js`, which runs outside the plugin and gets only the config folder from herdr |
+| `state-dir` | the state folder's path, written by the hook for `peek`, which runs outside the plugin and gets only the config folder from herdr |
 
 `keys.json` is written to a temporary file and then renamed, like the state files.
 
@@ -188,15 +189,15 @@ folders. See [installation.md](installation.md#key-bindings).
 
 | Variable | Effect |
 |---|---|
-| `PATH` | where `node`, `git`, `curl`, `code`, `claude`, the editors and the clipboard and trash tools are found (absolute entries only, except for `curl` in `scripts/fetch-bin.sh`) |
+| `PATH` | where `git`, `curl`, `code`, `claude`, the editors and the clipboard and trash tools are found (absolute entries only, except for `curl` in `scripts/fetch-bin.sh`) |
 | `VISUAL`, `EDITOR` | the Editor pane's terminal editor, after one set in **Editor** |
 | `GIT_SSH_COMMAND`, `GIT_SSH` | when set, or `core.sshCommand`, updates leave ssh alone; otherwise they run it in batch mode |
 | `WAYLAND_DISPLAY`, `DISPLAY` | on Linux, the preview's paste reads the clipboard with `wl-paste` when `WAYLAND_DISPLAY` is set, else with `xclip` when `DISPLAY` is; with neither (over SSH), only the terminal's own paste reaches the pane |
 | `HERDR_BIN_PATH` | the herdr binary, else `herdr` from `PATH` |
 | `HERDR_PLUGIN_ID` | the plugin id, `gcaudan.explorer` when unset |
 | `HERDR_PLUGIN_ROOT` | the plugin folder, for updates, when the binary does not run from its `bin/` (a build run from cargo's `target/`) |
-| `XDG_STATE_HOME`, `LOCALAPPDATA` | where `peek.js` looks for the state folder when `state-dir` is missing (`LOCALAPPDATA` on Windows, also for VS Code) |
-| `HERDR_CONFIG_PATH`, `XDG_CONFIG_HOME`, `APPDATA` | the herdr `config.toml` the install scripts add the key bindings to, see [Installation](installation.md) (`XDG_CONFIG_HOME`: `install.sh` only; `APPDATA`: `install.ps1` only) |
+| `XDG_STATE_HOME`, `LOCALAPPDATA` | where `peek` looks for the state folder when `state-dir` is missing (`LOCALAPPDATA` on Windows, also for VS Code) |
+| `HERDR_CONFIG_PATH`, `XDG_CONFIG_HOME`, `APPDATA` | the herdr `config.toml` `herdr-explorer setup` adds the key bindings to, see [Setup](installation.md#setup) (`XDG_CONFIG_HOME`: not on Windows; `APPDATA`: Windows only) |
 
 herdr sets `HERDR_PLUGIN_STATE_DIR`, `HERDR_PLUGIN_CONFIG_DIR`, `HERDR_PLUGIN_CONTEXT_JSON` and
 `HERDR_PLUGIN_EVENT_JSON` for the plugin's own processes (and `HERDR_PLUGIN_CLICKED_URL` for a clicked link), and `HERDR_PANE_ID` in every pane; the plugin only reads them.

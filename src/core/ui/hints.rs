@@ -5,7 +5,6 @@ use super::message::empty;
 use super::text::{ellipsis, line, seg_width, text_width};
 use super::theme::{c, g};
 use super::{Seg, fg, seg};
-use crate::core::js;
 
 /// Key hints: the segments, and the columns of each pair from their start, to click them.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -112,13 +111,13 @@ const HELP_KEYS: [(&str, &str); 3] = [("↑↓", "scroll"), ("/", "find"), ("esc
 
 /// The rows of the help: a group's title alone, or a key and its action.
 fn help_rows(groups: &[Group], state: &HelpState) -> Vec<Vec<String>> {
-    let q = state.find.as_ref().map(|f| js::lower(&f.value)).unwrap_or_default();
+    let q = state.find.as_ref().map(|f| f.value.to_lowercase()).unwrap_or_default();
     let mut out = Vec::new();
     for (g, pairs) in groups {
         let kept: Vec<Vec<String>> = pairs
             .iter()
             .map(|(k, a)| vec![k.split(' ').map(key_label).collect::<Vec<_>>().join(" "), a.clone()])
-            .filter(|r| q.is_empty() || js::lower(&format!("{} {}", r[0], r[1])).contains(&q))
+            .filter(|r| q.is_empty() || format!("{} {}", r[0], r[1]).to_lowercase().contains(&q))
             .collect();
         if !kept.is_empty() {
             out.push(vec![g.clone()]);

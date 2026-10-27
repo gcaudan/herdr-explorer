@@ -1,7 +1,7 @@
 //! Screen captures (Linux): a scenario (`rust/tests/fixtures/screens/<pane>/<name>.keys`) runs a pane in a pty of a
 //! fixed size, in a folder of its own with the fake herdr, types keys, waits for the output to settle, and gives the
-//! final screen (`vt::Screen::text`) and the calls made to herdr. The JS capture is recorded next to the scenario
-//! (`.screen`, `.calls`); the Rust binary must give the same.
+//! final screen (`vt::Screen::text`) and the calls made to herdr. The capture is recorded next to the scenario
+//! (`.screen`, `.calls`); the binary must give the same.
 //!
 //! A scenario holds one directive per line, run in order (`#` starts a comment):
 //!   size <cols> <rows>          the terminal's size at start (default 80 24)
@@ -182,6 +182,8 @@ pub fn run(scenario: &Path, command: &[OsString], root: &Path) -> Capture {
     for d in ["work", "state", "config", "home", "herdr"] {
         std::fs::create_dir_all(root.join(d)).unwrap();
     }
+    // Setup offered already: its dialog has a test of its own (smoke.rs).
+    std::fs::write(root.join("state/setup-offered"), "").unwrap();
     let fake_bin = repo().join("tools/fake-herdr/herdr");
     let text = std::fs::read_to_string(scenario).unwrap_or_else(|e| panic!("{}: {e}", scenario.display()));
     let rootstr = root.to_str().unwrap();

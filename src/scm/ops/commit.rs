@@ -3,7 +3,7 @@
 use super::{capital, card, opt, strings, trim, unsafe_to_continue};
 use crate::core::exec::{self, Opts, WIN};
 use crate::core::ui::Confirm;
-use crate::core::{js, paths, which, worker};
+use crate::core::{paths, which, worker};
 use crate::diff;
 use crate::scm::context::{base, files};
 use crate::scm::parse::{self, Item};
@@ -111,21 +111,14 @@ fn claude(input: &str) -> Option<String> {
     // /^(commit message:\s*)/i
     let mut l = line.as_str();
     if l.len() >= 15 && l.is_char_boundary(15) && l[..15].eq_ignore_ascii_case("commit message:") {
-        l = l[15..].trim_start_matches(js::is_space);
+        l = l[15..].trim_start_matches(crate::unicode::is_space);
     }
     // /^["'“]+|["'”]+$/g
     let l = l.trim_start_matches(['"', '\'', '“']).trim_end_matches(['"', '\'', '”']);
-    let l: String = trim(l).encode_utf16().take(200).collect::<Vec<u16>>().pipe(|u| String::from_utf16_lossy(&u));
+    // 200 characters at most.
+    let l: String = trim(l).chars().take(200).collect();
     (!l.is_empty()).then_some(l)
 }
-
-trait Pipe: Sized {
-    fn pipe<T>(self, f: impl FnOnce(Self) -> T) -> T {
-        f(self)
-    }
-}
-
-impl<T> Pipe for T {}
 
 /// Without Claude: "add foo.js", "update explorer.js and 2 other files".
 fn fallback_message(items: &[Item]) -> String {
@@ -149,22 +142,9 @@ fn fallback_message(items: &[Item]) -> String {
     format!("{verb} {} and {}", base(&one.path), files(items.len() - 1).replacen("file", "other file", 1))
 }
 
-/// The diff, cut at MAX_PROMPT UTF-16 units as `slice` cuts it (a pair cut in two leaves U+FFFD).
+/// The diff, cut at MAX_PROMPT characters.
 fn cut_prompt(diff: &str) -> String {
-    let mut out = String::new();
-    let mut n = 0;
-    for ch in diff.chars() {
-        let w = ch.len_utf16();
-        if n + w > crate::scm::context::MAX_PROMPT {
-            if n < crate::scm::context::MAX_PROMPT {
-                out.push('\u{FFFD}');
-            }
-            break;
-        }
-        out.push(ch);
-        n += w;
-    }
-    out
+    diff.chars().take(crate::scm::context::MAX_PROMPT).collect()
 }
 
 impl Pane {
@@ -366,7 +346,7 @@ impl Pane {
                 let mut text = state::git(&top, &args, &GitOpts::default()).out;
                 if !staged {
                     for it in items.iter().filter(|i| i.untracked).take(20) {
-                        if js::utf16_len(&text) > crate::scm::context::MAX_PROMPT {
+                        if text.chars().count() > crate::scm::context::MAX_PROMPT {
                             break;
                         }
                         let mut args = vec!["diff"];
@@ -375,7 +355,7 @@ impl Pane {
                         text += &state::git(&top, &args, &GitOpts::default()).out;
                     }
                 }
-                if js::utf16_len(&text) > crate::scm::context::MAX_PROMPT {
+                if text.chars().count() > crate::scm::context::MAX_PROMPT {
                     text = format!("{}\n[diff truncated]\n", cut_prompt(&text));
                 }
                 let list: Vec<String> = items
@@ -432,8 +412,8 @@ mod tests {
     }
 
     #[test]
-    fn a_long_diff_is_cut_in_utf16_units() {
-        let text = "a".repeat(crate::scm::context::MAX_PROMPT - 1) + "😀";
-        assert!(cut_prompt(&text).ends_with('\u{FFFD}'));
+    fn a_long_diff_is_cut_in_characters() {
+        let text = "a".repeat(crate::scm::context::MAX_PROMPT - 1) + "😀😀";
+        assert!(cut_prompt(&text).ends_with("a😀"));
     }
 }

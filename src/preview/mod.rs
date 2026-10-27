@@ -1,11 +1,11 @@
-//! File preview of a tab (src/preview.js), opened next to the terminal by the explorer and the search:
+//! File preview of a tab, opened next to the terminal by the explorer and the search:
 //! syntax-highlighted text, rendered Markdown, images (in pixels with the Kitty graphics protocol, else drawn with half
 //! blocks), a hex dump for other binary files; or the file's git changes (Diff view, d). Reloads by itself when the
 //! file changes on disk, and shows the next file the explorer asks for (request file, see actions.preview), in tabs
 //! (core::tabs); the tab's review notes show in the text.
 //!
 //! As in the explorer, the herdr and clipboard calls run on a worker thread and their results come back to the
-//! pane's loop; the JS's timers are deadlines of that loop.
+//! pane's loop; timers are deadlines of that loop.
 //!
 //! Updated plugin (core::update): the preview starts again on the new code, on the same file and line.
 
@@ -27,7 +27,7 @@ use crate::core::screen::{self, Input, Screen};
 use crate::core::tabs::{self, Tabs};
 use crate::core::ui::{self, Scrollbar, c, fg};
 use crate::core::watch::Watch;
-use crate::core::{js, paths, update, worker};
+use crate::core::{paths, update, worker};
 use crate::json::{self, Value};
 use crate::sys::{self, Watcher};
 use std::rc::Rc;
@@ -62,7 +62,7 @@ impl Kept for Width {
     }
 }
 
-/// The pane: its state, the tabs, and the deadlines of the JS's timers.
+/// The pane: its state, the tabs, and the deadlines of its timers.
 pub struct Preview {
     pane: String,
     tab: String,
@@ -85,7 +85,7 @@ pub struct Preview {
     git: Worker,
     /// Beside a review's source control: q closes, whatever it shows.
     review: bool,
-    // the JS's run counters: an answer of git that another call took the place of is dropped
+    // run counters: an answer of git that another call took the place of is dropped
     diff_run: u64,
     changes_run: u64,
     show_run: u64,
@@ -135,7 +135,7 @@ fn within(file: &str, dir: &str) -> bool {
 }
 
 fn ext(file: &str) -> String {
-    js::lower(paths::extname(file).get(1..).unwrap_or(""))
+    paths::extname(file).get(1..).unwrap_or("").to_lowercase()
 }
 
 fn is_markdown(file: &str) -> bool {
@@ -146,9 +146,9 @@ fn size(n: u64) -> String {
     if n < 1024 {
         format!("{n} B")
     } else if n < 1 << 20 {
-        format!("{} KB", js::to_fixed(n as f64 / 1024.0, 1))
+        format!("{:.1} KB", n as f64 / 1024.0)
     } else {
-        format!("{} MB", js::to_fixed(n as f64 / f64::from(1 << 20), 1))
+        format!("{:.1} MB", n as f64 / f64::from(1 << 20))
     }
 }
 
@@ -165,7 +165,7 @@ fn hexdump(buf: &[u8]) -> Vec<String> {
 
 /// `+v || 0`, for a field of a request or a saved tab.
 fn num(v: Option<&Value>) -> f64 {
-    let n = js::number(v);
+    let n = crate::json::num(v);
     if n.is_nan() { 0.0 } else { n }
 }
 
@@ -203,7 +203,7 @@ fn saved_tabs(text: Option<String>) -> PaneTabs {
 
 /// The modification time of a file in milliseconds, 0 when missing (fs.Stats' mtimeMs).
 fn mtime_ms(file: &str) -> f64 {
-    std::fs::metadata(file).ok().and_then(|m| m.modified().ok()).map_or(0.0, js::time_ms)
+    std::fs::metadata(file).ok().and_then(|m| m.modified().ok()).map_or(0.0, crate::core::clock::ms)
 }
 
 /// Runs the pane: the process's exit code.
@@ -344,10 +344,10 @@ impl Preview {
         Ok(p)
     }
 
-    /// What the JS does as its script loads, once the screen is set up.
+    /// What the pane does first, once the screen is set up.
     fn start(&mut self) {
         let restored = self.restored;
-        // The JS's process.on('exit', saveFile), a signal included.
+        // The tabs saved at exit, a signal included.
         let (pane, snapshot, images) = (self.pane.clone(), self.snapshot.clone(), self.kitty.exit.clone());
         exec::at_exit(move || {
             if let Some(data) = snapshot.lock().unwrap_or_else(|e| e.into_inner()).take() {
@@ -495,7 +495,7 @@ impl Preview {
             [&self.requests, &self.settings_watch, &self.scope_watch, &self.notes_watch]
                 .into_iter()
                 .flatten()
-                .map(|w| Some(w.due())),
+                .map(Watch::due),
         );
         all.extend(self.version_watch.iter().map(update::VersionWatch::due));
         if !self.keeper_busy {
@@ -713,7 +713,7 @@ impl Preview {
         if let Some(show) = req.get("show").filter(|s| s.truthy()) {
             return self.enter_show(Some(show));
         }
-        // A file that is not a string: left alone, where the JS would read a file descriptor.
+        // A file that is not a string: left alone.
         let Some(asked) = req.get("file").filter(|f| f.truthy()).and_then(Value::as_str).map(String::from) else {
             return;
         };
@@ -811,7 +811,7 @@ impl Preview {
             self.render();
         }
         self.layout_seen = layout;
-        if js::strict_eq(saved.get("images"), self.settings.get("images")) {
+        if saved.get("images") == self.settings.get("images") {
             return;
         }
         self.settings.set("images", saved.get("images").cloned().unwrap_or(Value::Null));

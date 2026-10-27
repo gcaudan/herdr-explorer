@@ -1,4 +1,4 @@
-//! test/full-tab.test.js, and the other actions on herdr's side: herdr's answers faked by a script first on a PATH of
+//! The full tab, and the other actions on herdr's side: herdr's answers faked by a script first on a PATH of
 //! its own (HERDR_BIN_PATH pointed at it, herdr's variables removed), for a tab explorer (p2) | terminal (p3) |
 //! preview (p5). The script logs each call, its arguments separated by tabs, and answers with the file named by its
 //! arguments joined by spaces, else the file of its first two (pane-list), else as a plugin pane opened.
@@ -73,7 +73,7 @@ impl Fake {
         Fake { _guard: guard, _tmp: tmp, dir, state }
     }
 
-    /// The panes of the tab, and the neighbours of the JS test's fake.
+    /// The panes of the tab, and the neighbours the fake gives.
     fn reset(&self, panes: &[Value]) {
         let _ = std::fs::remove_dir_all(self.dir.join("answers"));
         let _ = std::fs::remove_file(self.dir.join("calls.log"));
@@ -291,7 +291,7 @@ fn a_file_opened_from_the_search_is_written_for_the_tabs_explorer_to_select_even
     assert_eq!(req.get("reveal"), Some(&Value::Bool(true)));
 }
 
-// --- beyond the JS test
+// --- the other actions
 
 #[test]
 fn a_path_goes_to_the_terminal_quoted_for_its_shell_or_for_its_agent() {

@@ -1,4 +1,4 @@
-//! test/show.test.js: a commit, a stash or a tag shown by the preview's Diff view (diff::show), from git.
+//! A commit, a stash or a tag shown by the preview's Diff view (diff::show), from git.
 
 mod support;
 

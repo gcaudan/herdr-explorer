@@ -1,10 +1,10 @@
-//! Review notes in the preview (src/preview.js): taken on the selected lines (a), shown in the text under the last line
+//! Review notes in the preview: taken on the selected lines (a), shown in the text under the last line
 //! they cover, sent to the agent (A), copied (C), the last one removed (U).
 
 use super::diff::DiffData;
 use super::{Kind, Preview, Row};
 use crate::core::ui::{self, Field, Seg, c, fg, seg, text_width};
-use crate::core::{exec, js, notes, paths};
+use crate::core::{exec, notes, paths};
 use crate::diff::{self as diffs, Ref};
 use crate::json::Value;
 
@@ -56,7 +56,8 @@ impl Preview {
             } else {
                 format!("{} ", line_label(&notes::where_(n, Some(&paths::dirname(file)), false)))
             };
-            let kind = n.get("kind").filter(|k| k.truthy()).map_or(String::new(), |k| format!("{}: ", js::string(k)));
+            let kind =
+                n.get("kind").filter(|k| k.truthy()).map_or(String::new(), |k| format!("{}: ", crate::json::text(k)));
             let text = n.get("text").and_then(Value::as_str).unwrap_or("");
             let body = format!("✎ {at}{}{kind}{}", if stale { "stale, " } else { "" }, ui::clean_line(text, 4, None));
             let style = if stale { fg(c().dim) } else { note_style() };
@@ -69,7 +70,7 @@ impl Preview {
         let mut out: Vec<Row> = s
             .notes
             .iter()
-            .filter(|n| !lines || !truthy(n, "from") || truthy(n, "stale") || js::number(n.get("to")) > len)
+            .filter(|n| !lines || !truthy(n, "from") || truthy(n, "stale") || crate::json::num(n.get("to")) > len)
             .flat_map(&rows_of)
             .collect();
         if !lines {
@@ -84,7 +85,7 @@ impl Preview {
                 out.extend(
                     s.notes
                         .iter()
-                        .filter(|n| truthy(n, "from") && !truthy(n, "stale") && js::strict_eq(n.get("to"), Some(&end)))
+                        .filter(|n| truthy(n, "from") && !truthy(n, "stale") && n.get("to") == Some(&end))
                         .flat_map(&rows_of),
                 );
             }
@@ -98,8 +99,8 @@ impl Preview {
         self.state.notes.iter().any(|n| {
             n.get("from").is_some_and(Value::truthy)
                 && !n.get("stale").is_some_and(Value::truthy)
-                && line >= js::number(n.get("from"))
-                && line <= js::number(n.get("to"))
+                && line >= crate::json::num(n.get("from"))
+                && line <= crate::json::num(n.get("to"))
         })
     }
 
@@ -165,7 +166,7 @@ impl Preview {
             }
             "enter" => {
                 let Some(n) = self.state.note.take() else { return };
-                if n.field.value.chars().all(js::is_space) {
+                if n.field.value.chars().all(crate::unicode::is_space) {
                     return self.render();
                 }
                 self.state.select = None;
@@ -227,7 +228,7 @@ impl Preview {
         };
         self.state.note_count = all.len();
         let file = Value::Str(file.unwrap_or_default());
-        self.state.notes = all.into_iter().filter(|n| js::strict_eq(n.get("file"), Some(&file))).collect();
+        self.state.notes = all.into_iter().filter(|n| n.get("file") == Some(&file)).collect();
     }
 
     pub(super) fn load_notes(&mut self) {

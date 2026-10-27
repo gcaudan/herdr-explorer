@@ -1,9 +1,9 @@
-//! git's output turned into data, for the source control pane (src/scm/parse.js): status, history, stashes, refs,
+//! git's output turned into data, for the source control pane: status, history, stashes, refs,
 //! remotes, worktrees, branch comparisons, config scopes and error messages. Pure functions.
 
 use crate::core::exec::Exec;
-use crate::core::{js, paths};
-use crate::unicode::locale_compare;
+use crate::core::paths;
+use crate::unicode::natural_cmp;
 
 /// The change of a status code: a type change shows as modified, a copy as added.
 pub fn code(c: char) -> char {
@@ -88,7 +88,7 @@ fn ahead_behind(e: &str) -> Option<(f64, f64)> {
         if n > 0 && e[at + n..].starts_with(" -") {
             let m = digits(&e[at + n + 2..]);
             if m > 0 {
-                let num = |s: &str| js::string_to_number(s);
+                let num = |s: &str| s.parse().unwrap_or(f64::NAN);
                 return Some((num(&e[at..at + n]), num(&e[at + n + 2..at + n + 2 + m])));
             }
         }
@@ -127,8 +127,8 @@ pub fn parse_status(out: &str) -> Status {
             } else {
                 None
             };
-            // A missing code (a field XY shorter than 2) is not '.': JS's undefined, a modification. Without the
-            // field at all, the JS throws: the record is left out.
+            // A missing code (a field XY shorter than 2) is not '.': a modification. Without the field
+            // at all, the record is left out.
             if parts.len() > 1 {
                 let x = xy.first().copied();
                 if x != Some('.') {
@@ -155,9 +155,8 @@ pub fn parse_status(out: &str) -> Status {
         }
         i += 1;
     }
-    // localeCompare with { numeric: true, sensitivity: 'base' }; a stable sort, as V8's.
     for list in [&mut info.conflicts, &mut info.staged, &mut info.changes] {
-        list.sort_by(|a, b| locale_compare(&a.path, &b.path, true));
+        list.sort_by(|a, b| natural_cmp(&a.path, &b.path));
     }
     info.detached = info.branch == "(detached)";
     info.has_head = info.oid != "(initial)";
@@ -191,7 +190,7 @@ pub struct Commit {
 
 /// `+field`: a missing field is NaN.
 fn number(f: Option<&str>) -> f64 {
-    f.map_or(f64::NAN, js::string_to_number)
+    f.and_then(|s| s.trim().parse().ok()).unwrap_or(f64::NAN)
 }
 
 /// `/(^|, )HEAD($|,| ->)/.test(refs)`.
@@ -229,7 +228,7 @@ pub fn parse_history(out: &str) -> Vec<Commit> {
 
 /// Short age of a commit: "5 min", "3 h", "2 d", "4 mo", "1 y".
 pub fn ago(time: f64) -> String {
-    ago_at(time, js::now_ms())
+    ago_at(time, crate::core::clock::now_ms())
 }
 
 /// `ago` at a time (ms).
@@ -251,14 +250,14 @@ pub fn ago_at(time: f64, now: f64) -> String {
     }
 }
 
-/// A number as JS writes an integer one (NaN included).
+/// An integer as text (NaN included).
 fn fmt_num(x: f64) -> String {
-    js::string(&crate::json::Value::Num(x))
+    if x.is_nan() { "NaN".into() } else { crate::json::number(x) }
 }
 
-/// A string with none of JS's line terminators, which `.` does not match.
+/// A string with no line terminator, which `.` does not match.
 fn one_line(s: &str) -> bool {
-    !s.chars().any(js::is_line_terminator)
+    !s.chars().any(crate::core::regex::is_line_terminator)
 }
 
 /// `/^refs\/(heads|remotes|tags)\/(.+)$/`: the kind and the name.
@@ -392,9 +391,9 @@ pub struct Refs {
 /// `/^(\S+)\s+(.*) \(fetch\)$/`: a remote and its fetch URL.
 fn remote_line(l: &str) -> Option<Remote> {
     let rest = l.strip_suffix(" (fetch)")?;
-    let name_end = rest.find(js::is_space).unwrap_or(rest.len());
+    let name_end = rest.find(crate::unicode::is_space).unwrap_or(rest.len());
     let after = &rest[name_end..];
-    let url = after.trim_start_matches(js::is_space);
+    let url = after.trim_start_matches(crate::unicode::is_space);
     if name_end == 0 || url.len() == after.len() || !one_line(url) {
         return None;
     }
@@ -403,7 +402,7 @@ fn remote_line(l: &str) -> Option<Remote> {
 
 /// `/^<prefix>(.*)$/m`: the rest of the first line of a block that starts with prefix.
 fn line_after<'a>(block: &'a str, prefix: &str) -> Option<&'a str> {
-    block.split(js::is_line_terminator).find_map(|l| l.strip_prefix(prefix))
+    block.split(crate::core::regex::is_line_terminator).find_map(|l| l.strip_prefix(prefix))
 }
 
 /// git for-each-ref (refname, short hash, upstream, track, date, subject, separated by %1f), git remote -v and git
@@ -469,11 +468,11 @@ pub fn parse_compare(out: &str) -> Vec<Compared> {
 /// git rev-list --left-right --count base...branch: [behind, ahead].
 pub fn parse_count(out: &str) -> Vec<f64> {
     // trim().split(/\s+/): "" gives [""], that is [0].
-    let t = out.trim_matches(js::is_space);
+    let t = out.trim_matches(crate::unicode::is_space);
     if t.is_empty() {
         return vec![0.0];
     }
-    t.split(js::is_space).filter(|s| !s.is_empty()).map(js::string_to_number).collect()
+    t.split(crate::unicode::is_space).filter(|s| !s.is_empty()).map(|s| s.parse().unwrap_or(f64::NAN)).collect()
 }
 
 /// A file of git diff --numstat: add and del "-" for a binary file.
@@ -544,13 +543,13 @@ pub fn error_of(res: &Exec) -> String {
     let text = if !res.err.is_empty() { &res.err } else { &res.out };
     let lines: Vec<&str> = text
         .split('\n')
-        .map(|l| l.strip_suffix('\r').unwrap_or(l).trim_matches(js::is_space))
+        .map(|l| l.strip_suffix('\r').unwrap_or(l).trim_matches(crate::unicode::is_space))
         .filter(|l| !l.is_empty())
         .collect();
     // A refused push: the reason (non-fast-forward, fetch first…) rather than "failed to push some refs".
     if let Some((l, n)) = lines.iter().find_map(|l| rejected(l).map(|n| (*l, n))) {
         let after = &l[n..];
-        let reason = after.trim_start_matches(js::is_space);
+        let reason = after.trim_start_matches(crate::unicode::is_space);
         return if reason.len() < after.len() { format!("rejected {reason}") } else { l.to_string() };
     }
     let fatal = |x: &&&str| x.starts_with("fatal:") || x.starts_with("error:");

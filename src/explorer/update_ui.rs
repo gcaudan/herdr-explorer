@@ -1,11 +1,10 @@
-//! The explorer's side of the update (explorer.js): the newer release asked about, installed, skipped; the installer
-//! to run again; the header's pill; the restart on the new code.
+//! The explorer's side of the update: the newer release asked about, its command copied, skipped; the header's pill;
+//! the restart on the new code.
 
 use super::{Act, Choice, Explorer, Run, later};
 use crate::core::actions;
 use crate::core::ui::{Ask, Button};
-use crate::core::{update, worker};
-use std::panic::AssertUnwindSafe;
+use crate::core::{exec, paths, setup, update};
 use std::rc::Rc;
 
 fn button(key: &str, label: &str, tone: &str) -> Button {
@@ -13,38 +12,20 @@ fn button(key: &str, label: &str, tone: &str) -> Button {
 }
 
 impl Explorer {
-    /// update.json changed (the daily check, a skip, an update in another tab): what it says, read again.
+    /// update.json changed (the daily check, a skip in another tab): what it says, read again.
     pub(super) fn update_changed(&mut self) {
         self.latest = update::available();
         self.skipped = update::skipped();
-        self.finish = update::finishing();
         self.render();
     }
 
     /// The newer release: the versions, its first changes (the release's text, kept by the daily check), and the
-    /// answers: update, its notes in the browser, skip it (not for one skipped already), later (focused, as escape).
-    /// Installed by herdr: herdr's update command copied instead, since only herdr may move its checkout (herdr not
-    /// answering: the update, whose checks refuse such a checkout).
+    /// answers: herdr's update command copied (herdr's index is the only channel), its notes in the browser, skip it
+    /// (not for one skipped already), later (focused, as escape).
     pub(super) fn ask_update(&mut self) -> Act {
-        if self.updating {
-            return Act::Now(Some("Update in progress".into()));
-        }
-        Act::Later(Box::new(|| {
-            if update::managed() {
-                let text = actions::copy(&update::herdr_update(), "Update command copied");
-                return Box::new(move |ex: &mut Explorer| ex.flash(Some(text)));
-            }
-            Box::new(|ex: &mut Explorer| {
-                let text = ex.update_choice();
-                ex.flash(text)
-            })
-        }))
-    }
-
-    fn update_choice(&mut self) -> Option<String> {
-        let to = self.latest.clone().or_else(|| self.skipped.clone())?;
+        let Some(to) = self.latest.clone().or_else(|| self.skipped.clone()) else { return Act::Now(None) };
         let (notes, url) = update::release();
-        let mut buttons = vec![button("y", "Update", "go"), button("r", "Notes", "")];
+        let mut buttons = vec![button("c", "Copy command", "go"), button("r", "Notes", "")];
         if self.latest.is_some() {
             buttons.push(button("s", "Skip version", ""));
         }
@@ -52,13 +33,14 @@ impl Explorer {
         let note = if notes.len() > 3 {
             format!("and {} more (r)", notes.len() - 3)
         } else {
-            "The panes restart on the new code.".into()
+            "Copies herdr's update command.".into()
         };
         let focus = buttons.len() - 1;
-        let install: Run = {
-            let to = to.clone();
-            Rc::new(move |ex: &mut Explorer| ex.install(&to))
-        };
+        let copy: Run = Rc::new(|_: &mut Explorer| {
+            later(|| {
+                Some(actions::copy(&update::herdr_update(), "Update command copied: run it, then reopen the panes"))
+            })
+        });
         let notes_page: Run = Rc::new(move |_: &mut Explorer| {
             let url = url.clone();
             later(move || Some(actions::web(&url, "the release notes")))
@@ -81,79 +63,46 @@ impl Explorer {
                 focus,
                 ..Ask::default()
             },
-            on: vec![("y".into(), install), ("r".into(), notes_page), ("s".into(), skip)],
+            on: vec![("c".into(), copy), ("r".into(), notes_page), ("s".into(), skip)],
         });
         self.render();
-        None
-    }
-
-    /// The update, on a thread of its own as it may take minutes: the panes then restart on the new code by
-    /// themselves (VersionWatch). Refused: the reason only, since the command would bypass the checks. Failed: the
-    /// command copied, to run in the terminal. "Updating…" stays until it ends.
-    fn install(&mut self, to: &str) -> Act {
-        self.updating = true;
-        self.flash_at = None;
-        self.state.flash = Some("Updating…".into());
-        self.render();
-        let to = to.to_string();
-        let job: super::Job = Box::new(move || {
-            let text = match std::panic::catch_unwind(AssertUnwindSafe(|| update::install(&to))) {
-                Err(_) => "Update failed".to_string(),
-                Ok(o) => match o.retry.filter(|_| !o.ok) {
-                    None => o.message,
-                    Some(command) => {
-                        format!("{}: {}", o.message, actions::copy(&command, "update command copied"))
-                    }
-                },
-            };
-            Box::new(move |ex: &mut Explorer| {
-                ex.updating = false;
-                ex.state.flash = None;
-                ex.flash(Some(text));
-            })
-        });
-        if !worker::spawn(self.tx.clone(), self.waker.clone(), job) {
-            self.updating = false;
-            self.state.flash = None;
-            return Act::Now(Some("Update failed".into()));
-        }
         Act::Now(None)
     }
 
-    /// The update the installer must finish: its command shown, then copied to run in a terminal; the ! finish then
-    /// goes away in every explorer.
-    pub(super) fn finish_update(&mut self) -> Act {
-        let copy: Run = Rc::new(|_: &mut Explorer| {
+    /// No key binding of the plugin in herdr's config, and setup never offered: offered once, in every explorer
+    /// (setup-offered in the state folder), the dialog answered or not.
+    pub(super) fn offer_setup(&mut self) {
+        let Some(marker) = exec::state_dir().map(|d| paths::join(&[&d, "setup-offered"])) else { return };
+        if std::fs::metadata(&marker).is_ok() || setup::bound() {
+            return;
+        }
+        exec::write_atomic(&marker, "");
+        let run: Run = Rc::new(|_: &mut Explorer| {
             later(|| {
-                let done = actions::copy(&update::installer(), "Installer command copied");
-                if done != "Clipboard unavailable" {
-                    update::finished();
-                }
-                Some(done)
+                Some(match setup::setup() {
+                    Ok(_) => "Key bindings added".into(),
+                    Err(e) => e,
+                })
             })
         });
-        self.state.menu = None;
         self.state.choice = Some(Choice {
             ask: Ask {
-                title: format!("Finish the {} update", self.finish.as_deref().unwrap_or("")),
-                name: update::installer(),
-                note: Some("Run it once in a terminal.".into()),
-                buttons: vec![button("c", "Copy command", "go"), button("n", "Later", "")],
+                title: "Set up herdr-explorer".into(),
+                name: "prefix+f explorer · prefix+a go to file · prefix+d source control".into(),
+                note: Some("Adds these keys to herdr's config.toml and links the herdr-preview skill for Claude Code.                             Later: herdr-explorer setup"
+                    .into()),
+                buttons: vec![button("y", "Set up", "go"), button("n", "Later", "")],
                 focus: 0,
                 ..Ask::default()
             },
-            on: vec![("c".into(), copy)],
+            on: vec![("y".into(), run)],
         });
-        self.render();
-        Act::Now(None)
     }
 
-    /// What the header's pill does (render.rs pill): finish, update, or the notes of the update just done.
+    /// What the header's pill does (render.rs pill): the update, or the notes of the update just made.
     pub(super) fn pill_action(&mut self) -> Act {
         let check = self.settings.get("updateCheck").is_some_and(crate::json::Value::truthy);
-        if self.finish.is_some() {
-            self.finish_update()
-        } else if self.latest.is_some() && check && !self.updating {
+        if self.latest.is_some() && check {
             self.ask_update()
         } else {
             let (_, url) = update::release();
@@ -161,11 +110,10 @@ impl Explorer {
         }
     }
 
-    /// Nothing typed nor chosen, no update running: the explorer may restart on the new code.
+    /// Nothing typed nor chosen: the explorer may restart on the new code.
     pub(super) fn idle_for_update(&self) -> bool {
         let s = &self.state;
-        !self.updating
-            && s.prompt.is_none()
+        s.prompt.is_none()
             && s.confirm.is_none()
             && s.choice.is_none()
             && s.menu.is_none()
@@ -184,6 +132,7 @@ impl Explorer {
         self.git_watcher = None;
         self.keys_watch = None;
         self.settings_watch = None;
+        self.shown_watch = None;
         self.update_watch = None;
         self.requests = None;
         self.screen.restart(&[("EXPLORER_TREE".into(), self.root.clone())]);

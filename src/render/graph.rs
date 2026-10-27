@@ -13,7 +13,7 @@ pub struct Row {
     pub below: bool,
 }
 
-// Makes room for lane i (the JS's array grows with holes).
+// Makes room for lane i (with holes).
 fn put<T: Clone>(lanes: &mut Vec<Option<T>>, i: usize) {
     if lanes.len() <= i {
         lanes.resize(i + 1, None);

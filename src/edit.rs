@@ -1,6 +1,7 @@
-//! Terminal editor on a file, in a full-tab pane opened from the explorer or the preview (src/edit.js): the editor of
+//! Terminal editor on a file, in a full-tab pane opened from the explorer or the preview: the editor of
 //! the settings when it needs a terminal, $VISUAL, $EDITOR, else the first of nano, nvim, vim, vi (edit, nvim, vim,
-//! nano on Windows). The pane closes when the editor exits.
+//! nano on Windows). The pane closes when the editor exits. Source control's pane runs the tool of the settings
+//! (scmCommand) the same way (tool).
 
 use crate::core::exec::{self, WIN};
 use crate::core::{paths, which};
@@ -68,17 +69,44 @@ pub fn run(_args: &[String]) -> i32 {
         crate::core::actions::hold_tab("edit", &origin, "Editor");
     }
     let Some((cmd, args)) = editor() else { return fail("No terminal editor found: set $EDITOR.\r\n") };
-    // Node runs no batch file without a shell (EINVAL); Rust would, through cmd.
-    let ext = paths::extname(&cmd).to_lowercase();
+    launch(&cmd, &args, Some(&file), None)
+}
+
+/// The source control tool of the settings (scmCommand, in EXPLORER_TOOL), in the review's tab of source control's
+/// pane, at the explorer's root (EXPLORER_ROOT): split as the editor's command, run without a shell.
+pub fn tool() -> i32 {
+    let root = exec::env_var("EXPLORER_ROOT").filter(|r| !r.is_empty());
+    let review = exec::env_var("EXPLORER_REVIEW").unwrap_or_default();
+    crate::core::actions::hold_tab("review", &review, "SC");
+    let words = exec::words(&exec::env_var("EXPLORER_TOOL").unwrap_or_default());
+    let Some((name, args)) = words.split_first().filter(|(n, _)| !n.is_empty()) else {
+        return fail("No source control tool.\r\n");
+    };
+    let Some(cmd) = find(name) else { return fail(&format!("{name} not found.\r\n")) };
+    launch(&cmd, args, None, root.as_deref())
+}
+
+/// cmd run with args (then the file), in dir when given; its exit code.
+fn launch(cmd: &str, args: &[String], file: Option<&str>, dir: Option<&str>) -> i32 {
+    // A batch file runs only through cmd, which would read its arguments: refused.
+    let ext = paths::extname(cmd).to_lowercase();
     if WIN && (ext == ".cmd" || ext == ".bat") {
-        return fail(&format!("Cannot start {cmd}: EINVAL\r\n"));
+        return fail(&format!("Cannot start {cmd}: a batch file needs cmd\r\n"));
     }
-    match std::process::Command::new(&cmd).args(&args).arg(&file).status() {
+    let mut command = std::process::Command::new(cmd);
+    command.args(args).args(file);
+    if let Some(dir) = dir {
+        command.current_dir(dir);
+    }
+    match command.status() {
         Err(e) => fail(&format!("Cannot start {cmd}: {}\r\n", exec::io_code(&e))),
         Ok(status) => match status.code() {
-            // An exit code past a byte (Windows: 0xC000013A after ctrl+c), given as is, as the JS's process.exit.
-            Some(code) if !(0..=255).contains(&code) => std::process::exit(code),
-            // Killed by a signal: the JS's null status, 0.
+            // An exit code past a byte (Windows: 0xC000013A after ctrl+c), given as is.
+            Some(code) if !(0..=255).contains(&code) => {
+                exec::exit_hooks();
+                std::process::exit(code)
+            }
+            // Killed by a signal: 0.
             code => code.unwrap_or(0),
         },
     }

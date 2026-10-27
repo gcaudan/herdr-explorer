@@ -155,38 +155,38 @@ pub fn hostname() -> String {
     String::from_utf8_lossy(&buf[..end]).into_owned()
 }
 
-/// The process's user id (process.getuid()).
+/// The process's user id.
 pub fn getuid() -> u32 {
     // SAFETY: getuid has no preconditions.
     unsafe { getuid_raw() }
 }
 
-/// Whether the process may run the file (access X_OK, as fs.accessSync checks it).
+/// Whether the process may run the file (access X_OK).
 pub fn executable(path: &str) -> bool {
     let Ok(c) = std::ffi::CString::new(path) else { return false };
     // SAFETY: a NUL-terminated path.
     unsafe { access(c.as_ptr(), 1) == 0 }
 }
 
-/// A new session without terminal, for a child about to run (Node's detached); async-signal-safe.
+/// A new session without terminal, for a child about to run (a detached child); async-signal-safe.
 pub fn setsid() {
     // SAFETY: no precondition; it fails only for a group leader.
     unsafe { setsid_raw() };
 }
 
-/// SIGTERM to a process group (Node's process.kill(-pid)).
+/// SIGTERM to a process group (kill(-pid)).
 pub fn kill_group(pid: u32) {
     // SAFETY: plain system call.
     unsafe { kill(-(pid as c_int), SIGTERM) };
 }
 
-/// SIGTERM to a process, as Node's `child.kill()`.
+/// SIGTERM to a process.
 pub fn terminate(pid: u32) {
     // SAFETY: plain system call.
     unsafe { kill(pid as c_int, SIGTERM) };
 }
 
-/// A signal to a process, as Node's `child.kill(sig)`.
+/// A signal to a process.
 pub fn send_signal(pid: u32, sig: super::Signal) {
     let sig = match sig {
         super::Signal::Term => SIGTERM,
@@ -195,6 +195,43 @@ pub fn send_signal(pid: u32, sig: super::Signal) {
     };
     // SAFETY: plain system call.
     unsafe { kill(pid as c_int, sig) };
+}
+
+/// A pipe that tells a child its parent's end: the children inherit the read end, never the write end, which the
+/// parent keeps; the read end sees its end of file once the parent is gone, however it ended.
+pub fn lifeline() -> io::Result<(std::os::fd::OwnedFd, std::os::fd::OwnedFd)> {
+    use std::os::fd::FromRawFd;
+    let mut fds = [0 as c_int; 2];
+    // SAFETY: pipe writes two descriptors, owned from here on.
+    unsafe {
+        if pipe(fds.as_mut_ptr()) != 0 {
+            return Err(io::Error::last_os_error());
+        }
+        fcntl(fds[1], F_SETFD, FD_CLOEXEC);
+        Ok((std::os::fd::OwnedFd::from_raw_fd(fds[0]), std::os::fd::OwnedFd::from_raw_fd(fds[1])))
+    }
+}
+
+/// Takes the read end of a parent's lifeline, inherited as fd: no longer passed on to this process's own children.
+/// False when fd is not open.
+pub fn adopt_lifeline(fd: i32) -> bool {
+    // SAFETY: a flag change on a descriptor; fails on one that is not open.
+    unsafe { fcntl(fd, F_SETFD, FD_CLOEXEC) >= 0 }
+}
+
+/// Blocks until the lifeline read from fd ends: true once the parent is gone, false on a read that failed.
+pub fn wait_lifeline(fd: i32) -> bool {
+    let mut b = 0u8;
+    loop {
+        // SAFETY: a one-byte read into b.
+        let n = unsafe { read(fd, &mut b as *mut u8 as *mut c_void, 1) };
+        match n {
+            0 => return true,
+            n if n < 0 && errno() == EINTR => {}
+            n if n < 0 => return false,
+            _ => {}
+        }
+    }
 }
 
 /// The parent process's id: 1, or a subreaper's, once the parent is gone.
@@ -535,6 +572,22 @@ mod tests {
     use super::*;
     use std::os::fd::AsRawFd;
     use std::sync::Mutex;
+
+    #[test]
+    fn a_lifeline_ends_with_its_write_end() {
+        let (r, w) = lifeline().unwrap();
+        // SAFETY: F_GETFD only reads the descriptor's flags.
+        let cloexec = |fd: c_int| unsafe { fcntl(fd, F_GETFD) } & FD_CLOEXEC != 0;
+        assert!(!cloexec(r.as_raw_fd()) && cloexec(w.as_raw_fd()));
+        assert!(adopt_lifeline(r.as_raw_fd()) && cloexec(r.as_raw_fd()));
+        let fd = r.as_raw_fd();
+        let waiting = std::thread::spawn(move || wait_lifeline(fd));
+        std::thread::sleep(Duration::from_millis(50));
+        assert!(!waiting.is_finished());
+        drop(w);
+        assert!(waiting.join().unwrap());
+        drop(r);
+    }
 
     unsafe extern "C" {
         fn raise(sig: c_int) -> c_int;

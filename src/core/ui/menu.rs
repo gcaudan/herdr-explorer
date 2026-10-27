@@ -81,7 +81,7 @@ impl<T: Clone> Menu<T> {
             if lines.len() <= i {
                 lines.resize(i + 1, String::new());
             }
-            // `lines[i] || line([], W)`: an empty line too.
+            // An empty line is drawn blank, full width.
             let blank;
             let l = if lines[i].is_empty() {
                 blank = line(&[], cols(w), None);

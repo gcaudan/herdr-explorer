@@ -9,6 +9,11 @@ confirmation. Opened with `s` in the tree, it selects the selected file in Chang
 folder, its first changed file); a file without changes leaves the selection at the top, with *No changes in …*
 in the status line.
 
+With a **Source control tool** in the settings (`scmCommand`: `lazygit`, `gitui`, `tig`…), `prefix+d` and
+**Source control** of the menu run that tool in the review tab instead, at the explorer's root; the tab closes when
+the tool exits. Opening source control on a file (`s` on a file, **File history**) keeps the plugin's. Unlike it, an
+external tool runs the repository's hooks and filters: keep the setting empty for repositories you have not reviewed.
+
 ## Header and tabs
 
 The header shows the repository name, the branch (click it for the branch picker), its state against the
@@ -19,7 +24,7 @@ CHERRY-PICKING, REVERTING, APPLYING, BISECTING). On the right, one main button s
 its icon spins while it runs. Then come **⇣ Fetch** and **Actions ▾**, the repository's menu (`m`), with shorter
 labels below 80 columns. A menu hangs under the button that opened it, which stays lit while it is open.
 
-Tabs: **Changes**, **History**, **Stashes**, **Refs** (keys `1` to `4`), the active one underlined, Changes and
+Tabs: **Changes**, **History**, **Stashes**, **Refs**, **PRs** (keys `1` to `5`), the active one underlined, Changes and
 Stashes with their count. In Changes, a **List · Tree** switch, the active choice filled, changes the layout.
 
 The review has its own preview, on the right at full height, which shows the selection as it moves: a file's
@@ -66,7 +71,7 @@ help of the view (see [Key help](explorer.md#key-help--or-f1)).
 | `enter`                    | file, commit, stash, tag: focus the preview (opened again after a `q` there) · section/folder: fold · branch: checkout |
 | `z`                        | zoom the pane (toggle); the zoom goes when the pane loses the focus |
 | `tab`                      | focus the diff                                                  |
-| `1`–`4`                    | switch view                                                     |
+| `1`–`5`                    | switch view                                                     |
 | `r`                        | refresh                                                         |
 | `f` / `L` / `P`            | fetch / pull (fast-forward only) / push. The first push publishes the branch on `origin` (else the first remote) and sets its upstream |
 | `ctrl+p` / `ctrl+f`        | Go to file / Search in files, in the repository                 |
@@ -89,6 +94,15 @@ edits it in the terminal editor and `o` opens it in its app (else the editor).
 
 **Stashes view**: `n` new stash, named on a row above the list (the message is optional): `enter`
 stashes the untracked files too, `alt+enter` or `ctrl+o` leaves them. `a` apply, `o` pop, `d` drop.
+
+**PRs view** (pull requests): the repository's open pull requests on GitHub, through the [GitHub CLI](https://cli.github.com)
+(`gh`, logged in with `gh auth login`): number, draft, title, review (approved, changes requested, review
+required), author and checks (`✓` passed, `✗` failed, `●` running). The current branch's comes first, in bold. The
+list loads on entering the view and on `r`, never on its own; the last one shows meanwhile. `enter` shows the pull
+request (header, description, checks and diff; GitHub gives no diff past 300 files), `o` opens it in the browser,
+`C` checks it out (`gh pr checkout`, refused as a fetch when the repository sets network settings). Without `gh`,
+or not logged in, the view says so. Creating, merging or commenting stay with `gh`, or a source control tool such as
+`gh dash` in the settings.
 
 **File history**: from the explorer (`H` or **File history**) or the preview (`H`), the History view shows only the
 commits that changed the file, each linked to the previous one in the graph, and a commit's diff is limited to the

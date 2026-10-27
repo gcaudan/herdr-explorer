@@ -1,4 +1,4 @@
-//! The `hook` subcommand (src/hook.js): opens the explorer to the left (or the right, depending on the settings) of a
+//! The `hook` subcommand: opens the explorer to the left (or the right, depending on the settings) of a
 //! tab.
 //!   hook           tab.created event (creating a space also emits it for its first tab), unless the autoOpen
 //!                  setting is off
@@ -8,19 +8,20 @@
 //!   hook --scm     key binding action: source control of the current tab's folder
 //!   hook --closed  tab.closed and workspace.closed events: removes the state of the tabs and panes gone
 //!   hook --agent   pane.agent_status_changed event: the working tree when the agent starts a turn (scope)
-//!   hook --focused tab.focused event: a tab under review leads to its review (actions::scm)
+//!   hook --focused tab.focused event: the tab shown noted (core::shown); a tab under review leads to its review
+//!                  (actions::scm)
 //!
-//! Each run also saves the state folder for peek. Where the JS threw (herdr failing, an answer without what it
-//! reads), the hook stops with code 1, without the stack.
+//! Each run also saves the state folder for peek. Where herdr fails or an answer lacks what it reads, the hook
+//! stops with code 1, without the stack.
 
 use crate::core::actions::{self, Shown};
 use crate::core::exec::{self, OWN_PANES};
-use crate::core::{js, paths, scope, update};
+use crate::core::{paths, scope, shown, update};
 use crate::json::{self, Value};
 
 const LABEL: &str = "Explorer";
 
-/// What the JS threw on: the hook stops there, code 1.
+/// A failure: the hook stops there, code 1.
 struct Thrown;
 
 type R<T> = Result<T, Thrown>;
@@ -29,7 +30,7 @@ fn some<T>(v: Option<T>) -> R<T> {
     v.ok_or(Thrown)
 }
 
-/// A herdr command's result (execFileSync): thrown when herdr fails.
+/// A herdr command's result, waited for: Thrown when herdr fails.
 fn herdr(args: &[&str]) -> R<Value> {
     let out = exec::exec(exec::herdr(), args, &exec::Opts::default());
     if out.code != Some(0) {
@@ -38,9 +39,9 @@ fn herdr(args: &[&str]) -> R<Value> {
     Ok(exec::result(Some(&out.out)))
 }
 
-/// A field as the JS passes it to execFileSync: String() of it.
+/// A field as text for a herdr argument, "undefined" when missing.
 fn str_of(v: &Value, key: &str) -> String {
-    v.get(key).map_or_else(|| "undefined".into(), js::string)
+    v.get(key).map_or_else(|| "undefined".into(), json::text)
 }
 
 /// `v.key` of an array, thrown when it is not one (`.filter`, `.find` on it).
@@ -62,7 +63,7 @@ fn workspace_panes(workspace: &str) -> R<Vec<Value>> {
 }
 
 fn tab_panes(workspace: &str, tab: Option<&Value>) -> R<Vec<Value>> {
-    Ok(workspace_panes(workspace)?.into_iter().filter(|p| js::strict_eq(p.get("tab_id"), tab)).collect())
+    Ok(workspace_panes(workspace)?.into_iter().filter(|p| p.get("tab_id") == tab).collect())
 }
 
 fn workspaces() -> R<Vec<Value>> {
@@ -102,7 +103,7 @@ fn clamp(x: f64, lo: f64, hi: f64) -> f64 {
 }
 
 fn rect(r: &Value, key: &str) -> f64 {
-    js::number(r.get("rect").and_then(|r| r.get(key)))
+    json::num(r.get("rect").and_then(|r| r.get(key)))
 }
 
 /// Opens the explorer in the tab; tree: the tree root, when Set as root had moved it away from the space folder
@@ -113,14 +114,12 @@ fn open(panes: &[Value], tab: &Value, root: Option<String>, tree: Option<String>
     // The top-left pane: the explorer takes its place and pushes it to the right. Docked on the right: the top-right
     // pane, which the explorer splits.
     let layout = some(herdr(&["pane", "layout", "--pane", &str_of(first, "pane_id")])?.get("layout").cloned())?;
-    let area = js::number(layout.get("area").and_then(|a| a.get("width")));
+    let area = json::num(layout.get("area").and_then(|a| a.get("width")));
     let corner = list(&layout, "panes")?.into_iter().find(|r| {
         rect(r, "y") == 0.0 && if right { rect(r, "x") + rect(r, "width") == area } else { rect(r, "x") == 0.0 }
     });
-    let target = corner
-        .as_ref()
-        .and_then(|c| panes.iter().find(|p| js::strict_eq(p.get("pane_id"), c.get("pane_id"))))
-        .unwrap_or(first);
+    let target =
+        corner.as_ref().and_then(|c| panes.iter().find(|p| p.get("pane_id") == c.get("pane_id"))).unwrap_or(first);
     let target_id = str_of(target, "pane_id");
     let before = focused_tab()?;
 
@@ -137,7 +136,7 @@ fn open(panes: &[Value], tab: &Value, root: Option<String>, tree: Option<String>
     args.push("--no-focus");
     let opened = herdr(&args)?;
     let explorer = some(opened.get("plugin_pane").and_then(|p| p.get("pane")).and_then(|p| p.get("pane_id")))?;
-    let explorer = js::string(explorer);
+    let explorer = json::text(explorer);
 
     // The split starts half-and-half of the target pane's space: set it right away to the wanted width (including
     // the 2-column border), without waiting for the explorer to start, which then corrects any rounding.
@@ -145,7 +144,7 @@ fn open(panes: &[Value], tab: &Value, root: Option<String>, tree: Option<String>
     if let Some(corner) = &corner {
         let part = clamp((exec::read_width() + 2.0) / rect(corner, "width"), 0.1, 0.9);
         let delta = (if right { 1.0 - part } else { part }) - 0.5;
-        let amount = js::to_fixed(delta.abs(), 6);
+        let amount = format!("{:.6}", delta.abs());
         let direction = if delta > 0.0 { "right" } else { "left" };
         let _ = herdr(&["pane", "resize", "--pane", &target_id, "--direction", direction, "--amount", &amount]);
     }
@@ -158,8 +157,8 @@ fn open(panes: &[Value], tab: &Value, root: Option<String>, tree: Option<String>
     }
     let _ = settle_preview(panes, tab, &explorer);
     herdr(&["pane", "focus", "--direction", if right { "left" } else { "right" }, "--pane", &explorer])?;
-    if let Some(before) = before.filter(|b| b.truthy() && !js::strict_eq(Some(b), Some(tab))) {
-        herdr(&["tab", "focus", &js::string(&before)])?;
+    if let Some(before) = before.filter(|b| b.truthy() && b != tab) {
+        herdr(&["tab", "focus", &json::text(&before)])?;
     }
     Ok(explorer)
 }
@@ -174,16 +173,16 @@ fn settle_preview(panes: &[Value], tab: &Value, explorer: &str) -> R<()> {
     let (Some(preview), [terminal]) = (preview, terminals.as_slice()) else { return Ok(()) };
     let layout = some(herdr(&["pane", "layout", "--pane", explorer])?.get("layout").cloned())?;
     let Some(found) = actions::side_split(&layout, explorer) else { return Ok(()) };
-    if found.split_width == js::number(some(layout.get("area"))?.get("width")) {
+    if found.split_width == json::num(some(layout.get("area"))?.get("width")) {
         return Ok(());
     }
     let rects = list(&layout, "panes")?;
-    let find = |p: &Value| rects.iter().find(|r| js::strict_eq(r.get("pane_id"), p.get("pane_id"))).cloned();
+    let find = |p: &Value| rects.iter().find(|r| r.get("pane_id") == p.get("pane_id")).cloned();
     let (Some(p), Some(t)) = (find(preview), find(terminal)) else { return Ok(()) };
     let id = str_of(preview, "pane_id");
     herdr(&["pane", "move", &id, "--new-tab", "--no-focus"])?;
-    let ratio = js::to_fixed(rect(&t, "width") / (rect(&t, "width") + rect(&p, "width")), 4);
-    let (tab, target) = (js::string(tab), str_of(terminal, "pane_id"));
+    let ratio = format!("{:.4}", rect(&t, "width") / (rect(&t, "width") + rect(&p, "width")));
+    let (tab, target) = (json::text(tab), str_of(terminal, "pane_id"));
     let args = ["pane", "move", &id, "--tab", &tab, "--target-pane", &target, "--split", "right", "--ratio", &ratio];
     herdr(&[&args[..], &["--no-focus"]].concat())?;
     Ok(())
@@ -221,10 +220,12 @@ fn hook(args: &[String]) -> R<()> {
     let has = |flag: &str| args.iter().any(|a| a == flag);
     let ctx = env_json("HERDR_PLUGIN_CONTEXT_JSON")?;
     let ws = str_of(&ctx, "workspace_id");
-    let cwd_of = |v: &Value| v.get("workspace_cwd").filter(|c| c.truthy()).map(js::string);
+    let cwd_of = |v: &Value| v.get("workspace_cwd").filter(|c| c.truthy()).map(json::text);
 
     if has("--toggle") {
         let Some(tab) = ctx.get("tab_id").filter(|t| t.truthy()) else { return Ok(()) };
+        // The action's tab is the one shown (no tab.focused event after herdr starts).
+        shown::set(&json::text(tab));
         let panes = tab_panes(&ws, Some(tab))?;
         if let Some(explorer) = panes.iter().find(|p| label_is(p, LABEL)) {
             // The preview closes with the explorer (see close in the explorer).
@@ -236,16 +237,18 @@ fn hook(args: &[String]) -> R<()> {
             open(&panes, tab, cwd_of(&ctx), None)?;
         }
     } else if has("--search") || has("--scm") {
-        // The JS caught everything here.
+        // Any failure ignored here.
         let _ = search(&ctx, has("--scm"));
     } else if has("--focused") {
         let ev = env_json("HERDR_PLUGIN_EVENT_JSON")?;
         let d = ev.get("data").filter(|d| d.truthy()).cloned().unwrap_or(Value::Obj(Vec::new()));
         let tab = d.get("tab_id").filter(|t| t.truthy()).or_else(|| d.get("tab").and_then(|t| t.get("tab_id")));
-        if let Some(tab) = tab.filter(|t| t.truthy())
-            && let Some(p) = actions::review_of(&js::string(tab))
-        {
-            actions::focus_pane(&p);
+        if let Some(tab) = tab.filter(|t| t.truthy()).map(json::text) {
+            // Follow wakes in the explorer of that tab only.
+            shown::set(&tab);
+            if let Some(p) = actions::review_of(&tab) {
+                actions::focus_pane(&p);
+            }
         }
     } else if has("--closed") {
         sweep()?;
@@ -255,7 +258,7 @@ fn hook(args: &[String]) -> R<()> {
         let pane = d
             .get("pane_id")
             .filter(|p| p.truthy())
-            .and_then(|id| herdr(&["pane", "get", &js::string(id)]).ok())
+            .and_then(|id| herdr(&["pane", "get", &json::text(id)]).ok())
             .and_then(|r| r.get("pane").cloned())
             .filter(Value::truthy);
         if let Some(pane) = pane
@@ -280,8 +283,7 @@ fn hook(args: &[String]) -> R<()> {
             && exec::read_settings().get("autoOpen").is_some_and(Value::truthy)
         {
             let panes = tab_panes(&str_of(tab, "workspace_id"), tab.get("tab_id"))?;
-            let root =
-                if js::strict_eq(ctx.get("workspace_id"), tab.get("workspace_id")) { cwd_of(&ctx) } else { None };
+            let root = if ctx.get("workspace_id") == tab.get("workspace_id") { cwd_of(&ctx) } else { None };
             // Not in the editor's tab, opened as a tab of its own.
             if panes.len() == 1 && !own(&panes[0]) {
                 open(&panes, tab.get("tab_id").unwrap_or(&Value::Null), root, None)?;
@@ -298,7 +300,7 @@ fn search(ctx: &Value, scm: bool) -> R<()> {
     // From a tab of their own (source control, the search), the tab they were opened from (actions::origin_of).
     let here = exec::env_var("HERDR_PANE_ID").map(Value::Str).or_else(|| ctx.get("pane_id").cloned());
     let here = here.filter(Value::truthy);
-    let from = here.as_ref().and_then(|h| actions::origin_of(&js::string(h)));
+    let from = here.as_ref().and_then(|h| actions::origin_of(&json::text(h)));
     let tab = match &from {
         Some((_, tab)) => Some(Value::Str(tab.clone())),
         None => ctx.get("tab_id").cloned(),
@@ -321,7 +323,7 @@ fn search(ctx: &Value, scm: bool) -> R<()> {
     // panes.
     let saved = explorer.map(|e| exec::read_pane_state(&str_of(e, "pane_id"))).unwrap_or(Value::Null);
     // The focused terminal first, else the tab's first one.
-    let focused = panes.iter().find(|p| js::strict_eq(p.get("pane_id"), here.as_ref()));
+    let focused = panes.iter().find(|p| p.get("pane_id") == here.as_ref());
     let terminal = focused.filter(|f| !own(f)).or_else(|| panes.iter().find(|p| !own(p)));
     let root = saved
         .get("root")
@@ -330,7 +332,7 @@ fn search(ctx: &Value, scm: bool) -> R<()> {
         .or_else(|| ctx.get("workspace_cwd"))
         .filter(|r| r.truthy());
     if let (Some(pane), Some(root)) = (pane.filter(Value::truthy), root) {
-        let (pane, root) = (js::string(&pane), js::string(root));
+        let (pane, root) = (json::text(&pane), json::text(root));
         if scm {
             actions::scm(&root, &pane, "", false);
         } else {
@@ -347,8 +349,7 @@ fn exists(p: Option<&Value>, dir: bool) -> Option<String> {
     (!p.is_empty() && meta.is_dir() == dir).then(|| p.clone())
 }
 
-/// A pane still running its program, node (herdr restored the others as shells), or this binary when a manifest
-/// starts it without the node shim.
+/// A pane still running its program, this binary (herdr restored the others as shells).
 fn running(p: &Value) -> R<bool> {
     let info = herdr(&["pane", "process-info", "--pane", &str_of(p, "pane_id")])?;
     let procs = list(some(info.get("process_info"))?, "foreground_processes")?;
@@ -363,8 +364,8 @@ fn running(p: &Value) -> R<bool> {
             Some(Value::Str(s)) => paths::basename(s, None),
             Some(_) => return false,
         };
-        let name = js::lower(&name);
-        ["node", "node.exe", "herdr-explorer", "herdr-explorer.exe"].contains(&name.as_str())
+        let name = name.to_lowercase();
+        ["herdr-explorer", "herdr-explorer.exe"].contains(&name.as_str())
     }))
 }
 
@@ -412,7 +413,7 @@ fn restore() -> R<()> {
             let (mut list, mut at) = (Vec::new(), -1);
             if let Some(saved) = saved {
                 let all = saved.get("list").and_then(Value::as_array).cloned().unwrap_or_default();
-                let current = saved.get("current").map(js::string);
+                let current = saved.get("current").map(json::text);
                 for (i, t) in all.into_iter().enumerate() {
                     if t.truthy() && exists(t.get("file"), false).is_some() {
                         if current.as_deref() == Some(i.to_string().as_str()) {
@@ -441,12 +442,12 @@ fn restore() -> R<()> {
                     tabs,
                     ..Shown::default()
                 };
-                let root = first.get("root").map_or_else(String::new, js::string);
+                let root = first.get("root").map_or_else(String::new, json::text);
                 // showPreview's default 0 for a tab saved without its line; what the preview reads as 0 too.
-                let line = first.get("line").map_or(0.0, |l| js::number(Some(l)));
+                let line = first.get("line").map_or(0.0, |l| json::num(Some(l)));
                 let line = if line.is_nan() { 0.0 } else { line };
                 actions::preview(
-                    &js::string(first.get("file").unwrap_or(&Value::Null)),
+                    &json::text(first.get("file").unwrap_or(&Value::Null)),
                     &root,
                     &anchor,
                     line,

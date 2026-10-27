@@ -310,15 +310,7 @@
    "out": {
     "files": [
      [
-      "b",
-      "M"
-     ],
-     [
-      "cd",
-      "M"
-     ],
-     [
-      "b c",
+      "ab",
       "M"
      ],
      [
@@ -626,13 +618,13 @@
     ".git",
     "B2",
     "_x",
-    "A",
     "a",
+    "A",
     "a9",
     "a10",
     "b",
-    "Été",
-    "ete"
+    "ete",
+    "Été"
    ]
   },
   {
@@ -779,9 +771,9 @@
      "open": false
     },
     {
-     "name": "A",
+     "name": "a",
      "dir": false,
-     "rel": "A",
+     "rel": "a",
      "link": false,
      "gone": false,
      "from": null,
@@ -791,9 +783,9 @@
      "open": false
     },
     {
-     "name": "a",
+     "name": "A",
      "dir": false,
-     "rel": "a",
+     "rel": "A",
      "link": false,
      "gone": false,
      "from": null,
@@ -827,9 +819,9 @@
      "open": false
     },
     {
-     "name": "B.txt",
+     "name": "b.txt",
      "dir": false,
-     "rel": "B.txt",
+     "rel": "b.txt",
      "link": false,
      "gone": false,
      "from": null,
@@ -839,9 +831,9 @@
      "open": false
     },
     {
-     "name": "b.txt",
+     "name": "B.txt",
      "dir": false,
-     "rel": "b.txt",
+     "rel": "B.txt",
      "link": false,
      "gone": false,
      "from": null,
@@ -863,9 +855,9 @@
      "open": false
     },
     {
-     "name": "E",
+     "name": "e",
      "dir": false,
-     "rel": "E",
+     "rel": "e",
      "link": false,
      "gone": false,
      "from": null,
@@ -875,9 +867,9 @@
      "open": false
     },
     {
-     "name": "e",
+     "name": "E",
      "dir": false,
-     "rel": "e",
+     "rel": "E",
      "link": false,
      "gone": false,
      "from": null,
@@ -923,9 +915,9 @@
      "open": false
     },
     {
-     "name": "README",
+     "name": "readme",
      "dir": false,
-     "rel": "README",
+     "rel": "readme",
      "link": false,
      "gone": false,
      "from": null,
@@ -935,9 +927,9 @@
      "open": false
     },
     {
-     "name": "readme",
+     "name": "README",
      "dir": false,
-     "rel": "readme",
+     "rel": "README",
      "link": false,
      "gone": false,
      "from": null,
@@ -1143,9 +1135,9 @@
      "open": false
     },
     {
-     "name": "A",
+     "name": "a",
      "dir": false,
-     "rel": "A",
+     "rel": "a",
      "link": false,
      "gone": false,
      "from": null,
@@ -1155,9 +1147,9 @@
      "open": false
     },
     {
-     "name": "a",
+     "name": "A",
      "dir": false,
-     "rel": "a",
+     "rel": "A",
      "link": false,
      "gone": false,
      "from": null,
@@ -1191,9 +1183,9 @@
      "open": false
     },
     {
-     "name": "B.txt",
+     "name": "b.txt",
      "dir": false,
-     "rel": "B.txt",
+     "rel": "b.txt",
      "link": false,
      "gone": false,
      "from": null,
@@ -1203,9 +1195,9 @@
      "open": false
     },
     {
-     "name": "b.txt",
+     "name": "B.txt",
      "dir": false,
-     "rel": "b.txt",
+     "rel": "B.txt",
      "link": false,
      "gone": false,
      "from": null,
@@ -1227,9 +1219,9 @@
      "open": false
     },
     {
-     "name": "E",
+     "name": "e",
      "dir": false,
-     "rel": "E",
+     "rel": "e",
      "link": false,
      "gone": false,
      "from": null,
@@ -1239,9 +1231,9 @@
      "open": false
     },
     {
-     "name": "e",
+     "name": "E",
      "dir": false,
-     "rel": "e",
+     "rel": "E",
      "link": false,
      "gone": false,
      "from": null,
@@ -1287,9 +1279,9 @@
      "open": false
     },
     {
-     "name": "README",
+     "name": "readme",
      "dir": false,
-     "rel": "README",
+     "rel": "readme",
      "link": false,
      "gone": false,
      "from": null,
@@ -1299,9 +1291,9 @@
      "open": false
     },
     {
-     "name": "readme",
+     "name": "README",
      "dir": false,
-     "rel": "readme",
+     "rel": "README",
      "link": false,
      "gone": false,
      "from": null,
@@ -1445,9 +1437,9 @@
      "open": false
     },
     {
-     "name": "A",
+     "name": "a",
      "dir": false,
-     "rel": "A",
+     "rel": "a",
      "link": false,
      "gone": false,
      "from": null,
@@ -1457,9 +1449,9 @@
      "open": false
     },
     {
-     "name": "a",
+     "name": "A",
      "dir": false,
-     "rel": "a",
+     "rel": "A",
      "link": false,
      "gone": false,
      "from": null,
@@ -1493,9 +1485,9 @@
      "open": false
     },
     {
-     "name": "B.txt",
+     "name": "b.txt",
      "dir": false,
-     "rel": "B.txt",
+     "rel": "b.txt",
      "link": false,
      "gone": false,
      "from": null,
@@ -1505,9 +1497,9 @@
      "open": false
     },
     {
-     "name": "b.txt",
+     "name": "B.txt",
      "dir": false,
-     "rel": "b.txt",
+     "rel": "B.txt",
      "link": false,
      "gone": false,
      "from": null,
@@ -1529,9 +1521,9 @@
      "open": false
     },
     {
-     "name": "E",
+     "name": "e",
      "dir": false,
-     "rel": "E",
+     "rel": "e",
      "link": false,
      "gone": false,
      "from": null,
@@ -1541,9 +1533,9 @@
      "open": false
     },
     {
-     "name": "e",
+     "name": "E",
      "dir": false,
-     "rel": "e",
+     "rel": "E",
      "link": false,
      "gone": false,
      "from": null,
@@ -1589,9 +1581,9 @@
      "open": false
     },
     {
-     "name": "README",
+     "name": "readme",
      "dir": false,
-     "rel": "README",
+     "rel": "readme",
      "link": false,
      "gone": false,
      "from": null,
@@ -1601,9 +1593,9 @@
      "open": false
     },
     {
-     "name": "readme",
+     "name": "README",
      "dir": false,
-     "rel": "readme",
+     "rel": "README",
      "link": false,
      "gone": false,
      "from": null,
@@ -1759,9 +1751,9 @@
      "open": false
     },
     {
-     "name": "A",
+     "name": "a",
      "dir": false,
-     "rel": "A",
+     "rel": "a",
      "link": false,
      "gone": false,
      "from": null,
@@ -1771,9 +1763,9 @@
      "open": false
     },
     {
-     "name": "a",
+     "name": "A",
      "dir": false,
-     "rel": "a",
+     "rel": "A",
      "link": false,
      "gone": false,
      "from": null,
@@ -1807,9 +1799,9 @@
      "open": false
     },
     {
-     "name": "B.txt",
+     "name": "b.txt",
      "dir": false,
-     "rel": "B.txt",
+     "rel": "b.txt",
      "link": false,
      "gone": false,
      "from": null,
@@ -1819,9 +1811,9 @@
      "open": false
     },
     {
-     "name": "b.txt",
+     "name": "B.txt",
      "dir": false,
-     "rel": "b.txt",
+     "rel": "B.txt",
      "link": false,
      "gone": false,
      "from": null,
@@ -1843,9 +1835,9 @@
      "open": false
     },
     {
-     "name": "E",
+     "name": "e",
      "dir": false,
-     "rel": "E",
+     "rel": "e",
      "link": false,
      "gone": false,
      "from": null,
@@ -1855,9 +1847,9 @@
      "open": false
     },
     {
-     "name": "e",
+     "name": "E",
      "dir": false,
-     "rel": "e",
+     "rel": "E",
      "link": false,
      "gone": false,
      "from": null,
@@ -1903,9 +1895,9 @@
      "open": false
     },
     {
-     "name": "README",
+     "name": "readme",
      "dir": false,
-     "rel": "README",
+     "rel": "readme",
      "link": false,
      "gone": false,
      "from": null,
@@ -1915,9 +1907,9 @@
      "open": false
     },
     {
-     "name": "readme",
+     "name": "README",
      "dir": false,
-     "rel": "readme",
+     "rel": "README",
      "link": false,
      "gone": false,
      "from": null,
@@ -2227,9 +2219,9 @@
      "open": false
     },
     {
-     "name": "A",
+     "name": "a",
      "dir": false,
-     "rel": "A",
+     "rel": "a",
      "link": false,
      "gone": false,
      "from": null,
@@ -2242,9 +2234,9 @@
      "open": false
     },
     {
-     "name": "a",
+     "name": "A",
      "dir": false,
-     "rel": "a",
+     "rel": "A",
      "link": false,
      "gone": false,
      "from": null,
@@ -2317,9 +2309,9 @@
      "open": false
     },
     {
-     "name": "README",
+     "name": "readme",
      "dir": false,
-     "rel": "README",
+     "rel": "readme",
      "link": false,
      "gone": false,
      "from": null,
@@ -2332,9 +2324,9 @@
      "open": false
     },
     {
-     "name": "readme",
+     "name": "README",
      "dir": false,
-     "rel": "readme",
+     "rel": "README",
      "link": false,
      "gone": false,
      "from": null,

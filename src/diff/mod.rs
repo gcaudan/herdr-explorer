@@ -1,4 +1,4 @@
-//! The diff library of src/diff.js: git's changes collected (collect), read (parse), then laid out (render). The
+//! The diff library: git's changes collected (collect), read (parse), then laid out (render). The
 //! Changes pane (changes/), the preview's Diff view and source control show them.
 
 mod collect;
@@ -6,7 +6,8 @@ mod parse;
 mod render;
 
 pub use collect::{
-    Collected, DIFF_OPTS, MAX_UNTRACKED, changes_of, collect, default_branch, line_changes, show, show_args, view_items,
+    Collected, DIFF_OPTS, MAX_UNTRACKED, changes_of, collect, default_branch, line_changes, pull_of, show, show_args,
+    view_items,
 };
 pub use parse::{Diff, File, Head, Hunk, Line, head, parse, strip, unquote};
 pub use render::{

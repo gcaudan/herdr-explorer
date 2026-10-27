@@ -1,6 +1,5 @@
 //! The herdr explorer plugin: panes, hook and peek, one binary. `main.rs` reads the command line and calls `cli::run`.
-//! The port follows the JS of 0.8.0: the `src/*.js` files the modules name are those of the git history before the
-//! switch to Rust; the `src/*.js` files of today are the shims herdr runs.
+//! herdr runs this binary for every command of the manifest.
 
 pub mod changes;
 pub mod cli;

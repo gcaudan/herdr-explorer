@@ -104,6 +104,7 @@
     "changes": true,
     "images": "auto",
     "reviewPrefix": "",
+    "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
     "scmTree": false,
@@ -138,6 +139,7 @@
     "changes": true,
     "images": "auto",
     "reviewPrefix": "",
+    "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
     "scmTree": false,
@@ -172,6 +174,7 @@
     "changes": true,
     "images": "auto",
     "reviewPrefix": "",
+    "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
     "scmTree": false,
@@ -208,6 +211,7 @@
     "changes": true,
     "images": "auto",
     "reviewPrefix": "",
+    "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
     "scmTree": false,
@@ -244,6 +248,7 @@
     "changes": true,
     "images": "auto",
     "reviewPrefix": "",
+    "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
     "scmTree": false,
@@ -278,6 +283,7 @@
     "changes": true,
     "images": "auto",
     "reviewPrefix": "",
+    "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
     "scmTree": false,
@@ -312,6 +318,7 @@
     "changes": true,
     "images": "auto",
     "reviewPrefix": "",
+    "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
     "scmTree": false,
@@ -347,6 +354,7 @@
     "changes": true,
     "images": "auto",
     "reviewPrefix": "",
+    "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
     "scmTree": false,
@@ -379,6 +387,7 @@
     "changes": true,
     "images": "auto",
     "reviewPrefix": "",
+    "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
     "scmTree": false,
@@ -461,7 +470,7 @@
    "env": {
     "HERDR_PLUGIN_STATE_DIR": "$ROOT"
    },
-   "out": "$ROOT/panes/x__.json"
+   "out": "$ROOT/panes/x_.json"
   },
   {
    "fn": "paneFile",
@@ -556,7 +565,7 @@
    "env": {
     "HERDR_PLUGIN_STATE_DIR": "$ROOT"
    },
-   "out": "$ROOT/x-___-a_b_c.json"
+   "out": "$ROOT/x-__-a_b_c.json"
   },
   {
    "fn": "tabFile",
@@ -914,7 +923,7 @@
    "files": {
     "keys.json": "{\"explorer\":\"str\"}"
    },
-   "throws": "Cannot use 'in' operator to search for 'newFile' in str"
+   "throws": "keys.json: the explorer entry is not an object: str"
   },
   {
    "fn": "readKeys",
@@ -939,7 +948,7 @@
    "files": {
     "keys.json": "{\"explorer\":5}"
    },
-   "throws": "Cannot use 'in' operator to search for 'newFile' in 5"
+   "throws": "keys.json: the explorer entry is not an object: 5"
   },
   {
    "fn": "readKeys",
@@ -1255,7 +1264,7 @@
    "after": {
     "keys.json": "null"
    },
-   "throws": "Cannot read properties of null (reading 'explorer')"
+   "throws": "keys.json is null, not an object"
   },
   {
    "fn": "keysTemplate",
@@ -1283,7 +1292,7 @@
    "after": {
     "keys.json": "5"
    },
-   "throws": "Cannot create property 'explorer' on number '5'"
+   "throws": "keys.json is a number, not an object: 5"
   },
   {
    "fn": "keysTemplate",
@@ -1311,7 +1320,7 @@
    "after": {
     "keys.json": "\"s\""
    },
-   "throws": "Cannot create property 'explorer' on string 's'"
+   "throws": "keys.json is a string, not an object: s"
   },
   {
    "fn": "keysTemplate",
@@ -1447,7 +1456,7 @@
    "after": {
     "keys.json": "null"
    },
-   "throws": "Cannot read properties of null (reading 'explorer')"
+   "throws": "keys.json is null, not an object"
   },
   {
    "fn": "writeKeys",
@@ -1470,7 +1479,7 @@
    "after": {
     "keys.json": "{\"explorer\":null,\"b\":null}"
    },
-   "throws": "Cannot convert undefined or null to object"
+   "throws": "keys.json: the b entry is null"
   },
   {
    "fn": "writeKeys",

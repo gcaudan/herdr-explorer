@@ -1,4 +1,4 @@
-//! test/review.test.js: the terminal's replies kept apart from the keys, the line a note set sends, notes following
+//! The terminal's replies kept apart from the keys, the line a note set sends, notes following
 //! their lines, the files viewed, the diff rows. The image decoders wait for the step that ports them.
 
 mod support;

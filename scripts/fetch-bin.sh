@@ -1,7 +1,7 @@
 #!/bin/sh
 # Puts the plugin's binary for this machine in bin/: the release asset of the version in herdr-plugin.toml, checked
 # against the release's SHA256SUMS. Run from the plugin's folder, or with its path as argument, by herdr plugin
-# install and update ([[build]]), install.sh, the updater and the shims. Nothing to do when bin/.dev exists (a binary
+# install and update ([[build]]) and the launcher. Nothing to do when bin/.dev exists (a binary
 # built by scripts/dev-build.sh) or when the binary already has that version. On any failure, bin/ is left as it was.
 set -eu
 

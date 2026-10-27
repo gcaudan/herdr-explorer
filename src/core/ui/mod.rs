@@ -1,5 +1,5 @@
 //! Terminal helpers shared by the plugin's panes: colours, text width, lines, input decoding, a one-line text
-//! field, cards, menus and scrollbars. Offsets in a text are byte offsets, where the JS counted UTF-16 units.
+//! field, cards, menus and scrollbars. Offsets in a text are byte offsets.
 
 mod card;
 mod hints;

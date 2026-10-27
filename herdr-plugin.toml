@@ -5,9 +5,8 @@ min_herdr_version = "0.9.4"
 description = "VS Code-style file explorer, preview, search and source control for every tab"
 platforms = ["linux", "macos", "windows"]
 
-# The binary, bin/herdr-explorer, fetched for herdr plugin install and update; the shims fetch it too when missing
-# or of another version. The explorer and the preview run it directly, as their own launcher (no Node process stays
-# in those panes), which fetches it as well before a restart on new code.
+# The binary, bin/herdr-explorer, fetched for herdr plugin install and update: every command below runs it, without
+# another runtime. The explorer and the preview are their own launcher, which fetches it as well before a restart on new code.
 [[build]]
 platforms = ["linux", "macos"]
 command = ["sh", "scripts/fetch-bin.sh"]
@@ -17,27 +16,27 @@ platforms = ["windows"]
 command = ["powershell", "-ExecutionPolicy", "Bypass", "-File", "scripts/fetch-bin.ps1"]
 
 [[startup]]
-command = ["node", "src/hook.js", "--restore"]
+command = ["bin/herdr-explorer", "hook", "--restore"]
 
 [[events]]
 on = "tab.created"
-command = ["node", "src/hook.js"]
+command = ["bin/herdr-explorer", "hook"]
 
 [[events]]
 on = "tab.closed"
-command = ["node", "src/hook.js", "--closed"]
+command = ["bin/herdr-explorer", "hook", "--closed"]
 
 [[events]]
 on = "workspace.closed"
-command = ["node", "src/hook.js", "--closed"]
+command = ["bin/herdr-explorer", "hook", "--closed"]
 
 [[events]]
 on = "pane.agent_status_changed"
-command = ["node", "src/hook.js", "--agent"]
+command = ["bin/herdr-explorer", "hook", "--agent"]
 
 [[events]]
 on = "tab.focused"
-command = ["node", "src/hook.js", "--focused"]
+command = ["bin/herdr-explorer", "hook", "--focused"]
 
 [[panes]]
 id = "tree"
@@ -55,54 +54,54 @@ command = ["bin/herdr-explorer", "pane", "preview"]
 id = "search"
 title = "Search"
 placement = "tab"
-command = ["node", "src/search.js"]
+command = ["bin/herdr-explorer", "pane", "search"]
 
 [[panes]]
 id = "scm"
 title = "Source Control"
 placement = "tab"
-command = ["node", "src/scm.js"]
+command = ["bin/herdr-explorer", "pane", "scm"]
 
 [[panes]]
 id = "diff"
 title = "Changes"
 placement = "split"
-command = ["node", "src/diff.js"]
+command = ["bin/herdr-explorer", "pane", "diff"]
 
 [[panes]]
 id = "edit"
 title = "Editor"
 placement = "tab"
-command = ["node", "src/edit.js"]
+command = ["bin/herdr-explorer", "pane", "edit"]
 
 [[actions]]
 id = "toggle"
 title = "Open, focus or close the explorer"
 contexts = ["tab"]
-command = ["node", "src/hook.js", "--toggle"]
+command = ["bin/herdr-explorer", "hook", "--toggle"]
 
 [[actions]]
 id = "search"
 title = "Go to file"
 contexts = ["tab"]
-command = ["node", "src/hook.js", "--search"]
+command = ["bin/herdr-explorer", "hook", "--search"]
 
 [[actions]]
 id = "scm"
 title = "Source control"
 contexts = ["tab"]
-command = ["node", "src/hook.js", "--scm"]
+command = ["bin/herdr-explorer", "hook", "--scm"]
 
 [[actions]]
 id = "peek"
 title = "Preview the last changed file"
 contexts = ["tab"]
-command = ["node", "src/peek.js", "--last"]
+command = ["bin/herdr-explorer", "peek", "--last"]
 
 [[actions]]
 id = "open-link"
 title = "Preview the file of a clicked link"
-command = ["node", "src/peek.js", "--url"]
+command = ["bin/herdr-explorer", "peek", "--url"]
 
 # Ctrl-click on a file:// hyperlink (OSC 8) in any pane: the file in the tab's preview.
 [[link_handlers]]

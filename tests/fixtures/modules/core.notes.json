@@ -1377,7 +1377,7 @@
     },
     "/r"
    ],
-   "out": "a:9"
+   "out": "a:9-10"
   },
   {
    "fn": "where",
@@ -1403,7 +1403,7 @@
     },
     "/r"
    ],
-   "out": "a:2"
+   "out": "a:[2]"
   },
   {
    "fn": "format",
@@ -1529,7 +1529,7 @@
     "/r",
     "\n"
    ],
-   "out": "Review notes: a: on null; a:x: on x; a10:1: on 1; a9:1: on 1 "
+   "out": "Review notes: a: on null; a:x: on x; a9:1: on 1; a10:1: on 1 "
   },
   {
    "fn": "format",
@@ -1635,7 +1635,7 @@
     "/r",
     ""
    ],
-   "out": "Review notes: a:x: on x; a:1: on 1; a:x: on x; a: on 0; a:x: on x; a:x: on x; a:2: on 2; a:3: on 3; a:4: on 4; a:5: on 5; a:6: on 6; a:7: on 7 "
+   "out": "Review notes: a:x: on x; a:1: on 1; a:x: on x; a: on 0; a:x: on x; a:2: on 2; a:3: on 3; a:5: on 5; a:6: on 6; a:7: on 7; a:x: on x; a:4: on 4 "
   },
   {
    "fn": "format",
@@ -1965,7 +1965,7 @@
     "/r",
     ""
    ],
-   "out": "Review notes: a:x: on x; a:x: on x; a:1: on 1; a:x: on x; a:x: on x; a: on 0; a:x: on x; a:x: on x; a: on 0; a:1: on 1; a:2: on 2; a:3: on 3; a:4: on 4; a:5: on 5; a:6: on 6; a:6: on 6; a:7: on 7; a:x: on x; a:10: on 10; a:x: on x; a:x: on x; a:2: on 2; a:x: on x; a:2: on 2; a:3: on 3; a:3: on 3; a:4: on 4; a:5: on 5; a:6: on 6; a:7: on 7; a:x: on x; a:7: on 7; a:8: on 8; a:8: on 8; a:9: on 9; a:9: on 9; a:10: on 10; a:x: on x; a:x: on x; a:x: on x "
+   "out": "Review notes: a:x: on x; a:1: on 1; a:x: on x; a:x: on x; a: on 0; a:x: on x; a: on 0; a:1: on 1; a:2: on 2; a:2: on 2; a:3: on 3; a:3: on 3; a:5: on 5; a:5: on 5; a:6: on 6; a:x: on x; a:x: on x; a:2: on 2; a:3: on 3; a:4: on 4; a:6: on 6; a:7: on 7; a:x: on x; a:x: on x; a:7: on 7; a:8: on 8; a:9: on 9; a:x: on x; a:x: on x; a:4: on 4; a:6: on 6; a:7: on 7; a:9: on 9; a:10: on 10; a:10: on 10; a:x: on x; a:x: on x; a:x: on x; a:x: on x; a:8: on 8 "
   },
   {
    "fn": "format",

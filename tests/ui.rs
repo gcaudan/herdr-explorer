@@ -1,4 +1,4 @@
-//! test/ui.test.js: the terminal width of text and the segment helpers built on it (a row must take exactly the
+//! The terminal width of text and the segment helpers built on it (a row must take exactly the
 //! columns the terminal gives it), the cards, the menus and the scrollbar.
 
 use herdr_explorer::core::ui::{self, Ask, BarMark, Button, Choice, Confirm, Menu, MenuItem, Mouse, Scrollbar, Seg};
@@ -272,8 +272,7 @@ fn background_of_reads_the_terminal_background_from_its_osc_11_answer() {
     assert_eq!(ui::background_of("\x1b]10;rgb:ffff/ffff/ffff\x07"), None);
 }
 
-/// The JS test also checks that ui.C stays the same object and that onTheme tells the modules: the port has
-/// neither, its styles are worked out from c() at each use.
+/// The styles are worked out from c() at each use, so a swap shows at once.
 #[test]
 fn use_theme_swaps_the_colours() {
     let _l = lock();

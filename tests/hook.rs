@@ -228,7 +228,7 @@ fn toggle_closes_the_explorer_and_its_preview() {
     let out = f.run("hook", &["--toggle"]);
     assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
     assert_eq!(f.calls(), ["pane list --workspace w1", "pane close w1:p5", "pane close w1:p2"]);
-    // herdr failing stops the hook, as the JS threw.
+    // herdr failing stops the hook.
     f.fails("pane close w1:p5");
     assert_eq!(f.run("hook", &["--toggle"]).status.code(), Some(1));
     // A tab of the plugin's own panes only, or no tab: nothing.
@@ -301,7 +301,7 @@ fn a_new_tab_gets_the_explorer_unless_auto_open_is_off() {
     std::fs::write(f.state.join("settings.json"), r#"{"autoOpen":false}"#).unwrap();
     assert_eq!(f.run("hook", &[]).status.code(), Some(0));
     assert!(f.calls().is_empty());
-    // A bad event is what the JS threw on.
+    // A bad event fails the hook.
     f.set("HERDR_PLUGIN_EVENT_JSON", "{");
     assert_eq!(f.run("hook", &[]).status.code(), Some(1));
 }
@@ -335,7 +335,7 @@ fn agent_reports_what_it_did_with_the_turn() {
     let out = f.run("hook", &["--agent"]);
     assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
     assert_eq!(text(&out.stdout), "kept\n");
-    // herdr failing on the pane: nothing, as the JS caught it.
+    // herdr failing on the pane: nothing.
     f.fails("pane get w1:p1");
     let out = f.run("hook", &["--agent"]);
     assert_eq!((out.status.code(), text(&out.stdout)), (Some(0), String::new()));
@@ -352,6 +352,27 @@ fn focused_leads_a_tab_under_review_to_its_review() {
     let out = f.run("hook", &["--focused"]);
     assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
     assert_eq!(f.calls(), ["pane get w1:p8", "plugin pane focus w1:p8", "tab focus w1:t5"]);
+}
+
+#[test]
+fn focused_notes_the_tab_shown_for_follow() {
+    let mut f = Fake::new("hook-shown");
+    f.set("HERDR_SOCKET_PATH", "/run/herdr.sock");
+    let focus = |f: &mut Fake, tab: &str| {
+        f.set("HERDR_PLUGIN_EVENT_JSON", &format!(r#"{{"data":{{"tab_id":"{tab}"}}}}"#));
+        let out = f.run("hook", &["--focused"]);
+        assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
+    };
+    let shown = f.state.join("shown-tab");
+    focus(&mut f, "w1:t2");
+    assert_eq!(std::fs::read_to_string(&shown).unwrap(), "/run/herdr.sock\nw1:t2\n");
+    // The same tab again: the file left alone, so that no explorer wakes for nothing.
+    let before = std::fs::metadata(&shown).unwrap().modified().unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(20));
+    focus(&mut f, "w1:t2");
+    assert_eq!(std::fs::metadata(&shown).unwrap().modified().unwrap(), before);
+    focus(&mut f, "w1:t3");
+    assert_eq!(std::fs::read_to_string(&shown).unwrap(), "/run/herdr.sock\nw1:t3\n");
 }
 
 #[test]
@@ -379,11 +400,11 @@ fn restore_reopens_the_panes_herdr_left_as_shells() {
     let file = home.join("a.txt");
     std::fs::write(&file, "A").unwrap();
     f.tab(&[("w1:p2", Some("Explorer")), ("w1:p1", None), ("w1:p5", Some("Preview"))]);
-    // The explorer runs no node: a shell; the preview still runs.
+    // The explorer runs a shell, its program gone; the preview still runs it.
     f.answer("pane process-info --pane w1:p2", r#"{"process_info":{"foreground_processes":[{"argv":["/bin/bash"]}]}}"#);
     f.answer(
         "pane process-info --pane w1:p5",
-        r#"{"process_info":{"foreground_processes":[{"argv":["/usr/bin/node"]}]}}"#,
+        r#"{"process_info":{"foreground_processes":[{"argv":["/p/bin/herdr-explorer","pane","preview"]}]}}"#,
     );
     std::fs::create_dir_all(f.state.join("panes")).unwrap();
     std::fs::write(f.state.join("panes/w1_p2.json"), format!(r#"{{"home":"{}","root":"/gone"}}"#, home.display()))
@@ -491,7 +512,7 @@ fn peek_shows_the_file_at_its_places() {
 #[test]
 fn peek_says_what_is_wrong_with_its_use() {
     let mut f = Fake::new("peek-use");
-    let usage = "peek: usage: peek.js [--diff] <file>[:<line>[-<line>][:<col>-<col>],…] | [--diff] --last | --url\n";
+    let usage = "peek: usage: peek [--diff] <file>[:<line>[-<line>][:<col>-<col>],…] | [--diff] --last | --url\n";
     let out = f.run("peek", &["a.txt"]);
     assert_eq!((out.status.code(), text(&out.stderr)), (Some(2), "peek: run it from a herdr pane\n".into()));
     f.set("HERDR_PANE_ID", "w1:p1");

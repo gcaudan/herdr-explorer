@@ -380,7 +380,7 @@ fn jpeg_scan(b: &[u8], pos: usize, f: &mut Frame, comps: &[ScanComp], restart: u
         blk.fill(0);
         let t = r.symbol(dc) & 15;
         c.pred += r.receive(t);
-        // The prediction is unbounded: its product goes through a double, as in the JS.
+        // The prediction is unbounded: its product goes through a double.
         blk[0] = int32(c.pred as f64 * s.q[0] as f64);
         let mut k = 1;
         while k < 64 {
@@ -477,7 +477,7 @@ fn jpeg_progressive(b: &[u8], pos: usize, f: &mut Frame, comps: &[ScanComp], res
             }
             return;
         }
-        // A band cut short reads nothing (undefined bounds in the JS).
+        // A band cut short (bounds missing) reads nothing.
         let (Some(ss), Some(se), Some(ac)) = (band.ss, band.se, s.ac) else { return };
         let (mut k, se) = (ss as usize, se as usize);
         let co = &mut c.coefs[o..o + 64];
@@ -567,8 +567,8 @@ fn jpeg_finish(f: &mut Frame, qt: &[Option<Table>; 4]) {
     }
 }
 
-// Integer IDCT (the jidctint algorithm, as in stb_image): fixed point with 12 fractional bits. The JS computes in
-// doubles, exact here (below 2^53) as in i64; ToInt32 where it stores or shifts.
+// Integer IDCT (the jidctint algorithm, as in stb_image): fixed point with 12 fractional bits, in
+// i64 (exact below 2^53); wrapped to 32 bits (int32) where it stores or shifts.
 const K: [i64; 12] = [2217, -7568, 3135, 4816, 1223, 8410, 12586, 6149, -3686, -10498, -8035, -1598];
 
 fn idct(d: &[i32; 64], v: &mut [i32; 64], out: &mut [u8], off: usize, stride: usize) {

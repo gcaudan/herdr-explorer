@@ -1,4 +1,4 @@
-//! Rendering for the terminal, as the JS's src/render: syntax highlighting, Markdown, the history graph, images.
+//! Rendering for the terminal: syntax highlighting, Markdown, the history graph, images.
 
 pub mod graph;
 pub mod highlight;

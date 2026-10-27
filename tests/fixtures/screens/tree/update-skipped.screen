@@ -7,9 +7,9 @@ size 60x20
      ⟪fg=#8c8c8c⟫│⟪⟫                                                ⟪fg=#8c8c8c⟫│⟪⟫
      ⟪fg=#8c8c8c⟫│⟪⟫ $VERSION → 99.0.0                                 ⟪fg=#8c8c8c⟫│⟪⟫
      ⟪fg=#8c8c8c⟫│ • ⟪⟫diff: stage hunks                            ⟪fg=#8c8c8c⟫│⟪⟫
-     ⟪fg=#8c8c8c⟫│ The panes restart on the new code.⟪⟫             ⟪fg=#8c8c8c⟫│⟪⟫
+     ⟪fg=#8c8c8c⟫│ Copies herdr's update command.⟪⟫                 ⟪fg=#8c8c8c⟫│⟪⟫
      ⟪fg=#8c8c8c⟫│⟪⟫                                                ⟪fg=#8c8c8c⟫│⟪⟫
-     ⟪fg=#8c8c8c⟫│⟪⟫  ⟪fg=#6fbf8e bg=#2d2d2d⟫ y Update ⟪⟫  ⟪fg=#8c8c8c bg=#2d2d2d⟫ r Notes ⟪⟫  ⟪fg=#ffffff bg=#606060 b⟫ n Later ⟪⟫              ⟪fg=#8c8c8c⟫│⟪⟫
+     ⟪fg=#8c8c8c⟫│⟪⟫  ⟪fg=#6fbf8e bg=#2d2d2d⟫ c Copy command ⟪⟫  ⟪fg=#8c8c8c bg=#2d2d2d⟫ r Notes ⟪⟫  ⟪fg=#ffffff bg=#606060 b⟫ n Later ⟪⟫        ⟪fg=#8c8c8c⟫│⟪⟫
      ⟪fg=#8c8c8c⟫╰────────────────────────────────────────────────╯⟪⟫
   Enter opens                                       ⟪fg=#519aba⟫preview⟪⟫
   Preview follows selection                           ⟪fg=#8c8c8c⟫○ off⟪⟫

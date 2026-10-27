@@ -1,10 +1,10 @@
-//! The explorer pane (src/explorer.js): the space's tree, folded with the mouse and the keyboard, VS Code-style git
+//! The explorer pane: the space's tree, folded with the mouse and the keyboard, VS Code-style git
 //! status, filter as you type, file operations, automatic refresh. Enter or double-click: preview (or the editor);
 //! right-click: action menu. Header icon: settings.
 //!
-//! The JS ran its herdr and git calls asynchronously; here they run on two worker threads, one for herdr and the
+//! The herdr and git calls run on two worker threads, one for herdr and the
 //! actions, one for git, each a job at a time, and their results come back to the pane's loop (`Then`), which owns all
-//! the state. The JS's timers are deadlines of that loop.
+//! the state. Timers are deadlines of that loop.
 
 mod input;
 mod ops;
@@ -23,7 +23,7 @@ use crate::core::icons::{self, Loaded};
 use crate::core::screen::{self, Input, Screen};
 use crate::core::ui::{self, HelpState, Scrollbar};
 use crate::core::watch::Watch;
-use crate::core::{js, paths, update, worker};
+use crate::core::{paths, shown, update, worker};
 use crate::json::{self, Value};
 use crate::sys::{self, Watcher};
 use state::tree_settings;
@@ -167,7 +167,7 @@ type Job = worker::Job<Explorer>;
 
 type Worker = worker::Worker<Explorer>;
 
-/// What an action gives: its message at once, or a job whose message comes later (the JS's promise).
+/// What an action gives: its message at once, or a job whose message comes later.
 pub enum Act {
     Now(Option<String>),
     Later(Job),
@@ -231,7 +231,7 @@ fn save_width(width: &Mutex<f64>, w: f64) {
     }
 }
 
-/// The pane: its state, the objects that stay, and the deadlines of the JS's timers.
+/// The pane: its state, the objects that stay, and the deadlines of its timers.
 pub struct Explorer {
     home: String,
     root: String,
@@ -245,14 +245,10 @@ pub struct Explorer {
     /// skipped, only in the settings.
     latest: Option<String>,
     skipped: Option<String>,
-    /// An update that changed the manifest or the installer, which the installer must finish: ! finish in the header.
-    finish: Option<String>,
-    /// Restarted on the code of an update done here: the version in a message, and the release's notes in the
-    /// header's pill for half a minute (until notice_at).
+    /// Started on the code of an update made since the explorers last ran: the version in a message, and the
+    /// release's notes in the header's pill for half a minute (until notice_at).
     notice: Option<String>,
     notice_at: Option<Instant>,
-    /// An update running: no second one, ↑ hidden.
-    updating: bool,
     /// update.json, read again when it changes; the version on disk, watched once started.
     update_watch: Option<Watch>,
     version_watch: Option<update::VersionWatch>,
@@ -294,8 +290,12 @@ pub struct Explorer {
     graphics_at: Option<Instant>,
     following_at: Option<Instant>,
     scan_at: Instant,
-    follow_at: Instant,
+    follow_at: Option<Instant>,
     // following the terminal
+    /// The explorer's tab, learned at the first look; Follow sleeps while herdr shows another (`shown`).
+    tab: Option<String>,
+    shown: Option<String>,
+    shown_watch: Option<Watch>,
     last_cwd: Option<String>,
     forced: bool,
     /// The tab's request file (a file opened from the search), watched, and its time last seen.
@@ -319,14 +319,14 @@ fn inside(dir: &str, root: &str) -> bool {
 /// $HOME, one of its parents or the filesystem root.
 fn big(dir: &str) -> bool {
     // /home → /var/home on some systems.
-    let real = |p: &str| exec::node_realpath(p).unwrap_or_else(|_| p.to_string());
+    let real = |p: &str| exec::walk_realpath(p).unwrap_or_else(|_| p.to_string());
     let up = paths::relative(&real(dir), &real(&icons::homedir()));
     dir == paths::root(dir) || (!up.starts_with("..") && !paths::is_absolute(&up))
 }
 
 /// A file's modification time in ms, 0 when missing (watchFile's stat).
 fn mtime_ms(file: &str) -> f64 {
-    std::fs::metadata(file).ok().and_then(|m| m.modified().ok()).map_or(0.0, js::time_ms)
+    std::fs::metadata(file).ok().and_then(|m| m.modified().ok()).map_or(0.0, crate::core::clock::ms)
 }
 
 /// Runs the pane: the process's exit code.
@@ -370,7 +370,7 @@ impl Explorer {
         // Moved by an update of its extension: its new place saved for the next starts. No longer installed: the
         // default icons saved, rather than searching for it again at every start.
         let moved = match &theme {
-            Some(t) => !js::strict_eq(t.entry.get("file"), icons_entry.get("file")),
+            Some(t) => t.entry.get("file") != icons_entry.get("file"),
             None => icons_entry.truthy() && icons_entry.get("id").is_some_and(Value::truthy),
         };
         if moved {
@@ -381,6 +381,7 @@ impl Explorer {
             exec::write_settings(&saved);
         }
         let settings_watch = exec::settings_file().map(|f| Watch::new(&f, Duration::from_millis(1000)));
+        let shown_watch = shown::file().map(|f| Watch::new(&f, Duration::from_millis(1000)));
         let screen = Screen::open(screen::Options { mouse: true, motion: true, focus: true })?;
         let waker = screen.waker();
         let (tx, rx) = channel();
@@ -391,6 +392,7 @@ impl Explorer {
         let tree = Tree::new(&root, tree_settings(&settings));
         let now = Instant::now();
         update::init();
+        update::note_version();
         let notice = update::just_updated();
         Ok(Explorer {
             home,
@@ -403,10 +405,8 @@ impl Explorer {
             theme,
             latest: update::available(),
             skipped: update::skipped(),
-            finish: update::finishing(),
             notice_at: notice.as_ref().map(|_| now + Duration::from_secs(30)),
             notice,
-            updating: false,
             update_watch: update::file().map(|f| Watch::new(&f, Duration::from_millis(1000))),
             version_watch: None,
             stopped: false,
@@ -456,7 +456,10 @@ impl Explorer {
             graphics_at: None,
             following_at: None,
             scan_at: now + Duration::from_secs(30),
-            follow_at: now + Duration::from_secs(2),
+            follow_at: Some(now + Duration::from_secs(2)),
+            tab: None,
+            shown: shown::get(),
+            shown_watch,
             last_cwd: None,
             forced: false,
             requests: None,
@@ -465,14 +468,14 @@ impl Explorer {
         })
     }
 
-    /// What the JS does as its script loads, after the screen is set up.
+    /// What the pane does first, after the screen is set up.
     fn start(&mut self) {
         // A file opened from the search in the tab's preview (reveal in its request, actions.preview): selected in
         // the tree, its folders expanded, when it is under the root. The tab's request file is watched once the tab
         // is known.
         let pane = if self.pane.is_empty() { "undefined".to_string() } else { self.pane.clone() };
         // The pane, then its tab in a job of its own: the herdr calls sent meanwhile (the right-click below) go
-        // between the two, as while the JS awaited.
+        // between the two.
         self.herdr.send(Box::new(move || {
             let me = actions::pane_of(&pane);
             Box::new(move |ex: &mut Explorer| {
@@ -493,6 +496,8 @@ impl Explorer {
         }));
         // The Kitty graphics query, as the preview sends it.
         let _ = sys::write_stdout(ui::KITTY_QUERY.as_bytes());
+        crate::core::setup::refresh_skill();
+        self.offer_setup();
         if let Some(to) = self.notice.clone() {
             self.flash(Some(format!("Updated to {to}")));
         }
@@ -554,7 +559,7 @@ impl Explorer {
     }
 
     fn next_deadline(&self) -> Option<Instant> {
-        let mut all = vec![Some(self.scan_at), Some(self.follow_at)];
+        let mut all = vec![Some(self.scan_at), self.follow_at];
         all.extend([
             self.refresh_at,
             self.git_at,
@@ -565,11 +570,11 @@ impl Explorer {
             self.notice_at,
             self.scrollbar.due(),
         ]);
-        all.extend(self.update_watch.iter().map(|w| Some(w.due())));
+        all.extend(self.update_watch.iter().map(Watch::due));
         all.extend(self.version_watch.iter().map(update::VersionWatch::due));
         all.extend(self.width_at.iter().map(|&t| Some(t)));
-        all.extend([&self.keys_watch, &self.settings_watch].into_iter().flatten().map(|w| Some(w.due())));
-        all.extend(self.requests.iter().map(|(w, _)| Some(w.due())));
+        all.extend([&self.keys_watch, &self.settings_watch, &self.shown_watch].into_iter().flatten().map(Watch::due));
+        all.extend(self.requests.iter().map(|(w, _)| w.due()));
         if !self.keeper_busy {
             // Held by a check on the worker: its result wakes the loop, which looks again.
             all.push(self.keeper.try_lock().ok().and_then(|k| k.due()));
@@ -623,15 +628,32 @@ impl Explorer {
             self.scan_at = now + Duration::from_secs(30);
             self.schedule();
         }
-        if self.follow_at <= now {
-            self.follow_at = now + Duration::from_secs(2);
-            self.follow();
+        if self.shown_watch.as_mut().is_some_and(Watch::poll) {
+            self.shown = shown::get();
+            // Its tab shown again: a look at once. Another tab: the explorer's own asked again, as its pane may have
+            // moved there.
+            if !self.asleep() {
+                self.follow_at.get_or_insert(now);
+            } else {
+                self.learn_tab();
+            }
+        }
+        // Every 2 s while Follow is on and herdr shows the explorer's tab; off, again once the settings change or
+        // the tab shows.
+        if self.follow_at.is_some_and(|t| t <= now) {
+            self.follow_at = None;
+            if !self.asleep() {
+                self.follow();
+                let on = self.settings.get("follow").is_some_and(Value::truthy);
+                self.follow_at = on.then(|| now + Duration::from_secs(2));
+            }
         }
         if self.keys_watch.as_mut().is_some_and(Watch::poll) {
             self.keys = exec::read_keys("explorer", &self.defaults);
         }
         if self.settings_watch.as_mut().is_some_and(Watch::poll) {
             self.settings_changed();
+            self.follow_at.get_or_insert(now);
         }
         if self.requests.as_mut().is_some_and(|(w, _)| w.poll()) {
             self.request();
@@ -653,7 +675,7 @@ impl Explorer {
     fn keeper_job(&mut self, f: impl FnOnce() + Send + 'static) {
         self.keeper_busy = true;
         self.herdr.send(Box::new(move || {
-            // The JS's finally: free again even when the check failed.
+            // Free again even when the check failed.
             let _ = std::panic::catch_unwind(AssertUnwindSafe(f));
             Box::new(|ex: &mut Explorer| ex.keeper_busy = false)
         }));
@@ -718,7 +740,7 @@ impl Explorer {
         self.herdr.send(Box::new(move || {
             let panes = actions::tab_of(&pane).map(|t| t.panes).unwrap_or_default();
             for p in panes.iter().filter(|p| p.get("label").and_then(Value::as_str) == Some("Preview")) {
-                let id = p.get("pane_id").map_or_else(|| "undefined".into(), js::string);
+                let id = p.get("pane_id").map_or_else(|| "undefined".into(), crate::json::text);
                 exec::run(exec::herdr(), &["pane", "close", &id], &Opts::default());
             }
             exec::run(exec::herdr(), &["pane", "close", &pane], &Opts::default());
@@ -735,7 +757,7 @@ impl Explorer {
         let Some(file) = exec::settings_file() else { return };
         let Some(saved) = exec::read_text(&file).ok().and_then(|t| json::parse(&t).ok()) else { return };
         if saved.is_null() {
-            // The JS threw reading null's icons.
+            // Null settings: nothing changed.
             return;
         }
         let chosen = saved.get("icons").filter(|v| v.truthy()).cloned().unwrap_or(Value::Str(String::new()));
@@ -754,7 +776,7 @@ impl Explorer {
         ];
         for name in names {
             let Some(v) = saved.get(name) else { continue };
-            if js::strict_eq(Some(v), self.settings.get(name)) {
+            if Some(v) == self.settings.get(name) {
                 continue;
             }
             self.settings.set(name, v.clone());
@@ -846,9 +868,9 @@ impl Explorer {
 fn alone(pane: &str) -> bool {
     let ask = |args: &[&str]| exec::result(exec::run(exec::herdr(), args, &Opts::default()).as_deref());
     let Some(me) = ask(&["pane", "get", pane]).get("pane").filter(|p| p.truthy()).cloned() else { return false };
-    let ws = me.get("workspace_id").map_or_else(|| "undefined".into(), js::string);
+    let ws = me.get("workspace_id").map_or_else(|| "undefined".into(), crate::json::text);
     let all = ask(&["pane", "list", "--workspace", &ws]);
     let Some(all) = all.get("panes").filter(|p| p.truthy()) else { return false };
-    let mine = all.as_array().into_iter().flatten().filter(|p| js::strict_eq(p.get("tab_id"), me.get("tab_id")));
+    let mine = all.as_array().into_iter().flatten().filter(|p| p.get("tab_id") == me.get("tab_id"));
     mine.count() == 1
 }

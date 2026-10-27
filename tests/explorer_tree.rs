@@ -1,4 +1,4 @@
-//! test/explorer-tree.test.js: the explorer's tree without the terminal: the rows of a folder with its expanded
+//! The explorer's tree without the terminal: the rows of a folder with its expanded
 //! folders, their order, the filter, the changed files only, and the git decorations read from a status.
 
 mod support;
@@ -166,7 +166,7 @@ fn rows_the_filter_keeps_the_matches_and_the_folders_holding_one_unfolded_outsid
 
 #[test]
 fn rows_the_filter_marks_the_match_in_the_name_as_shown() {
-    // Not in the JS test: the match found in the name in lower case, marked in the name itself.
+    // The match found in the name in lower case, marked in the name itself.
     let dir = folder(&["éTÉ.txt", "x/Été.md"]);
     let mut tree = Tree::new(&root(&dir), settings(false, true, false));
     let rows = tree.rows(Some("té"), false, &[]);

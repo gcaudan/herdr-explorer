@@ -1,13 +1,13 @@
-//! The preview's keyboard and mouse (src/preview.js): the menu, the key help and the find first, then the keys of
+//! The preview's keyboard and mouse: the menu, the key help and the find first, then the keys of
 //! the view; the header's tabs and chips, the body's selection of characters, copied when released.
 
 use super::{Find, Kind, Opt, Pos, Preview, Rows, Select};
 use crate::core::actions;
+use crate::core::paths;
 use crate::core::regex::Regex;
 use crate::core::stage::Mode;
 use crate::core::tabs;
 use crate::core::ui::{self, BarHit, Choice, Event, Field, HelpState, Menu, MenuItem, Mouse, c, fg};
-use crate::core::{js, paths};
 use crate::unicode;
 use std::time::{Duration, Instant};
 
@@ -386,7 +386,7 @@ impl Preview {
         let q = self.state.find.as_ref().map(|f| f.field.value.clone()).unwrap_or_default();
         let mut matches = Vec::new();
         if !q.is_empty() {
-            let flags = if q != js::lower(&q) { "g" } else { "gi" };
+            let flags = if q != q.to_lowercase() { "g" } else { "gi" };
             if let Ok(re) = Regex::new(&escape(&q), flags) {
                 // Rendered Markdown: matches in the displayed text.
                 let lines: Vec<String> = if self.markdown_view() {
@@ -776,7 +776,7 @@ impl Preview {
             let from = start.max(r.pad);
             let mut part = row.get(from..end.max(from)).unwrap_or("").to_string();
             if r.src < 0 {
-                part = part.trim_end_matches(js::is_space).to_string();
+                part = part.trim_end_matches(crate::unicode::is_space).to_string();
             }
             if i > a.row && (r.src < 0 || r.first) {
                 text.push('\n');
@@ -827,7 +827,7 @@ impl Preview {
                     i,
                     if wordy(ch) {
                         1
-                    } else if js::is_space(ch) {
+                    } else if crate::unicode::is_space(ch) {
                         2
                     } else {
                         3

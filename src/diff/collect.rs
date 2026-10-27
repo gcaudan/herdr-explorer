@@ -1,13 +1,13 @@
-//! The changes read from git (src/diff.js): of a scope (collect), of a commit, stash or tag (show), the lines of a file
+//! The changes read from git: of a scope (collect), of a commit, stash or tag (show), the lines of a file
 //! changed since HEAD (line_changes), and the options every diff's View menu starts with.
 
 use super::{Diff, parse};
 use crate::core::buffer::{LineDiff, LineKind};
 use crate::core::exec::{self, Env, Opts, env_set, git, git_env, run};
+use crate::core::paths;
 use crate::core::regex::Regex;
 use crate::core::scope::{self, Scope};
 use crate::core::ui::{self, MenuItem, c, fg, seg};
-use crate::core::{js, paths};
 use crate::json::Value;
 use std::cell::RefCell;
 use std::collections::BTreeSet;
@@ -77,8 +77,20 @@ pub fn show_args(what: &Value) -> Option<Vec<String>> {
     }
 }
 
-/// The changes of show_args, parsed, run from cwd: None when git fails.
+/// The number of a pull request to show ({ kind: "pull", ref }), None for another request.
+pub fn pull_of(what: &Value) -> Option<u64> {
+    if what.get("kind").and_then(Value::as_str) != Some("pull") {
+        return None;
+    }
+    what.get("ref").and_then(Value::as_str)?.parse().ok().filter(|n| *n > 0)
+}
+
+/// The changes of show_args, parsed, run from cwd: None when git fails. A pull request's come from gh, after its
+/// header and description.
 pub fn show(cwd: &str, what: &Value) -> Option<Diff> {
+    if let Some(n) = pull_of(what) {
+        return crate::core::gh::show(cwd, n).map(|text| parse(&text));
+    }
     let args = show_args(what)?;
     git()?;
     let args: Vec<&str> = args.iter().map(String::as_str).collect();
@@ -195,11 +207,11 @@ pub fn collect(cwd: &str, file: &str, base: &str, scope: Option<&Scope>, turn: O
             .filter(|c| !c.is_empty())
     };
     if kind == "turn" {
-        let turn_top = turn.and_then(|t| t.get("top")).map(js::string);
+        let turn_top = turn.and_then(|t| t.get("top")).map(crate::json::text);
         if turn_top.is_none_or(|t| paths::resolve(&[&t]) != paths::resolve(&[&top])) {
             return fail(top, base_name, "No agent turn recorded in this repository".into());
         }
-        let tree = turn.and_then(|t| t.get("tree")).filter(|t| t.truthy()).map(js::string);
+        let tree = turn.and_then(|t| t.get("tree")).filter(|t| t.truthy()).map(crate::json::text);
         let Some(tree) = tree else { return fail(top, base_name, "The agent turn is still being recorded".into()) };
         // Only the file compared added: the preview reloads at each save of it.
         let Some(now) = scope::worktree(&top, &env, true, (!file.is_empty()).then_some(file)) else {
@@ -275,11 +287,11 @@ pub fn changes_of(res: &Collected) -> Diff {
     }
     let name = |f: &super::File| f.to.clone().or_else(|| f.from.clone()).unwrap_or_default();
     let mut files: Vec<_> = a.files.into_iter().chain(b.files).collect();
-    // JS's < on strings: by UTF-16 code units; a stable sort, as V8's.
-    files.sort_by(|x, y| name(x).encode_utf16().cmp(name(y).encode_utf16()));
+    // By path; a stable sort.
+    files.sort_by_key(name);
     let pre: Vec<String> = a.pre.into_iter().chain(b.pre).collect();
     // An empty section's blank line.
-    let pre = if pre.iter().any(|l| !l.trim_matches(js::is_space).is_empty()) { pre } else { Vec::new() };
+    let pre = if pre.iter().any(|l| !l.trim_matches(crate::unicode::is_space).is_empty()) { pre } else { Vec::new() };
     Diff { pre, files, add: a.add + b.add, del: a.del + b.del }
 }
 
@@ -320,7 +332,7 @@ pub fn line_changes(file: &str, count: usize) -> Option<LineDiff> {
 /// .git folder or file above the file.
 fn cache_key(abs: &str, count: usize) -> Option<String> {
     let read = |f: &str| exec::read_text(f).ok();
-    let time = |f: &str| std::fs::metadata(f).and_then(|m| m.modified()).map_or(0.0, js::time_ms);
+    let time = |f: &str| std::fs::metadata(f).and_then(|m| m.modified()).map_or(0.0, crate::core::clock::ms);
     let st = std::fs::metadata(abs).ok()?;
     let mut d = paths::dirname(abs);
     loop {
@@ -330,21 +342,21 @@ fn cache_key(abs: &str, count: usize) -> Option<String> {
             if kind.is_file() {
                 let text = read(&dot).unwrap_or_default();
                 let m = Regex::new(r"^gitdir: (.+)$", "m").expect("gitdir").exec(&text)?;
-                gitdir = paths::resolve(&[&d, m.get(1).unwrap_or("").trim_matches(js::is_space)]);
+                gitdir = paths::resolve(&[&d, m.get(1).unwrap_or("").trim_matches(crate::unicode::is_space)]);
             }
             let head = read(&paths::join(&[&gitdir, "HEAD"]))?;
             let commondir = read(&paths::join(&[&gitdir, "commondir"])).unwrap_or_else(|| ".".into());
-            let common = paths::resolve(&[&gitdir, commondir.trim_matches(js::is_space)]);
+            let common = paths::resolve(&[&gitdir, commondir.trim_matches(crate::unicode::is_space)]);
             let r = Regex::new(r"^ref: (.+)$", "m").expect("ref").exec(&head).and_then(|m| m.get(1).map(String::from));
-            let ref_time = r.map_or(0.0, |r| time(&paths::join(&[&common, r.trim_matches(js::is_space)])));
-            let mtime = st.modified().map_or(0.0, js::time_ms);
+            let ref_time = r.map_or(0.0, |r| time(&paths::join(&[&common, r.trim_matches(crate::unicode::is_space)])));
+            let mtime = st.modified().map_or(0.0, crate::core::clock::ms);
             return Some(
                 [
                     abs.to_string(),
                     count.to_string(),
                     mtime.to_string(),
                     st.len().to_string(),
-                    head.trim_matches(js::is_space).to_string(),
+                    head.trim_matches(crate::unicode::is_space).to_string(),
                     ref_time.to_string(),
                     time(&paths::join(&[&common, "packed-refs"])).to_string(),
                 ]
@@ -371,7 +383,7 @@ fn read_line_changes(abs: &str, count: usize) -> Option<LineDiff> {
     args.extend_from_slice(&DIFF_OPTS);
     args.extend_from_slice(&["-U0", "--no-renames", "HEAD", "--", abs]);
     let text = g(&args)?;
-    // kinds as long as the lines it names (a sparse array in the JS), at least count.
+    // kinds as long as the lines it names, at least count.
     let mut kinds = vec![LineKind::Same; count];
     let mut deleted = BTreeSet::new();
     let head = Regex::new(r"^@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@", "").expect("head");

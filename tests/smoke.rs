@@ -1,9 +1,9 @@
-//! The shims as herdr runs them (Linux): `node src/<entry>.js` in a plugin folder of its own, whose bin/ holds the
-//! binary cargo built behind a script that logs each start, marked as a development one (bin/.dev) so that no shim
-//! fetches anything. Each pane starts in a pty, shows its first screen and quits on its key with code 0; the hook and
-//! peek give what the binary gives; the preview's shim starts the binary again on code 75, with the environment it
-//! asked for, and the explorer's takes the folder it announces (EXPLORER_IPC_FILE). The environment is cleaned as for
-//! every test that runs a pane: the fake herdr first on PATH, dummy values.
+//! The manifest's commands as herdr runs them (Linux): `bin/herdr-explorer <args>` in a plugin folder of its own,
+//! the binary cargo built behind a script that logs each start, marked as a development one (bin/.dev) so that nothing
+//! is fetched. Each pane starts in a pty, shows its first screen and quits on its key with code 0; the hook and peek
+//! answer and call herdr; the preview, its own launcher, starts again on new code, and the explorer's launcher takes
+//! the folder its child announces (EXPLORER_IPC_FILE). The environment is cleaned as for every test that runs a pane:
+//! the fake herdr first on PATH, dummy values.
 #![cfg(target_os = "linux")]
 
 mod support;
@@ -27,37 +27,21 @@ fn repo() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
-fn node() -> Option<PathBuf> {
-    std::env::split_paths(&std::env::var_os("PATH")?).map(|d| d.join("node")).find(|p| p.is_file())
-}
-
-/// A test's folders: the plugin (shims, manifest, bin/), the work folder, herdr's fake, state and config.
+/// A test's folders: the plugin (manifest, bin/), the work folder, herdr's fake, state and config.
 struct Setup {
     _tmp: support::TempDir,
     root: PathBuf,
     plugin: PathBuf,
     work: PathBuf,
-    node: PathBuf,
 }
 
 impl Setup {
-    fn new(name: &str) -> Option<Setup> {
-        let Some(node) = node() else {
-            assert!(std::env::var_os("CI").is_none(), "node not found: the shims must be checked in CI");
-            eprintln!("node not found: the shims are not checked");
-            return None;
-        };
+    fn new(name: &str) -> Setup {
         let tmp = support::TempDir::new(&format!("smoke-{name}"));
         let root = tmp.path.clone();
         let plugin = root.join("plugin");
-        for d in ["plugin/src", "plugin/bin", "work", "state", "config", "home", "herdr"] {
+        for d in ["plugin/bin", "work", "state", "config", "home", "herdr"] {
             std::fs::create_dir_all(root.join(d)).unwrap();
-        }
-        for e in std::fs::read_dir(repo().join("src")).unwrap().filter_map(Result::ok) {
-            if e.path().extension().is_none_or(|x| x != "js") {
-                continue;
-            }
-            std::fs::copy(e.path(), plugin.join("src").join(e.file_name())).unwrap();
         }
         std::fs::copy(repo().join("herdr-plugin.toml"), plugin.join("herdr-plugin.toml")).unwrap();
         // A copy, not a link: the binary finds its plugin folder (the manifest it watches) above its own bin/.
@@ -77,10 +61,12 @@ impl Setup {
         use std::os::unix::fs::PermissionsExt;
         std::fs::set_permissions(&wrapper, std::fs::Permissions::from_mode(0o755)).unwrap();
         std::fs::write(plugin.join("bin/.dev"), "").unwrap();
+        // Setup offered already, but in its own test.
+        std::fs::write(root.join("state/setup-offered"), "").unwrap();
         std::fs::write(root.join("state/settings.json"), r#"{"glyphs":"unicode","theme":"dark","updateCheck":false}"#)
             .unwrap();
         std::fs::write(root.join("work/a.txt"), "hello smoke\n").unwrap();
-        Some(Setup { _tmp: tmp, plugin, work: root.join("work"), root, node })
+        Setup { _tmp: tmp, plugin, work: root.join("work"), root }
     }
 
     fn env(&self) -> Vec<(String, String)> {
@@ -104,8 +90,11 @@ impl Setup {
         ]
     }
 
-    fn shim(&self, entry: &str) -> Vec<OsString> {
-        vec![self.node.clone().into(), self.plugin.join("src").join(entry).into()]
+    /// A command of the manifest: the plugin's binary with these arguments.
+    fn cmd(&self, args: &[&str]) -> Vec<OsString> {
+        let mut cmd = vec![self.plugin.join("bin/herdr-explorer").into()];
+        cmd.extend(args.iter().map(OsString::from));
+        cmd
     }
 
     fn starts(&self) -> Vec<String> {
@@ -113,7 +102,7 @@ impl Setup {
         text.lines().map(String::from).collect()
     }
 
-    /// A shim run without a terminal, as herdr runs hooks and actions: code, stdout, stderr.
+    /// A command run without a terminal, as herdr runs hooks and actions: code, stdout, stderr.
     fn run(&self, cmd: &[OsString], extra: &[(&str, &str)]) -> (Option<i32>, String, String) {
         let out = Command::new(&cmd[0])
             .args(&cmd[1..])
@@ -172,12 +161,12 @@ struct Pane {
     master: OwnedFd,
     child: Child,
     output: Arc<Mutex<Vec<u8>>>,
-    /// The shim reaped: its id, and its group's, may be another process's by now.
+    /// The pane's first process reaped: its id, and its group's, may be another process's by now.
     reaped: bool,
 }
 
 impl Drop for Pane {
-    /// The shim and what it started, as one process group (setsid): never left running, even after a panic.
+    /// The pane's first process and what it started, as one process group (setsid): never left running, even after a panic.
     fn drop(&mut self) {
         if self.reaped {
             return;
@@ -234,7 +223,7 @@ impl Pane {
         std::fs::File::from(self.master.try_clone().unwrap()).write_all(bytes).unwrap();
     }
 
-    /// The shim's exit code, once it ended (10 s at most).
+    /// The pane's exit code, once its first process ended (10 s at most).
     fn code(&mut self) -> Option<i32> {
         let start = Instant::now();
         loop {
@@ -247,17 +236,17 @@ impl Pane {
         }
     }
 
-    /// The pane's close asked of herdr, then its terminal hung up as herdr does: the shim and the binary end.
+    /// The pane's close asked of herdr, then its terminal hung up as herdr does: the launcher and its child end.
     fn closed_by_herdr(&mut self, s: &Setup) {
         wait_for("the pane's close never asked of herdr", || {
             std::fs::read_to_string(s.root.join("herdr/calls.log")).unwrap_or_default().contains("pane\tclose\tw1:p2\n")
         });
-        // SAFETY: SIGHUP (1) to the group the shim leads, as the kernel sends it when the terminal goes.
+        // SAFETY: SIGHUP (1) to the group the pane's first process leads, as the kernel sends it when the terminal goes.
         unsafe { kill(-(self.child.id() as i32), 1) };
         self.code();
     }
 
-    /// No process left in the pane's session (setsid: the shim's id): the binary ended with its shim.
+    /// No process left in the pane's session (setsid: its first process's id): the child ended with its launcher.
     fn none_left(&self) {
         let sid = self.child.id().to_string();
         wait_for("a process of the pane is left", || {
@@ -287,28 +276,28 @@ fn wait_for(what: &str, mut ok: impl FnMut() -> bool) {
 }
 
 #[test]
-fn each_pane_starts_through_its_shim_and_quits_with_code_0() {
-    let Some(s) = Setup::new("panes") else { return };
+fn each_pane_starts_as_the_manifest_runs_it_and_quits_with_code_0() {
+    let s = Setup::new("panes");
     let file = s.work.join("a.txt").display().to_string();
     let root = s.work.display().to_string();
-    // The pane, its shim, what it needs, what its first screen shows, its quit key (the explorer's closes its pane).
+    // The pane, what it needs, what its first screen shows, its quit key (the explorer's closes its pane).
     let panes: [(&str, Vars, &str, &[u8]); 5] = [
-        ("explorer.js", &[("EXPLORER_ROOT", &root)], "a.txt", b"q"),
-        ("preview.js", &[("EXPLORER_FILE", &file), ("EXPLORER_ROOT", &root)], "hello smoke", b"q"),
-        ("search.js", &[("EXPLORER_ROOT", &root)], "a.txt", b"\x1b"),
-        ("diff.js", &[("EXPLORER_FILE", &file), ("EXPLORER_ROOT", &root)], "a.txt", b"q"),
-        ("scm.js", &[("EXPLORER_ROOT", &root)], "Not a git repository", b"q"),
+        ("tree", &[("EXPLORER_ROOT", &root)], "a.txt", b"q"),
+        ("preview", &[("EXPLORER_FILE", &file), ("EXPLORER_ROOT", &root)], "hello smoke", b"q"),
+        ("search", &[("EXPLORER_ROOT", &root)], "a.txt", b"\x1b"),
+        ("diff", &[("EXPLORER_FILE", &file), ("EXPLORER_ROOT", &root)], "a.txt", b"q"),
+        ("scm", &[("EXPLORER_ROOT", &root)], "Not a git repository", b"q"),
     ];
-    for (entry, extra, shown, quit) in panes {
-        let mut p = s.start(&s.shim(entry), extra);
+    for (id, extra, shown, quit) in panes {
+        let mut p = s.start(&s.cmd(&["pane", id]), extra);
         p.until(shown);
         std::thread::sleep(Duration::from_millis(500));
         p.send(quit);
-        if entry == "explorer.js" {
+        if id == "tree" {
             // The explorer asks herdr to close its pane, which hangs its terminal up.
             p.closed_by_herdr(&s);
         } else {
-            assert_eq!(p.code(), Some(0), "{entry}:\n{}", p.screen());
+            assert_eq!(p.code(), Some(0), "{id}:\n{}", p.screen());
         }
         p.none_left();
     }
@@ -324,19 +313,20 @@ fn each_pane_starts_through_its_shim_and_quits_with_code_0() {
     .unwrap();
     use std::os::unix::fs::PermissionsExt;
     std::fs::set_permissions(&editor, std::fs::Permissions::from_mode(0o755)).unwrap();
-    let mut p = s.start(&s.shim("edit.js"), &[("EXPLORER_FILE", &file), ("EDITOR", editor.to_str().unwrap())]);
-    assert_eq!(p.code(), Some(0), "edit.js:\n{}", p.screen());
+    let mut p = s.start(&s.cmd(&["pane", "edit"]), &[("EXPLORER_FILE", &file), ("EDITOR", editor.to_str().unwrap())]);
+    assert_eq!(p.code(), Some(0), "edit:\n{}", p.screen());
     let out = std::fs::read_to_string(s.root.join("editor.out")).unwrap();
     assert_eq!(out, format!("{root}/sub\n{file}\n"));
-    // Every pane ran under its shim's IPC file.
+    // Each pane started once by the manifest's command, with no IPC file: the explorer's and the preview's launchers
+    // start their child by the binary's own path (bin/herdr-explorer.real here), which the wrapper does not log.
     let starts = s.starts();
     assert_eq!(starts.len(), 6, "{starts:?}");
-    assert!(starts.iter().all(|l| l.starts_with("pane ") && l.ends_with("ipc=set")), "{starts:?}");
+    assert!(starts.iter().all(|l| l.starts_with("pane ") && l.ends_with("ipc=")), "{starts:?}");
 }
 
 #[test]
-fn the_hook_and_peek_give_what_the_binary_gives() {
-    let Some(s) = Setup::new("hook") else { return };
+fn the_hook_and_peek_answer_and_call_herdr() {
+    let s = Setup::new("hook");
     // A tab of two panes, p1 a terminal in the work folder and p5 the preview; herdr's answers by their first two
     // words.
     let pane = |id: &str, label: &str| {
@@ -361,72 +351,35 @@ fn the_hook_and_peek_give_what_the_binary_gives() {
     }
     let ctx = r#"{"workspace_id":"w1","tab_id":"w1:t1","workspace_cwd":"/space"}"#;
     let extra = [("HERDR_PLUGIN_CONTEXT_JSON", ctx), ("HERDR_PANE_ID", "w1:p1")];
-    let bin: OsString = s.plugin.join("bin/herdr-explorer.real").into();
     let calls = || {
         let log = s.root.join("herdr/calls.log");
         let text = std::fs::read_to_string(&log).unwrap_or_default();
         let _ = std::fs::remove_file(&log);
         text
     };
-    // Each through its shim, then as the binary: the same code, output and herdr calls.
-    let both = |sub: &str, entry: &str, args: &[&str]| {
-        let mut shim = s.shim(entry);
-        shim.extend(args.iter().map(OsString::from));
-        let mut direct = vec![bin.clone(), sub.into()];
-        direct.extend(args.iter().map(OsString::from));
+    // As the manifest runs them: code, output, and the herdr calls made.
+    let run = |args: &[&str]| {
         let _ = calls();
-        let a = (s.run(&shim, &extra), calls());
-        let b = (s.run(&direct, &extra), calls());
-        assert_eq!(a, b, "{sub} {args:?}");
-        a
+        (s.run(&s.cmd(args), &extra), calls())
     };
-    let ((code, _, err), log) = both("hook", "hook.js", &["--toggle"]);
+    let ((code, _, err), log) = run(&["hook", "--toggle"]);
     assert_eq!(code, Some(0), "{err}");
     assert!(log.contains("plugin\tpane\topen\t--plugin\tgcaudan.explorer\t--entrypoint\ttree"), "{log}");
-    let ((_, _, _), log) = both("hook", "hook.js", &["--closed"]);
+    let ((_, _, _), log) = run(&["hook", "--closed"]);
     assert!(log.contains("workspace\tlist"), "{log}");
-    let ((code, out, err), _) = both("peek", "peek.js", &["a.txt:1"]);
+    let ((code, out, err), _) = run(&["peek", "a.txt:1"]);
     assert_eq!((code, out.as_str()), (Some(0), "Preview: a.txt:1\n"), "{err}");
-    let ((code, _, err), _) = both("peek", "peek.js", &["--nope"]);
+    let ((code, _, err), _) = run(&["peek", "--nope"]);
     assert_ne!(code, Some(0), "{err}");
 }
 
 #[test]
-fn the_shim_starts_the_preview_again_on_new_code_with_what_it_asked_for() {
-    let Some(s) = Setup::new("restart") else { return };
-    let file = s.work.join("a.txt").display().to_string();
-    let root = s.work.display().to_string();
-    let mut p = s.start(&s.shim("preview.js"), &[("EXPLORER_FILE", &file), ("EXPLORER_ROOT", &root)]);
-    // The manifest's version changed: an update.
-    p.until("hello smoke");
-    let starts = s.starts();
-    assert_eq!(starts, [format!("pane preview file={file} view= ipc=set")]);
-    // From here on, once the first screen is drawn: the old binary's screen put back, then the new one's.
-    let mark = p.quiet();
-    let toml = s.plugin.join("herdr-plugin.toml");
-    let text = std::fs::read_to_string(&toml).unwrap();
-    let mut lines: Vec<String> = text.lines().map(String::from).collect();
-    let at = lines.iter().position(|l| l.starts_with("version")).unwrap();
-    lines[at] = "version = \"9.9.9\"".into();
-    std::fs::write(&toml, lines.join("\n") + "\n").unwrap();
-    wait_for("the preview never restarted", || s.starts().len() >= 2);
-    // Started again with what it asked for (EXPLORER_VIEW is the restart's own), in the same terminal: the new
-    // binary draws in it and quits with code 0.
-    assert_eq!(s.starts()[1], format!("pane preview file={file} view=file ipc=set"));
-    p.until_after(mark, "hello smoke");
-    p.send(b"q");
-    assert_eq!(p.code(), Some(0), "{}", p.screen());
-    p.none_left();
-}
-
-#[test]
 fn the_binary_started_by_the_manifest_starts_the_preview_again_on_new_code() {
-    let Some(s) = Setup::new("restart-bin") else { return };
+    let s = Setup::new("restart-bin");
     let file = s.work.join("a.txt").display().to_string();
     let root = s.work.display().to_string();
-    // As the manifest runs it: no shim, the binary is its own launcher (no EXPLORER_IPC_FILE).
-    let bin = vec![s.plugin.join("bin/herdr-explorer").into(), "pane".into(), "preview".into()];
-    let mut p = s.start(&bin, &[("EXPLORER_FILE", &file), ("EXPLORER_ROOT", &root)]);
+    // As the manifest runs it: the binary is its own launcher (no EXPLORER_IPC_FILE).
+    let mut p = s.start(&s.cmd(&["pane", "preview"]), &[("EXPLORER_FILE", &file), ("EXPLORER_ROOT", &root)]);
     p.until("hello smoke");
     assert_eq!(s.starts(), [format!("pane preview file={file} view= ipc=")]);
     let mark = p.quiet();
@@ -443,7 +396,7 @@ fn the_binary_started_by_the_manifest_starts_the_preview_again_on_new_code() {
 
 #[test]
 fn the_binary_started_by_the_manifest_fetches_the_new_binary_before_it_restarts() {
-    let Some(s) = Setup::new("restart-fetch") else { return };
+    let s = Setup::new("restart-fetch");
     // No development binary: the launcher makes the binary the manifest's version before the restart, by fetch-bin,
     // here a fake that logs its run.
     std::fs::remove_file(s.plugin.join("bin/.dev")).unwrap();
@@ -453,8 +406,7 @@ fn the_binary_started_by_the_manifest_fetches_the_new_binary_before_it_restarts(
         .unwrap();
     let file = s.work.join("a.txt").display().to_string();
     let root = s.work.display().to_string();
-    let bin = vec![s.plugin.join("bin/herdr-explorer").into(), "pane".into(), "preview".into()];
-    let mut p = s.start(&bin, &[("EXPLORER_FILE", &file), ("EXPLORER_ROOT", &root)]);
+    let mut p = s.start(&s.cmd(&["pane", "preview"]), &[("EXPLORER_FILE", &file), ("EXPLORER_ROOT", &root)]);
     p.until("hello smoke");
     let mark = p.quiet();
     let toml = s.plugin.join("herdr-plugin.toml");
@@ -471,17 +423,17 @@ fn the_binary_started_by_the_manifest_fetches_the_new_binary_before_it_restarts(
 }
 
 #[test]
-fn the_explorers_shim_takes_the_folder_the_binary_announces() {
-    let Some(s) = Setup::new("cwd") else { return };
+fn the_explorers_launcher_takes_the_folder_its_child_announces() {
+    let s = Setup::new("cwd");
     std::fs::create_dir_all(s.work.join("sub/deep")).unwrap();
     let root = s.work.join("sub").display().to_string();
-    let mut p = s.start(&s.shim("explorer.js"), &[("EXPLORER_ROOT", &root)]);
+    let mut p = s.start(&s.cmd(&["pane", "tree"]), &[("EXPLORER_ROOT", &root)]);
     p.until("deep");
     assert_eq!(p.cwd(), s.work.join("sub"));
-    // backspace: the parent folder as the root, announced to the launcher, the shim.
+    // backspace: the parent folder as the root, announced to the launcher, the pane's first process.
     std::thread::sleep(Duration::from_millis(500));
     p.send(b"\x7f");
-    wait_for("the shim never moved to the new root", || p.cwd() == s.work);
+    wait_for("the launcher never moved to the new root", || p.cwd() == s.work);
     p.send(b"q");
     p.closed_by_herdr(&s);
     p.none_left();
@@ -489,7 +441,7 @@ fn the_explorers_shim_takes_the_folder_the_binary_announces() {
 
 #[test]
 fn the_explorer_outside_a_repository_marks_the_changes_of_those_in_its_folders() {
-    let Some(s) = Setup::new("repos") else { return };
+    let s = Setup::new("repos");
     let git = |dir: &Path, args: &[&str]| {
         let ok = Command::new("git")
             .args(["-c", "user.name=t", "-c", "user.email=t@t", "-c", "init.defaultBranch=main"])
@@ -522,7 +474,7 @@ fn the_explorer_outside_a_repository_marks_the_changes_of_those_in_its_folders()
     };
     let marked = |screen: &str| screen.lines().filter(|l| badged(l)).count();
     let root = s.work.display().to_string();
-    let mut p = s.start(&s.shim("explorer.js"), &[("EXPLORER_ROOT", &root)]);
+    let mut p = s.start(&s.cmd(&["pane", "tree"]), &[("EXPLORER_ROOT", &root)]);
     p.until("plain");
     wait_for("the repositories' folders never marked", || marked(&p.screen()) == 2);
     let screen = p.screen();
@@ -538,4 +490,31 @@ fn the_explorer_outside_a_repository_marks_the_changes_of_those_in_its_folders()
     p.send(b"q");
     p.closed_by_herdr(&s);
     p.none_left();
+}
+
+#[test]
+fn the_explorer_offers_setup_once_which_adds_the_key_bindings() {
+    let s = Setup::new("setup");
+    std::fs::remove_file(s.root.join("state/setup-offered")).unwrap();
+    let config = s.root.join("home/.config/herdr/config.toml");
+    let bound = |n: usize| {
+        let text = std::fs::read_to_string(&config).unwrap_or_default();
+        text.matches("[[keys.command]]").count() == n && text.contains("command = \"gcaudan.explorer.toggle\"")
+    };
+    let root = s.work.display().to_string();
+    let mut p = s.start(&s.cmd(&["pane", "tree"]), &[("EXPLORER_ROOT", &root)]);
+    p.until("Set up herdr-explorer");
+    std::thread::sleep(Duration::from_millis(300));
+    p.send(b"y");
+    wait_for("setup never wrote the key bindings", || bound(3));
+    p.send(b"q");
+    p.closed_by_herdr(&s);
+    p.none_left();
+    // Offered once: the next explorer shows its tree only.
+    assert!(s.root.join("state/setup-offered").exists());
+    // Run again from a terminal: nothing added twice.
+    let (code, out, err) = s.run(&s.cmd(&["setup"]), &[]);
+    assert_eq!(code, Some(0), "{err}");
+    assert!(out.contains("already bound"), "{out}");
+    assert!(bound(3));
 }
