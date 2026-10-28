@@ -67,9 +67,12 @@ fn trim(s: &str) -> &str {
     s.trim_matches(crate::unicode::is_space)
 }
 
-/// `+text.trim()`, NaN for a text that is not a number.
+/// `+text.trim()`: 0 for an empty text, NaN for a text that is not a number.
 fn count_of(res: &Exec) -> f64 {
-    trim(&res.out).parse().unwrap_or(f64::NAN)
+    match trim(&res.out) {
+        "" => 0.0,
+        t => t.parse().unwrap_or(f64::NAN),
+    }
 }
 
 /// What --continue would run that the hardening cannot stop, from files a repository received with its .git can
