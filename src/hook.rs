@@ -365,7 +365,8 @@ fn running(p: &Value) -> R<bool> {
             Some(_) => return false,
         };
         let name = name.to_lowercase();
-        ["herdr-explorer", "herdr-explorer.exe"].contains(&name.as_str())
+        // node: a pane of a 0.x release, still open after the update.
+        ["herdr-explorer", "herdr-explorer.exe", "node", "node.exe"].contains(&name.as_str())
     }))
 }
 
