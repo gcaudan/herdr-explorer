@@ -283,7 +283,8 @@ fn glob_source(glob: &str) -> String {
             s += &format!("[{}]", inner.replace('\\', "\\\\"));
             i = end;
         } else {
-            if ".+^$()|\\".contains(c) {
+            // A lone } or ] too: the u mode refuses them unescaped.
+            if ".+^$()|\\}]".contains(c) {
                 s.push('\\');
             }
             s.push(c);
@@ -473,6 +474,9 @@ mod tests {
         assert!(g.test("src/deep/b.rs") && g.test("src/mod.rs") && !g.test("lib/c.rs"));
         assert!(globs(" , ").is_none());
         assert_eq!(glob_source("./a/[!x]?"), "a/[^x][^/](?:/.*)?");
+        // A lone } or ] is a character of the name, not a filter lost.
+        let g = globs("node_modules,foo},a]").unwrap();
+        assert!(g.test("node_modules/x") && g.test("foo}") && g.test("a]") && !g.test("foo"));
     }
 
     #[test]
