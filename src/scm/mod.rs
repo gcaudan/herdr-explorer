@@ -166,6 +166,8 @@ pub struct Pane {
     again: bool,
     poll_at: Instant,
     poll_every: Duration,
+    /// When the last refresh started: the next one waits a second after it.
+    refreshed_at: Option<Instant>,
     /// The file or folder selected in the explorer, selected here once the changes are loaded.
     reveal_file: Option<String>,
     follow_at: Option<Instant>,
@@ -256,6 +258,7 @@ impl Pane {
             again: false,
             poll_at: Instant::now() + Duration::from_secs(5),
             poll_every: Duration::from_secs(5),
+            refreshed_at: None,
             reveal_file: exec::env_var("EXPLORER_FILE").filter(|f| !f.is_empty()),
             follow_at: None,
             compare_at: None,
@@ -495,10 +498,12 @@ impl Pane {
 
     // --- the refresh
 
-    /// At most one refresh every 250 ms, never two at once.
+    /// A refresh 250 ms from now, at most one a second (a build writing files), never two at once.
     fn schedule(&mut self) {
         if self.refresh_at.is_none() {
-            self.refresh_at = Some(Instant::now() + Duration::from_millis(250));
+            let soon = Instant::now() + Duration::from_millis(250);
+            let after = self.refreshed_at.map(|t| t + Duration::from_secs(1));
+            self.refresh_at = Some(after.map_or(soon, |a| a.max(soon)));
         }
     }
 
@@ -508,6 +513,7 @@ impl Pane {
             return;
         }
         self.loading = true;
+        self.refreshed_at = Some(Instant::now());
         let ask = LoadAsk::of(&self.s, &self.root);
         self.git.send(Box::new(move || {
             let loaded = std::panic::catch_unwind(|| state::load(&ask)).ok();
@@ -558,14 +564,17 @@ impl Pane {
     }
 
     /// Commits, staging, branch switches and fetches change files of the git folder; edits, the working tree, watched
-    /// apart without its `.git` (which `git status` itself writes to). A working tree that cannot be watched (too many
-    /// folders for inotify) is looked at every 5 s instead.
+    /// apart without its `.git` (which `git status` itself writes to). On Linux, where inotify takes a watch per
+    /// folder (node_modules and target included), and when it cannot be watched, the working tree is looked at every
+    /// 5 s instead.
     fn watch_git(&mut self) {
         if !self.git_watchers.is_empty() {
             return;
         }
         let Some(r) = self.repo() else { return };
-        let (gitdir, common, top) = (r.gitdir.clone(), r.common.clone(), r.top.clone());
+        let (gitdir, common) = (r.gitdir.clone(), r.common.clone());
+        #[cfg(not(target_os = "linux"))]
+        let top = r.top.clone();
         let on = |names: bool| {
             let (tx, waker) = (self.tx.clone(), self.waker.clone());
             move |f: Option<String>| {
@@ -585,8 +594,16 @@ impl Pane {
             list.extend(Watcher::new(&common, false, on(true)));
         }
         list.extend(Watcher::new(&paths::join(&[&common, "refs"]), true, on(false)));
+        #[cfg(not(target_os = "linux"))]
+        self.watch_tree(&top);
+        self.git_watchers.extend(list);
+    }
+
+    /// The working tree watched, without its `.git`: one handle of the system on macOS and Windows.
+    #[cfg(not(target_os = "linux"))]
+    fn watch_tree(&mut self, top: &str) {
         let (tx, waker) = (self.tx.clone(), self.waker.clone());
-        let tree = Watcher::new(&top, true, move |f: Option<String>| {
+        let tree = Watcher::new(top, true, move |f: Option<String>| {
             let in_git = f.as_deref().is_some_and(|f| f == ".git" || f.starts_with(".git/") || f.starts_with(".git\\"));
             if !in_git {
                 let _ = tx.send(Box::new(|p: &mut Pane| p.schedule()));
@@ -594,11 +611,10 @@ impl Pane {
             }
         });
         if let Ok(tree) = tree {
-            list.push(tree);
+            self.git_watchers.push(tree);
             self.poll_every = Duration::from_secs(30);
             self.poll_at = self.poll_at.min(Instant::now() + self.poll_every);
         }
-        self.git_watchers = list;
     }
 
     /// The file or folder selected in the explorer, selected here once the changes are loaded: the file, else the
