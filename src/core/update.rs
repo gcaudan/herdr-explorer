@@ -2,7 +2,7 @@
 //! kept in the state folder, for the explorer's ↑, which copies herdr's update command: herdr's plugin index is the
 //! only channel, its build step (scripts/fetch-bin.*) putting the release's binary in bin/. The explorer and preview
 //! panes restart on the new code by themselves when the version on disk changes (`VersionWatch`: a linked clone
-//! moved by git). GitHub is asked through curl, as fetch-bin does (no crate).
+//! moved by git), or a development build is put (bin/.dev written again by scripts/dev-build). GitHub is asked through curl, as fetch-bin does (no crate).
 
 use crate::core::exec::{self, Opts, WIN};
 use crate::core::regex::Regex;
@@ -74,9 +74,25 @@ pub fn current() -> Option<&'static str> {
     CURRENT.get_or_init(read_version).as_deref()
 }
 
-/// Reads the version this process runs, at its start.
+/// The development build's mark (bin/.dev), which scripts/dev-build writes again once each build is put.
+fn dev_file() -> Option<String> {
+    dir().map(|d| paths::join(&[d, "bin", ".dev"]))
+}
+
+fn read_dev() -> Option<String> {
+    std::fs::read_to_string(dev_file()?).ok()
+}
+
+/// The development build this process runs: the mark when the process started (`init`), None for a release binary.
+fn current_dev() -> Option<&'static str> {
+    static CURRENT: OnceLock<Option<String>> = OnceLock::new();
+    CURRENT.get_or_init(read_dev).as_deref()
+}
+
+/// Reads the version and the development build this process runs, at its start.
 pub fn init() {
     let _ = current();
+    let _ = current_dev();
 }
 
 /// { checkedAt, repo, latest, notes, url, skip, seen, updated } in the state folder: the repository checked, the
@@ -266,11 +282,12 @@ fn origin() -> Option<String> {
     (r.code == Some(0)).then_some(r.out)
 }
 
-/// The version on disk watched: once it differs from the one this process runs (an update, or a
-/// git pull in a terminal), the pane restarts on the new code, 2 s later so that every file is written, and when
+/// The version on disk watched, and the development build's mark: once one differs from what this process runs (an
+/// update, a git pull in a terminal, a development build put), the pane restarts on the new code, 2 s later so that every file is written, and when
 /// idle allows it; asked again every second until then. The pane's loop calls `poll`.
 pub struct VersionWatch {
     watch: Option<Watch>,
+    dev: Option<Watch>,
     attempt: Option<Instant>,
 }
 
@@ -282,23 +299,28 @@ impl Default for VersionWatch {
 
 impl VersionWatch {
     pub fn new() -> VersionWatch {
-        VersionWatch { watch: manifest().map(|m| Watch::new(&m, Duration::from_millis(2000))), attempt: None }
+        let watch = |f: Option<String>| f.map(|f| Watch::new(&f, Duration::from_millis(2000)));
+        VersionWatch { watch: watch(manifest()), dev: watch(dev_file()), attempt: None }
     }
 
+    /// A new version, or a new development build (its mark there and changed: one removed brings no new code).
     fn due_version() -> bool {
         read_version().is_some_and(|v| Some(v.as_str()) != current())
+            || read_dev().is_some_and(|d| Some(d.as_str()) != current_dev())
     }
 
     /// When the loop must look again.
     pub fn due(&self) -> Option<Instant> {
         let w = self.watch.as_ref()?;
-        [self.attempt, w.due()].into_iter().flatten().min()
+        [self.attempt, w.due(), self.dev.as_ref().and_then(Watch::due)].into_iter().flatten().min()
     }
 
     /// Looks at the manifest and the attempt due: true when the pane must restart now (the watch then stops).
     pub fn poll(&mut self, idle: impl FnOnce() -> bool) -> bool {
         let Some(w) = &mut self.watch else { return false };
-        if w.poll() && self.attempt.is_none() && Self::due_version() {
+        // Both looked at, each keeping its own track.
+        let changed = w.poll() | self.dev.as_mut().is_some_and(Watch::poll);
+        if changed && self.attempt.is_none() && Self::due_version() {
             self.attempt = Some(Instant::now() + Duration::from_millis(2000));
         }
         let Some(at) = self.attempt.filter(|a| *a <= Instant::now()) else { return false };
@@ -311,6 +333,7 @@ impl VersionWatch {
             return false;
         }
         self.watch = None;
+        self.dev = None;
         true
     }
 }

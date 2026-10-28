@@ -30,9 +30,9 @@ the manifest runs it.
 4. Edit the code under `src/`, run `scripts/dev-build.sh` again, then reload what you changed:
    - **search, source control, changes, editor**: these panes start a fresh process each time they
      open. Close the pane and open it again.
-   - **explorer and preview**: these panes keep running. Close and reopen them (`prefix+f` twice
-     toggles the explorer), or open a new tab. They restart by themselves only when the `version` in
-     `herdr-plugin.toml` changes.
+   - **explorer and preview**: these panes keep running, and restart by themselves on your binary once
+     idle: dev-build writes `bin/.dev` again after each build, as a new `version` in `herdr-plugin.toml`
+     would. They keep their place, width and what they show.
    - **the hook**: runs on each event or action, so the next one picks up your binary.
    - **herdr-plugin.toml** (hooks, panes, actions, build step): herdr keeps its own copy of the manifest, so run
      `herdr plugin link .` again.

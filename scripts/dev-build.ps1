@@ -36,4 +36,6 @@ try {
     if (-not $hadDev) { Remove-Item -LiteralPath $dev -Force -ErrorAction SilentlyContinue }
     throw
 }
+# The binary put, bin\.dev marked anew: the explorer and preview panes restart on it once idle.
+Set-Content -LiteralPath $dev -Value "$(Get-Date -Format o) $PID" -NoNewline
 Write-Host "dev-build: $exe ($(& $exe --version)), bin\.dev written"

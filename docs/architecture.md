@@ -254,7 +254,7 @@ restart on the new code when its version changes (see [Launcher and self-restart
 | Explorer        | a watch on the root (`sys::watch`: inotify, FSEvents, ReadDirectoryChangesW), recursive unless the root is `$HOME`, a parent of it or the filesystem root (then top level only, or when the recursive watch fails). Changes inside `.git` or in collapsed ignored folders are skipped |
 | Explorer        | a watch on the git folder for `index` and `HEAD` (commit, stage, branch switch); outside a repository, on that of each repository of the root's folders, whose status alone is read again, as after a change in its folder |
 | Explorer        | a 30 s safety rescan, every repository read again. A `.git` appearing later (`git init`, clone), in the root or one of its folders, is detected |
-| Explorer        | `settings.json`, `keys.json` and `update.json`, watched through their folder (`core::watch`: one watch per folder for the process, and a look at the folder every 30 s, which watches it again when it was made again) |
+| Explorer        | `settings.json`, `keys.json` and `update.json`, watched through their folder (`core::watch`: one watch per folder for the process, made again once when the system tells it lost the folder, removed or moved away, or when a look at the folder every 30 s finds another one there) |
 | Explorer        | the folder of the neighbouring terminal, polled every 2 s when **Follow** is on and herdr shows the explorer's tab (`shown-tab`, below) |
 | Preview         | the file's folder, the tab's request file and `settings.json` (Images), watched through their folder |
 | Source control  | the git folder (`index`, `HEAD`, `ORIG_HEAD`, `FETCH_HEAD`, `MERGE_HEAD`, `packed-refs`, `stash`, `CHERRY_PICK_HEAD`, `REVERT_HEAD`), the common git folder and `refs/` (worktrees), the working tree on macOS and Windows (`.git` left out: `git status` 250 ms after a change, at most once a second), a 30 s poll (5 s without the working tree's watch, always on Linux, where inotify would take a watch per folder), and focus |
@@ -297,8 +297,9 @@ signals come from a thread of their own.
 - The launcher keeps the terminal in raw mode between children, so a `ctrl+c` typed during a restart
   cannot kill the pane, and forwards `SIGTERM`, `SIGHUP` and `SIGINT` to the child. If it is killed, the child
   exits too: it sees the end of the pipe on Unix, the end of the launcher's process on Windows, without polling.
-- `update::VersionWatch` watches the `version` line of `herdr-plugin.toml`. When it differs from the
-  version the process started with, the pane waits 2 s, so that an update has written every file. Then
+- `update::VersionWatch` watches the `version` line of `herdr-plugin.toml`, and `bin/.dev`, which dev-build writes
+  again once each build is in place. When either differs from what the process started with (a removed `bin/.dev`
+  aside), the pane waits 2 s, so that an update has written every file. Then
   it checks every second until the pane is idle (see [Pane restart](installation.md#pane-restart)).
 - To restart, the child releases the terminal and sends the launcher what the next process must show
   (`EXPLORER_TREE` for the explorer; `EXPLORER_FILE`, `EXPLORER_ROOT`, `EXPLORER_LINE` and

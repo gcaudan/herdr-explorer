@@ -130,7 +130,7 @@ See [docs/usage.md](docs/usage.md) for every pane, key, mouse action and menu it
 
 ## Contributing
 
-Install Rust, clone, link it with `herdr plugin link .`, then `scripts/dev-build.sh` after each change and reopen the pane; the
+Install Rust, clone, link it with `herdr plugin link .`, then `scripts/dev-build.sh` after each change (the explorer and preview restart on it by themselves); the
 checks are `sh scripts/check.sh`. Commits follow
 [Conventional Commits](https://www.conventionalcommits.org/), and releases are cut by release-please. See
 [CONTRIBUTING.md](CONTRIBUTING.md).

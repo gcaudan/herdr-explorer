@@ -164,7 +164,8 @@ scripts/dev-build.sh    # Windows (PowerShell): powershell -ExecutionPolicy Bypa
 ```
 
 It runs `cargo build --release` (cargo from `PATH`, else `$CARGO_HOME/bin`, by default `~/.cargo/bin`, where rustup
-installs it without touching your shell's profile), copies the binary to `bin/` and writes `bin/.dev`: fetch-bin then never replaces it. Run it again after each change; delete `bin/.dev` (and run
+installs it without touching your shell's profile), copies the binary to `bin/` and writes `bin/.dev`: fetch-bin then never replaces it, and the open explorer and preview
+panes restart on the new binary once idle. Run it again after each change; delete `bin/.dev` (and run
 `scripts/fetch-bin.sh`) to go back to the release binary.
 
 ### Adding the explorer to existing tabs

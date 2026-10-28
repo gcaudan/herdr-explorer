@@ -26,4 +26,6 @@ mv -f "$exe.new-$$" "$exe" || {
   [ -n "$had_dev" ] || rm -f "$dir/bin/.dev"
   exit 1
 }
+# The binary put, bin/.dev marked anew: the explorer and preview panes restart on it once idle.
+printf '%s %s' "$(date +%Y%m%dT%H%M%S)" "$$" >"$dir/bin/.dev"
 echo "dev-build: $exe ($("$exe" --version)), bin/.dev written"
