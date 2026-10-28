@@ -80,8 +80,10 @@ herdr's plugin index adds no key bindings, nor links the skill for Claude Code: 
    `%APPDATA%\herdr\config.toml` on Windows, else `$XDG_CONFIG_HOME/herdr/config.toml` (`~/.config/herdr/config.toml`
    without it), macOS included.
 2. Append one `[[keys.command]]` block per action (see [Key bindings](#key-bindings)), unless the config already
-   binds that action. A binding you already changed, for example to another key, is left alone. When it added one,
-   run `herdr server reload-config`, ignoring errors.
+   binds that action. A binding you already changed, for example to another key, is left alone, and a key the
+   config already binds to something else is skipped, with a message. A config that cannot be read, or that writes
+   `keys.command` inline (which a block appended would make invalid), is not changed: the blocks to copy are
+   printed instead. When it added one, run `herdr server reload-config`, ignoring errors.
 3. When Claude Code is installed (a `~/.claude` folder), link the [herdr-preview skill](usage.md#show-a-file-from-an-agent-or-a-script)
    into `~/.claude/skills/herdr-preview` (a symbolic link, a junction on Windows, which needs no admin right), so
    that Claude Code can show you files in the preview. A link of that name is replaced; a folder that is not a link
