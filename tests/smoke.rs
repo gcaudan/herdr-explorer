@@ -47,6 +47,15 @@ impl Setup {
         // A copy, not a link: the binary finds its plugin folder (the manifest it watches) above its own bin/.
         let real = plugin.join("bin/herdr-explorer.real");
         std::fs::copy(env!("CARGO_BIN_EXE_herdr-explorer"), &real).unwrap();
+        // A process forked meanwhile by another test holds the copy open for writing until it execs: the copy cannot
+        // run before (ETXTBSY, "Text file busy"), so it is waited for, 2 s at most.
+        for _ in 0..200 {
+            let run = std::process::Command::new(&real).arg("--version").output();
+            if run.as_ref().map_or_else(|e| e.raw_os_error() != Some(26), |_| true) {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
         let log = root.join("starts.log");
         let wrapper = plugin.join("bin/herdr-explorer");
         std::fs::write(
