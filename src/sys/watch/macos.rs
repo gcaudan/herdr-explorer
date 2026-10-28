@@ -137,7 +137,8 @@ pub struct Watcher {
 unsafe impl Send for Watcher {}
 
 impl Watcher {
-    pub fn new(dir: &str, recursive: bool, on: Callback) -> io::Result<Watcher> {
+    /// FSEvents watches the path: a folder made again there is seen, the watch never lost.
+    pub fn new(dir: &str, recursive: bool, on: Callback, _lost: super::Lost) -> io::Result<Watcher> {
         let real = std::fs::canonicalize(dir)?;
         if !real.is_dir() {
             return Err(io::Error::from_raw_os_error(20)); // ENOTDIR

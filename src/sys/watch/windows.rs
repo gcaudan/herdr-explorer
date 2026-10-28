@@ -115,7 +115,7 @@ impl Drop for Reader {
 }
 
 impl Watcher {
-    pub fn new(dir: &str, recursive: bool, on: Callback) -> io::Result<Watcher> {
+    pub fn new(dir: &str, recursive: bool, on: Callback, lost: super::Lost) -> io::Result<Watcher> {
         if !std::fs::metadata(dir)?.is_dir() {
             return Err(io::Error::from_raw_os_error(267)); // ERROR_DIRECTORY
         }
@@ -153,7 +153,7 @@ impl Watcher {
             return Err(io::Error::last_os_error());
         }
         let stop = stop as usize;
-        let thread = std::thread::spawn(move || run(reader, stop, on));
+        let thread = std::thread::spawn(move || run(reader, stop, on, lost));
         Ok(Watcher { stop, thread: Some(thread) })
     }
 }
@@ -171,8 +171,12 @@ impl Drop for Watcher {
 }
 
 /// The watcher's thread: the changes read until the stop event is set, or the folder is gone. The reader, dropped at
-/// the end, cancels the read in progress.
-fn run(mut reader: Reader, stop: usize, mut on: Callback) {
+/// the end, cancels the read in progress. A read that fails (the folder removed) ends the watch: lost.
+fn run(mut reader: Reader, stop: usize, mut on: Callback, lost: super::Lost) {
+    let gone = |on: &mut Callback| {
+        lost.store(true, std::sync::atomic::Ordering::SeqCst);
+        on(None);
+    };
     loop {
         let handles = [reader.io_event, stop as Handle];
         // SAFETY: two valid events.
@@ -182,6 +186,7 @@ fn run(mut reader: Reader, stop: usize, mut on: Callback) {
         let mut got = 0u32;
         // SAFETY: the read completed.
         if unsafe { GetOverlappedResult(reader.h, &mut *reader.ov, &mut got, 0) } == 0 {
+            gone(&mut on);
             break;
         }
         // FILE_NOTIFY_INFORMATION: the offset of the next, the action, the name's length in bytes, the name. Read
@@ -215,6 +220,7 @@ fn run(mut reader: Reader, stop: usize, mut on: Callback) {
             on(name);
         }
         if again.is_err() {
+            gone(&mut on);
             break;
         }
     }

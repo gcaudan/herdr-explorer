@@ -118,7 +118,7 @@ pub struct Watcher {
 }
 
 impl Watcher {
-    pub fn new(dir: &str, recursive: bool, on: Callback) -> io::Result<Watcher> {
+    pub fn new(dir: &str, recursive: bool, on: Callback, lost: super::Lost) -> io::Result<Watcher> {
         // SAFETY: a new descriptor, closed by the thread or below.
         let fd = unsafe { inotify_init1(IN_NONBLOCK | IN_CLOEXEC) };
         if fd < 0 {
@@ -139,7 +139,7 @@ impl Watcher {
             unsafe { close(fd) };
             return Err(e);
         }
-        let thread = std::thread::spawn(move || run(tree, recursive, pipe[0], on));
+        let thread = std::thread::spawn(move || run(tree, recursive, pipe[0], on, lost));
         Ok(Watcher { stop: pipe[1], thread: Some(thread) })
     }
 }
@@ -159,8 +159,9 @@ impl Drop for Watcher {
     }
 }
 
-/// The watcher's thread: the changes read from inotify until the pipe says stop.
-fn run(mut tree: Tree, recursive: bool, stop: c_int, mut on: Callback) {
+/// The watcher's thread: the changes read from inotify until the pipe says stop. The root's watch ended by inotify
+/// (the folder removed, or moved away: inotify follows it elsewhere) is lost.
+fn run(mut tree: Tree, recursive: bool, stop: c_int, mut on: Callback, lost: super::Lost) {
     let mut buf = vec![0u8; 65536];
     loop {
         let mut fds =
@@ -191,10 +192,16 @@ fn run(mut tree: Tree, recursive: bool, stop: c_int, mut on: Callback) {
                 continue;
             }
             if mask & IN_IGNORED != 0 {
-                tree.dirs.remove(&wd);
+                if tree.dirs.remove(&wd).is_some_and(|d| d.is_empty()) {
+                    lost.store(true, std::sync::atomic::Ordering::SeqCst);
+                    on(None);
+                }
                 continue;
             }
             let Some(dir) = tree.dirs.get(&wd).cloned() else { continue };
+            if dir.is_empty() && mask & IN_MOVE_SELF != 0 && !lost.swap(true, std::sync::atomic::Ordering::SeqCst) {
+                on(None);
+            }
             let name = String::from_utf8_lossy(raw.split(|&b| b == 0).next().unwrap_or(&[])).into_owned();
             let rel = match (dir.is_empty(), name.is_empty()) {
                 (true, false) => name,

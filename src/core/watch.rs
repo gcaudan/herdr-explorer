@@ -1,8 +1,9 @@
 //! A file watched: changed once its times, size, mode or identity differ from the last look, or it appears or goes.
 //! Its folder is watched (`sys::Watcher`, one per folder for the whole process, shared by the files watched there):
-//! a change of the file's name there wakes the pane's loop (`wake_with`), which then calls `poll`. Every 30 s, on a
-//! grid that all the watches share, the folder is looked at too: one removed then made again loses its watch without
-//! a word, which is then made again. Without a watch (the folder missing, or an unsupported system), the file's status
+//! a change of the file's name there wakes the pane's loop (`wake_with`), which then calls `poll`. A folder's watch
+//! lost (the system tells: the folder removed or moved away) is dropped from the folders shared, and made again by the
+//! first of its files to look; every 30 s, on a grid that all the watches share, the folder's identity is looked at
+//! too, for a loss the system did not tell. Without a watch (the folder missing, or an unsupported system), the file's status
 //! is polled every interval, the watch tried again each time. The pane's loop calls `poll`, and `due` to time it.
 
 use crate::sys;
@@ -78,10 +79,25 @@ fn ident(dir: &str) -> Option<Ident> {
 /// The names watched in a folder, each with the flag it sets, gone with its Watch.
 type Names = Arc<Mutex<Vec<(String, Weak<AtomicBool>)>>>;
 
-/// A folder's watch, shared by the files watched there.
+/// A folder's watch, shared by the files watched there: the folder it watches (its identity then), and whether it was
+/// found gone.
 struct Shared {
-    _watcher: Mutex<sys::Watcher>,
+    watcher: Mutex<sys::Watcher>,
     names: Names,
+    ident: Option<Ident>,
+    dead: AtomicBool,
+}
+
+impl Shared {
+    /// Whether it still watches the folder at its path: the system watches it still, and the folder there is the
+    /// same; marked dead otherwise, for every file watched there.
+    fn live(&self, now: &Option<Ident>) -> bool {
+        let alive = self.watcher.lock().unwrap_or_else(|e| e.into_inner()).alive();
+        if !alive || *now != self.ident {
+            self.dead.store(true, Ordering::SeqCst);
+        }
+        !self.dead.load(Ordering::SeqCst)
+    }
 }
 
 /// The folders watched, by path: a watch goes with its last file.
@@ -97,8 +113,7 @@ pub struct Watch {
     next: Instant,
     /// Set by the folder's watch when the file's name changes there, with that watch; None while the file is polled.
     seen: Option<Seen>,
-    /// The folder as it was watched, and the next look at it (CHECK).
-    dir: Option<Ident>,
+    /// The next look at the folder (CHECK).
     check: Instant,
 }
 
@@ -113,15 +128,16 @@ fn dir_of(file: &str) -> Option<String> {
     Some(dir.to_string_lossy().into_owned())
 }
 
-/// The file's folder watched for its name, None when it cannot be; `fresh`: a new watch of the folder, in place of
-/// the one shared so far. A lost track (None for a name) counts as a change.
-fn watch(file: &str, fresh: bool) -> Option<Seen> {
+/// The file's folder watched for its name, None when it cannot be: the folder's shared watch while it is live, else a
+/// new one in its place. A lost track (None for a name) counts as a change.
+fn watch(file: &str) -> Option<Seen> {
     let name = std::path::Path::new(file).file_name()?.to_string_lossy().into_owned();
     let dir = dir_of(file)?;
+    let now = ident(&dir);
     let mut folders = FOLDERS.lock().unwrap_or_else(|e| e.into_inner());
     let folders = folders.get_or_insert_with(HashMap::new);
     folders.retain(|_, w| w.strong_count() > 0);
-    let shared = match folders.get(&dir).and_then(Weak::upgrade).filter(|_| !fresh) {
+    let shared = match folders.get(&dir).and_then(Weak::upgrade).filter(|s| s.live(&now)) {
         Some(s) => s,
         None => {
             let names: Names = Arc::default();
@@ -143,7 +159,7 @@ fn watch(file: &str, fresh: bool) -> Option<Seen> {
                 }
             })
             .ok()?;
-            let s = Arc::new(Shared { _watcher: Mutex::new(watcher), names });
+            let s = Arc::new(Shared { watcher: Mutex::new(watcher), names, ident: now, dead: AtomicBool::new(false) });
             folders.insert(dir, Arc::downgrade(&s));
             s
         }
@@ -164,10 +180,9 @@ fn next_check() -> Instant {
 impl Watch {
     pub fn new(file: &str, interval: Duration) -> Watch {
         // The folder watched before the first look: a change between the two is seen.
-        let seen = watch(file, false);
-        let dir = dir_of(file).and_then(|d| ident(&d));
+        let seen = watch(file);
         let next = Instant::now() + interval;
-        Watch { file: file.to_string(), interval, last: stat(file), next, seen, dir, check: next_check() }
+        Watch { file: file.to_string(), interval, last: stat(file), next, seen, check: next_check() }
     }
 
     pub fn file(&self) -> &str {
@@ -186,19 +201,19 @@ impl Watch {
     /// Looks at the file when its time has come: true when it changed since the last look.
     pub fn poll(&mut self) -> bool {
         match &self.seen {
-            Some((flag, _)) => {
-                if !flag.swap(false, Ordering::SeqCst) {
-                    if Instant::now() < self.check {
-                        return false;
-                    }
+            Some((flag, shared)) => {
+                let told = flag.swap(false, Ordering::SeqCst);
+                let look = !told && Instant::now() >= self.check;
+                if look {
                     self.check = next_check();
-                    // The folder made again: watched again, and the file looked at; else nothing to look at.
-                    let dir = dir_of(&self.file).and_then(|d| ident(&d));
-                    if dir == self.dir {
-                        return false;
-                    }
-                    self.dir = dir;
-                    self.seen = watch(&self.file, true);
+                }
+                // The folder's watch lost (as told, or as its identity says at the look): watched again, the file
+                // looked at; else nothing to look at but what the watch told.
+                let lost = (told || look) && !shared.live(&dir_of(&self.file).and_then(|d| ident(&d)));
+                if lost {
+                    self.seen = watch(&self.file);
+                } else if !told {
+                    return false;
                 }
             }
             None => {
@@ -207,8 +222,7 @@ impl Watch {
                     return false;
                 }
                 self.next = now + self.interval;
-                self.seen = watch(&self.file, false);
-                self.dir = dir_of(&self.file).and_then(|d| ident(&d));
+                self.seen = watch(&self.file);
             }
         }
         let s = stat(&self.file);
@@ -274,6 +288,34 @@ mod tests {
         drop(wa);
         std::fs::write(&b, "yy").unwrap();
         assert!(saw(&mut wb));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_folder_made_again_is_watched_again_once() {
+        let dir = std::env::temp_dir().join(format!("hx-watch-again-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let (a, b) = (dir.join("a"), dir.join("b"));
+        std::fs::write(&a, "a").unwrap();
+        let mut wa = Watch::new(a.to_str().unwrap(), Duration::ZERO);
+        let saw = |w: &mut Watch| {
+            (0..200).any(|_| {
+                std::thread::sleep(Duration::from_millis(10));
+                w.poll()
+            })
+        };
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert!(saw(&mut wa));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(&a, "again").unwrap();
+        assert!(saw(&mut wa));
+        // Watched again by the folder's new watch, which a file watched from now on shares.
+        let wb = Watch::new(b.to_str().unwrap(), Duration::ZERO);
+        let (sa, sb) = (&wa.seen.as_ref().unwrap().1, &wb.seen.as_ref().unwrap().1);
+        assert!(Arc::ptr_eq(sa, sb));
+        std::fs::write(&a, "and again").unwrap();
+        assert!(saw(&mut wa));
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
