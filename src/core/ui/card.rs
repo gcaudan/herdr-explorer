@@ -241,9 +241,11 @@ pub fn ask(lines: &mut Vec<String>, w: i64, h: i64, q: &mut Ask) {
         .filter(|s| !s.is_empty())
         .map(|s| vec![seg(format!(" {}", ellipsis(s, room)), fg(c().dim))])
         .collect();
+    // The note's lines, each cut to the card.
     let mut note: Vec<Vec<Seg>> = q
         .note
         .iter()
+        .flat_map(|s| s.split('\n'))
         .filter(|s| !s.is_empty())
         .map(|s| vec![seg(format!(" {}", ellipsis(s, room)), fg(c().dim))])
         .collect();

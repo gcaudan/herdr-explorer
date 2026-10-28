@@ -46,31 +46,73 @@ pub fn bound() -> bool {
     KEYS.iter().any(|(_, action, _)| text.contains(&command_of(action)))
 }
 
-/// The bindings missing from the config appended: the lines that tell what was done.
-fn bind(config: &Path) -> std::io::Result<Vec<String>> {
-    if let Some(dir) = config.parent() {
-        std::fs::create_dir_all(dir)?;
+/// A binding as config.toml writes it.
+fn block(key: &str, action: &str, description: &str) -> String {
+    format!(
+        "\n[[keys.command]]\nkey = \"{key}\"\ntype = \"plugin_action\"\ncommand = \"{}.{action}\"\ndescription = \"{description}\"\n",
+        exec::plugin()
+    )
+}
+
+/// What the config's text gets: the bindings to append and the lines that tell what was done (where: the config,
+/// shown). A key already bound is skipped; a config that binds keys.command inline, which a table appended would make
+/// invalid, is left alone: Err, why.
+fn plan(text: &str, shown: &str) -> Result<(String, Vec<String>), &'static str> {
+    let mut table = String::new();
+    let mut keys = Vec::new();
+    for line in text.lines() {
+        let l: String = line.chars().filter(|c| !c.is_whitespace()).collect();
+        if l.starts_with('[') {
+            table = l.trim_matches(['[', ']']).to_string();
+        } else if l.starts_with("keys.command=") || (table == "keys" && l.starts_with("command=")) {
+            return Err("sets keys.command inline");
+        } else if let Some(k) = l.strip_prefix("key=") {
+            keys.push(k.split('#').next().unwrap_or("").trim_matches(['"', '\'']).to_string());
+        }
     }
-    let text = std::fs::read_to_string(config).unwrap_or_default();
     let mut add = String::new();
     let mut done = Vec::new();
     for (key, action, description) in KEYS {
         if text.contains(&command_of(action)) {
             continue;
         }
-        add += &format!(
-            "\n[[keys.command]]\nkey = \"{key}\"\ntype = \"plugin_action\"\ncommand = \"{}.{action}\"\ndescription = \"{description}\"\n",
-            exec::plugin()
-        );
-        done.push(format!("key     {key} in {}", config.display()));
+        if keys.iter().any(|k| k == key) {
+            done.push(format!("key     {key} already bound in {shown}, skipped"));
+            continue;
+        }
+        add += &block(key, action, description);
+        done.push(format!("key     {key} in {shown}"));
     }
+    Ok((add, done))
+}
+
+/// The bindings missing from the config appended (plan): the lines that tell what was done. A config that cannot be
+/// read (not UTF-8) or that plan leaves alone is not changed, the lines to copy given in the error.
+fn bind(config: &Path) -> Result<Vec<String>, String> {
+    let io = |e: std::io::Error| format!("{}: {e}", config.display());
+    if let Some(dir) = config.parent() {
+        std::fs::create_dir_all(dir).map_err(io)?;
+    }
+    let text = match std::fs::read_to_string(config) {
+        Ok(t) => t,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(e) => return Err(manual(config, &format!("cannot be read ({e})"))),
+    };
+    let (add, done) = plan(&text, &config.display().to_string()).map_err(|why| manual(config, why))?;
     if !add.is_empty() {
         use std::io::Write;
-        std::fs::OpenOptions::new().create(true).append(true).open(config)?.write_all(add.as_bytes())?;
+        let mut f = std::fs::OpenOptions::new().create(true).append(true).open(config).map_err(io)?;
+        f.write_all(add.as_bytes()).map_err(io)?;
         let opts = Opts { timeout: Some(Duration::from_secs(10)), ..Opts::default() };
         let _ = exec::run(exec::herdr(), &["server", "reload-config"], &opts);
     }
     Ok(done)
+}
+
+/// The config left alone: why, then the bindings to copy into it.
+fn manual(config: &Path, why: &str) -> String {
+    let blocks: String = KEYS.iter().map(|(k, a, d)| block(k, a, d)).collect();
+    format!("{} {why}: not changed; add these lines to it:\n{blocks}", config.display())
 }
 
 /// The skill's link in ~/.claude/skills, None without Claude Code.
@@ -142,7 +184,7 @@ pub fn refresh_skill() {
 /// Runs the setup: the bindings, then the skill. The lines that tell what was done, or why it failed.
 pub fn setup() -> Result<Vec<String>, String> {
     let config = config_file().ok_or("herdr's config folder not found")?;
-    let mut lines = bind(&config).map_err(|e| format!("{}: {e}", config.display()))?;
+    let mut lines = bind(&config)?;
     if lines.is_empty() {
         lines.push(format!("keys    already bound in {}", config.display()));
     }
@@ -163,5 +205,25 @@ pub fn run() -> i32 {
             eprintln!("setup: {e}");
             1
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_key_bound_already_is_skipped() {
+        let (add, done) = plan("[[keys.command]]\nkey = \"prefix+f\" # mine\ncommand = \"other\"\n", "c").unwrap();
+        assert!(!add.contains("prefix+f") && add.contains("prefix+a") && add.contains("prefix+d"), "{add}");
+        assert!(done[0].contains("prefix+f already bound in c, skipped"), "{done:?}");
+    }
+
+    #[test]
+    fn an_inline_keys_command_is_left_alone() {
+        assert!(plan("keys.command = []\n", "c").is_err());
+        assert!(plan("[keys]\ncommand = [ ]\n", "c").is_err());
+        let (add, done) = plan("", "c").unwrap();
+        assert_eq!((add.matches("[[keys.command]]").count(), done.len()), (3, 3));
     }
 }

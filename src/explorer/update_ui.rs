@@ -7,6 +7,9 @@ use crate::core::ui::{Ask, Button};
 use crate::core::{exec, paths, setup, update};
 use std::rc::Rc;
 
+/// The setup's offer, told from the other choices by its title.
+const SETUP_TITLE: &str = "Set up herdr-explorer";
+
 fn button(key: &str, label: &str, tone: &str) -> Button {
     Button { key: key.into(), label: label.into(), tone: tone.into() }
 }
@@ -81,16 +84,19 @@ impl Explorer {
             later(|| {
                 Some(match setup::setup() {
                     Ok(_) => "Key bindings added".into(),
-                    Err(e) => e,
+                    // The lines to copy are for a terminal: herdr-explorer setup prints them.
+                    Err(e) => format!("{}: run herdr-explorer setup", e.lines().next().unwrap_or_default()),
                 })
             })
         });
         self.state.choice = Some(Choice {
             ask: Ask {
-                title: "Set up herdr-explorer".into(),
+                title: SETUP_TITLE.into(),
                 name: "prefix+f explorer · prefix+a go to file · prefix+d source control".into(),
-                note: Some("Adds these keys to herdr's config.toml and links the herdr-preview skill for Claude Code.                             Later: herdr-explorer setup"
-                    .into()),
+                note: Some(
+                    "Adds the keys to herdr's config.toml, and the\nherdr-preview skill for Claude Code.\nLater: herdr-explorer setup"
+                        .into(),
+                ),
                 buttons: vec![button("y", "Set up", "go"), button("n", "Later", "")],
                 focus: 0,
                 ..Ask::default()
@@ -110,12 +116,13 @@ impl Explorer {
         }
     }
 
-    /// Nothing typed nor chosen: the explorer may restart on the new code.
+    /// Nothing typed nor chosen: the explorer may restart on the new code. The setup's offer does not hold it: offered
+    /// once, it goes with the restart, `herdr-explorer setup` left to run later.
     pub(super) fn idle_for_update(&self) -> bool {
         let s = &self.state;
         s.prompt.is_none()
             && s.confirm.is_none()
-            && s.choice.is_none()
+            && s.choice.as_ref().is_none_or(|c| c.ask.title == SETUP_TITLE)
             && s.menu.is_none()
             && s.settings.is_none()
             && s.help.is_none()
