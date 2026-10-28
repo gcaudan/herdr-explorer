@@ -76,7 +76,8 @@ fn plan(text: &str, shown: &str) -> Result<(String, Vec<String>), &'static str> 
         if text.contains(&command_of(action)) {
             continue;
         }
-        if keys.iter().any(|k| k == key) {
+        // herdr reads keys without regard to case: Prefix+F is prefix+f.
+        if keys.iter().any(|k| k.eq_ignore_ascii_case(key)) {
             done.push(format!("key     {key} already bound in {shown}, skipped"));
             continue;
         }
@@ -192,6 +193,19 @@ pub fn setup() -> Result<Vec<String>, String> {
     Ok(lines)
 }
 
+/// What setup's lines tell in one line, for the explorer's message: the keys added, those skipped.
+pub fn summary(lines: &[String]) -> String {
+    let key = |l: &String| l.strip_prefix("key     ").and_then(|l| l.split(' ').next()).map(String::from);
+    let skipped: Vec<String> = lines.iter().filter(|l| l.ends_with(", skipped")).filter_map(key).collect();
+    let added = lines.iter().filter(|l| !l.ends_with(", skipped")).filter_map(key).count();
+    match (added, skipped.is_empty()) {
+        (0, true) => "Key bindings already in herdr's config".into(),
+        (_, true) => "Key bindings added".into(),
+        (0, false) => format!("No key binding added: {} already bound", skipped.join(", ")),
+        _ => format!("Key bindings added; {} already bound: skipped", skipped.join(", ")),
+    }
+}
+
 /// `herdr-explorer setup`: its exit code.
 pub fn run() -> i32 {
     match setup() {
@@ -217,6 +231,16 @@ mod tests {
         let (add, done) = plan("[[keys.command]]\nkey = \"prefix+f\" # mine\ncommand = \"other\"\n", "c").unwrap();
         assert!(!add.contains("prefix+f") && add.contains("prefix+a") && add.contains("prefix+d"), "{add}");
         assert!(done[0].contains("prefix+f already bound in c, skipped"), "{done:?}");
+        assert_eq!(summary(&done), "Key bindings added; prefix+f already bound: skipped");
+    }
+
+    #[test]
+    fn keys_are_compared_without_case() {
+        let text = "[[keys.command]]\nkey = \"Prefix+F\"\n[[keys.command]]\nkey='PREFIX+A'\n[[keys.command]]\nkey=\"prefix+D\"\n";
+        let (add, done) = plan(text, "c").unwrap();
+        assert!(add.is_empty(), "{add}");
+        assert_eq!(summary(&done), "No key binding added: prefix+f, prefix+a, prefix+d already bound");
+        assert_eq!(summary(&plan("", "c").unwrap().1), "Key bindings added");
     }
 
     #[test]

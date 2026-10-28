@@ -83,7 +83,7 @@ impl Explorer {
         let run: Run = Rc::new(|_: &mut Explorer| {
             later(|| {
                 Some(match setup::setup() {
-                    Ok(_) => "Key bindings added".into(),
+                    Ok(lines) => setup::summary(&lines),
                     // The lines to copy are for a terminal: herdr-explorer setup prints them.
                     Err(e) => format!("{}: run herdr-explorer setup", e.lines().next().unwrap_or_default()),
                 })
