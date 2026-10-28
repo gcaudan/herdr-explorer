@@ -112,7 +112,7 @@ fn last(cwd: &str) -> Result<String, Fail> {
         return fail("not in a git repository", 1);
     }
     let opts = Opts { cwd: Some(top.into()), env: Some(env), ..Opts::default() };
-    let args = ["status", "--porcelain=v1", "-z", "--untracked-files=all"];
+    let args = ["status", "--porcelain=v1", "-z", "--untracked-files=all", "--ignore-submodules=all"];
     let Some(out) = exec::run(exec::git(), &args, &opts) else { return fail("git status failed", 1) };
     let mut best: Option<(String, f64)> = None;
     let parts: Vec<&str> = out.split('\0').collect();
