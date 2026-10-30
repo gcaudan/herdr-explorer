@@ -81,8 +81,6 @@ jobs:
       run:
         shell: bash
     env:
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
       TAG: ${{ needs.release-please.outputs.tag }}
       ASSET: herdr-explorer-${{ matrix.target }}${{ matrix.ext }}
     steps:
@@ -92,13 +90,17 @@ jobs:
       - run: rustup toolchain install
       - run: cargo build --release --locked --target ${{ matrix.target }}
       # gh finds a draft release by its tag; a release just created can take a moment to be seen, hence the tries.
+      # The token only here: cargo build runs the repository's build.rs.
       - name: Attach the binary
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           cp "target/${{ matrix.target }}/release/herdr-explorer${{ matrix.ext }}" "$ASSET"
           for try in 1 2 3 4 5; do
             gh release upload "$TAG" "$ASSET" --clobber && exit 0
-            sleep $((try * 10))
+            [ "$try" -lt 5 ] && sleep $((try * 10))
           done
           echo "::error::cannot attach $ASSET to $TAG"
           exit 1
