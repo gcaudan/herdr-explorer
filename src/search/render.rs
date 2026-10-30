@@ -49,11 +49,6 @@ fn field_parts(f: &SField, w: i64, focus: bool) -> Vec<Seg> {
     f.field.segments(w, &style)
 }
 
-/// `String(n)` for a line number.
-fn num(n: f64) -> String {
-    if n.fract() == 0.0 && n.abs() < 1e21 { format!("{n:.0}") } else { n.to_string() }
-}
-
 fn is_blank(c: char) -> bool {
     crate::unicode::is_space(c) || crate::core::regex::is_line_terminator(c)
 }
@@ -270,7 +265,7 @@ impl Search {
     fn preview_lines(&mut self, t: Option<Target>, w: usize, h: i64) -> Vec<String> {
         let mut out = Vec::new();
         let Some(t) = t else { return out };
-        let at_line = if t.line != 0.0 { format!(":{}", num(t.line)) } else { String::new() };
+        let at_line = if t.line != 0.0 { format!(":{}", crate::json::number(t.line)) } else { String::new() };
         out.push(line(&[seg(format!(" {}{at_line}", t.rel), "\x1b[1m")], w, Some(c().header)));
         if self.preview(&t.rel).is_none() {
             return out;
@@ -506,6 +501,9 @@ impl Search {
             None
         } else if content && s.fields[CONTENT].field.value.is_empty() {
             Some(ui::empty::<&str, &str>(rw, h as usize, "Type to search", &[]))
+        } else if content && s.searching {
+            // Not every file read yet: no verdict.
+            None
         } else {
             let pairs: &[(&str, &str)] = if !content {
                 &[("ctrl+f", "search in files")]

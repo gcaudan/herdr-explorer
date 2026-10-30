@@ -13,7 +13,7 @@ const MAX_SIZE: u64 = 2 << 20;
 pub const MAX_MATCHES: usize = 5000;
 /// Go to file results kept.
 pub const MAX_ROWS: usize = 1000;
-/// Files read at once.
+/// Files read one after the other between two checks for a newer search.
 pub const BATCH: usize = 24;
 
 /// The byte offset of the n-th character of s, or its length.
@@ -42,9 +42,11 @@ pub fn git_files(root: &str) -> Option<Vec<String>> {
 pub fn walk(root: &str, hidden: bool) -> (Vec<String>, bool) {
     let mut files = Vec::new();
     let mut seen = HashSet::new();
+    let mut capped = false;
     let mut queue = std::collections::VecDeque::from([String::new()]);
     while let Some(rel) = queue.pop_front() {
         if files.len() >= MAX_FILES {
+            capped = true;
             break;
         }
         let abs = paths::join(&[root, &rel]);
@@ -72,6 +74,8 @@ pub fn walk(root: &str, hidden: bool) -> (Vec<String>, bool) {
             if !dir {
                 if files.len() < MAX_FILES {
                     files.push(r);
+                } else {
+                    capped = true;
                 }
                 continue;
             }
@@ -81,7 +85,6 @@ pub fn walk(root: &str, hidden: bool) -> (Vec<String>, bool) {
             queue.push_back(r);
         }
     }
-    let capped = files.len() >= MAX_FILES;
     (files, capped)
 }
 

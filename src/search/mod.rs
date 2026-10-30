@@ -321,11 +321,11 @@ impl Search {
                 let base = list.iter().map(|f| f.rfind('/').map_or(0, |i| i + 1)).collect();
                 let files = Files { list: Arc::new(list), lower, len, base };
                 Box::new(move |s: &mut Search| {
-                    if let Some(c) = capped {
-                        s.state.capped = c;
-                    }
                     if id != s.state.files_gen {
                         return;
+                    }
+                    if let Some(c) = capped {
+                        s.state.capped = c;
                     }
                     s.state.files = Some(files);
                     s.state.prev = None;
@@ -403,6 +403,8 @@ impl Search {
         self.debounce_at = None;
         let id = self.search_gen.fetch_add(1, Ordering::SeqCst) + 1;
         self.state.search_key = Some(self.search_key());
+        // The files read again, as they may have changed since.
+        self.previews.clear();
         let s = &mut self.state;
         (s.groups, s.total, s.error, s.re, s.cursor, s.top, s.touched) = (Vec::new(), 0, None, None, 0, 0, false);
         let text = s.fields[CONTENT].field.value.clone();
@@ -442,8 +444,8 @@ impl Search {
                 if total >= MAX_MATCHES {
                     break;
                 }
-                let found: Vec<Option<Group>> =
-                    batch.iter().map(|rel| find::grep(&root, rel, &re, MAX_MATCHES)).collect();
+                let room = MAX_MATCHES - total;
+                let found: Vec<Option<Group>> = batch.iter().map(|rel| find::grep(&root, rel, &re, room)).collect();
                 if current.load(Ordering::SeqCst) != id {
                     return;
                 }
@@ -590,6 +592,8 @@ impl Search {
             "Indexing…"
         } else if s.mode == Mode::Content && s.fields[CONTENT].field.value.is_empty() {
             "Type to search"
+        } else if s.mode == Mode::Content && s.searching {
+            "Searching…"
         } else {
             "No results"
         };
@@ -642,7 +646,11 @@ impl Search {
                 }
             };
             Box::new(move |s: &mut Search| match msg {
-                Some(m) => s.flash(Some(m)),
+                // Not opened: asked to open again with the next result.
+                Some(m) => {
+                    s.previewed &= !open;
+                    s.flash(Some(m));
+                }
                 None if open => s.share(),
                 None => {}
             })
