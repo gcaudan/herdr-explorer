@@ -102,7 +102,7 @@ while :; do
 done
 done_already && exit 0
 
-curl -fsSL -o "$tmp" "$url/$asset" || fail "cannot download $url/$asset"
+curl -fsSL -o "$tmp" "$url/$asset" || fail "cannot download $url/$asset (a release just tagged may still be building: retry in a few minutes)"
 curl -fsSL -o "$tmp.sums" "$url/SHA256SUMS" || fail "cannot download $url/SHA256SUMS"
 want=$(awk -v a="$asset" '$2 == a || $2 == "*" a { print $1; exit }' "$tmp.sums")
 case "$want" in

@@ -99,7 +99,7 @@ try {
     if (DoneAlready) { exit 0 }
 
     & curl.exe -fsSL -o $tmp "$url/$asset"
-    if ($LASTEXITCODE) { Fail "cannot download $url/$asset" }
+    if ($LASTEXITCODE) { Fail "cannot download $url/$asset (a release just tagged may still be building: retry in a few minutes)" }
     & curl.exe -fsSL -o "$tmp.sums" "$url/SHA256SUMS"
     if ($LASTEXITCODE) { Fail "cannot download $url/SHA256SUMS" }
     $want = $null
