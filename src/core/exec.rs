@@ -8,6 +8,7 @@ use super::which::which;
 use crate::json::{self, Value};
 use std::io::{Read, Write};
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime};
 
@@ -316,10 +317,15 @@ pub fn write_atomic(file: &str, text: impl AsRef<[u8]>) -> bool {
     res.is_ok()
 }
 
-/// A new folder in the system's temporary folder, its name the prefix and 6 random characters (fs.mkdtempSync).
+/// A new folder in the system's temporary folder, its name the prefix and 6 random characters, readable by its owner
+/// only (fs.mkdtempSync).
 pub fn mkdtemp(prefix: &str) -> std::io::Result<String> {
     const CHARS: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let base = std::env::temp_dir().to_string_lossy().into_owned();
+    #[cfg_attr(not(unix), allow(unused_mut))]
+    let mut builder = std::fs::DirBuilder::new();
+    #[cfg(unix)]
+    std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
     let mut seed = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).map_or(0, |d| d.as_nanos() as u64)
         ^ (std::process::id() as u64) << 32;
     loop {
@@ -329,7 +335,7 @@ pub fn mkdtemp(prefix: &str) -> std::io::Result<String> {
             name.push(CHARS[(seed >> 33) as usize % CHARS.len()] as char);
         }
         let dir = paths::join(&[&base, &name]);
-        match std::fs::create_dir(&dir) {
+        match builder.create(&dir) {
             Ok(()) => return Ok(dir),
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
             Err(e) => return Err(e),
@@ -382,6 +388,8 @@ pub struct Opts {
 }
 
 const MAX_OUT: usize = 64 << 20;
+/// How long the outputs of an ended child may stay silent and open (held by a grandchild) before they are given up.
+const HELD_OUTPUTS: Duration = Duration::from_secs(1);
 
 /// A child's end: its exit code (None when killed by a signal), its outputs, and why it failed to run.
 struct Outcome {
@@ -583,10 +591,12 @@ fn spawn(cmd: &str, args: &[&str], opts: &Opts, kill_on_overflow: bool) -> Outco
     };
     let pid = child.id();
     let overflow = Arc::new(Mutex::new(false));
+    // Bytes read from both outputs, to tell outputs still in use from outputs merely held open.
+    let read = Arc::new(AtomicUsize::new(0));
     let max = opts.max_buffer.unwrap_or(MAX_OUT);
     let reader = |mut r: Box<dyn Read + Send>| {
         let buf = Arc::new(Mutex::new(Vec::new()));
-        let (b, over) = (buf.clone(), overflow.clone());
+        let (b, over, read) = (buf.clone(), overflow.clone(), read.clone());
         let t = std::thread::spawn(move || {
             let mut chunk = [0u8; 65536];
             let mut size = 0usize;
@@ -594,6 +604,7 @@ fn spawn(cmd: &str, args: &[&str], opts: &Opts, kill_on_overflow: bool) -> Outco
                 match r.read(&mut chunk) {
                     Ok(0) | Err(_) => break,
                     Ok(n) => {
+                        read.fetch_add(n, Ordering::Relaxed);
                         size += n;
                         if size <= max {
                             b.lock().unwrap_or_else(|p| p.into_inner()).extend_from_slice(&chunk[..n]);
@@ -657,9 +668,17 @@ fn spawn(cmd: &str, args: &[&str], opts: &Opts, kill_on_overflow: bool) -> Outco
         });
         return Outcome { code: None, out: take(&out), err: take(&err), overflow: false, timed_out, failed: None };
     }
-    // The outputs stay open as long as a grandchild holds them: the deadline still counts until they close (the
-    // child, reaped, is not killed: its pid may be another's by now).
+    // The outputs stay open as long as a grandchild holds them (an ssh ControlPersist master): once the child has
+    // ended, they are waited for while they still bring something, within the deadline, then given up after a quiet
+    // spell, the child's own status kept (the child, reaped, is not killed: its pid may be another's by now).
+    let mut last = (read.load(Ordering::Relaxed), Instant::now());
     while !(out_t.is_finished() && err_t.is_finished()) {
+        let n = read.load(Ordering::Relaxed);
+        if n != last.0 {
+            last = (n, Instant::now());
+        } else if last.1.elapsed() >= HELD_OUTPUTS {
+            break;
+        }
         if deadline.is_some_and(|d| Instant::now() >= d) {
             return Outcome {
                 code: None,
@@ -672,8 +691,11 @@ fn spawn(cmd: &str, args: &[&str], opts: &Opts, kill_on_overflow: bool) -> Outco
         }
         std::thread::sleep(Duration::from_millis(5));
     }
-    let _ = out_t.join();
-    let _ = err_t.join();
+    // A reader still blocked ends with the grandchild holding its output.
+    if out_t.is_finished() && err_t.is_finished() {
+        let _ = out_t.join();
+        let _ = err_t.join();
+    }
     let over = *overflow.lock().unwrap_or_else(|p| p.into_inner());
     Outcome {
         code: status.and_then(|s| s.code()),
@@ -735,10 +757,37 @@ pub fn herdr() -> Option<&'static str> {
     HERDR.get_or_init(|| which(&env_var("HERDR_BIN_PATH").unwrap_or_else(|| "herdr".into()))).as_deref()
 }
 
-/// git from PATH, found once.
+/// The options of a herdr command: a time limit, as a herdr that never answers (a restart) would hold the caller, and
+/// the calls queued behind it.
+pub fn herdr_opts() -> Opts {
+    Opts { timeout: Some(Duration::from_secs(10)), ..Default::default() }
+}
+
+/// git from PATH, found once. An older git than 2.31 counts as none: it ignores GIT_CONFIG_COUNT, so none of git_env's
+/// hardening would apply, and a repository's config could run its commands (core.fsmonitor, filters).
 pub fn git() -> Option<&'static str> {
     static GIT: OnceLock<Option<String>> = OnceLock::new();
-    GIT.get_or_init(|| which("git")).as_deref()
+    GIT.get_or_init(|| {
+        let git = which("git")?;
+        // `git version` reads no repository; run away from any all the same.
+        let opts = Opts {
+            cwd: Some(std::env::temp_dir().to_string_lossy().into_owned()),
+            timeout: Some(Duration::from_secs(10)),
+            ..Default::default()
+        };
+        run(Some(&git), &["version"], &opts).filter(|v| git_recent(v)).map(|_| git)
+    })
+    .as_deref()
+}
+
+/// Whether `git version` tells 2.31 or later ("git version 2.39.5 (Apple Git-154)", "2.45.1.windows.1").
+fn git_recent(version: &str) -> bool {
+    let Some(rest) = version.trim().strip_prefix("git version ") else { return false };
+    let mut parts = rest.split(['.', ' ']).map(|p| p.parse::<u32>().ok());
+    match (parts.next().flatten(), parts.next().flatten()) {
+        (Some(major), Some(minor)) => (major, minor) >= (2, 31),
+        _ => false,
+    }
 }
 
 /// Hooks folder that never exists. On Windows, /dev/null would mean C:\dev\null, a folder any user can create.
@@ -838,7 +887,8 @@ pub fn git_env(cwd: &str) -> Env {
     let pairs: Vec<(&str, &str)> = config.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
     add_config(&mut env, &pairs);
     // core.worktree set by the repository could point anywhere (the home folder): switch, pull or discard would write
-    // there. The working tree is kept to the folder holding the repository.
+    // there. The working tree is kept to the folder holding the repository: the one whose .git entry leads to it (a
+    // submodule's .git file, whose core.worktree git sets itself), else the git folder's parent.
     if worktree {
         let dir = run(
             git(),
@@ -847,10 +897,36 @@ pub fn git_env(cwd: &str) -> Env {
         )
         .unwrap_or_default();
         let dir = dir.trim();
-        let tree = if dir.is_empty() { cwd.to_string() } else { paths::dirname(dir) };
+        let tree =
+            if dir.is_empty() { cwd.to_string() } else { git_holder(cwd, dir).unwrap_or_else(|| paths::dirname(dir)) };
         env_set(&mut env, "GIT_WORK_TREE", &tree);
     }
     env
+}
+
+/// The nearest folder from cwd up holding a .git entry, when that entry is gitdir: the folder itself, or a file
+/// ("gitdir: <path>") naming it, as in a submodule or a linked worktree.
+fn git_holder(cwd: &str, gitdir: &str) -> Option<String> {
+    let want = std::fs::canonicalize(gitdir).ok()?;
+    let mut dir = paths::resolve(&[cwd]);
+    loop {
+        let dot = paths::join(&[&dir, ".git"]);
+        if let Ok(m) = std::fs::metadata(&dot) {
+            let target = if m.is_dir() {
+                dot
+            } else {
+                let text = read_text(&dot).ok()?;
+                let named = text.lines().next()?.strip_prefix("gitdir:")?.trim().to_string();
+                paths::resolve(&[&dir, &named])
+            };
+            return (std::fs::canonicalize(target).ok()? == want).then_some(dir);
+        }
+        let up = paths::dirname(&dir);
+        if up == dir {
+            return None;
+        }
+        dir = up;
+    }
 }
 
 /// Operation under way in a repository, from the files git keeps in its folder: "MERGING", "REBASING"… or "".
@@ -1310,6 +1386,27 @@ mod tests {
     }
 
     #[test]
+    fn git_older_than_2_31_counts_as_none() {
+        assert!(git_recent("git version 2.31.0\n"));
+        assert!(git_recent("git version 2.39.5 (Apple Git-154)"));
+        assert!(git_recent("git version 2.45.1.windows.1"));
+        assert!(git_recent("git version 3.0.0"));
+        assert!(!git_recent("git version 2.30.2"));
+        assert!(!git_recent("git version 2.25.1"));
+        assert!(!git_recent("git version 1.8.3.1"));
+        assert!(!git_recent("not git"));
+    }
+
+    #[test]
+    fn a_temporary_folder_is_its_owner_s_only() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = mkdtemp("herdr-explorer-test-").unwrap();
+        let mode = std::fs::metadata(&dir).unwrap().permissions().mode();
+        std::fs::remove_dir(&dir).unwrap();
+        assert_eq!(mode & 0o777, 0o700);
+    }
+
+    #[test]
     fn runs_programs() {
         assert_eq!(run(Some("/bin/sh"), &["-c", "printf 'a\\nb'"], &Opts::default()).as_deref(), Some("a\nb"));
         assert_eq!(run(Some("/bin/sh"), &["-c", "echo x; exit 3"], &Opts::default()), None);
@@ -1358,9 +1455,22 @@ mod tests {
     fn timeout_counts_while_a_grandchild_holds_the_outputs() {
         let slow = Opts { timeout: Some(Duration::from_millis(300)), ..Default::default() };
         let t = Instant::now();
-        let e = sh("(sleep 3 &); exit 0", &slow);
+        let e = sh("(while :; do echo x; sleep 0.05; done &); exit 0", &slow);
         assert_eq!(e.code, None);
         assert!(t.elapsed() < Duration::from_secs(2));
+    }
+
+    /// A grandchild that holds the outputs without writing (an ssh master) does not turn a success into a timeout.
+    #[test]
+    fn a_child_ended_is_not_held_by_a_silent_grandchild() {
+        for timeout in [Some(Duration::from_secs(10)), None] {
+            let opts = Opts { timeout, ..Default::default() };
+            let t = Instant::now();
+            let e = sh("(sleep 5 &); echo done; exit 3", &opts);
+            assert_eq!((e.code, e.out.as_str()), (Some(3), "done\n"));
+            assert!(t.elapsed() < Duration::from_secs(4), "{timeout:?}");
+            assert_eq!(run(Some("/bin/sh"), &["-c", "(sleep 5 &); echo ok"], &opts).as_deref(), Some("ok\n"));
+        }
     }
 
     #[test]
@@ -1427,7 +1537,39 @@ mod tests {
         assert_eq!(env_get(&env, "GIT_NO_LAZY_FETCH"), Some("1"));
         // git gives the real path: /private/var for macOS's /var.
         let real = std::fs::canonicalize(&dir).unwrap();
-        assert_eq!(env_get(&env, "GIT_WORK_TREE"), real.to_str());
+        let tree = env_get(&env, "GIT_WORK_TREE").map(|t| std::fs::canonicalize(t).unwrap());
+        assert_eq!(tree.as_ref(), Some(&real));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// git sets core.worktree in a submodule's config: its working tree is its checkout, not its git folder's parent.
+    #[test]
+    fn a_submodule_keeps_its_own_working_tree() {
+        let Some(git) = git() else { return };
+        let dir = std::env::temp_dir().join(format!("hx-gitsub-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let d = std::fs::canonicalize(&dir).unwrap().to_string_lossy().into_owned();
+        let g = |at: &str, args: &[&str]| {
+            let o = Opts { cwd: Some(format!("{d}/{at}")), ..Default::default() };
+            let mut all = vec!["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"];
+            all.extend(["-c", "protocol.file.allow=always"]);
+            all.extend(args);
+            assert!(run(Some(git), &all, &o).is_some(), "git {args:?}");
+        };
+        for r in ["inner", "outer"] {
+            std::fs::create_dir_all(format!("{d}/{r}")).unwrap();
+            std::fs::write(format!("{d}/{r}/f"), r).unwrap();
+            g(r, &["init", "-q"]);
+            g(r, &["add", "f"]);
+            g(r, &["commit", "-qm", "1"]);
+        }
+        g("outer", &["submodule", "add", "-q", &format!("{d}/inner"), "sub"]);
+        let sub = format!("{d}/outer/sub");
+        let env = git_env(&sub);
+        assert_eq!(env_get(&env, "GIT_WORK_TREE"), Some(sub.as_str()));
+        let o = Opts { cwd: Some(sub.clone()), env: Some(env), ..Default::default() };
+        assert_eq!(run(Some(git), &["status", "--porcelain"], &o).as_deref(), Some(""));
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

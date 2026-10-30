@@ -36,6 +36,11 @@ impl<P: 'static> Worker<P> {
     pub fn send(&self, job: Job<P>) {
         let _ = self.0.send(job);
     }
+
+    /// A job whose panic still gives a result: `fallback`, for a pane that waits on it (a flag only its result clears).
+    pub fn send_or(&self, job: Job<P>, fallback: Then<P>) {
+        self.send(Box::new(move || std::panic::catch_unwind(AssertUnwindSafe(job)).unwrap_or(fallback)));
+    }
 }
 
 /// A job on a thread of its own, its result sent to the loop: one that waits on the pane (a question asked midway)

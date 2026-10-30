@@ -30,11 +30,11 @@ repository's hooks and filters, none of the protections below apply to it), your
 - **No shell**. Every program runs with an argument list, never through a shell command line.
   The one exception is an npm-installed `claude.cmd` on Windows, which can only run through `cmd`, with fixed
   arguments.
-- **Absolute paths**. `git`, `herdr`, `claude`, `dwebp`, a graphical editor command, and on Windows every program, run from
-  their absolute path, looked up in the absolute folders of `PATH` only. On Windows, a bare program name is first
-  looked up in the working directory, and elsewhere an empty or `.` entry of `PATH` means that folder too: a
-  repository could plant a `git` there. On Linux and macOS, the clipboard, trash and file manager tools and the
-  fallback terminal editor go through the usual `PATH` lookup.
+- **Absolute paths**. `git`, `herdr`, `claude`, `dwebp`, a graphical editor command, the clipboard, trash and file
+  manager tools, and on Windows every program, run from their absolute path, looked up in the absolute folders of
+  `PATH` only. On Windows, a bare program name is first looked up in the working directory, and elsewhere an empty or
+  `.` entry of `PATH` means that folder too: a repository could plant a `git` there. On Linux and macOS, the fallback
+  terminal editor goes through the usual `PATH` lookup.
 - **GitHub CLI**: the PRs view of source control runs `gh pr list`, `gh pr view`, `gh pr diff` and, on `C`,
   `gh pr checkout`, with the repository's git environment (its hooks and filters off for the git gh runs), no
   prompt and a 30 s limit. The checkout's fetch gets the settings of a fetch: refused when the repository sets
@@ -54,7 +54,8 @@ repository's hooks and filters, none of the protections below apply to it), your
 
 Every git call in a repository gets an environment built for that repository, passed as
 `GIT_CONFIG_KEY_n`/`GIT_CONFIG_VALUE_n` (unlike `-c`, this does not split a driver name containing `=`). It turns
-off what the repository's config could use to run commands:
+off what the repository's config could use to run commands. An older git than 2.31 ignores those variables: it is
+not used at all, as if missing.
 
 - **Hooks**: `core.hooksPath` points at a folder that never exists (`/dev/null`, or `.no-hooks` in the plugin folder
   on Windows, since `C:\dev\null` could be created by any user), and each `hook.<name>.command` the repository

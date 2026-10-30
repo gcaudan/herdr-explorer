@@ -272,7 +272,7 @@
     "/r",
     "..x"
    ],
-   "out": null
+   "out": "/r/..x"
   },
   {
    "fn": "target",
@@ -1213,7 +1213,7 @@
     "/a/b",
     "/a/b/..x"
    ],
-   "out": "/a/b/..x"
+   "out": "..x"
   },
   {
    "fn": "create",
@@ -3465,6 +3465,25 @@
     "Changes discarded",
     "",
     []
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "discard",
+    "$ROOT",
+    "mkdir d; seq 1 50 > d/old; git add d; git commit -qm 1; git mv d/old d/new; echo more >> d/new; git add d",
+    "d"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Changes discarded",
+    "",
+    [
+     "new"
+    ]
    ]
   }
  ]

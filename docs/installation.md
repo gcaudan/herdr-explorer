@@ -13,7 +13,7 @@ the release of its version (see [The binary](#the-binary)).
 | `curl`, and `sha256sum` or `shasum` (`curl.exe` and PowerShell on Windows, both built in on Windows 10 and later) | downloading the binary and checking it, at install and at each update |
 | Linux or macOS on x86_64 or arm64, or Windows on x86_64 or arm64 | the platforms with a release binary; elsewhere, build it with [dev-build](#building-the-binary) |
 | A [Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr | icons, chevrons and header icons; without one, choose emoji, Unicode or ASCII icons in the settings ([Without a Nerd Font](configuration.md#without-a-nerd-font)) |
-| git (optional), in an absolute folder of `PATH` (relative entries are ignored) | git status, the changes view, source control, `peek --last`, updates. Without it, the explorer and preview still work |
+| git 2.31 or later (optional), in an absolute folder of `PATH` (relative entries are ignored) | git status, the changes view, source control, `peek --last`, updates. Without it, the explorer and preview still work |
 | VS Code or another graphical editor (optional) | the external editor (see [Editor command](configuration.md#editor-command)) |
 | A terminal editor (optional): `$VISUAL`, `$EDITOR`, else the first of `nano`, `nvim`, `vim`, `vi` (`edit`, `nvim`, `vim`, `nano` on Windows) | the [Editor pane](usage.md#editor-pane) |
 | The [Claude Code](https://claude.com/claude-code) CLI, `claude` (optional) | commit messages written by Claude |

@@ -55,8 +55,8 @@ fn block(key: &str, action: &str, description: &str) -> String {
 }
 
 /// What the config's text gets: the bindings to append and the lines that tell what was done (where: the config,
-/// shown). A key already bound is skipped; a config that binds keys.command inline, which a table appended would make
-/// invalid, is left alone: Err, why.
+/// shown). A key already bound is skipped; a config that binds keys.command inline, or sets keys as an inline table,
+/// which a table appended would make invalid, is left alone: Err, why.
 fn plan(text: &str, shown: &str) -> Result<(String, Vec<String>), &'static str> {
     let mut table = String::new();
     let mut keys = Vec::new();
@@ -66,6 +66,8 @@ fn plan(text: &str, shown: &str) -> Result<(String, Vec<String>), &'static str> 
             table = l.trim_matches(['[', ']']).to_string();
         } else if l.starts_with("keys.command=") || (table == "keys" && l.starts_with("command=")) {
             return Err("sets keys.command inline");
+        } else if table.is_empty() && l.starts_with("keys=") {
+            return Err("sets keys inline");
         } else if let Some(k) = l.strip_prefix("key=").filter(|_| table == "keys" || table.starts_with("keys.")) {
             keys.push(k.split('#').next().unwrap_or("").trim_matches(['"', '\'']).to_string());
         }
@@ -253,6 +255,8 @@ mod tests {
     fn an_inline_keys_command_is_left_alone() {
         assert!(plan("keys.command = []\n", "c").is_err());
         assert!(plan("[keys]\ncommand = [ ]\n", "c").is_err());
+        assert!(plan("keys = { prefix = \"ctrl+b\" }\n", "c").is_err());
+        assert!(plan("[theme]\nkeys = 1\n", "c").is_ok());
         let (add, done) = plan("", "c").unwrap();
         assert_eq!((add.matches("[[keys.command]]").count(), done.len()), (3, 3));
     }

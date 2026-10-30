@@ -1,7 +1,7 @@
 //! What the explorer watches: the repository and its git status, the refresh when files change, and the terminal
 //! it follows (its folder, the files the panes ask for).
 
-use super::{Explorer, big, mtime_ms, rel_of, rel_under};
+use super::{Explorer, Then, big, mtime_ms, rel_of, rel_under};
 use crate::core::actions;
 use crate::core::exec::{self, Opts};
 use crate::core::paths;
@@ -50,26 +50,34 @@ impl Explorer {
         }
         self.probing = true;
         let (root, wide) = (self.root.clone(), big(&self.root));
-        self.git_worker.send(Box::new(move || {
-            let res = git_run(&root, &["rev-parse", "--show-toplevel", "--absolute-git-dir", "--show-prefix"]);
-            // Outside a repository, those of its folders; not in $HOME and above, with too many folders to look in.
-            let repos = if res.is_none() && !wide { repos_in(&root) } else { Vec::new() };
-            Box::new(move |ex: &mut Explorer| {
-                ex.probing = false;
-                if ex.stopped {
-                    return ex.after_git(after);
-                }
-                // Another root meanwhile (Set as root), whose look was skipped while this one ran: its own.
-                if root != ex.root {
-                    return ex.init_git(after);
-                }
-                match res {
-                    Some(res) => ex.found_git(&res),
-                    None => ex.found_repos(repos),
-                }
-                ex.after_git(after);
-            })
-        }));
+        // A look that failed (a panic) frees the next one too.
+        let failed: Then = Box::new(move |ex: &mut Explorer| {
+            ex.probing = false;
+            ex.after_git(after);
+        });
+        self.git_worker.send_or(
+            Box::new(move || {
+                let res = git_run(&root, &["rev-parse", "--show-toplevel", "--absolute-git-dir", "--show-prefix"]);
+                // Outside a repository, those of its folders; not in $HOME and above, with too many folders to look in.
+                let repos = if res.is_none() && !wide { repos_in(&root) } else { Vec::new() };
+                Box::new(move |ex: &mut Explorer| {
+                    ex.probing = false;
+                    if ex.stopped {
+                        return ex.after_git(after);
+                    }
+                    // Another root meanwhile (Set as root), whose look was skipped while this one ran: its own.
+                    if root != ex.root {
+                        return ex.init_git(after);
+                    }
+                    match res {
+                        Some(res) => ex.found_git(&res),
+                        None => ex.found_repos(repos),
+                    }
+                    ex.after_git(after);
+                })
+            }),
+            failed,
+        );
     }
 
     fn found_git(&mut self, res: &str) {
@@ -164,11 +172,15 @@ impl Explorer {
             return self.refresh_repos();
         }
         let root = self.root.clone();
-        self.git_worker.send(Box::new(move || {
-            let args = ["status", "--porcelain=v1", "-z", "--ignored=matching", "--ignore-submodules=all", "--", "."];
-            let status = git_run(&root, &args);
-            Box::new(move |ex: &mut Explorer| ex.refreshed(status.filter(|_| root == ex.root)))
-        }));
+        self.git_worker.send_or(
+            Box::new(move || {
+                let args =
+                    ["status", "--porcelain=v1", "-z", "--ignored=matching", "--ignore-submodules=all", "--", "."];
+                let status = git_run(&root, &args);
+                Box::new(move |ex: &mut Explorer| ex.refreshed(status.filter(|_| root == ex.root)))
+            }),
+            Box::new(|ex: &mut Explorer| ex.refreshed(None)),
+        );
     }
 
     /// The statuses of the repositories of the root's folders that changed, read again; outside any, the tree only.
@@ -182,22 +194,26 @@ impl Explorer {
             return self.refreshed(None);
         }
         let root = self.root.clone();
-        self.git_worker.send(Box::new(move || {
-            let args = ["status", "--porcelain=v1", "-z", "--ignored=matching", "--ignore-submodules=all", "--", "."];
-            let read: Vec<(String, Option<String>)> =
-                todo.into_iter().map(|(name, dir)| (name, git_run(&dir, &args))).collect();
-            Box::new(move |ex: &mut Explorer| {
-                if root == ex.root {
-                    for (name, status) in read {
-                        if let Some(r) = ex.repos.iter_mut().find(|r| r.name == name) {
-                            r.status = status;
+        self.git_worker.send_or(
+            Box::new(move || {
+                let args =
+                    ["status", "--porcelain=v1", "-z", "--ignored=matching", "--ignore-submodules=all", "--", "."];
+                let read: Vec<(String, Option<String>)> =
+                    todo.into_iter().map(|(name, dir)| (name, git_run(&dir, &args))).collect();
+                Box::new(move |ex: &mut Explorer| {
+                    if root == ex.root {
+                        for (name, status) in read {
+                            if let Some(r) = ex.repos.iter_mut().find(|r| r.name == name) {
+                                r.status = status;
+                            }
                         }
+                        ex.apply_repos();
                     }
-                    ex.apply_repos();
-                }
-                ex.refreshed(None);
-            })
-        }));
+                    ex.refreshed(None);
+                })
+            }),
+            Box::new(|ex: &mut Explorer| ex.refreshed(None)),
+        );
     }
 
     fn refreshed(&mut self, status: Option<String>) {

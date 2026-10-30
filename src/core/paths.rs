@@ -21,6 +21,12 @@ pub fn cwd() -> String {
     std::env::current_dir().map(|p| p.to_string_lossy().into_owned()).unwrap_or_else(|_| "/".into())
 }
 
+/// Whether a path from `relative` leaves its folder: `..` alone or as its first segment, or another root. A name
+/// starting with two dots (`..env`) stays inside.
+pub fn leaves(rel: &str) -> bool {
+    is_absolute(rel) || rel.strip_prefix("..").is_some_and(|r| r.is_empty() || r.starts_with(SEP))
+}
+
 /// The path with `..` and `.` resolved and separators merged: `sep` joins the parts kept.
 fn normalize_string(path: &str, above_root: bool, sep: &str, is_sep: fn(u8) -> bool) -> String {
     let b = path.as_bytes();

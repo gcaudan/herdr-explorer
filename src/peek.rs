@@ -25,7 +25,7 @@ fn fail<T>(text: impl Into<String>, code: i32) -> Result<T, Fail> {
 
 /// A herdr command's result, null when it fails.
 fn herdr(args: &[&str]) -> Value {
-    let out = exec::exec(exec::herdr(), args, &Opts::default());
+    let out = exec::exec(exec::herdr(), args, &exec::herdr_opts());
     if out.code != Some(0) {
         return Value::Null;
     }
@@ -51,7 +51,7 @@ fn find_state_dir() -> Result<(), Fail> {
         return Ok(());
     }
     let id = exec::plugin();
-    let out = exec::exec(exec::herdr(), &["plugin", "config-dir", &id], &Opts::default());
+    let out = exec::exec(exec::herdr(), &["plugin", "config-dir", &id], &exec::herdr_opts());
     let config =
         if out.code == Some(0) { out.out.trim_matches(crate::unicode::is_space).to_string() } else { String::new() };
     let mut dir = std::fs::read_to_string(paths::join(&[&config, "state-dir"]))

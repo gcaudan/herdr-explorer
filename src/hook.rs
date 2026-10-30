@@ -32,7 +32,7 @@ fn some<T>(v: Option<T>) -> R<T> {
 
 /// A herdr command's result, waited for: Thrown when herdr fails.
 fn herdr(args: &[&str]) -> R<Value> {
-    let out = exec::exec(exec::herdr(), args, &exec::Opts::default());
+    let out = exec::exec(exec::herdr(), args, &exec::herdr_opts());
     if out.code != Some(0) {
         return Err(Thrown);
     }

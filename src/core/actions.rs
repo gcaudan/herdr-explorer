@@ -100,10 +100,11 @@ fn detached(cmd: Option<&str>, args: &[&str], env: Option<Env>, verbatim: bool) 
     }
 }
 
-/// Feeds text to a clipboard tool; whether it ended with 0. stdout is dropped: xclip and wl-copy stay in the background
-/// holding it.
+/// Feeds text to a clipboard tool, found in the absolute folders of PATH; whether it ended with 0. stdout is dropped:
+/// xclip and wl-copy stay in the background holding it.
 fn pipe(cmd: &str, args: &[&str], text: &str) -> bool {
     use std::io::Write;
+    let Some(cmd) = which(cmd) else { return false };
     let spawned =
         Command::new(cmd).args(args).stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::null()).spawn();
     let Ok(mut child) = spawned else { return false };
@@ -243,7 +244,7 @@ pub fn web(url: &str, what: &str) -> String {
     let ok = if WIN {
         detached(which("explorer.exe").as_deref(), &[url], None, false)
     } else {
-        detached(Some(if MAC { "open" } else { "xdg-open" }), &[url], None, false)
+        detached(which(if MAC { "open" } else { "xdg-open" }).as_deref(), &[url], None, false)
     };
     if ok { format!("Opening {what}") } else { "Cannot open a browser".into() }
 }
@@ -259,7 +260,7 @@ pub fn system(abs: &str) -> String {
     let ok = if WIN {
         detached(which("explorer.exe").as_deref(), &[abs], None, false)
     } else {
-        detached(Some(if MAC { "open" } else { "xdg-open" }), &[abs], None, false)
+        detached(which(if MAC { "open" } else { "xdg-open" }).as_deref(), &[abs], None, false)
     };
     if ok { format!("Opening {}", paths::basename(abs, None)) } else { "Cannot open".into() }
 }
@@ -286,10 +287,10 @@ pub fn app(abs: &str, pane: &str) -> Option<String> {
         let script = "on run argv\ntell application \"Finder\"\nactivate\n\
                       make new Finder window to (POSIX file (item 1 of argv))\nend tell\nend run";
         let real = walk_realpath(abs).unwrap_or_else(|_| abs.to_string());
-        run(Some("osascript"), &["-e", script, &real], &Opts::default()).is_some()
-            || detached(Some("open"), &["-R", abs], None, false)
+        run(which("osascript").as_deref(), &["-e", script, &real], &Opts::default()).is_some()
+            || detached(which("open").as_deref(), &["-R", abs], None, false)
     } else {
-        detached(Some("xdg-open"), &[abs], None, false)
+        detached(which("xdg-open").as_deref(), &[abs], None, false)
     };
     Some(if ok { format!("Opening {}", paths::basename(abs, None)) } else { "File manager not found".into() })
 }
@@ -303,9 +304,9 @@ pub fn reveal(abs: &str) -> Option<String> {
         // A path cannot contain '"' on Windows.
         detached(which("explorer.exe").as_deref(), &[&format!("/select,\"{abs}\"")], None, true)
     } else if MAC {
-        detached(Some("open"), &["-R", abs], None, false)
+        detached(which("open").as_deref(), &["-R", abs], None, false)
     } else {
-        detached(Some("xdg-open"), &[&paths::dirname(abs)], None, false)
+        detached(which("xdg-open").as_deref(), &[&paths::dirname(abs)], None, false)
     };
     (!ok).then(|| "File manager not found".into())
 }
@@ -395,7 +396,7 @@ pub fn relative_to(dir: Option<&str>, abs: &str) -> String {
     let mut reference = abs.to_string();
     if let Some(dir) = dir.filter(|d| !d.is_empty()) {
         let rel = paths::relative(dir, abs);
-        if !rel.starts_with("..") && !paths::is_absolute(&rel) {
+        if !paths::leaves(&rel) {
             reference = if rel.is_empty() { ".".into() } else { rel };
         }
     }
@@ -404,11 +405,14 @@ pub fn relative_to(dir: Option<&str>, abs: &str) -> String {
 
 // --- plugin panes
 
-/// A herdr command's result, or null; with a time limit, as a herdr that never answers (a restart) would hold the
-/// next calls.
+/// A herdr command's output, or None, with herdr's time limit.
+fn call(args: &[&str]) -> Option<String> {
+    run(exec::herdr(), args, &exec::herdr_opts())
+}
+
+/// A herdr command's result, or null.
 fn ask(args: &[&str]) -> Value {
-    let opts = Opts { timeout: Some(Duration::from_secs(10)), ..Default::default() };
-    exec::result(run(exec::herdr(), args, &opts).as_deref())
+    exec::result(call(args).as_deref())
 }
 
 /// Opens a pane of the plugin. herdr opens a popup over the active pane and refuses a target for it. A tab of its own
@@ -853,10 +857,7 @@ pub fn terminal_of(pane: &str) -> (Option<String>, Option<&'static str>) {
     for side in order {
         let mut from = pane.to_string();
         for _ in 0..4 {
-            let found = exec::result(
-                run(exec::herdr(), &["pane", "neighbor", "--direction", side, "--pane", &from], &Opts::default())
-                    .as_deref(),
-            );
+            let found = ask(&["pane", "neighbor", "--direction", side, "--pane", &from]);
             let Some(target) = found
                 .get("neighbor")
                 .and_then(|n| n.get("neighbor_pane_id"))
@@ -865,7 +866,7 @@ pub fn terminal_of(pane: &str) -> (Option<String>, Option<&'static str>) {
             else {
                 break;
             };
-            let p = exec::result(run(exec::herdr(), &["pane", "get", &target], &Opts::default()).as_deref());
+            let p = ask(&["pane", "get", &target]);
             if !p.get("pane").is_some_and(own_label) {
                 return (Some(target), Some(side));
             }
@@ -877,14 +878,14 @@ pub fn terminal_of(pane: &str) -> (Option<String>, Option<&'static str>) {
 
 fn type_into(target: &str, side: &str, pane: &str, text: &str) -> bool {
     // send-text prints nothing on success: its exit code tells.
-    if run(exec::herdr(), &["pane", "send-text", target, text], &Opts::default()).is_none() {
+    if call(&["pane", "send-text", target, text]).is_none() {
         return false;
     }
     // By direction from the terminal's other neighbour would be fragile: move the focus step by step until it lands.
     let mut from = pane.to_string();
     for _ in 0..4 {
         let args = ["pane", "focus", "--direction", side, "--pane", &from];
-        let res = exec::result(run(exec::herdr(), &args, &Opts::default()).as_deref());
+        let res = ask(&args);
         let Some(now) =
             res.get("focus").and_then(|f| f.get("focused_pane_id")).filter(|n| n.truthy()).map(crate::json::text)
         else {
@@ -899,7 +900,7 @@ fn type_into(target: &str, side: &str, pane: &str, text: &str) -> bool {
 }
 
 fn cwd_of(target: &str) -> Option<String> {
-    let p = exec::result(run(exec::herdr(), &["pane", "get", target], &Opts::default()).as_deref());
+    let p = ask(&["pane", "get", target]);
     p.get("pane").and_then(|p| p.get("cwd")).and_then(Value::as_str).map(String::from)
 }
 
@@ -909,7 +910,7 @@ fn cwd_of(target: &str) -> Option<String> {
 /// (newline, escape…) could run a command or submit a prompt: refused.
 pub fn insert(abs: &str, pane: &str) -> Option<String> {
     let (Some(target), Some(side)) = terminal_of(pane) else { return Some("No terminal next to the explorer".into()) };
-    let p = exec::result(run(exec::herdr(), &["pane", "get", &target], &Opts::default()).as_deref());
+    let p = ask(&["pane", "get", &target]);
     let p = p.get("pane").cloned().unwrap_or(Value::Null);
     let reference = relative_to(p.get("cwd").and_then(Value::as_str), abs);
     if reference.chars().any(control) {
@@ -948,7 +949,7 @@ pub fn type_text(text: Line, pane: &str) -> Option<String> {
 
 /// The tab's layout as seen from a pane: its panes and splits, with their rects; null without one.
 pub fn layout_of(pane: &str) -> Value {
-    let res = exec::result(run(exec::herdr(), &["pane", "layout", "--pane", pane], &Opts::default()).as_deref());
+    let res = ask(&["pane", "layout", "--pane", pane]);
     res.get("layout").cloned().unwrap_or(Value::Null)
 }
 
@@ -1001,11 +1002,7 @@ pub fn set_width(pane: &str, found: &Found, want: f64) -> f64 {
     let delta = ratio - found.ratio;
     let amount = format!("{:.6}", delta.abs());
     let direction = if delta > 0.0 { "right" } else { "left" };
-    run(
-        exec::herdr(),
-        &["pane", "resize", "--pane", pane, "--direction", direction, "--amount", &amount],
-        &Opts::default(),
-    );
+    call(&["pane", "resize", "--pane", pane, "--direction", direction, "--amount", &amount]);
     ratio
 }
 
@@ -1241,7 +1238,7 @@ impl Sharer {
             let amount = format!("{:.6}", delta.abs());
             let direction = if delta > 0.0 { "right" } else { "left" };
             let args = ["pane", "resize", "--pane", &self.pane, "--direction", direction, "--amount", &amount];
-            run(exec::herdr(), &args, &Opts::default());
+            call(&args);
             // herdr rounds the split to whole columns: the ratio it took is the one kept.
             if let Some(after) = side_split(&layout_of(&self.pane), &self.pane) {
                 self.seen = Some(after.ratio);
@@ -1270,7 +1267,7 @@ pub fn target(dir: &str, name: &str) -> Option<String> {
     }
     let abs = paths::resolve(&[dir, name]);
     let rel = paths::relative(dir, &abs);
-    (!rel.is_empty() && !rel.starts_with("..") && !paths::is_absolute(&rel)).then_some(abs)
+    (!rel.is_empty() && !paths::leaves(&rel)).then_some(abs)
 }
 
 /// A path made, or why not.
@@ -1422,10 +1419,10 @@ pub fn trash(abs: &str) -> bool {
     } else if MAC {
         let script = "on run argv\ntell application \"Finder\" to delete POSIX file (item 1 of argv)\nend run";
         run(Some("/usr/bin/trash"), &[abs], &none).is_some()
-            || run(Some("osascript"), &["-e", script, abs], &none).is_some()
+            || run(which("osascript").as_deref(), &["-e", script, abs], &none).is_some()
     } else {
-        run(Some("gio"), &["trash", "--", abs], &none).is_some()
-            || run(Some("trash-put"), &["--", abs], &none).is_some()
+        run(which("gio").as_deref(), &["trash", "--", abs], &none).is_some()
+            || run(which("trash-put").as_deref(), &["--", abs], &none).is_some()
     };
     ok && std::fs::symlink_metadata(abs).is_err()
 }
@@ -1500,7 +1497,18 @@ pub fn discard(abs: &str, root: &str) -> String {
     };
     let head = git(root, &["rev-parse", "--verify", "-q", "HEAD"]).filter(|h| !h.is_empty());
     if head.is_some() {
-        let added = list(&["diff", "--cached", "--relative", "--name-only", "-z", "--diff-filter=A", "--", abs]);
+        // Without rename detection: a renamed file's new name is added too, and would be deleted for good.
+        let added = list(&[
+            "diff",
+            "--cached",
+            "--relative",
+            "--name-only",
+            "-z",
+            "--no-renames",
+            "--diff-filter=A",
+            "--",
+            abs,
+        ]);
         if !added.is_empty() {
             let full: Vec<String> = added.iter().map(|f| paths::resolve(&[root, f])).collect();
             let mut args = vec!["restore", "--staged", "--"];
