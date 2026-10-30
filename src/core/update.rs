@@ -186,7 +186,8 @@ pub fn check() {
     if file().is_none() || exec::read_settings().get("updateCheck") == Some(&Value::Bool(false)) {
         return;
     }
-    let at = read().get("checkedAt").filter(|v| v.truthy()).map_or(0.0, |v| json::num(Some(v)));
+    let data = read();
+    let at = data.get("checkedAt").filter(|v| v.truthy()).map_or(0.0, |v| json::num(Some(v)));
     if crate::core::clock::now_ms() - at < DAY {
         return;
     }
@@ -197,7 +198,15 @@ pub fn check() {
     if let Some((latest, notes, url)) = release {
         fields.extend([("latest", latest.into()), ("notes", notes.into()), ("url", url.into())]);
     }
+    fields.extend(current().and_then(|now| first_seen(&data, now)));
     write_with(fields);
+}
+
+/// `seen` for a first check before any explorer started (a first install), so that note_version does not take the
+/// file for one checked by the JavaScript versions.
+fn first_seen(data: &Value, now: &str) -> Option<(&'static str, Value)> {
+    let fresh = data.get("seen").is_none() && !data.get("checkedAt").is_some_and(|v| v.truthy());
+    fresh.then(|| ("seen", Value::from(now)))
 }
 
 /// The newer release found, (latest, skipped), or None: compared with the version on disk, so that it goes away once
@@ -238,24 +247,29 @@ pub fn release() -> (Vec<String>, String) {
 }
 
 /// A version the explorers had not run yet, noted at an explorer's start: an update ({ from, to, t }) when it is newer
-/// than the one they ran last. None before (a first install): no update.
+/// than the one they ran last. None before (a first install, check() then notes it): no update.
 pub fn note_version() {
     let (Some(_), Some(now)) = (file(), current()) else { return };
-    let data = read();
+    if let Some(fields) = noted(&read(), now, crate::core::clock::now_ms()) {
+        write_with(fields);
+    }
+}
+
+/// The fields note_version writes, None when `now` is the version seen. The JavaScript versions (0.8.0 and earlier)
+/// noted none: a file they checked for updates with, but without `seen`, comes from them (the Rust check notes `seen`
+/// on a first install).
+fn noted(data: &Value, now: &str, t: f64) -> Option<Vec<(&'static str, Value)>> {
     let seen = data.get("seen").and_then(Value::as_str).map(String::from);
     if seen.as_deref() == Some(now) {
-        return;
+        return None;
     }
+    let seen = seen.or_else(|| data.get("checkedAt").filter(|v| v.truthy()).map(|_| "0.8.0".to_string()));
     let mut fields = vec![("seen", Value::from(now))];
     if let Some(from) = seen.filter(|s| exec::newer(now, s)) {
-        let updated = Value::Obj(vec![
-            ("from".into(), from.into()),
-            ("to".into(), now.into()),
-            ("t".into(), crate::core::clock::now_ms().into()),
-        ]);
+        let updated = Value::Obj(vec![("from".into(), from.into()), ("to".into(), now.into()), ("t".into(), t.into())]);
         fields.push(("updated", updated));
     }
-    write_with(fields);
+    Some(fields)
 }
 
 /// The update this code comes from, for a minute after the first explorer started on it: the version it went to.
@@ -371,5 +385,39 @@ mod tests {
         let many: String = (0..30).map(|i| format!("* change {i}\r\n")).collect();
         assert_eq!(release_notes(&many).len(), 20);
         assert_eq!(release_notes("* a\u{7}b\u{85}c"), ["a b c"]);
+    }
+
+    fn updated_from(data: &str, now: &str) -> Option<Option<String>> {
+        let fields = noted(&json::parse(data).unwrap(), now, 1.0)?;
+        let updated = fields.iter().find(|(k, _)| *k == "updated");
+        Some(updated.and_then(|(_, u)| u.get("from")).and_then(Value::as_str).map(String::from))
+    }
+
+    #[test]
+    fn a_newer_version_than_the_one_seen_is_an_update() {
+        assert_eq!(updated_from(r#"{"seen":"1.0.0"}"#, "1.1.0"), Some(Some("1.0.0".into())));
+        assert_eq!(updated_from(r#"{"seen":"1.1.0"}"#, "1.0.0"), Some(None));
+        assert_eq!(updated_from(r#"{"seen":"1.0.0"}"#, "1.0.0"), None);
+    }
+
+    #[test]
+    fn a_file_checked_by_the_javascript_versions_is_an_update_from_0_8_0() {
+        assert_eq!(
+            updated_from(r#"{"checkedAt":1761000000000,"latest":"1.0.0"}"#, "1.0.0"),
+            Some(Some("0.8.0".into()))
+        );
+        assert_eq!(updated_from("{}", "1.0.0"), Some(None));
+        assert_eq!(updated_from(r#"{"skip":"0.9.0"}"#, "1.0.0"), Some(None));
+    }
+
+    #[test]
+    fn a_first_check_before_any_explorer_is_no_update() {
+        let mut data = json::parse("{}").unwrap();
+        let (k, v) = first_seen(&data, "1.0.0").unwrap();
+        data.set(k, v);
+        data.set("checkedAt", Value::from(1761000000000.0));
+        assert!(noted(&data, "1.0.0", 1.0).is_none());
+        assert!(first_seen(&json::parse(r#"{"checkedAt":1761000000000}"#).unwrap(), "1.0.0").is_none());
+        assert!(first_seen(&json::parse(r#"{"seen":"0.9.0"}"#).unwrap(), "1.0.0").is_none());
     }
 }
