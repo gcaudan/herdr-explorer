@@ -957,7 +957,15 @@ const POWERSHELL_: Spec = Spec {
 const RUST_: Spec = Spec {
     line: &["//"],
     block: &[("/*", "*/")],
-    str: &[("\"", "\"", "m")],
+    // Raw strings take no escapes: r"C:\" ends there.
+    str: &[
+        ("\"", "\"", "m"),
+        ("r\"", "\"", "mr"),
+        ("r#\"", "\"#", "mr"),
+        ("r##\"", "\"##", "mr"),
+        ("br\"", "\"", "mr"),
+        ("br#\"", "\"#", "mr"),
+    ],
     kw: "fn let mut const static struct enum trait impl type mod pub use crate self Self super where as ref move unsafe extern dyn async",
     ctl: "if else match loop while for in return break continue yield await",
     consts: "true false None Some Ok Err",

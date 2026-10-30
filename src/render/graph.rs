@@ -78,8 +78,9 @@ pub fn layout<S: AsRef<str>>(commits: &[(S, Vec<S>)], base: Option<&str>) -> Vec
                 joining.push(i);
                 continue;
             }
-            let i =
-                lanes.iter().enumerate().position(|(j, l)| l.is_none() && j > col).unwrap_or(lanes.len().max(col + 1));
+            // Not a lane ending on this row: its ╯ would hide the new one going down.
+            let free = |(j, l): (usize, &Option<Lane>)| l.is_none() && j > col && !closing.contains(&j);
+            let i = lanes.iter().enumerate().position(free).unwrap_or(lanes.len().max(col + 1));
             put(&mut lanes, i);
             lanes[i] = Some(Lane { hash: p, color: colors });
             colors += 1;

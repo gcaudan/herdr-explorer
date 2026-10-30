@@ -326,8 +326,8 @@ fn tag_style(name: &str) -> Option<String> {
         "i" | "em" => ITALIC.into(),
         "s" | "del" | "strike" => STRIKE.into(),
         "u" | "ins" => UNDER.into(),
-        "code" | "kbd" | "tt" | "samp" => code_style(&DARK),
-        "a" => link_style(&DARK),
+        "code" | "kbd" | "tt" | "samp" => code_style(col()),
+        "a" => link_style(col()),
         "mark" => "\x1b[7m".into(),
         "sup" | "sub" | "span" | "small" | "p" | "div" | "center" => String::new(),
         _ => return None,
@@ -564,7 +564,17 @@ fn tag(text: &str, i: usize, base: &str, ctx: &mut Ctx, depth: usize) -> Option<
     let Some(style) = tag_style(&name).filter(|_| m.get(4).unwrap_or("").is_empty()) else {
         return Some((end, vec![]));
     };
-    let Some(close) = highlight::find_lower(text, &format!("</{name}"), end) else { return Some((end, vec![])) };
+    // </s, not </sup: the name ends there.
+    let closing = format!("</{name}");
+    let mut from = end;
+    let close = loop {
+        let Some(k) = highlight::find_lower(text, &closing, from) else { return Some((end, vec![])) };
+        let next = at(text, k + closing.len());
+        if !next.is_some_and(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+            break k;
+        }
+        from = k + closing.len();
+    };
     let inner = &text[end..close];
     let after = text[close..].find('>').map_or(text.len(), |k| close + k + 1);
     let code = code_style(col());
@@ -723,7 +733,7 @@ static QUOTE: LazyLock<Regex> = LazyLock::new(|| re(r"^ {0,3}> ?", ""));
 static ITEM: LazyLock<Regex> = LazyLock::new(|| re(r"^( {0,3})([-+*]|\d{1,9}[.)])(?= |$)( *)", ""));
 static TSEP: LazyLock<Regex> =
     LazyLock::new(|| re(r"^ {0,3}\|?(?:[ \t]*:?-+:?[ \t]*\|)*[ \t]*:?-+:?[ \t]*\|?[ \t]*$", ""));
-static REF: LazyLock<Regex> = LazyLock::new(|| re(r"^ {0,3}\[([^\]]+)\]:[ \t]*<?(\S+?)>?(?:[ \t]+.*)?$", ""));
+static REF: LazyLock<Regex> = LazyLock::new(|| re(r"^ {0,3}\[([^\]^][^\]]*)\]:[ \t]*<?(\S+?)>?(?:[ \t]+.*)?$", ""));
 static COMMENT: LazyLock<Regex> = LazyLock::new(|| re(r"^ {0,3}<!--", ""));
 static FENCE_LANG: LazyLock<Regex> = LazyLock::new(|| re(r"^\{\.?|\}$", "g"));
 static LANG_END: LazyLock<Regex> = LazyLock::new(|| re(r"[\s,{]", ""));
@@ -756,7 +766,13 @@ fn interrupts(l: &str) -> bool {
         || HR.test(l)
         || QUOTE.test(l)
         || COMMENT.test(l)
-        || ITEM.exec(l).is_some_and(|m| !BLANK.test(&l[m.end()..]))
+        || ITEM.exec(l).is_some_and(|m| {
+            // An ordered list breaks into a paragraph only from 1 (CommonMark).
+            let mark = m.get(2).unwrap_or("");
+            let from_one =
+                !mark.starts_with(|c: char| c.is_ascii_digit()) || mark[..mark.len() - 1].parse() == Ok(1u32);
+            from_one && !BLANK.test(&l[m.end()..])
+        })
 }
 
 fn trim(s: &str) -> &str {
@@ -1060,6 +1076,12 @@ fn table(head: &[String], rows: &[Vec<String>], align: &[Align], width: usize, c
     if avail < n as i64 * 2 {
         // Too narrow for columns: one "header: value" line per cell, rows separated by rules.
         let mut out = Vec::new();
+        // No row: the header alone, one name a line.
+        if all.len() == 1 {
+            for c in &all[0] {
+                out.extend(wrap(c, width).into_iter().map(Line::of));
+            }
+        }
         for (k, r) in all[1..].iter().enumerate() {
             if k > 0 {
                 out.push(Line::of(vec![seg("─".repeat(width), border.as_str())]));
@@ -1278,7 +1300,7 @@ fn code(lang: &str, lines: &[String], width: usize, ctx: &Ctx) -> Vec<Line> {
     out.into_iter().map(Line::of).collect()
 }
 
-fn block(b: &Block, width: usize, ctx: &mut Ctx, level: usize, tight: bool) -> Vec<Line> {
+fn block(b: &Block, width: usize, ctx: &mut Ctx, level: usize) -> Vec<Line> {
     let width = width.max(1);
     let p = col();
     match b {
@@ -1286,7 +1308,9 @@ fn block(b: &Block, width: usize, ctx: &mut Ctx, level: usize, tight: bool) -> V
             let color = p.h[h - 1];
             let segs = inline(text, &format!("{BOLD}{}", ui::fg(color)), ctx, 0);
             let mut out: Vec<Line> = wrap(&segs, width).into_iter().map(Line::of).collect();
-            out[0].anchor = Some(slug(&plain(&segs), ctx));
+            // Without the (url) after a link, as GitHub's anchors.
+            let text: String = segs.iter().filter(|s| s.1 != dim()).map(|s| s.0.as_str()).collect();
+            out[0].anchor = Some(slug(&text, ctx));
             if *h == 1 {
                 out.push(Line::of(vec![seg("━".repeat(width), ui::fg(color))]));
             } else if *h == 2 {
@@ -1330,7 +1354,8 @@ fn block(b: &Block, width: usize, ctx: &mut Ctx, level: usize, tight: bool) -> V
                     inner[0] = Block::Para(text[a.end()..].to_string());
                 }
             }
-            let mut lines = blocks(&inner, width as i64 - 2, ctx, level, tight);
+            // A quote in a tight list keeps its own blank lines.
+            let mut lines = blocks(&inner, width as i64 - 2, ctx, level, false);
             if let Some(title) = alert {
                 let mut head: Vec<Line> =
                     wrap(&[seg(title, format!("{BOLD}{}", ui::fg(color)))], width.saturating_sub(2))
@@ -1391,7 +1416,7 @@ fn blocks(list: &[Block], width: i64, ctx: &mut Ctx, level: usize, tight: bool) 
     let width = width.max(1) as usize;
     let mut out = Vec::new();
     for b in list {
-        let lines = block(b, width, ctx, level, tight);
+        let lines = block(b, width, ctx, level);
         if lines.is_empty() {
             continue;
         }

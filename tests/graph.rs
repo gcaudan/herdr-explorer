@@ -49,3 +49,11 @@ fn the_lane_of_a_branch_straight_ahead_of_the_default_branch_changes_colour_wher
     let fork = layout(&commits(&[("d", &["b"]), ("m", &["b"]), ("b", &["a"]), ("a", &[])]), Some("b"));
     assert_eq!(fork[2].color, fork[1].color);
 }
+
+#[test]
+fn a_merge_does_not_open_its_second_parent_on_a_lane_ending_there() {
+    assert_eq!(
+        draw(&[("z", &["c"]), ("x", &["c"]), ("c", &["p1", "p2"]), ("p2", &["p1"]), ("p1", &[])]),
+        ["●", "│ ●", "●─╯─╮", "│   ●", "●───╯"]
+    );
+}
