@@ -85,7 +85,8 @@ const HOLD: Duration = Duration::from_millis(100);
 impl Splitter {
     /// The text of a read to decode now (maybe none).
     pub fn feed(&mut self, bytes: &[u8], now: Instant) -> String {
-        self.flush = None;
+        // The answer held keeps its time: input coming after it would otherwise hold it for as long as it comes.
+        let was = self.flush.take().filter(|_| !self.pending.is_empty());
         let mut data = std::mem::take(&mut self.pending) + &self.utf8(bytes);
         if let Some(start) = data.rfind("\x1b[200~")
             && !data[start..].contains("\x1b[201~")
@@ -96,7 +97,7 @@ impl Splitter {
             && let Some(reply) = unended(&data)
         {
             self.pending = data.split_off(reply);
-            self.flush = Some(now + HOLD);
+            self.flush = Some(was.filter(|_| reply == 0).unwrap_or(now + HOLD));
         }
         data
     }
@@ -142,13 +143,19 @@ fn incomplete(buf: &[u8]) -> usize {
     0
 }
 
-/// Where a terminal's answer (OSC, APC) starts that its end has not reached; only after the last paste, whose text
-/// may hold an ESC ] of its own.
+/// Where a terminal's answer (OSC, APC) starts that its end has not reached, or a CSI cut before its final letter
+/// (a mouse report over a slow link); only after the last paste, whose text may hold an ESC ] of its own.
 fn unended(data: &str) -> Option<usize> {
     let pasted = data.rfind("\x1b[201~");
-    let start = data.rfind("\x1b]").max(data.rfind("\x1b_"))?;
-    let ended = data[start + 2..].contains('\x07') || data[start + 2..].contains("\x1b\\");
-    (pasted.is_none_or(|p| start > p) && !ended).then_some(start)
+    let answer = data
+        .rfind("\x1b]")
+        .max(data.rfind("\x1b_"))
+        .filter(|&start| !data[start + 2..].contains('\x07') && !data[start + 2..].contains("\x1b\\"));
+    let csi = data
+        .rfind("\x1b[")
+        .filter(|&start| data[start + 2..].bytes().all(|b| b.is_ascii_digit() || b == b';' || b == b'<'));
+    let start = answer.into_iter().chain(csi).min()?;
+    pasted.is_none_or(|p| start > p).then_some(start)
 }
 
 // --- painting
@@ -389,6 +396,21 @@ mod tests {
         // Ended by ST, or inside a paste: decoded at once.
         assert_eq!(feed(&mut s, "\x1b_Gi=31;OK\x1b\\", now), "\x1b_Gi=31;OK\x1b\\");
         assert_eq!(feed(&mut s, "\x1b[200~\x1b]x\x1b[201~", now), "\x1b[200~\x1b]x\x1b[201~");
+        assert_eq!(s.due(), None);
+        // Input after it keeps its time.
+        assert_eq!(feed(&mut s, "\x1b]", now), "");
+        assert_eq!(feed(&mut s, "a", now + Duration::from_millis(60)), "");
+        assert_eq!(s.due(), Some(now + HOLD));
+        assert_eq!(s.tick(now + HOLD), Some("\x1b]a".to_string()));
+    }
+
+    #[test]
+    fn a_mouse_report_cut_between_reads_is_held() {
+        let (mut s, now) = (Splitter::default(), Instant::now());
+        assert_eq!(feed(&mut s, "x\x1b[<0;12", now), "x");
+        assert_eq!(feed(&mut s, ";5M", now), "\x1b[<0;12;5M");
+        assert_eq!(feed(&mut s, "\x1b[", now), "");
+        assert_eq!(feed(&mut s, "A", now), "\x1b[A");
         assert_eq!(s.due(), None);
     }
 

@@ -880,7 +880,8 @@ impl Editor {
                 "\t".to_string()
             } else {
                 let n = self.indent.len();
-                " ".repeat(n - col_of(&self.lines[self.cur.line], self.cur.at) % n)
+                let at = s.map_or(self.cur, |s| s.0);
+                " ".repeat(n - col_of(&self.lines[at.line], at.at) % n)
             };
             return self.type_(&unit, "");
         }

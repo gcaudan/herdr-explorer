@@ -111,6 +111,22 @@ enum Ast {
     Look { ast: Box<Ast>, ahead: bool, neg: bool },
 }
 
+/// The instructions a pattern may compile to, past which it is refused.
+const MAX_INSTS: u64 = 1 << 20;
+
+/// About the instructions an AST compiles to (each copy of a bounded repeat counted), saturated.
+fn size(ast: &Ast) -> u64 {
+    match ast {
+        Ast::Group(a, _) | Ast::Look { ast: a, .. } => size(a).saturating_add(2),
+        Ast::Cat(list) | Ast::Alt(list) => list.iter().fold(list.len() as u64, |n, a| n.saturating_add(size(a))),
+        Ast::Rep { ast, min, max, .. } => {
+            let copies = u64::from(max.unwrap_or(*min).max(*min)).saturating_add(1);
+            copies.saturating_mul(size(ast).saturating_add(4))
+        }
+        _ => 1,
+    }
+}
+
 #[derive(Debug, Clone)]
 enum Inst {
     Char(char),
@@ -823,6 +839,10 @@ impl Regex {
         if p.at < p.src.len() {
             return err("unmatched ')'");
         }
+        // A{n,m} copies its body m times: a{999999999} would take all the memory before any match.
+        if size(&ast) > MAX_INSTS {
+            return err("regular expression too large");
+        }
         let mut c = Compiler { progs: Vec::new(), regs: 0 };
         c.prog(&ast, false);
         Ok(Regex {
@@ -966,6 +986,9 @@ mod tests {
         // An iteration matching nothing ends the loop, and the groups of each iteration start afresh.
         assert_eq!(find("(a|)*b", "", "aab").unwrap()[0].as_deref(), Some("aab"));
         assert_eq!(find("(?:(a)|b)+", "", "ab").unwrap()[1], None);
+        // Counts too large to compile are refused, not expanded.
+        assert!(Regex::new("a{999999999}", "").is_err() && Regex::new("(a{1000}){1000}", "").is_err());
+        assert!(Regex::new("a{1000}", "").is_ok());
     }
 
     #[test]

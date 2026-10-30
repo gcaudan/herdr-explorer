@@ -273,6 +273,10 @@ pub fn worktree(top: &str, env: &Env, keep: bool, only: Option<&str>) -> Option<
         })
         .map(|f| format!(":(exclude,literal){f}"))
         .collect();
+    // Added to the kept copy while still small: taken out, else its old content stays in the snapshot.
+    let mut drop_big: Vec<&str> = vec!["rm", "--cached", "-q", "--ignore-unmatch", "--"];
+    let literal: Vec<String> = big.iter().map(|f| f.replacen(":(exclude,literal)", ":(literal)", 1)).collect();
+    drop_big.extend(literal.iter().map(String::as_str));
     let mut add: Vec<&str> = vec!["add", "-A", "--", &scope_path];
     add.extend(big.iter().map(String::as_str));
     let real_index = paths::resolve(&[top, index]);
@@ -328,7 +332,7 @@ pub fn worktree(top: &str, env: &Env, keep: bool, only: Option<&str>) -> Option<
             }
             let _ = std::fs::remove_file(&lock);
         }
-        if git_in(&add, Some(&kept)).is_some() {
+        if (big.is_empty() || git_in(&drop_big, Some(&kept)).is_some()) && git_in(&add, Some(&kept)).is_some() {
             let tree = git_in(&["write-tree"], Some(&kept)).unwrap_or_default();
             let tree = tree.trim_matches(crate::unicode::is_space);
             // Marked used through .from (sweep_state removes the copy a week after it): git rewrites neither file

@@ -243,7 +243,7 @@ fn decode(s: &str) -> Option<Vec<u8>> {
     let mut i = 0;
     while i < b.len() {
         if b[i] == b'%' {
-            let hex = s.get(i + 1..i + 3)?;
+            let hex = s.get(i + 1..i + 3).filter(|h| h.bytes().all(|c| c.is_ascii_hexdigit()))?;
             out.push(u8::from_str_radix(hex, 16).ok()?);
             i += 3;
         } else {
@@ -266,6 +266,7 @@ mod tests {
         assert_eq!(c("file:///a/%2e%2E/b").as_deref(), Some("/b"));
         assert_eq!(c("file:///a%2Fb").as_deref(), None);
         assert_eq!(c("file:///a%zz").as_deref(), None);
+        assert_eq!(c("file:///a%+f").as_deref(), None);
         assert_eq!(c("file:///a\tb\n.js").as_deref(), Some("/ab.js"));
         assert_eq!(c("file://ME/x").as_deref(), Some("/x"));
         assert_eq!(c("file://other/x").as_deref(), None);

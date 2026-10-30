@@ -231,8 +231,8 @@ fn token(s: &str) -> (usize, Option<Event>) {
         && let Some(ch) = body.chars().next()
         && ch != '\x1b'
     {
-        // ESC _ and ESC ] cut from the rest of their answer still read as one.
-        if ch == '_' || ch == ']' {
+        // ESC _ and ESC ] cut from the rest of their answer still read as one; alone, alt+_ and alt+].
+        if (ch == '_' || ch == ']') && s.len() > 2 {
             return (2, Some(Event::Reply(s[..2].to_string())));
         }
         return key_token(s, 1 + ch.len_utf8());

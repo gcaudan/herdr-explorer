@@ -177,6 +177,15 @@ fn editing_enter_keeps_the_indentation_backspace_joins_lines_tab_indents() {
 }
 
 #[test]
+fn tab_over_a_selection_on_one_line_reaches_the_stop_from_its_start() {
+    let mut ed = editor("    x\nab cdef\n");
+    ed.place(Pos::new(1, 1), false);
+    ed.place(Pos::new(1, 3), true);
+    ed.indent_lines(1);
+    assert_eq!(ed.lines[1], "a   cdef");
+}
+
+#[test]
 fn backspace_after_a_selection_shrunk_to_nothing_erases_before_the_cursor() {
     // shift+→ then shift+← leave the selection's other end at the cursor: the erase must not take it as a selection.
     let mut ed = editor("abcdef");

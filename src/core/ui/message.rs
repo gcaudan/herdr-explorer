@@ -130,9 +130,15 @@ pub fn wrap(text: &str, width: i64) -> Vec<String> {
             if !cur.is_empty() {
                 lines.push(cur.trim_end_matches(crate::unicode::is_space).to_string());
                 cur.clear();
+                w = 0;
+            }
+            // White space at a break goes with it: the next line never starts with it.
+            if word.chars().all(crate::unicode::is_space) {
+                continue;
             }
             let mut rest = word;
-            while text_width(rest) > width {
+            // The white space ending the word never breaks it: dropped with the line's end.
+            while text_width(rest.trim_end_matches(crate::unicode::is_space)) > width {
                 let (mut part, _) = fit(rest, width, None);
                 // A character wider than the width never fits: it goes alone on its line.
                 if part.is_empty() {

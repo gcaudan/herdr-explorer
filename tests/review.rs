@@ -23,6 +23,11 @@ fn terminal_replies_never_read_as_keys() {
     }
     assert_eq!(keys, ["a", "b", "c"]);
     assert_eq!(replies, ["\x1b_Gi=31;OK\x1b\\", "\x1b[6;16;8t"]);
+    // Alone, ESC ] and ESC _ are alt+] and alt+_; with more after them, a cut answer.
+    assert!(matches!(&ui::decode("\x1b]")[..], [Event::Key(k)] if k == "alt+]"));
+    assert!(matches!(&ui::decode("\x1b_")[..], [Event::Key(k)] if k == "alt+_"));
+    assert!(matches!(&ui::decode("\x1b]1")[0], Event::Reply(r) if r == "\x1b]"));
+    assert_eq!(ui::wrap("abcd ef", 4), ["abcd", "ef"]);
     let mouse: Vec<_> = ui::decode("\x1b[<0;5;7M")
         .into_iter()
         .filter_map(|e| if let Event::Mouse(m) = e { Some(m) } else { None })
