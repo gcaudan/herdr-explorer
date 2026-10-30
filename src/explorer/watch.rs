@@ -1,7 +1,7 @@
 //! What the explorer watches: the repository and its git status, the refresh when files change, and the terminal
 //! it follows (its folder, the files the panes ask for).
 
-use super::{Explorer, big, inside, mtime_ms, rel_of};
+use super::{Explorer, big, mtime_ms, rel_of, rel_under};
 use crate::core::actions;
 use crate::core::exec::{self, Opts};
 use crate::core::paths;
@@ -373,11 +373,11 @@ impl Explorer {
         // itself. Never $HOME, one of its parents or the filesystem root, where the tree would be too big to follow.
         // Not at the first check: the terminal has not moved, and the root may be the one Set as root chose before a
         // herdr restart.
-        if !inside(&cwd, &self.root) {
+        if rel_under(&cwd, &self.root).is_none() {
             if first {
                 return;
             }
-            if inside(&cwd, &self.home.clone()) {
+            if rel_under(&cwd, &self.home.clone()).is_some() {
                 let home = self.home.clone();
                 self.set_root(&home);
             } else if big(&cwd) {
@@ -386,10 +386,7 @@ impl Explorer {
                 self.set_root(&cwd);
             }
         }
-        let rel = rel_of(&self.root, &cwd);
-        if rel.is_empty() {
-            return;
-        }
+        let Some(rel) = rel_under(&cwd, &self.root).filter(|r| !r.is_empty()) else { return };
         self.expand(&rel);
         self.reveal_rel(&rel);
         self.render();

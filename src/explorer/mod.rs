@@ -326,10 +326,24 @@ fn inside(dir: &str, root: &str) -> bool {
     !r.starts_with("..") && !paths::is_absolute(&r)
 }
 
+/// The path with its links resolved, as written when it cannot be.
+fn real(p: &str) -> String {
+    exec::walk_realpath(p).unwrap_or_else(|_| p.to_string())
+}
+
+/// dir relative to root (empty for root itself), the links of both resolved when dir is not under root as written
+/// (/home → /var/home on some systems); None outside it.
+fn rel_under(dir: &str, root: &str) -> Option<String> {
+    if inside(dir, root) {
+        return Some(rel_of(root, dir));
+    }
+    let (dir, root) = (real(dir), real(root));
+    inside(&dir, &root).then(|| rel_of(&root, &dir))
+}
+
 /// $HOME, one of its parents or the filesystem root.
 fn big(dir: &str) -> bool {
     // /home → /var/home on some systems.
-    let real = |p: &str| exec::walk_realpath(p).unwrap_or_else(|_| p.to_string());
     let up = paths::relative(&real(dir), &real(&icons::homedir()));
     dir == paths::root(dir) || (!up.starts_with("..") && !paths::is_absolute(&up))
 }
@@ -885,4 +899,22 @@ fn alone(pane: &str) -> bool {
     let Some(all) = all.get("panes").filter(|p| p.truthy()) else { return false };
     let mine = all.as_array().into_iter().flatten().filter(|p| p.get("tab_id") == me.get("tab_id"));
     mine.count() == 1
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_folder_under_the_root_through_a_link_is_under_it() {
+        let dir = std::env::temp_dir().join(format!("hx-rel-under-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("real/sub")).unwrap();
+        std::os::unix::fs::symlink(dir.join("real"), dir.join("link")).unwrap();
+        let p = |s: &str| dir.join(s).to_string_lossy().into_owned();
+        assert_eq!(rel_under(&p("link/sub"), &p("real")).as_deref(), Some("sub"));
+        assert_eq!(rel_under(&p("real/sub"), &p("link")).as_deref(), Some("sub"));
+        assert_eq!(rel_under(&p("real"), &p("real/sub")), None);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 }
