@@ -22,7 +22,9 @@ pub fn review() -> String {
     exec::env_var("EXPLORER_REVIEW").unwrap_or_default()
 }
 
-/// Columns from which the diff opens on the right of the list (never in a review).
+/// Columns from which the diff opens on the right of the list (never in a review). The plugin always opens source
+/// control as a review: the list beside its diff (scmListShare) is left for the screen tests, which render the diff
+/// in the pane.
 pub fn split(review: &str) -> f64 {
     if review.is_empty() { 100.0 } else { f64::INFINITY }
 }

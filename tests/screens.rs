@@ -1,4 +1,4 @@
-//! Screen captures of the panes (Linux): each scenario of rust/tests/fixtures/screens/<pane>/ runs the pane in a
+//! Screen captures of the panes (Linux): each scenario of tests/fixtures/screens/<pane>/ runs the pane in a
 //! pty (support/pty.rs), started as the manifest runs it (`herdr-explorer pane <id>`), and compares its screen and
 //! herdr calls with the capture recorded next to it, recorded again with `HX_RECORD=1` for a change of behaviour its
 //! commit explains. `HX_ONLY=<prefix>` keeps the scenarios whose name

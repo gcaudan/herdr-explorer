@@ -95,19 +95,17 @@ pub fn run(args: Vec<OsString>) -> ExitCode {
                 crate::core::exec::home(file_dir.as_deref());
             }
             match cmd {
-                Command::Pane("tree", args) => return done(crate::explorer::run(&strings(args))),
-                Command::Pane("preview", args) => return done(crate::preview::run(&strings(args))),
-                Command::Pane("search", args) => return done(crate::search::run(&strings(args))),
-                Command::Pane("diff", args) => return done(crate::changes::run(&strings(args))),
+                Command::Pane("tree", args) => done(crate::explorer::run(&strings(args))),
+                Command::Pane("preview", args) => done(crate::preview::run(&strings(args))),
+                Command::Pane("search", args) => done(crate::search::run(&strings(args))),
+                Command::Pane("diff", args) => done(crate::changes::run(&strings(args))),
                 Command::Pane("scm", _) if crate::core::exec::env_var("EXPLORER_TOOL").is_some() => {
-                    return done(crate::edit::tool());
+                    done(crate::edit::tool())
                 }
-                Command::Pane("scm", args) => return done(crate::scm::run(&strings(args))),
-                Command::Pane("edit", args) => return done(crate::edit::run(&strings(args))),
-                _ => {}
+                Command::Pane("scm", args) => done(crate::scm::run(&strings(args))),
+                Command::Pane("edit", args) => done(crate::edit::run(&strings(args))),
+                _ => unreachable!("parse gives the panes of PANES only"),
             }
-            eprintln!("herdr-explorer: not implemented yet: {cmd:?}");
-            done(1)
         }
         Err(usage) => {
             eprintln!("{usage}");

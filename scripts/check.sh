@@ -3,7 +3,7 @@
 # without linking), then the cargo tests.
 set -eu
 cd "$(dirname "$0")/.."
-CARGO=${CARGO:-$HOME/.cargo/bin/cargo}
+CARGO=${CARGO:-$(command -v cargo || echo "$HOME/.cargo/bin/cargo")}
 "$CARGO" fmt --check
 "$CARGO" clippy --all-targets -- -D warnings
 for t in x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-apple-darwin aarch64-apple-darwin \
