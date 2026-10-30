@@ -101,6 +101,9 @@ impl Pane {
     pub(super) fn reload(&mut self) {
         self.parsed = None;
         self.cache.clear();
+        // Those of the scope left: the keys and the mouse act on nothing while it loads.
+        self.rows.clear();
+        (self.cur, self.anchor, self.top0) = (-1, None, 0);
         self.draw();
         self.changes(|p, d| {
             let Some(d) = d else { return };

@@ -108,6 +108,7 @@ impl Pane {
                 self.act(move || actions::search(&cwd, &pane, mode, ""));
             }
             "home" | "g" => {
+                self.anchor = None;
                 self.cur = self.rows.iter().position(|r| r.r#ref.is_some()).map_or(-1, |i| i as i64);
                 self.top0 = 0;
                 self.draw();
@@ -177,8 +178,10 @@ impl Pane {
             return self.scroll(m.wheel * 3);
         }
         let click = m.press && !m.drag && m.button == 0;
+        // A note, a prompt or a question takes the keys: no menu opened over it, the cursor left where it is.
+        let asking = self.note.is_some() || self.prompt.is_some() || self.confirm.is_some();
         // The header's switches: a click on a choice takes it.
-        if click && m.y == 1 {
+        if click && m.y == 1 && !asking {
             let chip = self.chips.iter().find(|c| m.x >= c.from && m.x <= c.to).map(|c| c.id);
             if let Some(id) = chip {
                 match id {
@@ -206,7 +209,7 @@ impl Pane {
         // A click on a row puts the cursor there; a drag selects the rows from there.
         let mut i = self.top0 + m.y - 2;
         let on_row = usize::try_from(i).ok().and_then(|i| self.rows.get(i)).is_some_and(|r| r.r#ref.is_some());
-        if (click || (m.drag && m.button == 0)) && self.note.is_none() && m.y >= 2 && m.y < h && on_row {
+        if (click || (m.drag && m.button == 0)) && !asking && m.y >= 2 && m.y < h && on_row {
             while i > 0 && self.rows[i as usize].more {
                 i -= 1;
             }
@@ -266,6 +269,7 @@ impl Pane {
         let found =
             if dir > 0 { self.rows.iter().enumerate().find(ok) } else { self.rows.iter().enumerate().rev().find(ok) };
         if let Some((i, _)) = found {
+            self.anchor = None;
             self.cur = i as i64;
             self.top0 = i as i64;
             self.draw();

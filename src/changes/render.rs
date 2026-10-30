@@ -121,9 +121,17 @@ impl Pane {
         if i.is_none() && self.stay.is_some() {
             i = rows.iter().rposition(at);
         }
+        // Its lines gone (the file folded as viewed): the file's name.
+        if i.is_none()
+            && let Some(was) = &was
+        {
+            i = rows.iter().position(|r| at(r) && r.r#ref.as_ref().is_some_and(|x| x.file == was.file));
+        }
         self.cur = i.or_else(|| rows.iter().position(|r| r.r#ref.is_some())).map_or(-1, |i| i as i64);
         self.stay = None;
         self.anchor = None;
+        // The rows above it may take more or fewer rows now: the cursor kept in view.
+        self.follow();
     }
 
     pub(super) fn title(&self) -> String {
