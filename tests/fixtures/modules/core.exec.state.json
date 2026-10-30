@@ -923,7 +923,24 @@
    "files": {
     "keys.json": "{\"explorer\":\"str\"}"
    },
-   "throws": "keys.json: the explorer entry is not an object: str"
+   "out": [
+    [
+     "a",
+     "newFile"
+    ],
+    [
+     "d",
+     "del"
+    ],
+    [
+     "delete",
+     "del"
+    ],
+    [
+     "enter",
+     "open"
+    ]
+   ]
   },
   {
    "fn": "readKeys",
@@ -948,7 +965,24 @@
    "files": {
     "keys.json": "{\"explorer\":5}"
    },
-   "throws": "keys.json: the explorer entry is not an object: 5"
+   "out": [
+    [
+     "a",
+     "newFile"
+    ],
+    [
+     "d",
+     "del"
+    ],
+    [
+     "delete",
+     "del"
+    ],
+    [
+     "enter",
+     "open"
+    ]
+   ]
   },
   {
    "fn": "readKeys",

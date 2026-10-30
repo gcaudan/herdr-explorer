@@ -983,7 +983,7 @@ impl Explorer {
             return Some("Cannot write keys.json".into());
         }
         self.keys = exec::read_keys("explorer", &self.defaults);
-        None
+        exec::keys_problem("explorer")
     }
 
     /// The default keys of an action given back, taken from the actions that have them now; the keys it took from

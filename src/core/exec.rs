@@ -1158,14 +1158,26 @@ fn member(v: &Value, key: &str) -> Value {
     }
 }
 
-/// Key name → action. A key the user gives to an action is taken from the action that had it by default. A pane's
-/// entry that is a string, a number or true is a panic: the pane ends.
-pub fn read_keys(pane: &str, defaults: &Bindings) -> KeyMap {
+/// A pane's entry in keys.json: Err with the entry when it is a string, a number or true, not an object.
+fn user_keys(pane: &str) -> Result<Value, Value> {
     let parsed = keys_file().and_then(|f| read_text(f).ok()).and_then(|t| json::parse(&t).ok());
     let user = parsed.map(|v| member(&v, pane)).filter(Value::truthy).unwrap_or(Value::Obj(Vec::new()));
-    if let (Value::Str(_) | Value::Num(_) | Value::Bool(_), Some(_)) = (&user, defaults.first()) {
-        panic!("keys.json: the {pane} entry is not an object: {}", json::text(&user));
+    match user {
+        Value::Str(_) | Value::Num(_) | Value::Bool(_) => Err(user),
+        _ => Ok(user),
     }
+}
+
+/// Why a pane's entry in keys.json is not used, for the pane to show: the default keys apply.
+pub fn keys_problem(pane: &str) -> Option<String> {
+    let user = user_keys(pane).err()?;
+    Some(format!("Cannot use keys.json: the {pane} entry is not an object ({}), default keys used", json::text(&user)))
+}
+
+/// Key name → action. A key the user gives to an action is taken from the action that had it by default. A pane's
+/// entry that is not an object gives the default keys (keys_problem).
+pub fn read_keys(pane: &str, defaults: &Bindings) -> KeyMap {
+    let user = user_keys(pane).unwrap_or(Value::Obj(Vec::new()));
     let entries = spread(&user);
     let has = |a: &str| entries.iter().any(|(k, _)| k == a);
     let mut map = KeyMap::default();

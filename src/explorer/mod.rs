@@ -501,6 +501,7 @@ impl Explorer {
         if let Some(to) = self.notice.clone() {
             self.flash(Some(format!("Updated to {to}")));
         }
+        self.flash(exec::keys_problem("explorer"));
         self.graphics_at = Some(Instant::now() + Duration::from_millis(500));
         self.watch_root();
         if self.root != self.home {
@@ -650,6 +651,7 @@ impl Explorer {
         }
         if self.keys_watch.as_mut().is_some_and(Watch::poll) {
             self.keys = exec::read_keys("explorer", &self.defaults);
+            self.flash(exec::keys_problem("explorer"));
         }
         if self.settings_watch.as_mut().is_some_and(Watch::poll) {
             self.settings_changed();

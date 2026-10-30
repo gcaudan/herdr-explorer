@@ -57,7 +57,8 @@
 - **Old panes**: an explorer or preview started by a version without the launcher (0.4.0 and earlier) keeps its old
   waiting `node` processes after updating, until it is closed. Close and reopen it (`prefix+f` twice for the
   explorer) to start from the launcher. A pane opened by a version of 0.8.0 or earlier still runs
-  `node src/<pane>.js`, which the update removed: close and reopen it too.
+  `node src/<pane>.js` from the previous version's folder, which herdr removes once no server uses it: close and
+  reopen it too.
 
 ## Common problems
 
@@ -95,9 +96,9 @@
 - **Cannot rename or delete the project folder on Windows** (*access denied* or *in use*): the plugin's panes work
   in that folder, so that new spaces, tabs and panes made from them start there, and Windows keeps a folder in use
   from being renamed or deleted. Close the explorer (and the other plugin panes of the tab) first.
-- **The explorer closes as soon as it opens, or ignores `keys.json`**: the `"explorer"` entry of `keys.json` (config
-  folder) is a string, a number or `true` instead of an object, which ends the pane; a file that is not valid JSON is
-  ignored. Fix the file, or delete it to go back to the default keys.
+- **The explorer ignores `keys.json`**: a file that is not valid JSON is ignored. When the `"explorer"` entry of
+  `keys.json` (config folder) is a string, a number or `true` instead of an object, the explorer uses the default keys
+  and shows `Cannot use keys.json: …`. Fix the file, or delete it to go back to the default keys.
 - **A setting edited by hand has no effect**: some are read only when a pane starts (see
   [Settings](configuration.md#settings)): close and reopen the explorer.
 
@@ -107,7 +108,9 @@
 
 | Message                                             | Meaning and fix                                                                     |
 | --------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `herdr not found`                                   | `herdr` is not on `PATH`. Install it, or add it to `PATH`                            |
+| `setup: herdr's config folder not found`            | (Windows) neither `HERDR_CONFIG_PATH` nor `APPDATA` is set: set one, or add the [key bindings](installation.md#key-bindings) by hand |
+| `<config> sets keys.command inline: not changed; add these lines to it:`, `<config> cannot be read (…): not changed; …` | setup left the config alone: copy the printed `[[keys.command]]` blocks into it |
+| `key prefix+f already bound in <config>, skipped`   | another command of the config uses that key: change the `key` line of the block, see [Key bindings](installation.md#key-bindings) |
 | `skill <path> exists and is not a link: left alone` | `~/.claude/skills/herdr-preview` is a real folder. Remove or rename it, then run the script again |
 | `fetch-bin: no release binary for <system> <machine>: build one with scripts/dev-build.sh (Rust needed)` | no release binary for this platform: see [Building the binary](installation.md#building-the-binary) |
 | `fetch-bin: curl not found: install it, then run scripts/fetch-bin.sh again`, `fetch-bin: neither sha256sum nor shasum found` | install the tool, then run the script again |
@@ -137,6 +140,7 @@
 | `No editor: set one in the settings`             | opening a folder needs an external editor. Set **Editor**                          |
 | `No terminal editor found: set $EDITOR.`         | (Editor pane) no `nano`/`nvim`/`vim`/`vi` found (`edit`/`nvim`/`vim`/`nano` on Windows). Set `$EDITOR` or the editor command |
 | `Cannot start <editor>: <code>`                  | (Editor pane) the editor could not start                                           |
+| `Cannot start <cmd>: a batch file needs cmd`     | (Editor pane, Windows) a `.cmd` or `.bat` editor or source control tool is refused: give an `.exe` |
 | `Cannot open the editor` / `the preview` / `the search` / `source control`, `Cannot show changes` | herdr refused to open the pane: check that it runs and is 0.9.4 or later |
 | `Cannot preview`                                 | herdr did not report the pane's tab, or the request file could not be written     |
 | `Invalid name`                                   | empty, absolute, containing a control character, or leaving the folder (`..`)     |
