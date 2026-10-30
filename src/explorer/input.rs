@@ -155,10 +155,6 @@ impl Explorer {
         }
         if f.field.key(k) {
             self.state.selected = None;
-            if f.field.value.is_empty() {
-                let field = std::mem::take(&mut f.field);
-                self.state.filter = Some(Filter { field, active: true });
-            }
             self.build_rows();
             self.state.top = 0;
             self.reveal();
@@ -275,7 +271,9 @@ impl Explorer {
                 _ => {}
             },
             "collapse" => match &r {
-                Some(e) if e.dir && e.open && self.state.filter.is_none() => self.toggle(r, Some(false)),
+                Some(e) if e.dir && e.open && self.state.filter.is_none() && !self.state.changed => {
+                    self.toggle(r, Some(false))
+                }
                 Some(e) => {
                     let first = e.from.as_deref().filter(|f| !f.is_empty()).unwrap_or(&e.rel);
                     let up = parent_of(first).unwrap_or("").to_string();

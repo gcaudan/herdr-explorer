@@ -8,7 +8,6 @@ use crate::core::exec::{self, KeyMap};
 use crate::core::icons::{self, Loaded};
 use crate::core::ui::{self, Field, Hints, Mouse, Rgb, Seg, c, fg, g, line, seg, text_width};
 use crate::json::{self, Value};
-use crate::sys;
 
 /// A page's list: its selected row, its first row shown, and its find (/).
 #[derive(Default)]
@@ -256,12 +255,6 @@ fn moves(n: i64, to: &str) -> Option<i64> {
         "bottom" => i64::MAX,
         _ => return None,
     })
-}
-
-/// `out.columns || 80`, `out.rows || 24`: the size the keys of the settings lay out with.
-fn size80() -> (usize, usize) {
-    let (w, h) = sys::size_or_default();
-    (w as usize, h as usize)
 }
 
 const NERD_FONT_LABEL: &str = "Nerd Font (default)";
@@ -694,7 +687,7 @@ impl Explorer {
         let r = at(&list, view.page.sel).filter(|r| r.group.is_none()).cloned();
         let action = self.keys.get(k).map(String::from);
         let up = self.pending_update();
-        let (w, h) = size80();
+        let (w, h) = self.size();
         let n = self.settings_layout(h, w).1;
         let to = arrow(k).or(action.as_deref());
         let Some(view) = &mut self.state.settings else { return };
@@ -720,9 +713,8 @@ impl Explorer {
     /// changes it, on a key hint acts as its key; elsewhere, it cancels a prompt.
     fn main_mouse(&mut self, m: &Mouse) {
         let rows = self.settings_rows();
-        let w = self.size().0;
-        let (w80, h80) = size80();
-        let (at_row, n, update, detail) = self.settings_layout(h80, w80);
+        let (w, h) = self.size();
+        let (at_row, n, update, detail) = self.settings_layout(h, w);
         let y = m.y - 1;
         let Some(view) = &mut self.state.settings else { return };
         let s = &mut view.page;
@@ -882,16 +874,17 @@ impl Explorer {
     fn icons_key(&mut self, k: &str) {
         let rows = self.theme_rows();
         let action = self.keys.get(k).map(String::from);
-        let n = self.icons_layout(size80().1).1;
+        let n = self.icons_layout(self.size().1).1;
         let Some(icons) = self.state.settings.as_mut().and_then(|v| v.icons.as_mut()) else { return };
         let a = action.as_deref();
+        let to = arrow(k).or(a);
         if k == "escape" || matches!(a, Some("close" | "settings" | "collapse")) {
             if let Some(view) = &mut self.state.settings {
                 view.icons = None;
             }
-        } else if let Some(d) = a.and_then(|a| moves(n, a)) {
+        } else if let Some(d) = to.and_then(|t| moves(n, t)) {
             move_in(&rows, &mut icons.page, d);
-        } else if matches!(a, Some("open" | "expand")) {
+        } else if k == "enter" || matches!(a, Some("open" | "expand")) {
             let sel = icons.page.sel;
             return self.run_action(|ex| ex.choose_theme(sel));
         }
@@ -1098,7 +1091,7 @@ impl Explorer {
 
     fn keys_key(&mut self, k: &str) {
         let rows = self.key_rows();
-        let (_, n) = self.keys_layout(size80().1);
+        let (_, n) = self.keys_layout(self.size().1);
         let Some(p) = self.state.settings.as_mut().and_then(|v| v.keys.as_mut()) else { return };
         if p.capture {
             let r = at(&found(&rows, &p.page.find), p.page.sel).map(|r| r.action.clone());

@@ -91,6 +91,13 @@ impl Explorer {
         format!("in {}/{parent}", paths::basename(&self.root, None))
     }
 
+    /// An entry deleted: its folder read again, as the root's watch may not see it ($HOME and above, a failed
+    /// recursive watch).
+    pub(super) fn removed(&mut self) {
+        self.tree.cache.clear();
+        self.build_rows();
+    }
+
     /// After a change on disk: the new entry selected, its folder expanded.
     fn created(&mut self, abs: &str) {
         self.tree.cache.clear();
@@ -180,6 +187,7 @@ impl Explorer {
                 let trashed = actions::trash(&abs);
                 Box::new(move |ex: &mut Explorer| {
                     if trashed {
+                        ex.removed();
                         return ex.flash(Some(format!("{short} moved to the trash")));
                     }
                     let q = Confirm {
@@ -290,12 +298,19 @@ impl Explorer {
                 let e = r.clone();
                 items.push(It::new("Rename…", now(move |ex| ex.rename_entry(&e)), "rename"));
                 let a = abs.clone();
-                let duplicate = Rc::new(move |ex: &mut Explorer| match actions::duplicate(&a) {
-                    (_, Some(err)) => Act::Now(Some(err)),
-                    (to, None) => {
-                        ex.created(&to.unwrap_or_default());
-                        Act::Now(None)
-                    }
+                // A big folder takes a while to copy: on the worker, the pane kept running.
+                let duplicate = Rc::new(move |_: &mut Explorer| {
+                    let a = a.clone();
+                    Act::Later(Box::new(move || {
+                        let (to, err) = actions::duplicate(&a);
+                        Box::new(move |ex: &mut Explorer| match err {
+                            Some(err) => ex.flash(Some(err)),
+                            None => {
+                                ex.created(&to.unwrap_or_default());
+                                ex.flash(None);
+                            }
+                        })
+                    }))
                 });
                 items.push(It::new("Duplicate", duplicate, ""));
                 let e = r.clone();

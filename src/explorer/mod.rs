@@ -197,9 +197,19 @@ fn now(f: impl Fn(&mut Explorer) + 'static) -> Run {
     })
 }
 
-/// Deleted for good: the message of actions::remove, else that the entry is gone.
+/// Deleted for good, on the worker (a big folder takes a while): the message of actions::remove, else that the
+/// entry is gone.
 fn removal(abs: String, name: String) -> impl Fn(&mut Explorer) -> Act + 'static {
-    move |_| Act::Now(Some(actions::remove(&abs).unwrap_or_else(|| format!("{name} deleted"))))
+    move |_| {
+        let (abs, name) = (abs.clone(), name.clone());
+        Act::Later(Box::new(move || {
+            let text = actions::remove(&abs).unwrap_or_else(|| format!("{name} deleted"));
+            Box::new(move |ex: &mut Explorer| {
+                ex.removed();
+                ex.flash(Some(text));
+            })
+        }))
+    }
 }
 
 /// The width kept, as the keeper (on the herdr worker) and the pane share it.
