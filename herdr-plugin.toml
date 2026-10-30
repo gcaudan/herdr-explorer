@@ -76,7 +76,7 @@ command = ["bin/herdr-explorer", "pane", "edit"]
 
 [[actions]]
 id = "toggle"
-title = "Open, focus or close the explorer"
+title = "Open or close the explorer"
 contexts = ["tab"]
 command = ["bin/herdr-explorer", "hook", "--toggle"]
 

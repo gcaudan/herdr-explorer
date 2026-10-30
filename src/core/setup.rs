@@ -66,7 +66,7 @@ fn plan(text: &str, shown: &str) -> Result<(String, Vec<String>), &'static str> 
             table = l.trim_matches(['[', ']']).to_string();
         } else if l.starts_with("keys.command=") || (table == "keys" && l.starts_with("command=")) {
             return Err("sets keys.command inline");
-        } else if let Some(k) = l.strip_prefix("key=") {
+        } else if let Some(k) = l.strip_prefix("key=").filter(|_| table == "keys" || table.starts_with("keys.")) {
             keys.push(k.split('#').next().unwrap_or("").trim_matches(['"', '\'']).to_string());
         }
     }
@@ -241,6 +241,12 @@ mod tests {
         assert!(add.is_empty(), "{add}");
         assert_eq!(summary(&done), "No key binding added: prefix+f, prefix+a, prefix+d already bound");
         assert_eq!(summary(&plan("", "c").unwrap().1), "Key bindings added");
+    }
+
+    #[test]
+    fn a_key_outside_the_keys_tables_binds_nothing() {
+        let (add, _) = plan("[theme]\nkey = \"prefix+f\"\n", "c").unwrap();
+        assert!(add.contains("prefix+f"), "{add}");
     }
 
     #[test]

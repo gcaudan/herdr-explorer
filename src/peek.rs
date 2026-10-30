@@ -59,7 +59,7 @@ fn find_state_dir() -> Result<(), Fail> {
         .unwrap_or_default();
     if dir.is_empty() {
         let base = if exec::WIN {
-            std::env::var("LOCALAPPDATA").unwrap_or_default()
+            exec::env_var("LOCALAPPDATA").unwrap_or_default()
         } else {
             exec::env_var("XDG_STATE_HOME").unwrap_or_else(|| paths::join(&[&icons::homedir(), ".local", "state"]))
         };

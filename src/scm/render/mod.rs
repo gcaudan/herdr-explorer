@@ -894,7 +894,7 @@ impl Pane {
                 ("pgup pgdn", "page"),
                 ("ctrl+u/d", "half page"),
                 ("g G", "first, last"),
-                ("1-4", "switch view"),
+                ("1-5", "switch view"),
             ],
         ));
         g.push(group(
