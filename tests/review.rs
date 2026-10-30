@@ -215,6 +215,23 @@ fn diff_rows_know_the_lines_they_show() {
 }
 
 #[test]
+fn a_note_after_a_removed_line_keeps_it_paired_with_the_added_one() {
+    let nl = "\\ No newline at end of file";
+    let text = ["diff --git a/x.js b/x.js", "--- a/x.js", "+++ b/x.js", "@@ -1 +1 @@", "-end()", nl, "+end(x)", nl, ""];
+    let parsed = diff::parse(&text.join("\n"));
+    let lines = |mode| -> Vec<Vec<usize>> {
+        diff::render(&parsed, 100, mode, true, &View::default())
+            .iter()
+            .filter(|r| !r.lines.is_empty())
+            .map(|r| r.lines.iter().map(|l| l.2).collect())
+            .collect()
+    };
+    // Side by side: one row for the pair, then the notes; inline, each note after its line.
+    assert_eq!(lines("split"), [vec![0, 2], vec![1], vec![3]]);
+    assert_eq!(lines("inline"), [vec![0], vec![1], vec![2], vec![3]]);
+}
+
+#[test]
 fn diff_rows_wrap_long_lines_or_scroll_them_from_a_column() {
     let long = "abcdefghij".repeat(6);
     let (del, add) = (format!("-{long}"), format!("+{long}!"));

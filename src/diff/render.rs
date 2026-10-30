@@ -251,10 +251,11 @@ fn file_row(f: &File, width: usize, viewed: bool) -> Row {
 }
 
 /// Lines of a hunk grouped: an unchanged line or a note ("No newline at end of file"), or a change (removed lines
-/// followed by added ones, paired for the word highlight and the side-by-side rows), as indexes in the hunk.
+/// followed by added ones, paired for the word highlight and the side-by-side rows), as indexes in the hunk. The note
+/// after a changed line goes with the change (notes), so that it never parts a removed line from the added one.
 enum Block {
     Line(usize),
-    Change { dels: Vec<usize>, adds: Vec<usize>, words: Vec<Option<(Vec<Span>, Vec<Span>)>> },
+    Change { dels: Vec<usize>, adds: Vec<usize>, notes: Vec<usize>, words: Vec<Option<(Vec<Span>, Vec<Span>)>> },
 }
 
 fn blocks(lines: &[Line]) -> Vec<Block> {
@@ -264,17 +265,21 @@ fn blocks(lines: &[Line]) -> Vec<Block> {
         if s == '-' || s == '+' {
             let reuse = matches!(out.last(), Some(Block::Change { adds, .. }) if !(s == '-' && !adds.is_empty()));
             if !reuse {
-                out.push(Block::Change { dels: Vec::new(), adds: Vec::new(), words: Vec::new() });
+                out.push(Block::Change { dels: Vec::new(), adds: Vec::new(), notes: Vec::new(), words: Vec::new() });
             }
             if let Some(Block::Change { dels, adds, .. }) = out.last_mut() {
                 if s == '-' { dels.push(i) } else { adds.push(i) }
             }
+        } else if let (Some(Block::Change { notes, .. }), true) =
+            (out.last_mut(), s == '\\' && i > 0 && matches!(lines[i - 1].sign, '-' | '+'))
+        {
+            notes.push(i);
         } else {
             out.push(Block::Line(i));
         }
     }
     for b in &mut out {
-        if let Block::Change { dels, adds, words: w } = b {
+        if let Block::Change { dels, adds, words: w, .. } = b {
             *w = dels
                 .iter()
                 .enumerate()
@@ -416,14 +421,21 @@ fn inline_rows(rows: &mut Vec<Row>, b: &Block, x: &Ctx) {
     };
     match b {
         Block::Line(i) => row(*i, None, None, None, dim()),
-        Block::Change { dels, adds, words } => {
+        // Inline, each note stays after its line.
+        Block::Change { dels, adds, notes, words } => {
             for (k, &d) in dels.iter().enumerate() {
                 let w = words.get(k).and_then(|w| w.as_ref()).map(|w| &w.0);
                 row(d, w, Some(c().removed), Some(c().removed_word), red());
+                if notes.contains(&(d + 1)) {
+                    row(d + 1, None, None, None, dim());
+                }
             }
             for (k, &a) in adds.iter().enumerate() {
                 let w = words.get(k).and_then(|w| w.as_ref()).map(|w| &w.1);
                 row(a, w, Some(c().added), Some(c().added_word), green());
+                if notes.contains(&(a + 1)) {
+                    row(a + 1, None, None, None, dim());
+                }
             }
         }
     }
@@ -469,7 +481,7 @@ fn split_rows(rows: &mut Vec<Row>, b: &Block, x: &Ctx) {
             let pair = (side(Some(*i), half, None, None, None, false), side(Some(*i), right, None, None, None, true));
             push(pair, if l.sign == '\\' { 0 } else { l.at }, vec![*i]);
         }
-        Block::Change { dels, adds, words } => {
+        Block::Change { dels, adds, notes, words } => {
             for k in 0..dels.len().max(adds.len()) {
                 let w = words.get(k).and_then(|w| w.as_ref());
                 let (d, a) = (dels.get(k).copied(), adds.get(k).copied());
@@ -479,6 +491,11 @@ fn split_rows(rows: &mut Vec<Row>, b: &Block, x: &Ctx) {
                 );
                 let place = x.lines[a.or(d).expect("a line")].at;
                 push(pair, place, d.into_iter().chain(a).collect());
+            }
+            // Side by side, the notes after the pairs, as an unchanged line.
+            for &n in notes {
+                let pair = (side(Some(n), half, None, None, None, false), side(Some(n), right, None, None, None, true));
+                push(pair, 0, vec![n]);
             }
         }
     }
