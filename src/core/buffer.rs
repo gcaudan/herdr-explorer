@@ -147,7 +147,7 @@ fn replace_file(real: &str, tmp: &str, text: &str, stat: Option<&Metadata>) -> s
 /// The text written over the file at once: to a new temporary file beside it, with the file's permissions and group,
 /// then renamed over it. A link keeps pointing to it: its target is written. A file with other names (hard links),
 /// owned by another user, or in a folder that cannot be written, is written in place instead, which keeps all of
-/// that. Returns the file's new stat.
+/// that. A read-only file is refused ("read-only"): the rename would replace it. Returns the file's new stat.
 pub fn save(file: &str, text: &str) -> std::io::Result<Metadata> {
     let (real, stat) = match walk_realpath(file) {
         Ok(real) => {
@@ -156,6 +156,9 @@ pub fn save(file: &str, text: &str) -> std::io::Result<Metadata> {
         }
         Err(_) => (file.to_string(), None),
     };
+    if stat.as_ref().is_some_and(|s| s.permissions().readonly()) {
+        return Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "read-only"));
+    }
     if stat.as_ref().is_none_or(|s| mine(&real, s)) {
         let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_millis());
         let name = format!(".{}.{}-{}.tmp", paths::basename(&real, None), std::process::id(), base36(now));

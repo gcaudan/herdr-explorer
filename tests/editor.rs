@@ -71,6 +71,21 @@ fn the_save_replaces_the_file_whole_leaving_no_temporary_file() {
     });
 }
 
+#[test]
+fn a_read_only_file_is_not_saved() {
+    scratch(|_, file| {
+        let mut perm = fs::metadata(file).unwrap().permissions();
+        perm.set_readonly(true);
+        fs::set_permissions(file, perm.clone()).unwrap();
+        let before = fs::read(file).unwrap();
+        assert_eq!(buffer::save(file, "new").unwrap_err().to_string(), "read-only");
+        assert_eq!(fs::read(file).unwrap(), before);
+        #[allow(clippy::permissions_set_readonly_false)]
+        perm.set_readonly(false);
+        fs::set_permissions(file, perm).unwrap();
+    });
+}
+
 // Windows' chmod only knows read-only.
 #[cfg(unix)]
 #[test]
