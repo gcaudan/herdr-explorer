@@ -139,7 +139,7 @@ fn find_code() -> Option<&'static Code> {
             return which("code").map(|c| (c, Vec::new(), None));
         }
         let mut dirs = super::which::path_dirs();
-        let local = std::env::var("LOCALAPPDATA").unwrap_or_default();
+        let local = exec::env_var("LOCALAPPDATA").unwrap_or_default();
         dirs.push(paths::join(&[&local, "Programs", "Microsoft VS Code", "bin"]));
         for dir in dirs {
             let Ok(cmd) = exec::read_text(paths::join(&[&dir, "code.cmd"])) else { continue };
@@ -359,8 +359,9 @@ pub fn clipboard() -> Option<String> {
 }
 
 /// Quoted for the shell unless made of plain characters: single quotes are literal in PowerShell (where the
-/// typographic ones count as quotes too, each doubled to escape it) and in POSIX shells ('\'' to escape). A leading
-/// dash would read as an option of the command being typed.
+/// typographic ones count as quotes too, each doubled to escape it) and in POSIX shells ('\'' to escape). fish reads
+/// \' and \\ as escapes even there: a backslash goes outside the quotes, as \\, which every shell reads as one. A
+/// leading dash would read as an option of the command being typed.
 pub fn quote(reference: &str) -> String {
     let r = if reference.starts_with('-') { format!("./{reference}") } else { reference.to_string() };
     let plain = |c: char| crate::unicode::is_letter(c) || crate::unicode::is_number(c) || "_./@:+,=-".contains(c);
@@ -377,7 +378,15 @@ pub fn quote(reference: &str) -> String {
         }
         out + "'"
     } else {
-        format!("'{}'", r.replace('\'', "'\\''"))
+        let mut out = String::from("'");
+        for c in r.chars() {
+            match c {
+                '\'' => out += "'\\''",
+                '\\' => out += "'\\\\'",
+                c => out.push(c),
+            }
+        }
+        out + "'"
     }
 }
 
@@ -1517,5 +1526,27 @@ pub fn discard(abs: &str, root: &str) -> String {
         0 => "Changes discarded".into(),
         1 => "1 untracked file kept: no trash".into(),
         n => format!("{n} untracked files kept: no trash"),
+    }
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    /// A name typed quoted into sh, and fish when installed, comes out as it is.
+    #[test]
+    fn a_quoted_name_reads_back_alike_in_sh_and_fish() {
+        for name in ["\\'; echo INJECTED; echo \\'", "a\\b", "it's", "a\\\\'b"] {
+            let script = format!("printf %s {}", quote(name));
+            for shell in ["sh", "fish"] {
+                let Some(sh) = which(shell) else { continue };
+                let mut cmd = Command::new(sh);
+                if shell == "fish" {
+                    cmd.arg("--no-config");
+                }
+                let out = cmd.args(["-c", &script]).output().unwrap();
+                assert_eq!(String::from_utf8_lossy(&out.stdout), name, "{shell}: {script}");
+            }
+        }
     }
 }

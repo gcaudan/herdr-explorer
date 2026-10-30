@@ -142,8 +142,9 @@ contains spaces or control characters is refused; the others pass after `--end-o
 - **Insert into terminal** (also `ctrl+t` in the search) types the text with `herdr pane send-text`, never
   submitted. It refuses names containing control characters (a newline would run the command or submit
   the prompt), prefixes names starting with `-` with `./`, and puts the others in single quotes for the shell when
-  they hold anything but plain characters (quoting valid in POSIX shells and in PowerShell, where typographic quotes
-  are escaped too). For an agent (Claude Code), a path is prefixed with `@`, and one with spaces is quoted instead,
+  they hold anything but plain characters (quoting valid in POSIX shells, in fish, where a backslash goes outside
+  the quotes since fish reads `\'` as an escape even inside them, and in PowerShell, where typographic quotes are
+  escaped too). For an agent (Claude Code), a path is prefixed with `@`, and one with spaces is quoted instead,
   so its end is clear and the rest cannot read as instructions.
 - **Review notes** are typed on one line, without submitting it: control characters are removed from the note texts
   when they are saved and again when they are sent, and the line is refused if one remains. The text goes into the
