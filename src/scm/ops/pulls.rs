@@ -69,6 +69,10 @@ impl Pane {
             if let Some(key) = keys.first() {
                 return p.flash(format!("Checkout refused: the repository sets {key}; use the terminal"), true);
             }
+            // Again: an op may have started while the question waited on the load worker.
+            if let Some(busy) = &p.s.busy {
+                return p.flash(format!("Busy: {busy}"), true);
+            }
             let label = format!("Checking out #{}", pull.number);
             p.s.busy = Some(label);
             p.draw();

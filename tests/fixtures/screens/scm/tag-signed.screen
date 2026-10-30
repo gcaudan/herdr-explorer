@@ -1,0 +1,21 @@
+size 120x20
+⟪bg=#252526 b⟫ work ⟪bg=#252526⟫ ⟪fg=#519aba bg=#2b3d45⟫ ⎇ main ⟪fg=#8c8c8c bg=#252526⟫  not published⟪bg=#252526⟫                                                    ⟪fg=#ffffff bg=#0e639c b⟫ ↑ Publish branch ⟪fg=#d4d4d4 bg=#252526 b⟫ ⇣ Fetch  Actions ▾ ⟪⟫
+ ⟪fg=#d4d4d4 b u⟫Changes⟪⟫   ⟪fg=#8c8c8c⟫History⟪⟫   ⟪fg=#8c8c8c⟫Stashes⟪⟫   ⟪fg=#8c8c8c⟫Re…⟪fg=#d4d4d4 bg=#04395e b⟫ List ⟪fg=#8c8c8c bg=#3a3a3e⟫ Tree ⟪fg=#8c8c8c⟫│⟪bg=#252526⟫                                                                         ⟪⟫
+ ⟪bg=#313131⟫ ⟪fg=#8c8c8c bg=#313131⟫Message  (c)⟪bg=#313131⟫                               ⟪⟫ ⟪fg=#8c8c8c⟫│⟪⟫
+ ⟪fg=#ffffff bg=#0e639c b⟫ ✓ Commit ⟪fg=#a074c4⟫ ✧ Claude ⟪fg=#8c8c8c⟫ ☐ Amend ⟪⟫                ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#8c8c8c bg=#04395e⟫ ▾ ⟪bg=#04395e b⟫CHANGES⟪fg=#8c8c8c bg=#04395e⟫  0⟪bg=#04395e⟫                                 ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫                               ⟪fg=#8c8c8c⟫No changes⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                  ⟪fg=#8c8c8c⟫No changes⟪⟫                  ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+        ⟪fg=#d4d4d4 b⟫ ctrl+p⟪fg=#8c8c8c⟫ go to file⟪fg=#d4d4d4 b⟫   2⟪fg=#8c8c8c⟫ history⟪⟫        ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#8dc149 bg=#252526⟫ ✓ ⟪bg=#252526⟫Tagged main v2                                                                                                       ⟪⟫

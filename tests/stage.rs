@@ -223,6 +223,34 @@ fn a_file_added_with_git_add_n_keeps_its_entry_when_staged_in_part_loses_it_when
     assert_eq!(r.out(&["status", "--porcelain"]), "");
 }
 
+/// The names go on stdin, still literal: a.txt is not taken by the pathspec a*.txt.
+#[cfg(unix)]
+#[test]
+fn whole_files_go_through_stdin_their_names_literal() {
+    let Some(r) = Repo::new(&[("x.txt", "x\n")]) else { return };
+    for f in ["a*.txt", ":b.txt", "c d.txt", "a.txt"] {
+        r.write(f, "new\n");
+    }
+    let parsed = r.changes();
+    let list = render(&parsed, "inline");
+    let names = ["a*.txt", ":b.txt", "c d.txt"];
+    let file = stage::picked(file_rows(&parsed, &list, &names, None));
+    assert_eq!(r.apply(&parsed, &file, Mode::Stage), "Staged 3 files");
+    assert_eq!(r.out(&["ls-files", "-z"]), ":b.txt\0a*.txt\0c d.txt\0x.txt\0");
+}
+
+/// The commands that write open no editor, not even the one the repository sets (core.editor).
+#[test]
+fn the_commands_that_write_open_no_editor() {
+    use herdr_explorer::scm::state::{self, GitOpts};
+    let Some(r) = Repo::new(&[("a.txt", "a\n")]) else { return };
+    r.git(&["config", "core.editor", "false"]);
+    r.git(&["config", "sequence.editor", "false"]);
+    let var = |name: &str| state::git(&r.top, &["var", name], &GitOpts { safe: true, ..GitOpts::default() }).out;
+    assert_eq!(var("GIT_EDITOR").trim(), ":");
+    assert_eq!(var("GIT_SEQUENCE_EDITOR").trim(), ":");
+}
+
 #[test]
 fn lines_ending_with_crlf_keep_it_in_the_patch() {
     let Some(r) = Repo::new(&[("w.txt", "a\r\nb\r\nc\r\n")]) else { return };

@@ -379,20 +379,19 @@ pub fn apply(
     let fail = |res: &Exec| format!("Cannot {name}: {}", why(res));
     let file = |t: &Target| &parsed.files[t.f];
     let untracked = |t: &Target| file(t).sec == "unstaged" && file(t).status == "added";
-    let git_args = |fixed: &[&str], names: &[String]| -> Vec<String> {
-        fixed.iter().map(|s| s.to_string()).chain(names.iter().cloned()).collect()
-    };
-    let git = |args: Vec<String>, input: &str| {
-        let args: Vec<&str> = args.iter().map(String::as_str).collect();
-        run_git(top, &env, &args, input)
+    let git = |args: &[&str], input: &str| run_git(top, &env, args, input);
+    // The paths on stdin: no command-line length limit (32 767 characters on Windows).
+    let with_paths = |args: &[&str], names: &[String]| {
+        let all = [args, &["--pathspec-from-file=-", "--pathspec-file-nul"]].concat();
+        run_git(top, &env, &all, &names.join("\0"))
     };
     // Added files the index already has (git add -N by the user): their entry is kept on a failure, and goes with
-    // the file on a discard.
-    let added: Vec<String> = list.iter().filter(|t| untracked(t)).map(|t| name_of(file(t))).collect();
+    // the file on a discard. The whole index listed: ls-files takes no paths on stdin.
+    let added: HashSet<String> = list.iter().filter(|t| untracked(t)).map(|t| name_of(file(t))).collect();
     let indexed: HashSet<String> = if added.is_empty() {
         HashSet::new()
     } else {
-        git(git_args(&["ls-files", "-z", "--"], &added), "").out.split('\0').map(String::from).collect()
+        git(&["ls-files", "-z"], "").out.split('\0').filter(|n| added.contains(*n)).map(String::from).collect()
     };
     let (mut patches, mut whole, mut ita, mut removed, mut unindex) =
         (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
@@ -417,7 +416,7 @@ pub fn apply(
         }
     }
     if !ita.is_empty() {
-        let res = git(git_args(&["add", "-N", "--"], &ita), "");
+        let res = with_paths(&["add", "-N"], &ita);
         if res.code != Some(0) {
             return fail(&res);
         }
@@ -439,24 +438,24 @@ pub fn apply(
             args.push("-R");
         }
         args.extend(["--whitespace=nowarn", "-"]);
-        let res = git(git_args(&args, &[]), &patch);
+        let res = git(&args, &patch);
         // The files git add -N put in the index for it go back to untracked.
         if res.code != Some(0) {
             if !ita.is_empty() {
-                git(git_args(&["rm", "--cached", "-q", "--"], &ita), "");
+                with_paths(&["rm", "--cached", "-q"], &ita);
             }
             return fail(&res);
         }
     }
     if !whole.is_empty() {
-        let has_head = git(git_args(&["rev-parse", "--verify", "-q", "HEAD"], &[]), "").code == Some(0);
+        let has_head = git(&["rev-parse", "--verify", "-q", "HEAD"], "").code == Some(0);
         let args: &[&str] = match mode {
-            Mode::Stage => &["add", "-A", "--"],
-            Mode::Unstage if has_head => &["reset", "-q", "--"],
-            Mode::Unstage => &["rm", "--cached", "-q", "--"],
-            Mode::Discard => &["checkout", "-q", "--"],
+            Mode::Stage => &["add", "-A"],
+            Mode::Unstage if has_head => &["reset", "-q"],
+            Mode::Unstage => &["rm", "--cached", "-q"],
+            Mode::Discard => &["checkout", "-q"],
         };
-        let res = git(git_args(args, &whole), "");
+        let res = with_paths(args, &whole);
         // The patch already applied stays: said, not undone.
         if res.code != Some(0) {
             if patch.is_empty() {
@@ -480,7 +479,7 @@ pub fn apply(
     let is_failed = |n: &String| failed.iter().any(|(f, _)| f == n);
     let gone: Vec<String> = unindex.into_iter().filter(|n| !left.contains(n) && !is_failed(n)).collect();
     if !gone.is_empty() {
-        let res = git(git_args(&["rm", "--cached", "-q", "--"], &gone), "");
+        let res = with_paths(&["rm", "--cached", "-q"], &gone);
         if res.code != Some(0) {
             return fail(&res);
         }

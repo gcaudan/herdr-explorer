@@ -35,9 +35,12 @@ pub struct Pack {
     pub push: Vec<String>,
 }
 
-/// The hardened environment of the commands that write, and their pack options.
+/// The hardened environment of the commands that write, and their pack options. GIT_EDITOR and GIT_SEQUENCE_EDITOR
+/// ':': no editor opens (nor the core.editor the repository could set), whatever a config makes git ask for.
 pub fn safe_env(cwd: &str) -> (Env, Pack) {
     let mut env = exec::git_env(cwd);
+    exec::env_set(&mut env, "GIT_EDITOR", ":");
+    exec::env_set(&mut env, "GIT_SEQUENCE_EDITOR", ":");
     let res = exec::exec(
         exec::git(),
         &["config", "-z", "--includes", "--show-scope", "--get-regexp", RISKY],

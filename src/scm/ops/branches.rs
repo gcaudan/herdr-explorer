@@ -169,8 +169,9 @@ impl Pane {
                 if name.starts_with('-') {
                     return self.flash("A tag name cannot start with \"-\"", true);
                 }
+                // --no-sign: lightweight, even with tag.gpgSign (which would ask for a message).
                 if !alt {
-                    let args = strings(&["tag", &name, &target]);
+                    let args = strings(&["tag", "--no-sign", &name, &target]);
                     return self.op(&format!("Tagging {at}"), args, GitOpts::default(), false, move |p, res| {
                         if res.is_some() {
                             p.flash(format!("Tagged {at} {name}"), false);
@@ -193,7 +194,7 @@ impl Pane {
                 }
                 let opts =
                     GitOpts { input: Some(format!("{msg}\n").into_bytes()), detached: true, ..GitOpts::default() };
-                let args = strings(&["tag", "-a", "--cleanup=strip", "-F", "-", &name, &target]);
+                let args = strings(&["tag", "-a", "--cleanup=whitespace", "-F", "-", &name, &target]);
                 self.op(&format!("Tagging {at}"), args, opts, false, move |p, res| {
                     if res.is_some() {
                         p.flash(format!("Tagged {at} {name}"), false);

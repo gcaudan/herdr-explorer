@@ -110,7 +110,7 @@ enum Yes {
     Integrate(Branch, &'static str),
     CherryPick(Commit, bool),
     ForcePush(String),
-    Undo(String),
+    Undo(String, String),
     Reset(Option<Commit>),
 }
 

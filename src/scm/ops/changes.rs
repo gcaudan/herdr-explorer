@@ -61,7 +61,9 @@ impl Pane {
         if items.is_empty() {
             return self.flash("Nothing staged", false);
         }
-        let args: &[&str] = if s.has_head { &["reset", "-q"] } else { &["rm", "--cached", "-r", "-q", "--", "."] };
+        // A path, even all of them: reset without one ends a merge, cherry-pick or revert under way.
+        let args: &[&str] =
+            if s.has_head { &["reset", "-q", "--", "."] } else { &["rm", "--cached", "-r", "-q", "--", "."] };
         self.op("Unstaging all", strings(args), GitOpts::default(), false, move |p, res| {
             if res.is_some() {
                 p.pulse(&items, "changes");
@@ -144,7 +146,8 @@ impl Pane {
         );
     }
 
-    /// Changes section: worktree changes restored from the index, untracked files to the trash. Staged section: index
+    /// Changes section: worktree changes restored from the index, untracked files to the trash, as those added with
+    /// git add -N (their entry out of the index once gone: restored, they would be emptied). Staged section: index
     /// and worktree back to HEAD, the files added since (all of them before the first commit) out of the index and to
     /// the trash.
     pub(in crate::scm) fn discard(&mut self, items: Vec<Item>, sec: &str) {
@@ -172,7 +175,8 @@ impl Pane {
             };
             return self.confirm(q, Yes::DiscardStaged { top, others, added });
         }
-        let (untracked, tracked): (Vec<Item>, Vec<Item>) = items.into_iter().partition(|i| i.untracked);
+        let (untracked, tracked): (Vec<Item>, Vec<Item>) =
+            items.into_iter().partition(|i| i.untracked || i.code == 'A');
         let mut q = if untracked.is_empty() {
             card("Discard the changes?", what, "Discard")
         } else {
@@ -220,7 +224,9 @@ impl Pane {
             if untracked.is_empty() {
                 p.schedule();
             } else {
-                p.trash_files(top, untracked.iter().map(|i| i.path.clone()).collect(), None, "");
+                let ita: Vec<Item> = untracked.iter().filter(|i| !i.untracked).cloned().collect();
+                let list = untracked.into_iter().map(|i| i.path).collect();
+                p.trash_files(top, list, (!ita.is_empty()).then_some(ita), "");
             }
         };
         if tracked.is_empty() {
@@ -229,6 +235,11 @@ impl Pane {
         let opts = GitOpts { top: Some(top.clone()), input: Some(state::nul(&tracked)), ..GitOpts::default() };
         let mut args = vec!["restore", "--worktree"];
         args.extend(FROM_FILE);
-        self.op("Discarding", strings(&args), opts, false, move |p, _| rest(p, top));
+        // The untracked files stay when the tracked ones could not be discarded.
+        self.op("Discarding", strings(&args), opts, false, move |p, res| {
+            if res.is_some() {
+                rest(p, top);
+            }
+        });
     }
 }

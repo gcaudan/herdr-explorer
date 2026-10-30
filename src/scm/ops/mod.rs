@@ -388,7 +388,7 @@ impl Pane {
                     p.flash(format!("Force pushed to {upstream}"), false)
                 });
             }
-            Yes::Undo(subject) => {
+            Yes::Undo(subject, whole) => {
                 self.op(
                     "Undoing the last commit",
                     strings(&["reset", "--soft", "-q", "HEAD~1"]),
@@ -400,6 +400,7 @@ impl Pane {
                         }
                         if p.s.field.value.is_empty() {
                             p.s.field.set(&subject);
+                            p.s.kept = Some((subject, whole));
                         }
                         p.flash("Last commit undone: its changes are staged", false);
                     },

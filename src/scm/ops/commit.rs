@@ -142,6 +142,24 @@ fn fallback_message(items: &[Item]) -> String {
     format!("{verb} {} and {}", base(&one.path), files(items.len() - 1).replacen("file", "other file", 1))
 }
 
+/// git log's format for subject_and_message.
+pub(super) const SUBJECT_AND_MESSAGE: &str = "--format=%s%x00%B";
+
+/// A commit's subject (the field's single line) and whole message, from git log's SUBJECT_AND_MESSAGE.
+pub(super) fn subject_and_message(out: &str) -> (String, String) {
+    let (subject, whole) = out.split_once('\0').unwrap_or((out, out));
+    (trim(subject).to_string(), trim(whole).to_string())
+}
+
+/// The message committed for the field's text: the whole message of the commit amend or undo took the subject from
+/// while the field still holds that subject, its body and trailers kept; else the text typed.
+fn message_of(msg: &str, kept: Option<&(String, String)>) -> String {
+    match kept {
+        Some((subject, whole)) if subject == msg && !msg.is_empty() => whole.clone(),
+        _ => msg.to_string(),
+    }
+}
+
 /// The diff, cut at MAX_PROMPT characters.
 fn cut_prompt(diff: &str) -> String {
     diff.chars().take(crate::scm::context::MAX_PROMPT).collect()
@@ -188,14 +206,17 @@ impl Pane {
         if self.s.amend {
             args.push("--amend");
         }
-        args.extend(if msg.is_empty() { &["--no-edit"][..] } else { &["--cleanup=strip", "-F", "-"][..] });
+        // As typed: a line starting with '#' is not a comment.
+        let text = message_of(&msg, self.s.kept.as_ref());
+        args.extend(if text.is_empty() { &["--no-edit"][..] } else { &["--cleanup=whitespace", "-F", "-"][..] });
         let (amend, o) = (self.s.amend, state::ongoing(&self.s));
-        let opts = GitOpts { input: Some(format!("{msg}\n").into_bytes()), detached: true, ..GitOpts::default() };
+        let opts = GitOpts { input: Some(format!("{text}\n").into_bytes()), detached: true, ..GitOpts::default() };
         self.op(if amend { "Amending" } else { "Committing" }, strings(&args), opts, false, move |p, res| {
             if res.is_none() {
                 return;
             }
             p.s.field.set("");
+            p.s.kept = None;
             p.s.editing = false;
             p.s.amend = false;
             // A cherry-pick or revert of several commits goes on with the next one.
@@ -300,10 +321,12 @@ impl Pane {
         // As in VS Code, amending starts from the last message.
         if self.s.amend && self.s.field.value.is_empty() && self.status_of().is_some_and(|s| s.has_head) {
             self.query(
-                |top| state::git(top, &["log", "-1", "--format=%s"], &GitOpts::default()),
+                |top| state::git(top, &["log", "-1", SUBJECT_AND_MESSAGE], &GitOpts::default()),
                 |p, res| {
                     if p.s.amend && p.s.field.value.is_empty() {
-                        p.s.field.set(trim(&res.out));
+                        let (subject, whole) = subject_and_message(&res.out);
+                        p.s.field.set(&subject);
+                        p.s.kept = Some((subject, whole));
                         p.draw();
                     }
                 },
@@ -409,6 +432,17 @@ mod tests {
         );
         let r = Item { orig: Some("x/old.js".into()), ..it("x/new.js", 'R') };
         assert_eq!(fallback_message(&[r]), "rename old.js to new.js");
+    }
+
+    #[test]
+    fn the_subject_left_as_is_keeps_the_whole_message() {
+        let (subject, whole) = subject_and_message("fix it\0fix it\n\nWhy.\n\nSigned-off-by: A <a@b>\n\n");
+        assert_eq!((subject.as_str(), whole.as_str()), ("fix it", "fix it\n\nWhy.\n\nSigned-off-by: A <a@b>"));
+        let kept = Some((subject, whole.clone()));
+        assert_eq!(message_of("fix it", kept.as_ref()), whole);
+        assert_eq!(message_of("fix it now", kept.as_ref()), "fix it now");
+        assert_eq!(message_of("", kept.as_ref()), "");
+        assert_eq!(message_of("#42 fix", None), "#42 fix");
     }
 
     #[test]

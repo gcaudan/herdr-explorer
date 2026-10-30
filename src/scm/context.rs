@@ -250,6 +250,8 @@ pub struct State {
     pub top: i64,
     pub sel_key: Option<String>,
     pub field: Field,
+    /// The subject amend or undo put in the field, and the whole message of its commit (body and trailers).
+    pub kept: Option<(String, String)>,
     pub editing: bool,
     pub amend: bool,
     pub generating: bool,

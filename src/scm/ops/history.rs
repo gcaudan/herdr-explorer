@@ -1,5 +1,6 @@
 //! Merge, rebase, cherry-pick, tags, force push, undo commit and reset --hard; the branch compared with.
 
+use super::commit::{SUBJECT_AND_MESSAGE, subject_and_message};
 use super::{card, count_of, opt, plural, strings, trim};
 use crate::core::exec::Exec;
 use crate::core::ui::Confirm;
@@ -227,7 +228,7 @@ impl Pane {
                 let opts = GitOpts::default();
                 std::thread::scope(|sc| {
                     let parent = sc.spawn(|| state::git(top, &["rev-parse", "--verify", "-q", "HEAD~1"], &opts));
-                    let last = sc.spawn(|| state::git(top, &["log", "-1", "--format=%s"], &opts));
+                    let last = sc.spawn(|| state::git(top, &["log", "-1", SUBJECT_AND_MESSAGE], &opts));
                     let mine = state::git(top, &["rev-list", "--count", "HEAD", "--not", "--remotes", "--"], &opts);
                     let get = |h: std::thread::ScopedJoinHandle<Exec>| {
                         h.join().unwrap_or(Exec { code: None, out: String::new(), err: String::new() })
@@ -241,14 +242,14 @@ impl Pane {
                 }
                 // On a remote branch already: none of its commits is only here.
                 let pushed = mine.code == Some(0) && trim(&mine.out) == "0";
-                let subject = trim(&last.out).to_string();
+                let (subject, whole) = subject_and_message(&last.out);
                 let q = Confirm {
                     where_: Some("its changes stay staged (reset --soft)".into()),
                     note: opt(if pushed { "Already pushed: the branch will need a force push." } else { "" }.into()),
                     tone: if pushed { "danger" } else { "go" }.into(),
                     ..card("Undo the last commit?", subject.clone(), "Undo")
                 };
-                p.confirm(q, Yes::Undo(subject));
+                p.confirm(q, Yes::Undo(subject, whole));
             },
         );
     }
