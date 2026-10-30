@@ -297,8 +297,9 @@ fn glob_source(glob: &str) -> String {
     s + &")".repeat(depth) + "(?:/.*)?"
 }
 
-/// Comma-separated globs (commas inside braces kept) as one RegExp, or None when empty.
-pub fn globs(text: &str) -> Option<Regex> {
+/// Comma-separated globs (commas inside braces kept) as one RegExp, or None when empty; the engine's message when
+/// one is not valid ([z-a]).
+pub fn globs(text: &str) -> Result<Option<Regex>, String> {
     let mut parts = Vec::new();
     let (mut cur, mut depth) = (String::new(), 0usize);
     for c in text.chars() {
@@ -322,9 +323,9 @@ pub fn globs(text: &str) -> Option<Regex> {
         .map(|p| glob_source(p))
         .collect();
     if sources.is_empty() {
-        return None;
+        return Ok(None);
     }
-    Regex::new(&format!("^(?:{})$", sources.join("|")), if exec::WIN { "i" } else { "" }).ok()
+    Regex::new(&format!("^(?:{})$", sources.join("|")), if exec::WIN { "i" } else { "" }).map(Some)
 }
 
 /// The text's matcher; the message shown when it is not a valid regular expression.
@@ -471,14 +472,14 @@ mod tests {
 
     #[test]
     fn globs_match_names_and_folders() {
-        let g = globs("*.rs,*.{ts,txt}").unwrap();
+        let g = globs("*.rs,*.{ts,txt}").unwrap().unwrap();
         assert!(g.test("src/a.rs") && g.test("e.ts") && g.test("d.txt") && !g.test("a.js"));
-        let g = globs("src/deep,mod*").unwrap();
+        let g = globs("src/deep,mod*").unwrap().unwrap();
         assert!(g.test("src/deep/b.rs") && g.test("src/mod.rs") && !g.test("lib/c.rs"));
-        assert!(globs(" , ").is_none());
+        assert!(globs(" , ").unwrap().is_none() && globs("[z-a]").is_err());
         assert_eq!(glob_source("./a/[!x]?"), "a/[^x][^/](?:/.*)?");
         // A lone } or ] is a character of the name, not a filter lost.
-        let g = globs("node_modules,foo},a]").unwrap();
+        let g = globs("node_modules,foo},a]").unwrap().unwrap();
         assert!(g.test("node_modules/x") && g.test("foo}") && g.test("a]") && !g.test("foo"));
     }
 

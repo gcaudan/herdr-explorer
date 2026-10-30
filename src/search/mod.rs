@@ -412,21 +412,26 @@ impl Search {
             s.searching = false;
             return self.render();
         }
-        match find::matcher(&text, s.case, s.word, s.regex) {
-            Ok(re) => s.re = Some(re),
-            Err(e) => {
-                s.searching = false;
-                s.error = Some(e);
-                return self.render();
-            }
-        }
+        let globs =
+            |k: usize, name: &str| find::globs(&s.fields[k].field.value).map_err(|_| format!("Invalid {name} glob"));
+        let (inc, exc) =
+            match (find::matcher(&text, s.case, s.word, s.regex), globs(INCLUDE, "include"), globs(EXCLUDE, "exclude"))
+            {
+                (Ok(re), Ok(inc), Ok(exc)) => {
+                    s.re = Some(re);
+                    (inc, exc)
+                }
+                (Err(e), _, _) | (_, Err(e), _) | (_, _, Err(e)) => {
+                    s.searching = false;
+                    s.error = Some(e);
+                    return self.render();
+                }
+            };
         s.searching = true;
         self.render();
         // load_files starts it again
         let Some(files) = &self.state.files else { return };
         let (list, re) = (files.list.clone(), self.state.re.clone().expect("a matcher"));
-        let inc = find::globs(&self.state.fields[INCLUDE].field.value);
-        let exc = find::globs(&self.state.fields[EXCLUDE].field.value);
         let (root, current, tx, waker) =
             (self.root.clone(), self.search_gen.clone(), self.tx.clone(), self.waker.clone());
         let send = move |then: Then| {
