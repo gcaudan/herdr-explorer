@@ -59,9 +59,9 @@ whole. The other scopes are read-only.
 What the Changes pane and the preview's Diff view compare the files with. `b` (or the header's scope, or **Compare
 with** in the View menu) opens its menu; the scope chosen holds for every pane of the tab, until changed:
 
-- **HEAD** (the default): the last commit, staged and unstaged changes together;
-- **Merge base with main**: the point where the branch left the default branch (the remote's `HEAD`, else `main` or
-  `master`), so every change of the branch, committed or not;
+- **HEAD** (the default): the last commit, each file's staged changes apart from its unstaged ones;
+- **Merge base with main**: the point where the branch left the default branch (the remote's `HEAD`, else the first of
+  `main`, `master`, `origin/main`, `origin/master` that exists), so every change of the branch, committed or not;
 - **Last agent turn**: the working tree as it was when the agent of the tab last started working, so only what it
   changed since. herdr tells the plugin when an agent's status changes; when it starts working after having been idle
   or done (or for another agent of the tab), the plugin records a snapshot of the repository's working tree, tracked

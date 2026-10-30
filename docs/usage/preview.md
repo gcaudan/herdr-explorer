@@ -170,7 +170,7 @@ View menu hides them (saved, see [`changes`](../configuration.md#settings)).
 ## Diff view
 
 `d` (or **File · Diff** in the header) shows the file's git changes in place of the file, as the Changes pane does:
-compared with HEAD, staged and unstaged together, an untracked file in full, a deleted one as removed lines. The
+compared with HEAD, its staged changes apart from its unstaged ones, an untracked file in full, a deleted one as removed lines. The
 header shows the added and removed line counts and what they are compared with (a click opens `b`'s menu); the View
 menu (`⚙`, `,`) chooses the **Layout**, inline or split (side by side, `v`), **Wrap lines** (`w`) and what to **Compare
 with** (the [diff scope](changes.md#diff-scope), `b`). The layout is saved for every
@@ -181,6 +181,13 @@ file. Find (`/`) works in the file only.
 
 The explorer opens it with `d` and **View changes** on a file, and among the changed files with `]`, `[` and the
 selection; `peek --diff` too.
+
+## Commit shown
+
+Source control shows the commit, stash, tag or pull request selected in its review's preview, over the preview's
+tabs and read only: its header, the files changed, then the diff. Only the keys that make sense there work: moving,
+`n`/`N` between hunks, `v` layout, `w` wrap, `,` the View menu, `z` zoom, the width keys and the key help. `q` and
+`escape` go back to the tab underneath, or close the preview when it has none (always in a review).
 
 ## What it shows
 
@@ -200,7 +207,7 @@ selection; `peek --diff` too.
   (libwebp, see [Requirements](../installation.md#requirements)). When herdr can show images (the Kitty graphics
   protocol), the image is drawn in real pixels, fitted to the pane; otherwise with half blocks (see
   [Sharp images](#sharp-images)). For other formats, such as SVG or a lossless or
-  arithmetic-coded JPEG, or over 50 MB, the preview shows the format and size only. TIFF: strips (not tiles), one
+  arithmetic-coded JPEG, or over 50 MB or 50 megapixels, the preview shows the format and size only. TIFF: strips (not tiles), one
   plane, uncompressed, PackBits, LZW or Deflate.
 - **Binary** (a NUL byte in the first 8000 bytes): a hex dump of the first 64 KB.
 

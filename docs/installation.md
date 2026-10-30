@@ -81,7 +81,8 @@ herdr's plugin index adds no key bindings, nor links the skill for Claude Code: 
    without it), macOS included.
 2. Append one `[[keys.command]]` block per action (see [Key bindings](#key-bindings)), unless the config already
    binds that action. A binding you already changed, for example to another key, is left alone, and a key the
-   config already binds to something else is skipped, with a message. A config that cannot be read, or that writes
+   config already binds to something else is skipped, with a message (keys compared without regard to case, as
+   herdr reads them: `Prefix+F` is `prefix+f`). A config that cannot be read, or that writes
    `keys.command` inline (which a block appended would make invalid), is not changed: the blocks to copy are
    printed instead. When it added one, run `herdr server reload-config`, ignoring errors.
 3. When Claude Code is installed (a `~/.claude` folder), link the [herdr-preview skill](usage.md#show-a-file-from-an-agent-or-a-script)
@@ -197,7 +198,8 @@ first three changes, with four answers: `c` **Copy command** (copies `herdr plug
 command copied: run it, then reopen the panes*), `r` **Notes** (the release page in the browser), `s` **Skip
 version** (no pill until the next release), and `n` **Later**, selected at first.
 
-`herdr plugin update` runs the manifest's build step, which fetches the new version's binary into `bin/`. After an
+`herdr plugin update` runs the new version's build step, which fetches its binary into `bin/`: when it fails
+(offline, no `curl`), herdr keeps the installed version. After an
 update, the explorers show, for a minute, a blue `✓ what's new` pill that opens the release notes.
 
 A linked git clone is yours to update: `git pull` (or `git checkout` the new tag), then `sh scripts/fetch-bin.sh`

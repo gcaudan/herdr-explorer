@@ -26,7 +26,7 @@ Text search across the files, results grouped by file, with each file's count on
 toggle **Aa** (match case), **ab** (whole word) and **.\*** (regex), blue when on. The **in** (include)
 and **not in** (exclude) fields take comma-separated globs:
 `*` and `?` within a segment, `**` across segments, `{a,b}`, `[abc]`, `[!abc]`. A pattern without a leading
-`./` or `/` matches at any depth, and a folder matches its contents. Files over 2 MB and binary files are skipped,
+`./` or `/` matches at any depth, and a folder matches its contents; globs ignore case on Windows only. Files over 2 MB and binary files are skipped,
 and the search stops at 5000 matches.
 
 ## Keys

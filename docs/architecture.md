@@ -244,7 +244,8 @@ and emphasis dropped) and its page. The explorers poll it to show `↑` and the 
 version in `herdr-plugin.toml` and not the one skipped (`skip`). The plugin installs no update itself: the explorer
 copies `herdr plugin update gcaudan.explorer` (`update::herdr_update`), herdr's plugin index being the only channel. At
 each start, an explorer notes the version it runs (`update::note_version`, `seen`); one newer than the last seen
-writes `updated` (`{ from, to, t }`), so that the explorers show `✓ what's new` for a while. A linked clone's panes
+writes `updated` (`{ from, to, t }`; a file checked for updates but without `seen` comes from the JavaScript
+versions, which noted none, and counts as 0.8.0), so that the explorers show `✓ what's new` for a while. A linked clone's panes
 restart on the new code when its version changes (see [Launcher and self-restart](#launcher-and-self-restart)).
 
 ## Refresh and watchers
@@ -322,5 +323,6 @@ one more at each update. The launcher does nothing else, so it stays on the code
 The search, source control, changes and editor panes are short-lived and have no launcher: the binary runs once,
 as the pane's first process, and first moves to `EXPLORER_ROOT` so that herdr reads that folder (the editor, without
 one, to its file's folder). A pane opened by a manifest of 0.8.0 or earlier still runs `node src/explorer.js` (or
-another `src/*.js`), which the update removed: close and reopen it. A pane started by a version without the launcher
+another `src/*.js`) from the previous version's folder, which herdr removes once no server uses it: close and
+reopen it. A pane started by a version without the launcher
 (0.4.0 and earlier) is the exception, see [Limitations](troubleshooting.md#limitations).

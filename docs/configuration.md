@@ -33,11 +33,10 @@ follow the groups of the settings view: Appearance, Tree, Opening, Preview, Revi
 | `updateCheck` | `true` | Check for updates | check GitHub once a day for a newer release | explorers within a second |
 | `reviewShare` | `0.35` | source control: `<` `>`, dragging the border | share of the review's width taken by source control beside its preview, from 0.15 to 0.8 | the next reviews |
 | `searchShare` | `0.35` | search: dragging the border | share of the search's tab taken by the search beside its preview, from 0.15 to 0.8 | the next searches |
-| `scmListShare` | `{}` | source control: drag the separator, `<` `>`, `shift+left` `shift+right` | share of the width taken by the list beside the diff, per view: `{ "changes": 0.3, "history": 0.6 }`; a view left out: 38 %, from 34 to 70 columns | other source control panes at their next opening |
 | `scmGraphAll` | `true` | source control History `a` | show every local and remote branch in History, or only the current one | other source control panes at their next opening |
 | `scmTree` | `false` | source control `t`, **List · Tree** switch | show the Changes view as a tree of folders | other source control panes at their next opening |
 
-A missing or unreadable `settings.json` means all defaults, and keys left out keep their default. `scmListShare`,
+A missing or unreadable `settings.json` means all defaults, and keys left out keep their default.
 `scmGraphAll` and `scmTree` are not in the settings view: only the source control pane changes them.
 
 ### Editor command
@@ -114,10 +113,11 @@ saved, and the explorer's width falls back to 32 columns.
 | `search-<tab id>.json` | the search open for the tab: `{ pane }`, removed when it closes |
 | `review-<tab id>.json` | the review open for the tab: `{ pane }`, its source control, removed when the review ends |
 | `viewed-<tab id>.json` | the files marked viewed in the tab's Changes pane: `{ real path: hash of the content then }` |
+| `pulls/<hash>.json`    | the last list of open pull requests of a repository (hash of its folder), shown in source control's [PRs view](usage/source-control.md) while `gh` answers |
 | `index/`               | the copies of the git index the [Last agent turn](usage/changes.md#diff-scope) scope works on; those unused for a week are removed at startup |
 
 `settings.json`, `expanded.json`, `width`, `update.json`, `search.json`, `resizing`, `preview-*.json`, `notes-*.json`, `review-*.json`, `search-*.json`, `scope-*.json`, `turn-*.json`, `viewed-*.json`,
-`panes/*.json` and `keys.json` (in the config folder) are written to a temporary file and then renamed, so a pane never reads them half-written. When a tab or a space closes, and again at herdr
+`panes/*.json`, `pulls/*.json` and `keys.json` (in the config folder) are written to a temporary file and then renamed, so a pane never reads them half-written. When a tab or a space closes, and again at herdr
 startup, the files of tabs and panes that no longer exist are deleted (`notes-*.json`, `preview-*.json`, `review-*.json`, `search-*.json`, `scope-*.json`, `turn-*.json`, `viewed-*.json`, `panes/*.json`),
 except those written in the last 10 seconds, which a tab opened meanwhile may already use.
 

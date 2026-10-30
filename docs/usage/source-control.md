@@ -60,17 +60,15 @@ help of the view (see [Key help](explorer.md#key-help--or-f1)).
 
 | Key                        | Action                                                          |
 | -------------------------- | --------------------------------------------------------------- |
-| `q` `escape` `ctrl+c`      | end the review (`q` and `escape` close a diff shown first)      |
+| `q` `escape` `ctrl+c`      | end the review (`q` and `escape` close a branch comparison first) |
 | `?` `f1`                   | all the keys                                                    |
 | `<` / `>`                  | narrower / wider source control beside the preview (kept)       |
-| `shift+left` `shift+right` | move the separator 4 columns that way (kept)                    |
 | `up` `k` / `down` `j`      | move (the preview on the right follows)                         |
 | `pageup` / `pagedown`, `home` `g` / `end` `G` | move by page / to the ends               |
 | `ctrl+u` / `ctrl+d`        | move half a page                                                |
 | `left` `h` / `right` `l`   | fold / unfold a section or folder                               |
 | `enter`                    | file, commit, stash, tag: focus the preview (opened again after a `q` there) · section/folder: fold · branch: checkout |
 | `z`                        | zoom the pane (toggle); the zoom goes when the pane loses the focus |
-| `tab`                      | focus the diff                                                  |
 | `1`–`5`                    | switch view                                                     |
 | `r`                        | refresh                                                         |
 | `f` / `L` / `P`            | fetch / pull (fast-forward only) / push. The first push publishes the branch on `origin` (else the first remote) and sets its upstream |
@@ -119,7 +117,7 @@ line). On a narrow pane the subject gives way first; on the right, the author (f
 has its own lane and colour, linked to the commit it started from and to the merge that brought it back; its
 commits are marked ┿ on its line (┯ for a branch tip, ┷ for the first commit), and the checked-out commit's
 subject is bold. The current branch's line changes colour where it leaves the default branch (the remote's HEAD,
-else `main` or `master`), so that its own commits stand apart even when it is a straight line ahead of it. It shows every local and remote branch, or with `a` only the current one (kept for the next
+else the first of `main`, `master`, `origin/main`, `origin/master`), so that its own commits stand apart even when it is a straight line ahead of it. It shows every local and remote branch, or with `a` only the current one (kept for the next
 panes). The graph takes 24 columns at most: lanes further right are cut. On a commit, `t` creates a tag and `C`
 cherry-picks it onto the current branch (refused when the branch already has it).
 
@@ -129,10 +127,11 @@ creates one tracking it). `D` deletes a local branch, and offers `-D` when it is
 saying how many commits would be lost (those on no other branch). `M` merges the selected branch into the current
 one, `R` rebases the current branch onto it.
 
-**Comparing branches**: from 100 columns, the selected branch is compared on the right with the current branch:
+**Comparing branches**: `=` on a branch shows, in place of the list, its comparison with the current branch:
 commits ahead and behind, the commits only on each side (`=` marks a change also on the other side, as after a
-cherry-pick), and the files it changed since it left the current branch. `=` opens the comparison at any width and focuses it; there, `up`/`down` select a commit,
-`enter` shows it, and `q` or `escape` on that commit goes back to the comparison. `B` makes the selected branch the
+cherry-pick), and the files it changed since it left the current branch. There, `up`/`down` (`k`/`j`, page keys,
+`g`/`G`) select a commit, which the preview shows, `enter` focuses the preview on it, and `q` or `escape` go back to
+the list. `B` makes the selected branch the
 base of the comparisons instead of the current branch (`B` again on it, or on the current branch, goes back). `=` also
 sets the [diff scope](changes.md#diff-scope) of the tab to `base...branch`, so that the Changes pane and the preview's Diff view
 show the branch's changes too; a branch merely selected leaves the scope alone.
@@ -162,13 +161,8 @@ is refused (see [Messages](../troubleshooting.md#source-control)).
 **While typing the message**: `enter` commits or continues, `escape`/`tab` leaves the field, `ctrl+g`
 writes with Claude, and `alt+a` toggles amend.
 
-**Diff focused**: `up` `k` / `down` `j` `enter`, `pageup` / `pagedown` `space`, `home` `g` / `end` `G`,
-`ctrl+u` / `ctrl+d` scroll. `n`/`N` jump between hunks, `v` switches inline/side by side (side by side by default
-from 120 columns; kept for the next diffs), `w` wraps long lines (the **Wrap lines** setting, shared with the preview
-and the Changes pane), and without wrap `left` `h` / `right` `l` scroll them 8 columns sideways, the line numbers
-staying. `,` or the `⚙` of the diff's title opens its **View** menu, **Layout** (`v`) and **Wrap lines** (`w`), each
-changed in place as in the preview. `tab`, `q` or `escape` go back to the list (below 100 columns, `q` and `escape`
-close the diff).
+**Diffs**: the changes of a file, and the commits, stashes, tags and pull requests, show in the review's preview,
+with its keys ([Diff view](preview.md#diff-view), [Commit shown](preview.md#commit-shown)).
 
 **Branch picker** (`b`): a menu that hangs under the header's branch (highlighted while it is open),
 as wide as its branches; the picker of *Merge a branch…* and *Rebase onto a branch…* hangs where the menu
@@ -188,7 +182,7 @@ everything to commit, `git init` and the [git operations](#git-operations) ask i
 On the selected row of Changes, buttons appear: **↶** discard and **+** stage on unstaged changes, **+** on
 conflicts, **−** unstage on staged changes. Click the header and commit-box buttons, the tabs and the branch.
 Click a section or folder to fold it, double-click a row to open it as `enter` does (a branch: checkout), and
-click the diff to focus it. The wheel scrolls the list, the diff or the picker under the mouse.
+click a branch comparison to focus it. The wheel scrolls the list, the comparison or the picker under the mouse.
 
 The pane refreshes when the git folder changes, when it gets the focus, and every 5 s, which picks up
 working-tree edits.
