@@ -50,9 +50,16 @@ impl Pane {
             return self.say("Not with this scope: stage compared with HEAD (b)".into());
         }
         let (from, to) = self.range();
-        // rows.slice(from, to + 1): nothing from a cursor on no row.
+        // rows.slice(from, to + 1): nothing from a cursor on no row. A file's name or a hunk's @@ takes the whole file
+        // or hunk on its own only: a range crossing it (a folded file among them) takes the lines selected.
         let picked = match (usize::try_from(from), usize::try_from(to)) {
-            (Ok(a), Ok(b)) => stage::picked(self.rows.get(a..=b.min(self.rows.len() - 1)).unwrap_or(&[])),
+            (Ok(a), Ok(b)) => stage::picked(
+                self.rows
+                    .get(a..=b.min(self.rows.len() - 1))
+                    .unwrap_or(&[])
+                    .iter()
+                    .filter(|r| a == b || (r.f.is_none() && r.h.is_none())),
+            ),
             _ => Sel::default(),
         };
         if mode != Mode::Discard {
