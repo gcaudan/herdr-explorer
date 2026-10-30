@@ -104,3 +104,30 @@ fn a_folder_moved_out_of_the_tree_is_no_longer_watched() {
     assert!(names.contains(&Some("here".into())));
     assert!(!names.iter().flatten().any(|n| n.starts_with("build/")), "{names:?}");
 }
+
+#[test]
+fn a_file_is_not_a_folder_to_watch() {
+    let dir = support::TempDir::new("watch-file");
+    std::fs::write(dir.path.join("f"), "x").unwrap();
+    assert!(watch(&dir.path.join("f"), false).is_err());
+}
+
+#[test]
+fn a_folder_moved_in_is_watched_past_an_unreadable_folder_in_it() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = support::TempDir::new("watch-moved");
+    let (out, root) = (dir.path.join("out"), dir.path.join("root"));
+    for d in ["x/a", "x/b", "x/c"] {
+        std::fs::create_dir_all(out.join(d)).unwrap();
+    }
+    std::fs::create_dir(&root).unwrap();
+    std::fs::set_permissions(out.join("x/a"), std::fs::Permissions::from_mode(0o000)).unwrap();
+    let (_w, rx) = watch(&root, true).unwrap();
+    std::fs::rename(out.join("x"), root.join("x")).unwrap();
+    assert!(seen(&rx, "x"));
+    std::fs::write(root.join("x/b/f"), "x").unwrap();
+    std::fs::write(root.join("x/c/f"), "x").unwrap();
+    let both = seen(&rx, "x/b/f") && seen(&rx, "x/c/f");
+    std::fs::set_permissions(root.join("x/a"), std::fs::Permissions::from_mode(0o755)).unwrap();
+    assert!(both);
+}

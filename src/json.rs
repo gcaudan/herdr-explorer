@@ -473,6 +473,8 @@ pub fn quote(out: &mut String, s: &str) {
 pub fn num(v: Option<&Value>) -> f64 {
     match v {
         Some(Value::Num(n)) => *n,
+        // Not "inf" or "nan", which Rust reads and JS's Number() does not.
+        Some(Value::Str(s)) if s.bytes().any(|b| b.is_ascii_alphabetic() && b != b'e' && b != b'E') => f64::NAN,
         Some(Value::Str(s)) => s.trim().parse().unwrap_or(f64::NAN),
         Some(Value::Bool(b)) => *b as u8 as f64,
         _ => f64::NAN,
@@ -529,6 +531,16 @@ pub fn number(n: f64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_string_field_reads_as_a_number_as_js_number_would() {
+        let n = |s: &str| num(Some(&Value::Str(s.into())));
+        assert_eq!(n(" 12.5 "), 12.5);
+        assert_eq!(n("1e3"), 1000.0);
+        for s in ["inf", "-Infinity", "nan", "NaN", "12px"] {
+            assert!(n(s).is_nan(), "{s}");
+        }
+    }
 
     #[test]
     fn numbers_as_js_writes_them() {

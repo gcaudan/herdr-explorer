@@ -60,7 +60,8 @@ impl Pane {
         }
         let mut root = Node::default();
         for it in items {
-            let parts: Vec<&str> = it.path.split('/').collect();
+            // A repository inside, not tracked, ends with / ("sub/"): a file named sub, not a folder holding "".
+            let parts: Vec<&str> = it.path.trim_end_matches('/').split('/').collect();
             let mut n = &mut root;
             for part in &parts[..parts.len() - 1] {
                 let i = match n.dirs.iter().position(|(k, _)| k == part) {
@@ -357,7 +358,9 @@ fn compare_rows(d: &DiffView, width: i64) -> Vec<CmpRow> {
         }
         for x in list {
             let date = format!(" {} ", pad_start(&x.date, 6));
-            let room = (width - crate::core::ui::text_width(&date) as i64 - 13).max(1);
+            // "     ", the short hash and two spaces before the subject; git lengthens the hash in a big repository.
+            let head = 5 + crate::core::ui::text_width(&x.short) as i64 + 2;
+            let room = (width - crate::core::ui::text_width(&date) as i64 - head).max(1);
             out.push(CmpRow {
                 commit: Some(x.clone()),
                 segs: vec![

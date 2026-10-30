@@ -57,12 +57,14 @@ struct Tree {
 }
 
 impl Tree {
-    /// Watches the folder rel; with recursive, the folders under it too. Fails at the first folder that cannot be
-    /// watched or read; a folder under it gone meanwhile (a build cache) is left out.
-    fn add(&mut self, rel: &str, recursive: bool) -> io::Result<()> {
+    /// Watches the folder rel; with recursive, the folders under it too. strict: fails at the first folder that
+    /// cannot be watched or read, else leaves it out and goes on with the others (a folder made or moved in later); a
+    /// folder under it gone meanwhile (a build cache) is left out.
+    fn add(&mut self, rel: &str, recursive: bool, strict: bool) -> io::Result<()> {
         let full = if rel.is_empty() { self.root.clone() } else { format!("{}/{rel}", self.root) };
         let path = CString::new(full.clone()).map_err(|_| io::Error::from(io::ErrorKind::InvalidInput))?;
-        let mask = if rel.is_empty() { MASK } else { MASK | IN_ONLYDIR };
+        // A folder, the root too: a file fails, as on macOS and Windows.
+        let mask = MASK | IN_ONLYDIR;
         // SAFETY: a C string that outlives the call.
         let wd = unsafe { inotify_add_watch(self.fd, path.as_ptr(), mask) };
         if wd < 0 {
@@ -89,8 +91,8 @@ impl Tree {
             };
             if dir {
                 let name = e.file_name().to_string_lossy().into_owned();
-                match self.add(&if rel.is_empty() { name } else { format!("{rel}/{name}") }, true) {
-                    Err(e) if gone(&e) => {}
+                match self.add(&if rel.is_empty() { name } else { format!("{rel}/{name}") }, true, strict) {
+                    Err(e) if gone(&e) || !strict => {}
                     done => done?,
                 }
             }
@@ -112,6 +114,13 @@ impl Tree {
     }
 }
 
+impl Drop for Tree {
+    fn drop(&mut self) {
+        // SAFETY: the inotify descriptor the tree owns, closed once (on a panic of the callback too).
+        unsafe { close(self.fd) };
+    }
+}
+
 pub struct Watcher {
     stop: c_int,
     thread: Option<JoinHandle<()>>,
@@ -130,15 +139,12 @@ impl Watcher {
         }
         let mut pipe = [0; 2];
         // SAFETY: pipe2 writes two descriptors.
-        let made = tree.add("", recursive).and_then(|_| match unsafe { pipe2(pipe.as_mut_ptr(), O_CLOEXEC) } {
+        let made = tree.add("", recursive, true).and_then(|_| match unsafe { pipe2(pipe.as_mut_ptr(), O_CLOEXEC) } {
             0 => Ok(()),
             _ => Err(io::Error::last_os_error()),
         });
-        if let Err(e) = made {
-            // SAFETY: the descriptor made above, closed once.
-            unsafe { close(fd) };
-            return Err(e);
-        }
+        // The descriptor closed with the tree on an error.
+        made?;
         let thread = std::thread::spawn(move || run(tree, recursive, pipe[0], on, lost));
         Ok(Watcher { stop: pipe[1], thread: Some(thread) })
     }
@@ -171,6 +177,9 @@ fn run(mut tree: Tree, recursive: bool, stop: c_int, mut on: Callback, lost: sup
             if io::Error::last_os_error().raw_os_error() == Some(EINTR) {
                 continue;
             }
+            // Nothing watched any more: told, as when the root goes.
+            lost.store(true, std::sync::atomic::Ordering::SeqCst);
+            on(None);
             break;
         }
         if fds[1].revents != 0 {
@@ -215,14 +224,11 @@ fn run(mut tree: Tree, recursive: bool, stop: c_int, mut on: Callback, lost: sup
             }
             if recursive && mask & IN_ISDIR != 0 && mask & (IN_CREATE | IN_MOVED_TO) != 0 {
                 // A folder made or moved in: watched too, as far as it can be read.
-                let _ = tree.add(&rel, true);
+                let _ = tree.add(&rel, true, false);
             }
             on(Some(rel));
         }
     }
-    // SAFETY: the descriptors this thread owns, closed once.
-    unsafe {
-        close(tree.fd);
-        close(stop);
-    }
+    // SAFETY: the pipe's end this thread owns, closed once; the inotify descriptor goes with the tree.
+    unsafe { close(stop) };
 }

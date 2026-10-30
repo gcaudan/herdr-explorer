@@ -35,7 +35,8 @@ impl Pane {
             Some((right, _)) => (right - inner - 2).max(0),
             None => pill_x.min(w - inner - 2).max(0),
         };
-        let y = p.anchor.map_or(1, |a| a.1);
+        // Near the bottom: raised so that its smallest box (4 rows) stays above the status line.
+        let y = p.anchor.map_or(1, |a| a.1).min(h - 5).max(0);
         let bh = 4.max((h - 1 - y).min(p.items.len() as i64 + 3));
         let body = bh - 3;
         if p.sel < p.top {
