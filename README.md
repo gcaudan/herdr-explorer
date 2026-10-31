@@ -58,8 +58,8 @@ Plugin id `gcaudan.explorer` · herdr 0.9.4 or later · Linux, macOS and Windows
 ## Requirements
 
 herdr 0.9.4 or later, `curl` to download the binary, and a
-[Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr, or emoji, Unicode or ASCII icons. git, a graphical editor, a clipboard and
-a trash tool, and the [Claude Code](https://claude.com/claude-code) CLI are optional: see
+[Nerd Font](https://www.nerdfonts.com/) (v3) in the terminal running herdr, or emoji, Unicode or ASCII icons. git (2.31 or later), a graphical editor, a
+clipboard and a trash tool, and the [Claude Code](https://claude.com/claude-code) CLI are optional: see
 [Requirements](docs/installation.md#requirements) for what each one adds.
 
 Release binaries exist for Linux and macOS (x86_64, arm64) and Windows (x86_64, arm64 in emulation); elsewhere,

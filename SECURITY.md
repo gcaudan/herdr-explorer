@@ -42,6 +42,7 @@ repository's hooks and filters, none of the protections below apply to it), your
 - **Editor commands**: the editor setting and `$EXPLORER_EDITOR`, `$VISUAL` or `$EDITOR` are split into words (quotes
   group them), never interpreted by a shell; the file path is the last argument.
 - **Output limits**. Program output is read up to 64 MB.
+- **herdr calls** have a 10 s limit, so a herdr that never answers (a restart) cannot hold a pane.
 - **The launcher** of the explorer and preview panes runs `scripts/fetch-bin` with the system's own shell and
   PowerShell, by absolute path (`/bin/sh`, and `powershell.exe` under `%SystemRoot%\System32\WindowsPowerShell`),
   never one found in a folder of `PATH`.
@@ -82,7 +83,8 @@ reset, fetch, pull, push…) also replaces every program-running key the reposit
 value, or git's default: `core.sshCommand`, `core.askPass`, `gpg.*.program`, `gpg.ssh.defaultKeyCommand`, credential
 helpers and merge drivers. `remote.*.uploadpack` and `receivepack` are overridden on the command line, and
 `core.gitProxy` is ignored (`GIT_PROXY_COMMAND` emptied). `protocol.ext.allow` and `protocol.file.allow` are set to
-`never`.
+`never`. `GIT_EDITOR` and `GIT_SEQUENCE_EDITOR` are `:`, so no editor opens, nor the `core.editor` the
+repository sets, whatever its config makes git ask for (a lightweight tag passes `--no-sign` for the same reason).
 
 ### Network (fetch, pull, push)
 
@@ -108,7 +110,8 @@ cherry-picks started from the pane pass `--strategy=ort`, so `pull.twohead` cann
 ### Diffs
 
 `git diff`, `show` and `stash show` run with `--no-color --no-ext-diff --no-textconv` and fixed `a/` `b/` prefixes:
-external diff tools and textconv filters never run. A revision given to the diff pane that starts with `-` or
+external diff tools and textconv filters never run; `--no-relative` and `diff.suppressBlankEmpty=false`
+keep the paths and lines what the parser expects, whatever the repository's config says. A revision given to the diff pane that starts with `-` or
 contains spaces or control characters is refused; the others pass after `--end-of-options`.
 
 ## Arguments and names
@@ -206,7 +209,8 @@ Files are untrusted input:
   `gcaudan/herdr-explorer`), checked against `SHA256SUMS` before it replaces anything. A binary you built
   (`bin/.dev`) is never replaced. The release workflow builds
   the binaries on GitHub's runners and writes `SHA256SUMS` from them; the checksums come from the same release as
-  the binary, so they guard against a corrupted or truncated download, not against a compromised release.
+  the binary, so they guard against a corrupted or truncated download, not against a compromised release. The release
+  token is given to the upload step only, never to `cargo build`, which runs the repository's `build.rs`.
 - `herdr-explorer setup`, run by you or from the dialog the explorer offers once, only appends the key bindings to
   herdr's `config.toml` and, when `~/.claude` exists, links `~/.claude/skills/herdr-preview` to the plugin folder;
   at each start, the explorer repoints that link when it points at another folder. A folder of that name that is

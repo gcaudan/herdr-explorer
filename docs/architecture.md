@@ -7,7 +7,9 @@ startup, the events and three actions, `peek` for the other two; `setup` adds th
 from the plugin's folder (`bin\herdr-explorer.exe` on Windows). The manifest's `[[build]]` steps run
 `scripts/fetch-bin` for `herdr plugin install` and `update` ([The binary](installation.md#the-binary)).
 
-`herdr-explorer --version` (or `-V`) prints the version that `build.rs` embeds from the manifest; a command line it
+`herdr-explorer --version` (or `-V`) prints the version that `build.rs` embeds from the manifest. `build.rs` also embeds the commit built, when the
+folder is a git checkout (`core::update::BUILD`, `v0.8.0 · 7807fc4`), shown at the foot of each pane's key help: a
+development build keeps the version of the release it started from. A command line it
 does not know prints the usage and exits with code 2. Each start of `hook`, `peek` or `pane` deletes the binaries
 set aside next to it (`herdr-explorer.old-*`) by fetch-bin and dev-build; Windows keeps one that still
 runs until a later start.
@@ -257,7 +259,7 @@ restart on the new code when its version changes (see [Launcher and self-restart
 | Explorer        | a 30 s safety rescan, every repository read again. A `.git` appearing later (`git init`, clone), in the root or one of its folders, is detected |
 | Explorer        | `settings.json`, `keys.json` and `update.json`, watched through their folder (`core::watch`: one watch per folder for the process, made again once when the system tells it lost the folder, removed or moved away, or when a look at the folder every 30 s finds another one there) |
 | Explorer        | the folder of the neighbouring terminal, polled every 2 s when **Follow** is on and herdr shows the explorer's tab (`shown-tab`, below) |
-| Preview         | the file's folder, the tab's request file and `settings.json` (Images), watched through their folder |
+| Preview         | the file shown, the tab's request file and `settings.json` (Images), watched through their folder (`core::watch`, so a folder removed and made again, by a build or a branch switch, is watched again). The file is reloaded 80 ms after its first change not reloaded yet, so a file written without a pause is reloaded too |
 | Source control  | the git folder (`index`, `HEAD`, `ORIG_HEAD`, `FETCH_HEAD`, `MERGE_HEAD`, `packed-refs`, `stash`, `CHERRY_PICK_HEAD`, `REVERT_HEAD`), the common git folder and `refs/` (worktrees), the working tree on macOS and Windows (`.git` left out: `git status` 250 ms after a change, at most once a second), a 30 s poll (5 s without the working tree's watch, always on Linux, where inotify would take a watch per folder), and focus |
 
 The tab herdr shows is noted by the hook in `shown-tab` in the state folder (`core::shown`): at each `tab.focused`

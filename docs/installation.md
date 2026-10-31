@@ -17,6 +17,7 @@ the release of its version (see [The binary](#the-binary)).
 | VS Code or another graphical editor (optional) | the external editor (see [Editor command](configuration.md#editor-command)) |
 | A terminal editor (optional): `$VISUAL`, `$EDITOR`, else the first of `nano`, `nvim`, `vim`, `vi` (`edit`, `nvim`, `vim`, `nano` on Windows) | the [Editor pane](usage.md#editor-pane) |
 | The [Claude Code](https://claude.com/claude-code) CLI, `claude` (optional) | commit messages written by Claude |
+| The [GitHub CLI](https://cli.github.com), `gh`, logged in with `gh auth login` (optional) | the PRs view of source control |
 | `dwebp`, from libwebp (optional) | WebP images in the preview (`webp` package on Linux, `brew install webp` on macOS) |
 | A terminal with the Kitty graphics protocol (optional) | sharp images in the preview, with **Settings → Images** (Kitty, Ghostty, WezTerm, Konsole…, with herdr's `terminal.kitty_graphics`, on by default); half blocks otherwise, see [Sharp images](usage/preview.md#sharp-images) |
 
@@ -195,7 +196,7 @@ notes) and its page, for the dialog below.
 The explorer never installs an update itself: herdr's plugin index is the only channel. Click the pill, or press `u`
 (or click **↑ X.Y.Z available**) in the settings: a dialog shows the installed and new versions and the release's
 first three changes, with four answers: `c` **Copy command** (copies `herdr plugin update gcaudan.explorer`, *Update
-command copied: run it, then reopen the panes*), `r` **Notes** (the release page in the browser), `s` **Skip
+command copied: run it in a terminal*), `r` **Notes** (the release page in the browser), `s` **Skip
 version** (no pill until the next release), and `n` **Later**, selected at first.
 
 `herdr plugin update` runs the new version's build step, which fetches its binary into `bin/`: when it fails

@@ -82,7 +82,7 @@ The last column is the action's name in [`keys.json`](../configuration.md#config
 ## Mouse
 
 - **Click** a folder to fold or unfold it, a file to select it (and preview it, with **Preview follows selection**
-  on). **Double-click** a file (within 400 ms) to open it.
+  on, once the selection rests for 150 ms). **Double-click** a file (within 400 ms) to open it.
 - **Right-click** a row for its action menu, below the last row for the root menu: in this pane, right-clicks go
   to the explorer instead of herdr's menu.
 - **Wheel** scrolls 3 rows (in a menu, it moves the selection). See also [Header](#header) and

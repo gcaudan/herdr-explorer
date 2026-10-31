@@ -99,7 +99,7 @@ works](docs/architecture.md#how-it-works).
 | `src/unicode/`        | Unicode classes (generated tables) and the natural order of names |
 | `src/sys/`            | the terminal, the process and folder watching per system (Linux, macOS, Windows)             |
 | `src/json.rs`         | JSON read and written as the JS did                                                          |
-| `Cargo.toml`, `build.rs` | the crate, with no dependency; `build.rs` embeds the version of `herdr-plugin.toml`      |
+| `Cargo.toml`, `build.rs` | the crate, with no dependency; `build.rs` embeds the version of `herdr-plugin.toml` and the commit built (shown in the key help)      |
 | `rust-toolchain.toml` | the toolchain and the 5 release targets                                                      |
 | `skills/herdr-preview/` | Claude Code skill that calls peek                                                          |
 | `tools/fake-herdr/`   | the fake herdr the tests put first on `PATH`                                                 |
@@ -126,7 +126,7 @@ PowerShell 5.1's parser) parse. Each night it runs a long pass of the mutation b
 | File (`tests/`     ) | Covers |
 | --- | --- |
 | `modules.rs` | the module fixtures recorded from the JS of 0.8.0 (`tests/fixtures/modules/`     ), replayed against the port. `HX_RECORD=1` writes what the port returns instead, for a change of behaviour its commit explains |
-| `screens.rs` | screen captures of the panes in a terminal, started directly, against those recorded from the JS (Linux). Each scenario is a `tests/fixtures/screens/<pane>/<name>.keys` file, whose directives `tests/support/pty.rs` documents; `HX_ONLY=<prefix>` runs only the scenarios whose name starts with it, `HX_RECORD=1` records them again |
+| `screens.rs` | screen captures of the panes in a terminal, started directly, against those recorded from the JS (Linux). Each scenario is a `tests/fixtures/screens/<pane>/<name>.keys` file, whose directives `tests/support/pty.rs` documents; `HX_ONLY=<prefix>` runs only the scenarios whose name starts with it, `HX_RECORD=1` records them again. The version and commit at the foot of the key help are compared as `<build>`, so that a capture does not change with each commit |
 | `shims.rs` | every command of the manifest runs the binary or a script |
 | `smoke.rs` | the manifest's commands as herdr runs them (Linux): each pane started and quit, the hook and peek, the restart on code 75 and the folder announced through `EXPLORER_IPC_FILE` |
 | `docs.rs` | relative links and `#anchors` of `README.md`, `SECURITY.md`, `CONTRIBUTING.md` and the `.md` files under `docs/` |
@@ -138,6 +138,7 @@ PowerShell 5.1's parser) parse. Each night it runs a long pass of the mutation b
 | `graph.rs` | the lanes of the history graph |
 | `icons.rs` | icon widths in each icon set |
 | `image.rs`, `image_render.rs` | WebP through `dwebp`, and where the image rendering parts from the JS on purpose |
+| `markdown.rs` | rendered Markdown: anchors, footnote lines, inline tags, lists; Rust's raw strings in the highlighter |
 | `markdown_images.rs` | images of rendered Markdown in pixels |
 | `places.rs` | the places of peek's argument (`core::places`) |
 | `remote_link.rs` | links to a network share found without being followed, and refused by the file actions (skipped where links cannot be created, such as Windows without developer mode) |
@@ -149,6 +150,7 @@ PowerShell 5.1's parser) parse. Each night it runs a long pass of the mutation b
 | `actions.rs`, `full_tab.rs` | the file actions and the programs they start, and the actions on herdr's side |
 | `hook.rs`, `launch.rs` | the hook and peek run as the binary, and the launcher's restarts |
 | `watch.rs` | the folder watcher |
+| `worker.rs` | a worker job that panics: its fallback result is still sent, in a binary of its own |
 | `mutate.rs` | the decoders and parsers (images, zlib, JSON, base64, diffs, git output, Markdown, highlighting, regular expressions) on the fixtures' inputs altered at random: no panic, no call over 2 s. `MUTATE_ROUNDS` sets the calls per target, `MUTATE_SEED` replays a run |
 | `fetch_bin.rs` | `scripts/fetch-bin.sh` against a local release, without the network |
 

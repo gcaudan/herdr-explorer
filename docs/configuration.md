@@ -35,9 +35,10 @@ follow the groups of the settings view: Appearance, Tree, Opening, Preview, Revi
 | `searchShare` | `0.35` | search: dragging the border | share of the search's tab taken by the search beside its preview, from 0.15 to 0.8 | the next searches |
 | `scmGraphAll` | `true` | source control History `a` | show every local and remote branch in History, or only the current one | other source control panes at their next opening |
 | `scmTree` | `false` | source control `t`, **List · Tree** switch | show the Changes view as a tree of folders | other source control panes at their next opening |
+| `scmListShare` | `{}` | source control: dragging the border between the list and its diff | the list's share of the width beside its diff, by view (`{"changes": 0.4}`) | other source control panes at their next opening |
 
 A missing or unreadable `settings.json` means all defaults, and keys left out keep their default.
-`scmGraphAll` and `scmTree` are not in the settings view: only the source control pane changes them.
+`scmGraphAll`, `scmTree` and `scmListShare` are not in the settings view: only the source control pane changes them.
 
 ### Editor command
 

@@ -22,7 +22,7 @@ with **hidden** on, the plugin walks the folder instead (50000 files at most), w
 
 ## Search in files
 
-Text search across the files, results grouped by file, with each file's count on the right. Chips
+Text search across the files, run 150 ms after the last key, results grouped by file, with each file's count on the right. Chips
 toggle **Aa** (match case), **ab** (whole word) and **.\*** (regex), blue when on. The **in** (include)
 and **not in** (exclude) fields take comma-separated globs:
 `*` and `?` within a segment, `**` across segments, `{a,b}`, `[abc]`, `[!abc]`. A pattern without a leading

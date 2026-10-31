@@ -114,7 +114,7 @@
 | `skill <path> exists and is not a link: left alone` | `~/.claude/skills/herdr-preview` is a real folder. Remove or rename it, then run the script again |
 | `fetch-bin: no release binary for <system> <machine>: build one with scripts/dev-build.sh (Rust needed)` | no release binary for this platform: see [Building the binary](installation.md#building-the-binary) |
 | `fetch-bin: curl not found: install it, then run scripts/fetch-bin.sh again`, `fetch-bin: neither sha256sum nor shasum found` | install the tool, then run the script again |
-| `fetch-bin: cannot download <url>`                  | offline, or no release of that version (a clone of `main` between two releases, or a fork without releases): clone a release tag, or build the binary |
+| `fetch-bin: cannot download <url> (a release just tagged may still be building: …)` | the release's binaries are built a few minutes after its tag: retry then. Otherwise offline, or no release of that version (a clone of `main` between two releases, or a fork without releases): clone a release tag, or build the binary |
 | `fetch-bin: <asset> is not in SHA256SUMS`, `fetch-bin: <asset> does not match its SHA256SUMS: not installed` | the download is incomplete or the release is broken: nothing was replaced. Run the script again later |
 | `fetch-bin: cannot create <folder>/bin/.fetch.lock` | `bin/` cannot be written: fix its rights                                            |
 | `fetch-bin: no version in <folder>/herdr-plugin.toml` | the manifest is missing or damaged: restore it with git                           |
@@ -166,6 +166,7 @@
 | `The agent turn is still being recorded`         | (Diff view, Changes pane) the agent just started working and the snapshot of the working tree is not written yet: in a moment, `r` in the preview, or **Last agent turn** chosen again with `b` in the Changes pane |
 | `Cannot edit this file here (e: in the terminal)` | (Preview) editing needs a text or Markdown file in the File view                  |
 | `Cannot edit: over 2 MB` / `binary file` / `not UTF-8` / `<code>` | (Preview) see [Limits](#limits)                                   |
+| `Cannot save: <code>`                            | (Preview) the file cannot be written (`EACCES`, `EROFS`…)                           |
 | `Mixed line endings: saved as LF` / `CRLF`       | (Preview) the file mixes LF and CRLF: saving writes the more frequent one everywhere (LF on a tie) |
 | `Notes need the explorer`, `Notes need herdr`    | (Preview, Changes pane) the pane does not know its herdr tab, whose terminal receives the notes |
 
@@ -173,7 +174,7 @@
 
 | Message                                     | Meaning and fix                                                           |
 | ------------------------------------------- | ------------------------------------------------------------------------- |
-| `Update command copied: run it, then reopen the panes` | run `herdr plugin update gcaudan.explorer` in a terminal |
+| `Update command copied: run it in a terminal` | run `herdr plugin update gcaudan.explorer` in a terminal: the panes restart on the new version by themselves |
 | `X.Y.Z skipped: Settings to update anyway`  | no `↑` for that version; `u` in the settings still opens the update       |
 | `Key bindings added`                        | the setup offered on the first start ran (see [Setup](installation.md#setup)) |
 
@@ -184,6 +185,7 @@
 | `indexing…`                   | the file list is loading                                   |
 | `(first 50000 files only)`    | the folder walk hit its cap. Narrow the root               |
 | `Invalid regex: …`            | fix the regular expression, or turn **.\*** off            |
+| `Invalid include glob`, `Invalid exclude glob` | fix the pattern in that field                  |
 | `No results`                  | `alt+h` also searches ignored and dot files                 |
 | `(file too large)`, `(binary file)`, `(not a file)`, `(cannot read)` | side preview not available for that file |
 
@@ -191,7 +193,7 @@
 
 | Message                                                            | Meaning and fix                                                     |
 | ------------------------------------------------------------------ | ------------------------------------------------------------------- |
-| `git not found in PATH`                                            | install git                                                         |
+| `git not found in PATH`                                            | install git 2.31 or later, in an absolute folder of `PATH`: an older git counts as none |
 | `<Operation> failed: <git error>`                                  | git's first error line. A rejected push shows the reason            |
 | `Busy: <operation>`                                                | wait for the running command                                        |
 | `timed out or not run`                                             | the command could not start, or hit its time limit                  |
@@ -228,6 +230,7 @@
 | `run it from a herdr pane` (code 2)                                     | `HERDR_PANE_ID` is not set                                          |
 | `not in a git repository`, `git status failed`, `no changed file`       | `--last` outside a repository, or with no modified, added or untracked file |
 | `no such file: <path>`, `not a file: <path>`                            | the path does not exist (allowed with `--diff`), or is a folder    |
+| `not a local file: <link>`                                              | (`--url`) the link is not a `file://` URL of this host, or no link was clicked |
 | `link to a network share, not shown: <path>`                            | the file is a link (or sits behind one) to `\\host\share`, never followed, see [Security](../SECURITY.md#windows) |
 | `wrong place: <place>`, `usage: …` (code 2)                             | a place such as `14-12`, `0` or `12:18-5`, or wrong arguments       |
 | `Cannot preview`, `Cannot open the preview`                             | see [Explorer and preview](#explorer-and-preview)                  |

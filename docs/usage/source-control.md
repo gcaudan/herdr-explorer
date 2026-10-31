@@ -94,7 +94,7 @@ edits it in the terminal editor and `o` opens it in its app (else the editor).
 stashes the untracked files too, `alt+enter` or `ctrl+o` leaves them. `a` apply, `o` pop, `d` drop.
 
 **PRs view** (pull requests): the repository's open pull requests on GitHub, through the [GitHub CLI](https://cli.github.com)
-(`gh`, logged in with `gh auth login`): number, draft, title, review (approved, changes requested, review
+(`gh`, logged in with `gh auth login`), the first 100: number, draft, title, review (approved, changes requested, review
 required), author and checks (`✓` passed, `✗` failed, `●` running). The current branch's comes first, in bold. The
 list loads on entering the view and on `r`, never on its own; the last one shows meanwhile. `enter` shows the pull
 request (header, description, checks and diff; GitHub gives no diff past 300 files), `o` opens it in the browser,

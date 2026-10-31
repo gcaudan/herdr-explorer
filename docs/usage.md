@@ -16,6 +16,9 @@ Its four herdr actions can be bound to keys (see [Key bindings](installation.md#
 (`prefix+a`), `gcaudan.explorer.scm` source control (`prefix+d`), and `gcaudan.explorer.peek` previews the changed
 file written last (left unbound by [setup](installation.md#setup)).
 
+The explorer's key help (`?`) lists the keys these actions are bound to, and shows the plugin's version and commit
+at its foot.
+
 Key names in these pages are those of [configuration.md](configuration.md#key-names). Only the explorer's
 keys can be rebound.
 
