@@ -629,7 +629,8 @@ fn the_diff_config_neither_cuts_a_hunk_at_a_blank_line_nor_names_the_paths_from_
     assert_eq!((signs.as_str(), parsed.add, parsed.del), ("  -+", 1, 1));
     let mut sel = Sel::default();
     sel.hunks.insert((f, 0));
-    assert_eq!(r.top, res.top);
+    // git names the top with forward slashes on Windows.
+    assert_eq!(r.top.replace('\\', "/"), res.top.replace('\\', "/"));
     assert_eq!(r.apply(&parsed, &sel, Mode::Stage), "Staged 2 lines");
     assert_eq!(r.out(&["diff", "--cached", "--numstat"]), "1\t1\tsub/f.txt\n");
 }
