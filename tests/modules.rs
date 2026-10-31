@@ -964,7 +964,7 @@ fn core_ui() {
                 let mut state = HelpState::default();
                 let draw = |state: &mut HelpState| {
                     let mut lines = vec![String::new(); h];
-                    ui::help(&mut lines, w, &title, &groups, state);
+                    ui::help(&mut lines, w, &title, &groups, state, "");
                     strs_val(&lines)
                 };
                 let mut out = vec![draw(&mut state)];

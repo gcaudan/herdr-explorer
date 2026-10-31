@@ -128,8 +128,8 @@ fn help_rows(groups: &[Group], state: &HelpState) -> Vec<Vec<String>> {
 }
 
 /// The key help of a pane (? or f1), over the whole pane: the title, a find field once / is pressed, the keys by
-/// group, then a rule and the keys of the help.
-pub fn help(lines: &mut [String], w: usize, title: &str, groups: &[Group], state: &mut HelpState) {
+/// group, then a rule and the keys of the help, with build (update::BUILD) on their right when it fits.
+pub fn help(lines: &mut [String], w: usize, title: &str, groups: &[Group], state: &mut HelpState, build: &str) {
     let h = lines.len();
     let rows = help_rows(groups, state);
     let at = if state.find.is_some() { 2 } else { 1 };
@@ -177,7 +177,13 @@ pub fn help(lines: &mut [String], w: usize, title: &str, groups: &[Group], state
         format!("{}{}", if state.top > 0 { "▴" } else { "" }, if state.top + n < rows.len() as i64 { "▾" } else { "" });
     let rule = "─".repeat((w as i64 - more.chars().count() as i64 - 1).max(0) as usize);
     out.push(line(&[seg(rule + &more, fg(c().dim))], w, None));
-    out.push(line(&keys(&HELP_KEYS, w).segs, w, Some(c().header)));
+    let mut foot = keys(&HELP_KEYS, w).segs;
+    let room = w as i64 - seg_width(&foot) as i64 - text_width(build) as i64 - 1;
+    if !build.is_empty() && room >= 2 {
+        foot.push(seg(" ".repeat(room as usize), String::new()));
+        foot.push(seg(build, fg(c().dim)));
+    }
+    out.push(line(&foot, w, Some(c().header)));
     for (i, l) in out.into_iter().take(h).enumerate() {
         lines[i] = l;
     }

@@ -36,7 +36,7 @@ impl Explorer {
         if self.state.help.is_some() {
             let groups = self.help_groups();
             if let Some(help) = &mut self.state.help {
-                ui::help(&mut lines, w, "Explorer", &groups, help);
+                ui::help(&mut lines, w, "Explorer", &groups, help, crate::core::update::BUILD);
             }
         }
         if let Some((q, _)) = &mut self.state.confirm {

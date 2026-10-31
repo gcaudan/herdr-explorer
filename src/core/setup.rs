@@ -46,6 +46,46 @@ pub fn bound() -> bool {
     KEYS.iter().any(|(_, action, _)| text.contains(&command_of(action)))
 }
 
+/// The keys the config binds to each of the plugin's actions ([[keys.command]] blocks): (key, action), in the
+/// config's order.
+pub fn action_keys() -> Vec<(String, String)> {
+    let text = config_file().and_then(|f| std::fs::read_to_string(f).ok()).unwrap_or_default();
+    keys_in(&text)
+}
+
+fn keys_in(text: &str) -> Vec<(String, String)> {
+    let prefix = format!("{}.", exec::plugin());
+    let value = |v: &str| v.split('#').next().unwrap_or("").trim().trim_matches(['"', '\'']).to_string();
+    let (mut out, mut block) = (Vec::new(), None::<(String, String)>);
+    let mut end = |block: &mut Option<(String, String)>| {
+        if let Some((key, command)) = block.take()
+            && let Some(action) = command.strip_prefix(&prefix)
+            && !key.is_empty()
+        {
+            out.push((key, action.to_string()));
+        }
+    };
+    for line in text.lines() {
+        let l = line.trim();
+        if l.starts_with('[') {
+            end(&mut block);
+            if l.replace(' ', "") == "[[keys.command]]" {
+                block = Some(Default::default());
+            }
+        } else if let Some((k, v)) = l.split_once('=')
+            && let Some(b) = &mut block
+        {
+            match k.trim() {
+                "key" => b.0 = value(v),
+                "command" => b.1 = value(v),
+                _ => {}
+            }
+        }
+    }
+    end(&mut block);
+    out
+}
+
 /// A binding as config.toml writes it.
 fn block(key: &str, action: &str, description: &str) -> String {
     format!(
@@ -257,6 +297,13 @@ mod tests {
         assert!(plan("[keys]\ncommand = [ ]\n", "c").is_err());
         assert!(plan("keys = { prefix = \"ctrl+b\" }\n", "c").is_err());
         assert!(plan("[theme]\nkeys = 1\n", "c").is_ok());
+        let text = format!(
+            "[[keys.command]]\nkey = \"prefix+f\"\ncommand = \"{p}.toggle\" # x\n\n[ui]\nkey = \"z\"\n\
+             [[keys.command]]\ncommand = \"other.scm\"\nkey = \"prefix+d\"\n[[ keys.command ]]\ncommand = '{p}.scm'\n\
+             key = 'ctrl+s'\n",
+            p = exec::plugin()
+        );
+        assert_eq!(keys_in(&text), [("prefix+f".into(), "toggle".into()), ("ctrl+s".into(), "scm".into())]);
         let (add, done) = plan("", "c").unwrap();
         assert_eq!((add.matches("[[keys.command]]").count(), done.len()), (3, 3));
     }

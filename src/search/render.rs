@@ -560,7 +560,7 @@ impl Search {
         lines.push(line(&self.state.hints.segs, wu, Some(c().header)));
         if let Some(help) = &mut self.state.help {
             let title = if content { "Search in files" } else { "Go to file" };
-            ui::help(&mut lines, wu, title, &help_groups(), help);
+            ui::help(&mut lines, wu, title, &help_groups(), help, crate::core::update::BUILD);
         }
         lines.truncate(hu);
         self.screen.paint(&lines);

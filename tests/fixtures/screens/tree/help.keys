@@ -4,6 +4,7 @@ file README.md # Hello\n
 file src/main.rs fn main() {}\n
 file src/lib.rs pub fn f() {}\n
 dir docs
+home .config/herdr/config.toml [[keys.command]]\nkey = "prefix+f"\ntype = "plugin_action"\ncommand = "gcaudan.explorer.toggle"\n\n[[keys.command]]\nkey = "prefix+a"\ntype = "plugin_action"\ncommand = "gcaudan.explorer.search"\n
 state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false,"follow":false}
 start
 keys ?

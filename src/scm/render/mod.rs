@@ -1156,7 +1156,7 @@ impl Pane {
             let title = VIEWS.iter().find(|v| v.0 == self.s.view).map_or("", |v| v.1);
             let groups = self.help_groups();
             if let Some(state) = self.help.as_mut() {
-                ui::help(&mut lines, wu, title, &groups, state);
+                ui::help(&mut lines, wu, title, &groups, state, crate::core::update::BUILD);
             }
         }
         self.screen.paint(&lines);

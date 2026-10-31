@@ -227,7 +227,7 @@ impl Pane {
             menu.draw(&mut lines, wi, h as i64);
         }
         if let Some(help) = &mut self.help {
-            ui::help(&mut lines, w, "Changes", &help_groups(), help);
+            ui::help(&mut lines, w, "Changes", &help_groups(), help, crate::core::update::BUILD);
         }
         self.screen.paint(&lines);
     }

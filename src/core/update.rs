@@ -12,6 +12,10 @@ use crate::json::{self, Value};
 use std::sync::{LazyLock, OnceLock};
 use std::time::{Duration, Instant};
 
+/// The version and the commit built ("v1.0.0 · 7807fc4"), shown in the key help: a development build has the
+/// version of the release it started from.
+pub const BUILD: &str = env!("HERDR_EXPLORER_BUILD");
+
 /// The GitHub repository the releases come from when the clone's origin is not on GitHub.
 pub const REPO: &str = "gcaudan/herdr-explorer";
 const DAY: f64 = 24.0 * 60.0 * 60.0 * 1000.0;

@@ -353,7 +353,7 @@ impl Preview {
                 .collect();
             let title = paths::basename(&self.state.file, None);
             if let Some(help) = &mut self.state.help {
-                ui::help(lines, w, &title, &groups, help);
+                ui::help(lines, w, &title, &groups, help, crate::core::update::BUILD);
             }
         }
         if let Some(q) = &mut self.state.ask {

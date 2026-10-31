@@ -1,5 +1,10 @@
 size 60x16
 ⟪fg=#8c8c8c⟫ ‹ ⟪b⟫Keys⟪fg=#8c8c8c⟫ · Explorer⟪⟫
+⟪fg=#519aba b⟫ Panes (herdr keys)⟪⟫
+⟪fg=#d4d4d4 b⟫  prefix+f   ⟪fg=#8c8c8c⟫explorer, open or close⟪⟫
+⟪fg=#d4d4d4 b⟫  prefix+a   ⟪fg=#8c8c8c⟫go to file⟪⟫
+⟪fg=#d4d4d4 b⟫  —          ⟪fg=#8c8c8c⟫source control⟪⟫
+⟪fg=#d4d4d4 b⟫  —          ⟪fg=#8c8c8c⟫preview the last changed file⟪⟫
 ⟪fg=#519aba b⟫ Move⟪⟫
 ⟪fg=#d4d4d4 b⟫  ↑ k        ⟪fg=#8c8c8c⟫up⟪⟫
 ⟪fg=#d4d4d4 b⟫  ↓ j        ⟪fg=#8c8c8c⟫down⟪⟫
@@ -8,10 +13,5 @@ size 60x16
 ⟪fg=#d4d4d4 b⟫  ctrl+u     ⟪fg=#8c8c8c⟫half page up⟪⟫
 ⟪fg=#d4d4d4 b⟫  ctrl+d     ⟪fg=#8c8c8c⟫half page down⟪⟫
 ⟪fg=#d4d4d4 b⟫  home g     ⟪fg=#8c8c8c⟫first⟪⟫
-⟪fg=#d4d4d4 b⟫  end G      ⟪fg=#8c8c8c⟫last⟪⟫
-⟪fg=#d4d4d4 b⟫  → l        ⟪fg=#8c8c8c⟫unfold⟪⟫
-⟪fg=#d4d4d4 b⟫  ← h        ⟪fg=#8c8c8c⟫fold, parent⟪⟫
-⟪fg=#d4d4d4 b⟫  /          ⟪fg=#8c8c8c⟫filter⟪⟫
-⟪fg=#519aba b⟫ Review⟪⟫
 ⟪fg=#8c8c8c⟫──────────────────────────────────────────────────────────▾⟪⟫
-⟪fg=#d4d4d4 bg=#252526 b⟫ ↑↓⟪fg=#8c8c8c bg=#252526⟫ scroll⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ close⟪bg=#252526⟫                             ⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ↑↓⟪fg=#8c8c8c bg=#252526⟫ scroll⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ close⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫<build>⟪bg=#252526⟫ ⟪⟫

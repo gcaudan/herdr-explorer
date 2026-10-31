@@ -14,4 +14,4 @@ size 60x16
 ⟪fg=#519aba b⟫ Diff⟪⟫
 ⟪fg=#d4d4d4 b⟫  ,          ⟪fg=#8c8c8c⟫the view's options (or ⚙)⟪⟫
 ⟪fg=#8c8c8c⟫──────────────────────────────────────────────────────────▾⟪⟫
-⟪fg=#d4d4d4 bg=#252526 b⟫ ↑↓⟪fg=#8c8c8c bg=#252526⟫ scroll⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ close⟪bg=#252526⟫                             ⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ↑↓⟪fg=#8c8c8c bg=#252526⟫ scroll⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ close⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫<build>⟪bg=#252526⟫ ⟪⟫

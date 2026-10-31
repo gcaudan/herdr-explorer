@@ -23,7 +23,7 @@ use crate::core::icons::{self, Loaded};
 use crate::core::screen::{self, Input, Screen};
 use crate::core::ui::{self, HelpState, Scrollbar};
 use crate::core::watch::Watch;
-use crate::core::{paths, shown, update, worker};
+use crate::core::{paths, setup, shown, update, worker};
 use crate::json::{self, Value};
 use crate::sys::{self, Watcher};
 use state::tree_settings;
@@ -39,6 +39,14 @@ use watch::{AfterGit, Repo};
 const WIDTH: usize = exec::DEFAULT_WIDTH as usize;
 
 /// The key help (help action), by group, with the keys bound now: (group, [(action, description)]).
+/// The plugin's actions that open a pane, bound in herdr's config: action, what it does.
+const PANES: [(&str, &str); 4] = [
+    ("toggle", "explorer, open or close"),
+    ("search", "go to file"),
+    ("scm", "source control"),
+    ("peek", "preview the last changed file"),
+];
+
 const HELP: [(&str, &[(&str, &str)]); 5] = [
     (
         "Move",
@@ -865,18 +873,26 @@ impl Explorer {
     }
 
     fn help_groups(&self) -> Vec<ui::Group> {
-        HELP.iter()
-            .map(|(group, items)| {
-                let keys = items
-                    .iter()
-                    .map(|(action, text)| {
-                        let k = self.keys_of(action).join(" ");
-                        (if k.is_empty() { "—".into() } else { k }, text.to_string())
-                    })
-                    .collect();
-                (group.to_string(), keys)
+        // The panes herdr opens, by the keys its config binds to the plugin's actions (setup), from any pane.
+        let bound = setup::action_keys();
+        let panes = PANES
+            .iter()
+            .map(|(action, text)| {
+                let k: Vec<&str> = bound.iter().filter(|(_, a)| a == action).map(|(k, _)| k.as_str()).collect();
+                (if k.is_empty() { "—".into() } else { k.join(" ") }, text.to_string())
             })
-            .collect()
+            .collect();
+        let groups = HELP.iter().map(|(group, items)| {
+            let keys = items
+                .iter()
+                .map(|(action, text)| {
+                    let k = self.keys_of(action).join(" ");
+                    (if k.is_empty() { "—".into() } else { k }, text.to_string())
+                })
+                .collect();
+            (group.to_string(), keys)
+        });
+        std::iter::once(("Panes (herdr keys)".to_string(), panes)).chain(groups).collect()
     }
 
     /// The keys of an action, its default ones first in their order.

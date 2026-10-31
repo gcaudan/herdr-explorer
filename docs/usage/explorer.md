@@ -246,10 +246,14 @@ saved in [`keys.json`](../configuration.md#config-folder-keysjson) and apply at 
 
 ## Key help (`?` or `f1`)
 
-Every key of the explorer, as bound now, takes the place of the tree, by group, over the pane's full height. The arrows, page keys, `j` `k` `g` `G`,
+Every key of the explorer, as bound now, takes the place of the tree, by group, over the pane's full height. It starts
+with **Panes (herdr keys)**: the keys herdr's config binds to the plugin's actions, which work from any pane (open or
+close the explorer, go to file, source control, preview the last changed file; `—` when the config binds none, see
+[Key bindings](../installation.md#key-bindings)). The arrows, page keys, `j` `k` `g` `G`,
 `ctrl+u` `ctrl+d` and the wheel scroll it, `/` finds a key or what it does. `escape`, `q`, `?`,
 `f1`, or a click on the title, goes back to the tree. The preview, the search, source
-control and the changes pane show their keys the same way (`?` or `f1`; `f1` only in the search).
+control and the changes pane show their keys the same way (`?` or `f1`; `f1` only in the search). Each help shows the
+plugin's version and the commit it was built from at the right of its footer (`v1.0.0 · 7807fc4`).
 
 ## Find in the pages
 

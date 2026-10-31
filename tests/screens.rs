@@ -33,7 +33,26 @@ fn root(pane: &str, scenario: &Path) -> PathBuf {
     PathBuf::from(format!("/tmp/hxs/{pane}-{name}"))
 }
 
+/// The screen with the build of the key help (version and commit, new with each) as `<build>`, the spaces before it as
+/// one.
+fn unbuilt(screen: &str) -> String {
+    let build = herdr_explorer::core::update::BUILD;
+    let mut out = String::new();
+    for l in screen.split_inclusive('\n') {
+        let Some(i) = l.find(build) else {
+            out += l;
+            continue;
+        };
+        let (head, tail) = (&l[..i], &l[i + build.len()..]);
+        // Its style, then the spaces of the segment before.
+        let at = head.rfind('⟪').filter(|&s| head[s..].ends_with('⟫')).unwrap_or(head.len());
+        out += &format!("{} {}<build>{tail}", head[..at].trim_end_matches(' '), &head[at..]);
+    }
+    out
+}
+
 fn compare(scenario: &Path, got: &pty::Capture) -> Option<String> {
+    let got = &pty::Capture { screen: unbuilt(&got.screen), calls: got.calls.clone() };
     if std::env::var_os("HX_RECORD").is_some() {
         std::fs::write(scenario.with_extension("screen"), &got.screen).unwrap();
         std::fs::write(scenario.with_extension("calls"), &got.calls).unwrap();

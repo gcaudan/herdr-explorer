@@ -28,4 +28,4 @@ size 80x30
 ⟪fg=#d4d4d4 b⟫  m          ⟪fg=#8c8c8c⟫mark the file viewed: folded until it changes⟪⟫
 ⟪fg=#d4d4d4 b⟫  ] [        ⟪fg=#8c8c8c⟫next, previous file not viewed⟪⟫
 ⟪fg=#8c8c8c⟫──────────────────────────────────────────────────────────────────────────────▾⟪⟫
-⟪fg=#d4d4d4 bg=#252526 b⟫ ↑↓⟪fg=#8c8c8c bg=#252526⟫ scroll⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ close⟪bg=#252526⟫                                                 ⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ↑↓⟪fg=#8c8c8c bg=#252526⟫ scroll⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ close⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫<build>⟪bg=#252526⟫ ⟪⟫
