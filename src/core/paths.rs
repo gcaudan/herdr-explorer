@@ -22,9 +22,9 @@ pub fn cwd() -> String {
 }
 
 /// Whether a path from `relative` leaves its folder: `..` alone or as its first segment, or another root. A name
-/// starting with two dots (`..env`) stays inside.
+/// starting with two dots (`..env`) stays inside. `/` also separates, for a path written with it on Windows (rel_of).
 pub fn leaves(rel: &str) -> bool {
-    is_absolute(rel) || rel.strip_prefix("..").is_some_and(|r| r.is_empty() || r.starts_with(SEP))
+    is_absolute(rel) || rel.strip_prefix("..").is_some_and(|r| r.is_empty() || r.starts_with([SEP, '/']))
 }
 
 /// The path with `..` and `.` resolved and separators merged: `sep` joins the parts kept.

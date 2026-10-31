@@ -291,7 +291,7 @@ impl Preview {
         let rel = (!root.is_empty()).then(|| paths::relative(root, &dir));
         match rel {
             Some(r) if r.is_empty() => None,
-            Some(r) if !(r.starts_with("..") || paths::is_absolute(&r)) => Some(format!("in {r}")),
+            Some(r) if !paths::leaves(&r) => Some(format!("in {r}")),
             _ => Some(format!("in {dir}")),
         }
     }

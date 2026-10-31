@@ -423,7 +423,7 @@ impl Explorer {
         }
         let Some(target) = req.get("file").and_then(Value::as_str) else { return };
         let rel = paths::relative(&self.root, target);
-        if rel.is_empty() || rel.starts_with("..") || paths::is_absolute(&rel) {
+        if rel.is_empty() || paths::leaves(&rel) {
             return;
         }
         self.reveal_rel(&rel_of(&self.root, target));

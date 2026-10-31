@@ -195,3 +195,15 @@ fn a_name_starting_with_two_dots_stays_in_its_folder() {
     assert_eq!(actions::relative_to(Some(&dir), &format!("{dir}/..env")), "..env");
     assert_eq!(actions::relative_to(Some(&format!("{dir}/a")), &format!("{dir}/b")), format!("{dir}/b"));
 }
+
+/// A path from paths::relative leaves its folder by `..` as its first segment only, whichever separator follows it.
+#[test]
+fn only_dot_dot_as_a_segment_leaves_the_folder() {
+    use herdr_explorer::core::paths::leaves;
+    for rel in ["..", "../x", "/x"] {
+        assert!(leaves(rel), "{rel}");
+    }
+    for rel in ["", "x", "..env", "...", "a/../b", "..x/y"] {
+        assert!(!leaves(rel), "{rel}");
+    }
+}

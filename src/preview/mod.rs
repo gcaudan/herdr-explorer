@@ -136,7 +136,7 @@ pub struct Preview {
 /// file inside dir (or dir itself), by their paths.
 fn within(file: &str, dir: &str) -> bool {
     let r = paths::relative(dir, file);
-    r != ".." && !r.starts_with(&format!("..{}", paths::SEP)) && !paths::is_absolute(&r)
+    !paths::leaves(&r)
 }
 
 fn ext(file: &str) -> String {

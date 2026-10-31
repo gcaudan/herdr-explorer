@@ -236,7 +236,7 @@ impl Explorer {
         self.git_watcher = None;
         // Going up: the folder left is selected.
         let back = rel_of(&self.root, &from);
-        if !back.is_empty() && !back.starts_with("..") && !paths::is_absolute(&back) {
+        if !back.is_empty() && !paths::leaves(&back) {
             self.reveal_rel(&back);
         }
         self.watch_root();

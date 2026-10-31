@@ -323,7 +323,7 @@ fn rel_of(from: &str, to: &str) -> String {
 /// Whether dir is root or under it.
 fn inside(dir: &str, root: &str) -> bool {
     let r = paths::relative(root, dir);
-    !r.starts_with("..") && !paths::is_absolute(&r)
+    !paths::leaves(&r)
 }
 
 /// The path with its links resolved, as written when it cannot be.
@@ -345,7 +345,7 @@ fn rel_under(dir: &str, root: &str) -> Option<String> {
 fn big(dir: &str) -> bool {
     // /home → /var/home on some systems.
     let up = paths::relative(&real(dir), &real(&icons::homedir()));
-    dir == paths::root(dir) || (!up.starts_with("..") && !paths::is_absolute(&up))
+    dir == paths::root(dir) || !paths::leaves(&up)
 }
 
 /// A file's modification time in ms, 0 when missing (watchFile's stat).

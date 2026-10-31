@@ -484,7 +484,7 @@ pub fn reveal_item(repo: &Repo, abs: &str) -> Result<Item, String> {
     let rel = hist_name(&repo.top, abs);
     let inside = |p: &str| rel.is_empty() || p == rel || p.starts_with(&format!("{rel}/"));
     let s = &repo.status;
-    let it = if rel.starts_with("..") {
+    let it = if paths::leaves(&rel) {
         None
     } else {
         s.conflicts.iter().chain(&s.staged).chain(&s.changes).find(|i| inside(&i.path))
