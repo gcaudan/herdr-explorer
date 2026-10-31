@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/gcaudan/herdr-explorer/compare/v0.8.0...v1.0.0) (2026-10-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* the plugin needs its binary in `bin/`, fetched by the manifest's build step for Linux and macOS (x86_64, arm64) and Windows; elsewhere, build it with `scripts/dev-build.sh`. git features need git 2.31 or later (an older git counts as missing).
+
+### Features
+
+* rewrite the plugin in Rust ([#29](https://github.com/gcaudan/herdr-explorer/issues/29)) ([60f48e2](https://github.com/gcaudan/herdr-explorer/commit/60f48e262ac173cf5f2666db484d7843a6a21239))
+
 ## [0.8.0](https://github.com/gcaudan/herdr-explorer/compare/v0.7.1...v0.8.0) (2026-10-25)
 
 
