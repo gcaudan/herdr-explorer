@@ -506,7 +506,7 @@ impl Explorer {
             Row::group("NEW TABS"),
             Row::setting(
                 "Open automatically",
-                "Open the explorer in new tabs that have a single pane. Off: only with the toggle key (prefix+f with the installer).",
+                "Open the explorer in new tabs that have a single pane. Off: only with the toggle key (prefix+f once setup has run).",
                 self.on_off("autoOpen"),
             ),
             Row::setting(

@@ -10,4 +10,4 @@ for t in x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-apple-darwi
   x86_64-pc-windows-msvc; do
   "$CARGO" clippy --target $t -- -D warnings
 done
-"$CARGO" test
+"$CARGO" test --no-fail-fast

@@ -1,4 +1,4 @@
-//! Screen captures (Linux): a scenario (`rust/tests/fixtures/screens/<pane>/<name>.keys`) runs a pane in a pty of a
+//! Screen captures (Linux): a scenario (`tests/fixtures/screens/<pane>/<name>.keys`) runs a pane in a pty of a
 //! fixed size, in a folder of its own with the fake herdr, types keys, waits for the output to settle, and gives the
 //! final screen (`vt::Screen::text`) and the calls made to herdr. The capture is recorded next to the scenario
 //! (`.screen`, `.calls`); the binary must give the same.

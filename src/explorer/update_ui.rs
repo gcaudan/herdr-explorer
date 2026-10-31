@@ -40,9 +40,7 @@ impl Explorer {
         };
         let focus = buttons.len() - 1;
         let copy: Run = Rc::new(|_: &mut Explorer| {
-            later(|| {
-                Some(actions::copy(&update::herdr_update(), "Update command copied: run it, then reopen the panes"))
-            })
+            later(|| Some(actions::copy(&update::herdr_update(), "Update command copied: run it in a terminal")))
         });
         let notes_page: Run = Rc::new(move |_: &mut Explorer| {
             let url = url.clone();
