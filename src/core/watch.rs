@@ -142,12 +142,16 @@ fn watch(file: &str) -> Option<Seen> {
         None => {
             let names: Names = Arc::default();
             let told = names.clone();
+            // FSEvents tells a change of the folder itself (removed, made again) by the folder's own name: every
+            // file then looks, as when the watch is lost.
+            let own = std::path::Path::new(&dir).file_name().map(|n| n.to_string_lossy().into_owned());
             let watcher = sys::Watcher::new(&dir, false, move |changed| {
                 let mut names = told.lock().unwrap_or_else(|e| e.into_inner());
                 names.retain(|(_, f)| f.strong_count() > 0);
+                let all = changed.is_none() || changed == own;
                 let mut hit = false;
                 for (n, flag) in names.iter() {
-                    if changed.as_deref().is_none_or(|c| c == n)
+                    if (all || changed.as_deref() == Some(n.as_str()))
                         && let Some(flag) = flag.upgrade()
                     {
                         flag.store(true, Ordering::SeqCst);
