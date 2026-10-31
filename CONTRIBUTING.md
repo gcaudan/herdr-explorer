@@ -36,11 +36,15 @@ the manifest runs it.
    - **the hook**: runs on each event or action, so the next one picks up your binary.
    - **herdr-plugin.toml** (hooks, panes, actions, build step): herdr keeps its own copy of the manifest, so run
      `herdr plugin link .` again.
-5. A pane can also run outside herdr for a quick check, for example
+5. To keep the herdr you work in on another install of the plugin, try your build in a herdr of its own:
+   `scripts/test-herdr.sh` builds, links this clone into a herdr with its own config (a copy of yours), plugins,
+   sessions and state, under `~/.cache/herdr-explorer-test` (`HX_TEST_HOME`), and attaches to it. `--no-build`
+   skips the build, `--stop` stops its server; other arguments go to herdr. A herdr that links this clone too runs the same `bin/`.
+6. A pane can also run outside herdr for a quick check, for example
    `EXPLORER_FILE=README.md bin/herdr-explorer pane diff` or `bin/herdr-explorer pane search <folder>`. Features that
    need herdr (opening panes, the neighbouring terminal) then do nothing or report an error.
-6. `herdr plugin log` shows the hooks' output and errors.
-7. Run `scripts/check.sh` before pushing (see [Tests](#tests)).
+7. `herdr plugin log` shows the hooks' output and errors.
+8. Run `scripts/check.sh` before pushing (see [Tests](#tests)).
 
 Keep the conventions of the existing code:
 
@@ -81,6 +85,7 @@ works](docs/architecture.md#how-it-works).
 | `herdr-plugin.toml`   | manifest: id, version, min herdr version, build step (fetch-bin), startup hook, events (`tab.created`, `tab.closed`, `workspace.closed`, `pane.agent_status_changed`, `tab.focused`), panes, actions, `file://` link handler |
 | `scripts/fetch-bin.sh`, `.ps1` | download the release binary of the manifest's version, checked against `SHA256SUMS`, into `bin/` |
 | `scripts/dev-build.sh`, `.ps1` | build the binary into `bin/`, marked as a development one (`bin/.dev`) |
+| `scripts/test-herdr.sh` | run a herdr of its own on this clone, apart from the herdr in use |
 | `scripts/check.sh`    | every check, see [Tests](#tests)                                                             |
 | `src/cli.rs`, `main.rs` | the command line: subcommands, `--version`                                                 |
 | `src/hook.rs`         | startup restore, herdr's events (new, closed and focused tabs, agent turns) and the toggle, search and source control actions. Opens and places the explorer |
