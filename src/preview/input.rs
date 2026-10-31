@@ -567,14 +567,21 @@ impl Preview {
         if self.state.edit.is_some() && self.state.show.is_none() {
             return self.edit_mouse(m);
         }
-        // A commit shown: the wheel and the scrollbar only.
+        // A commit shown: the wheel, the scrollbar and the header's ⚙ only.
         if self.state.show.is_some() {
             if m.wheel != 0 {
                 return self.scroll(m.wheel * 3);
             }
-            if let BarHit::Scroll(top) = self.scrollbar.mouse(m, m.y - 2, m.x == w as i64, Instant::now()) {
-                self.state.top = top;
-                self.render();
+            match self.scrollbar.mouse(m, m.y - 2, m.x == w as i64, Instant::now()) {
+                BarHit::Ignored => {}
+                BarHit::Took => return,
+                BarHit::Scroll(top) => {
+                    self.state.top = top;
+                    return self.render();
+                }
+            }
+            if m.y == 1 {
+                self.header_mouse(m);
             }
             return;
         }

@@ -29,8 +29,9 @@ use crate::core::ui::{self, Scrollbar, c, fg};
 use crate::core::watch::Watch;
 use crate::core::{paths, update, worker};
 use crate::json::{self, Value};
-use crate::sys::{self, Watcher};
+use crate::sys;
 use std::rc::Rc;
+use std::sync::atomic::AtomicU64;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -85,9 +86,12 @@ pub struct Preview {
     git: Worker,
     /// Beside a review's source control: q closes, whatever it shows.
     review: bool,
-    // run counters: an answer of git that another call took the place of is dropped
-    diff_run: u64,
-    changes_run: u64,
+    // run counters: an answer of git that another call took the place of is dropped, a job queued behind that call
+    // not even run
+    diff_run: Arc<AtomicU64>,
+    changes_run: Arc<AtomicU64>,
+    /// A merge base asked for (reload_scope): the next diff done says when it found no default branch.
+    check_branch: bool,
     show_run: u64,
     /// The commits shown so far, each one's id.
     shows: u64,
@@ -109,7 +113,8 @@ pub struct Preview {
     settle_at: Option<Instant>,
     reload_at: Option<Instant>,
     // watching
-    watcher: Option<Watcher>,
+    /// The file shown (watch).
+    watcher: Option<Watch>,
     /// The tab's request file, watched, and the time of the request taken last.
     requests: Option<Watch>,
     seen: f64,
@@ -306,8 +311,9 @@ impl Preview {
             herdr,
             git,
             review: env("EXPLORER_REVIEW").is_some_and(|r| !r.is_empty()),
-            diff_run: 0,
-            changes_run: 0,
+            diff_run: Arc::default(),
+            changes_run: Arc::default(),
+            check_branch: false,
             show_run: 0,
             shows: 0,
             changes_seen: 0,
@@ -399,8 +405,8 @@ impl Preview {
         if handed.is_some() && request.as_deref().is_some_and(|f| std::fs::metadata(f).is_ok()) {
             self.take();
         }
-        // Updated plugin: restarted on the new code once no search is typed nor selection dragged; never while a tab
-        // is edited, its text would be lost.
+        // Updated plugin: restarted on the new code once no search, note or commit is typed, no selection dragged, no
+        // question, menu or help open and no staging running; never while a tab is edited, its text would be lost.
         self.version_watch = Some(update::VersionWatch::new());
     }
 
@@ -408,7 +414,12 @@ impl Preview {
         let s = &self.state;
         !s.find.as_ref().is_some_and(|f| f.active)
             && s.note.is_none()
+            && s.rev_prompt.is_none()
+            && s.ask.is_none()
+            && s.menu.is_none()
+            && s.help.is_none()
             && !s.select.as_ref().is_some_and(|x| !x.done)
+            && !self.editing
             && self.edits().is_empty()
     }
 
@@ -441,6 +452,8 @@ impl Preview {
             ("EXPLORER_VIEW", if s.diff { "diff" } else { "file" }.into()),
             ("EXPLORER_TABS", tabs),
             ("EXPLORER_SHOW", show),
+            // The tab shown kept or not as saved in EXPLORER_TABS, not as when the pane was first opened.
+            ("EXPLORER_KEEP", String::new()),
         ]
         .into_iter()
         .map(|(k, v)| (k.to_string(), v))
@@ -492,7 +505,7 @@ impl Preview {
     fn next_deadline(&self) -> Option<Instant> {
         let mut all = vec![self.flash_at, self.settle_at, self.reload_at, self.scrollbar.due()];
         all.extend(
-            [&self.requests, &self.settings_watch, &self.scope_watch, &self.notes_watch]
+            [&self.watcher, &self.requests, &self.settings_watch, &self.scope_watch, &self.notes_watch]
                 .into_iter()
                 .flatten()
                 .map(Watch::due),
@@ -515,6 +528,11 @@ impl Preview {
             self.kitty.probing = false;
             self.state.rows = None;
             self.render();
+        }
+        // 80 ms after the first change not reloaded yet, not after the last: a file written without a pause (a log)
+        // is reloaded too.
+        if self.watcher.as_mut().is_some_and(Watch::poll) {
+            self.reload_at.get_or_insert(now + Duration::from_millis(80));
         }
         if due(&mut self.reload_at) {
             // The notes follow their lines (notes::current), the file's own reloaded with it.
@@ -777,22 +795,11 @@ impl Preview {
         }
     }
 
-    /// Changes on disk, by an agent or an editor: reloaded, keeping the position. The folder is watched rather than
-    /// the file, which editors and agents often replace by renaming a new one over it.
+    /// Changes on disk, by an agent or an editor: reloaded, keeping the position (timers). The folder is watched
+    /// rather than the file, which editors and agents often replace by renaming a new one over it; a folder removed
+    /// and made again (a build, a branch switched) watched again (core::watch).
     fn watch(&mut self) {
-        self.watcher = None;
-        let base = paths::basename(&self.state.file, None);
-        let (tx, waker) = (self.tx.clone(), self.waker.clone());
-        let watched = Watcher::new(&paths::dirname(&self.state.file), false, move |f| {
-            if f.is_some_and(|f| f != base) {
-                return;
-            }
-            let _ = tx.send(Box::new(|p: &mut Preview| {
-                p.reload_at = Some(Instant::now() + Duration::from_millis(80));
-            }));
-            waker.wake();
-        });
-        self.watcher = watched.ok();
+        self.watcher = Some(Watch::new(&self.state.file, Duration::from_millis(500)));
     }
 
     /// Wrap lines and the diff layout chosen in another pane (another preview, the Changes pane, source control):

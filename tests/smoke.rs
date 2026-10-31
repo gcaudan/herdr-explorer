@@ -431,6 +431,174 @@ fn the_binary_started_by_the_manifest_fetches_the_new_binary_before_it_restarts(
     p.none_left();
 }
 
+/// The version of the plugin's manifest changed, as an update does.
+fn bump(s: &Setup) {
+    let toml = s.plugin.join("herdr-plugin.toml");
+    let text = std::fs::read_to_string(&toml).unwrap();
+    std::fs::write(&toml, text.replacen("version = \"", "version = \"9.9.9-", 1)).unwrap();
+}
+
+/// Whether the pane's process left its screen from `mark` on: a restart on new code.
+fn left_screen(p: &Pane, mark: usize) -> bool {
+    p.output.lock().unwrap()[mark..].windows(8).any(|w| w == b"\x1b[?1049l")
+}
+
+#[test]
+fn the_preview_starts_again_on_new_code_only_once_its_menu_is_closed() {
+    let s = Setup::new("restart-menu");
+    let file = s.work.join("a.txt").display().to_string();
+    let root = s.work.display().to_string();
+    let mut p = s.start(&s.cmd(&["pane", "preview"]), &[("EXPLORER_FILE", &file), ("EXPLORER_ROOT", &root)]);
+    p.until("hello smoke");
+    p.send(b",");
+    p.until("Wrap lines");
+    let mark = p.quiet();
+    bump(&s);
+    // The restart is tried 2 s after the change, then every second while the pane is busy.
+    std::thread::sleep(Duration::from_millis(3500));
+    assert!(!left_screen(&p, mark), "restarted with the menu open:\n{}", p.screen());
+    p.send(b"\x1b");
+    wait_for("never restarted once the menu closed", || left_screen(&p, mark));
+    p.until_after(mark, "hello smoke");
+    p.send(b"q");
+    assert_eq!(p.code(), Some(0), "{}", p.screen());
+    p.none_left();
+}
+
+#[test]
+fn a_temporary_tab_stays_temporary_when_the_preview_starts_again_on_new_code() {
+    let s = Setup::new("restart-keep");
+    std::fs::write(s.work.join("b.txt"), "bee smoke\n").unwrap();
+    let (a, b) = (s.work.join("a.txt").display().to_string(), s.work.join("b.txt").display().to_string());
+    let root = s.work.display().to_string();
+    // Opened kept (Enter in the explorer), with a temporary tab beside it.
+    let tabs = format!(r#"{{"current":0,"list":[{{"file":"{a}","kept":true}},{{"file":"{b}","kept":false}}]}}"#);
+    let vars =
+        [("EXPLORER_FILE", a.as_str()), ("EXPLORER_ROOT", &root), ("EXPLORER_KEEP", "1"), ("EXPLORER_TABS", &tabs)];
+    let mut p = s.start(&s.cmd(&["pane", "preview"]), &vars);
+    p.until("hello smoke");
+    p.send(b"\t");
+    p.until("bee smoke");
+    let mark = p.quiet();
+    bump(&s);
+    wait_for("never restarted", || left_screen(&p, mark));
+    p.until_after(mark, "bee smoke");
+    p.quiet();
+    let state = std::fs::read_to_string(s.root.join("state/panes/w1_p2.json")).unwrap();
+    let state = herdr_explorer::json::parse(&state).unwrap();
+    let kept: Vec<bool> = state
+        .get("tabs")
+        .and_then(|t| t.get("list"))
+        .and_then(|l| l.as_array())
+        .unwrap()
+        .iter()
+        .map(|t| t.get("kept").is_some_and(|k| k.truthy()))
+        .collect();
+    assert_eq!(kept, [true, false]);
+    p.send(b"q");
+    assert_eq!(p.code(), Some(0), "{}", p.screen());
+    p.none_left();
+}
+
+#[test]
+fn the_gear_of_a_commit_shown_opens_its_menu() {
+    let s = Setup::new("show-gear");
+    let git = |args: &[&str]| {
+        let ok = Command::new("git")
+            .args(["-c", "user.name=t", "-c", "user.email=t@t"])
+            .args(args)
+            .current_dir(&s.work)
+            .env("GIT_CONFIG_GLOBAL", "/dev/null")
+            .env("GIT_CONFIG_NOSYSTEM", "1")
+            .output()
+            .unwrap()
+            .status
+            .success();
+        assert!(ok, "git {args:?}");
+    };
+    git(&["init", "-q"]);
+    git(&["add", "a.txt"]);
+    git(&["commit", "-q", "-m", "first"]);
+    let file = s.work.join("a.txt").display().to_string();
+    let root = s.work.display().to_string();
+    let show = format!(r#"{{"kind":"commit","ref":"HEAD","cwd":"{root}","title":"first"}}"#);
+    let vars = [("EXPLORER_FILE", file.as_str()), ("EXPLORER_ROOT", &root), ("EXPLORER_SHOW", &show)];
+    let mut p = s.start(&s.cmd(&["pane", "preview"]), &vars);
+    p.until("hello smoke");
+    p.quiet();
+    // ⚙ at the right end of the header (80 columns).
+    p.send(b"\x1b[<0;79;1M\x1b[<0;79;1m");
+    p.until("Layout");
+    p.send(b"\x1b");
+    p.quiet();
+    p.send(b"q");
+    p.send(b"q");
+    assert_eq!(p.code(), Some(0), "{}", p.screen());
+    p.none_left();
+}
+
+#[test]
+fn the_preview_follows_its_file_through_its_folder_removed_and_made_again() {
+    let s = Setup::new("watch-again");
+    let dir = s.work.join("build");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("out.txt"), "first build\n").unwrap();
+    let file = dir.join("out.txt").display().to_string();
+    let root = s.work.display().to_string();
+    let mut p = s.start(&s.cmd(&["pane", "preview"]), &[("EXPLORER_FILE", &file), ("EXPLORER_ROOT", &root)]);
+    p.until("first build");
+    // rm -rf build && make: the folder's watch goes with it, a new one is made once the folder is back.
+    std::fs::remove_dir_all(&dir).unwrap();
+    p.until("File deleted");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("out.txt"), "second build\n").unwrap();
+    p.until("second build");
+    std::fs::write(dir.join("out.txt"), "third build\n").unwrap();
+    p.until("third build");
+    p.send(b"q");
+    assert_eq!(p.code(), Some(0), "{}", p.screen());
+    p.none_left();
+}
+
+#[test]
+fn the_preview_reloads_a_file_written_without_a_pause() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    let s = Setup::new("watch-busy");
+    let log = s.work.join("run.log");
+    std::fs::write(&log, "start\n").unwrap();
+    let file = log.display().to_string();
+    let root = s.work.display().to_string();
+    let mut p = s.start(&s.cmd(&["pane", "preview"]), &[("EXPLORER_FILE", &file), ("EXPLORER_ROOT", &root)]);
+    p.until("start");
+    // A line every 20 ms, less than the reload's 80 ms: shown while the writes go on.
+    let stop = Arc::new(AtomicBool::new(false));
+    let writer = {
+        let (stop, log) = (stop.clone(), log.clone());
+        std::thread::spawn(move || {
+            let mut text = String::from("start\n");
+            let mut n = 0;
+            while !stop.load(Ordering::SeqCst) {
+                n += 1;
+                text += &format!("tick {n}\n");
+                std::fs::write(&log, &text).unwrap();
+                std::thread::sleep(Duration::from_millis(20));
+            }
+        })
+    };
+    let start = Instant::now();
+    let mut seen = false;
+    while !seen && start.elapsed() < Duration::from_secs(5) {
+        seen = p.screen().contains("tick ");
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    stop.store(true, Ordering::SeqCst);
+    writer.join().unwrap();
+    assert!(seen, "never reloaded while written:\n{}", p.screen());
+    p.send(b"q");
+    assert_eq!(p.code(), Some(0), "{}", p.screen());
+    p.none_left();
+}
+
 #[test]
 fn the_explorers_launcher_takes_the_folder_its_child_announces() {
     let s = Setup::new("cwd");

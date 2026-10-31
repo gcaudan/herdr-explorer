@@ -51,6 +51,7 @@ impl Repo {
     }
 
     fn write(&self, f: &str, text: &str) {
+        std::fs::create_dir_all(self.path(f).parent().unwrap()).unwrap();
         std::fs::write(self.path(f), text).unwrap();
     }
 
@@ -608,4 +609,27 @@ fn the_fork_point_of_the_history_where_the_branch_leaves_main_none_on_main() {
     r.git(&["commit", "-qam", "c"]);
     r.git(&["switch", "-q", "feat"]);
     assert_eq!(fork_point(&r.top, true), Some(base));
+}
+
+/// The user's diff config does not change what is read: a blank line of context stays in its hunk
+/// (diff.suppressBlankEmpty), and the paths are named from the top even from a folder below it (diff.relative), so
+/// that the hunk is staged whole.
+#[test]
+fn the_diff_config_neither_cuts_a_hunk_at_a_blank_line_nor_names_the_paths_from_the_folder() {
+    let Some(r) = Repo::new(&[("sub/f.txt", "a\n\nb\n")]) else { return };
+    r.git(&["config", "diff.suppressBlankEmpty", "true"]);
+    r.git(&["config", "diff.relative", "true"]);
+    r.write("sub/f.txt", "a\n\nc\n");
+    let sub = r.path("sub").to_string_lossy().into_owned();
+    let res = diff::collect(&sub, "", "head", None, None);
+    let parsed = diff::changes_of(&res);
+    let f = parsed.files.iter().position(|f| f.sec == "unstaged").expect("unstaged");
+    assert_eq!(parsed.files[f].to.as_deref(), Some("sub/f.txt"));
+    let signs: String = parsed.files[f].hunks[0].lines.iter().map(|l| l.sign).collect();
+    assert_eq!((signs.as_str(), parsed.add, parsed.del), ("  -+", 1, 1));
+    let mut sel = Sel::default();
+    sel.hunks.insert((f, 0));
+    assert_eq!(r.top, res.top);
+    assert_eq!(r.apply(&parsed, &sel, Mode::Stage), "Staged 2 lines");
+    assert_eq!(r.out(&["diff", "--cached", "--numstat"]), "1\t1\tsub/f.txt\n");
 }

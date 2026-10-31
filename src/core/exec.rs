@@ -814,11 +814,13 @@ fn no_hooks() -> String {
 /// GIT_OPTIONAL_LOCKS=0 keeps git status from taking index.lock, which would make a concurrent git commit fail.
 pub fn git_env(cwd: &str) -> Env {
     let hooks = no_hooks();
-    // log.showSignature would run the repository's gpg.program on every signed commit shown.
+    // log.showSignature would run the repository's gpg.program on every signed commit shown. diff.suppressBlankEmpty
+    // would write a blank context line as an empty one, which ends the hunk for diff::parse (and core::stage).
     let mut config: Vec<(String, String)> = [
         ("core.fsmonitor", "false"),
         ("core.hooksPath", hooks.as_str()),
         ("log.showSignature", "false"),
+        ("diff.suppressBlankEmpty", "false"),
         ("submodule.recurse", "false"),
         ("fetch.recurseSubmodules", "false"),
         ("push.recurseSubmodules", "no"),

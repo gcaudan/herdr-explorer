@@ -7,7 +7,7 @@ use crate::core::ui::{self, Seg, c, fg, seg, text_width};
 use crate::core::{actions, exec, paths, worker};
 use crate::render::image::{self, Pixels};
 use crate::render::markdown;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
@@ -99,12 +99,23 @@ struct Shot {
 
 /// The images a Markdown file shows, decoded once per file, width and way of drawing. stale: those of the Markdown
 /// file shown before a reload, taken back when their file kept its size and date (an agent rewriting the file
-/// reloads it often), the rest dropped once the rows are built again; another file's are dropped at once.
+/// reloads it often), the rest dropped once the rows are built again; another file's are dropped at once. used: the
+/// keys the rows being built drew, the others then dropped (keep_used).
 #[derive(Default)]
 pub struct Pictures {
     map: HashMap<String, Shot>,
     stale: HashMap<String, Shot>,
     of: Option<String>,
+    used: HashSet<String>,
+}
+
+impl Pictures {
+    /// Only the images the rows built last drew kept: those of another width (the pane resized) would otherwise stay
+    /// decoded until the file is loaded again.
+    fn keep_used(&mut self) {
+        let used = std::mem::take(&mut self.used);
+        self.map.retain(|k, _| used.contains(k));
+    }
 }
 
 /// Deletes an image (d=I) or its placements (d=i).
@@ -201,6 +212,7 @@ fn picture(url: &str, width: usize, a: &Ask, kitty: &mut Kitty, pics: &mut Pictu
     }
     let (cw, ch) = kitty.cell;
     let key = format!("{abs}\0{width}{}", if a.pixels { format!("\0{cw}×{ch}") } else { String::new() });
+    pics.used.insert(key.clone());
     if let Some(shot) = pics.map.get(&key) {
         return shot.lines.clone();
     }
@@ -376,9 +388,10 @@ impl Preview {
         let mut draw = |url: &str, width: usize| picture(url, width, &a, kitty, pics);
         let opts = markdown::Options { highlight: true, image: Some(&mut draw) };
         let res = markdown::render(&self.state.text, (width as f64 - 1.0).clamp(1.0, 120.0), opts);
-        // The images taken back are in pictures now; the others are dropped.
+        // The images taken back are in pictures now; the others are dropped, as those this render did not draw.
         if !waiting {
             self.pictures.stale.clear();
+            self.pictures.keep_used();
         }
         match res {
             Some(res) => res
@@ -626,5 +639,38 @@ impl Preview {
         let mut text = if k.sent.is_some() { delete('I', ID) } else { String::new() };
         text.extend(k.figures.iter().map(|id| delete('I', *id)));
         *k.exit.lock().unwrap_or_else(|e| e.into_inner()) = text;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_images_of_a_width_no_longer_drawn_are_dropped() {
+        let dir = std::env::temp_dir().join(format!("hx-pictures-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        // A PNG of 6×4 pixels.
+        let hex = "89504e470d0a1a0a0000000d49484452000000060000000408020000002266d9140000001349444154789c63f8cf\
+                   c0004130fa3f03b942008ce917e97461d1c50000000049454e44ae426082";
+        let png: Vec<u8> = (0..hex.len()).step_by(2).map(|i| u8::from_str_radix(&hex[i..i + 2], 16).unwrap()).collect();
+        std::fs::write(dir.join("b.png"), png).unwrap();
+        let file = dir.join("doc.md").to_string_lossy().into_owned();
+        let root = dir.to_string_lossy().into_owned();
+        let a = Ask { file: &file, root: &root, pixels: false, waiting: false };
+        let (mut kitty, mut pics) = (Kitty::new(), Pictures::default());
+        // Drawn at a width, then at others as the pane is resized: only the last one's kept.
+        for width in [30, 40, 50] {
+            assert!(picture("b.png", width, &a, &mut kitty, &mut pics).is_some());
+            pics.keep_used();
+        }
+        assert_eq!(pics.map.len(), 1);
+        assert!(pics.map.keys().all(|k| k.ends_with("\u{0}50")));
+        // The same width drawn again: taken from the map, still kept.
+        assert!(picture("b.png", 50, &a, &mut kitty, &mut pics).is_some());
+        pics.keep_used();
+        assert_eq!(pics.map.len(), 1);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

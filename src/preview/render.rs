@@ -122,6 +122,19 @@ fn byte_of(text: &str, u: i64) -> usize {
     text.char_indices().nth(u.max(0) as usize).map_or(text.len(), |(i, _)| i)
 }
 
+/// The columns a..b of a mark (characters of the file's line raw, from 1) as bytes of its cleaned line plain: a tab
+/// before them takes up to 4 cells there, a control character none.
+fn mark_bytes(raw: Option<&str>, plain: &str, a: i64, b: i64) -> (usize, usize) {
+    match raw.filter(|r| r.chars().any(ui::is_control)) {
+        Some(raw) => {
+            let mut at = Vec::new();
+            ui::clean_line(raw, 4, Some(&mut at));
+            (at[byte_of(raw, a - 1)], at[byte_of(raw, b)])
+        }
+        None => (byte_of(plain, a - 1), byte_of(plain, b)),
+    }
+}
+
 impl Preview {
     // --- display rows
 
@@ -279,11 +292,22 @@ impl Preview {
                 }
             }
             // The caller's marks: parts of the line on the selection's colour, whole lines on the line highlight's.
-            if let Some(text) = usize::try_from(r.src).ok().filter(|_| !md).and_then(|i| s.plain.get(i)) {
+            if let Some((i, text)) =
+                usize::try_from(r.src).ok().filter(|_| !md).and_then(|i| Some((i, s.plain.get(i)?)))
+            {
+                // The columns count the file's characters: its line, read again only for a row with some.
+                let mut raw = None;
                 let cols: Vec<(usize, usize)> = self
                     .marks_of(r.src)
                     .filter(|m| m.a != 0)
-                    .map(|m| (byte_of(text, m.a - 1).saturating_sub(off), byte_of(text, m.b).saturating_sub(off)))
+                    .map(|m| {
+                        let raw = *raw.get_or_insert_with(|| {
+                            let text = matches!(s.kind, Kind::Text | Kind::Markdown).then_some(s.text.as_str());
+                            text.and_then(|t| t.split('\n').nth(i))
+                        });
+                        let (a, b) = mark_bytes(raw, text, m.a, m.b);
+                        (a.saturating_sub(off), b.saturating_sub(off))
+                    })
                     .collect();
                 if !cols.is_empty() {
                     segs = ui::mark(&segs, &cols, &bg(c().select));
@@ -569,5 +593,23 @@ impl Preview {
         segs.push(seg(format!("{pos:>width$}", width = w.saturating_sub(kw)), fg(c().dim)));
         self.state.hints = Some(keys);
         ui::line(&segs, w, Some(c().header))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::mark_bytes;
+
+    #[test]
+    fn the_columns_of_a_mark_count_the_files_characters_a_tab_taking_its_cells() {
+        // \tfmt.Println: columns 2-6 are fmt.P, at bytes 4..9 once the tab takes 4 cells.
+        let plain = "    fmt.Println()";
+        assert_eq!(mark_bytes(Some("\tfmt.Println()"), plain, 2, 6), (4, 9));
+        assert_eq!(&plain[4..9], "fmt.P");
+        // A tab after a character goes to the next stop; a control character takes no cell.
+        assert_eq!(mark_bytes(Some("a\tb\x01c"), "a   bc", 3, 5), (4, 6));
+        // Without a tab, the line as it is (é is two bytes).
+        assert_eq!(mark_bytes(Some("é b"), "é b", 3, 3), (3, 4));
+        assert_eq!(mark_bytes(None, "é b", 3, 3), (3, 4));
     }
 }

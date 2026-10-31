@@ -15,6 +15,7 @@ use crate::diff::{self, Collected, Diff};
 use crate::json::{self, Value};
 use std::rc::Rc;
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use std::sync::mpsc::channel;
 
 /// The keys of a commit shown: moving, hunks, layout, wrap, the options, zoom, width, help; q and Escape go back.
@@ -186,8 +187,7 @@ impl Preview {
     /// Shown beside the File view's lines and on its scrollbar (Changes setting, c). Those of the file shown before
     /// stay until they come, so that a reload does not blink.
     pub(super) fn load_changes(&mut self) {
-        self.changes_run += 1;
-        let (run, file) = (self.changes_run, self.state.file.clone());
+        let (run, file) = (self.changes_run.fetch_add(1, Ordering::SeqCst) + 1, self.state.file.clone());
         if self.state.changes.as_ref().is_some_and(|ch| ch.file != file) {
             self.state.changes = None;
         }
@@ -198,10 +198,14 @@ impl Preview {
             return;
         }
         let count = self.state.plain.len();
+        let latest = self.changes_run.clone();
         self.git.send(Box::new(move || {
+            if latest.load(Ordering::SeqCst) != run {
+                return Box::new(|_: &mut Preview| {});
+            }
             let res = std::panic::catch_unwind(|| diff::line_changes(&file, count)).ok().flatten();
             Box::new(move |p: &mut Preview| {
-                if run != p.changes_run || p.state.file != file {
+                if run != p.changes_run.load(Ordering::SeqCst) || p.state.file != file {
                     return;
                 }
                 let n = p.state.plain.len();
@@ -328,22 +332,32 @@ impl Preview {
 
     /// The file's changes (diff::collect), from near_dir. keep_scroll: a reload, where the view stays; otherwise it
     /// goes to the line asked for, or the first change. check_branch: once done, whatever came first, says when the
-    /// merge base found no default branch (reload_scope).
+    /// merge base found no default branch (reload_scope); the diff of a call made meanwhile says it in its place.
     pub(super) fn load_diff(&mut self, keep_scroll: bool, check_branch: bool) {
-        self.diff_run += 1;
-        let (run, file) = (self.diff_run, self.state.file.clone());
+        let (run, file) = (self.diff_run.fetch_add(1, Ordering::SeqCst) + 1, self.state.file.clone());
+        self.check_branch |= check_branch;
         if !keep_scroll || self.state.diff_data.is_none() {
             self.state.diff_data = Some(DiffData::Loading);
         }
         let cwd = near_dir(&file);
         let scope = self.state.scope.clone();
         let turn = (scope.kind() == "turn" && !self.tab.is_empty()).then(|| scope::read_turn(&self.tab));
+        let latest = self.diff_run.clone();
         self.git.send(Box::new(move || {
+            if latest.load(Ordering::SeqCst) != run {
+                return Box::new(|_: &mut Preview| {});
+            }
             let res = std::panic::catch_unwind(|| diff::collect(&cwd, &file, "head", Some(&scope), turn.as_ref()))
                 .unwrap_or_else(|_| Collected { top: cwd.clone(), ..Collected::default() });
             let parsed = Arc::new(diff::changes_of(&res));
             Box::new(move |p: &mut Preview| {
-                if run == p.diff_run && p.state.file == file {
+                if run != p.diff_run.load(Ordering::SeqCst) {
+                    return;
+                }
+                // Another file's diff: its scope's default branch is not this one's.
+                let check = std::mem::take(&mut p.check_branch) && p.state.file == file;
+                let no_base = res.base_name.is_empty();
+                if p.state.file == file {
                     if let Some(e) = &res.error {
                         p.flash(Some(e.clone()));
                     }
@@ -361,12 +375,7 @@ impl Preview {
                     p.state.want_top = None;
                     p.render();
                 }
-                let no_base = match &p.state.diff_data {
-                    Some(DiffData::Done { base_name, .. }) => base_name.is_empty(),
-                    Some(DiffData::Loading) => true,
-                    None => false,
-                };
-                if check_branch && p.state.scope.kind() == "branch" && no_base {
+                if check && p.state.scope.kind() == "branch" && no_base {
                     p.flash(Some("No default branch: compared with HEAD".into()));
                 }
             })

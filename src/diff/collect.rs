@@ -15,10 +15,18 @@ use std::collections::BTreeSet;
 pub const MAX_UNTRACKED: usize = 200;
 
 /// Options of every git diff, show or stash show: no colours, external tools or textconv filters (from the
-/// repository config, they could run commands), and the a/ b/ prefixes whatever diff.noprefix or diff.mnemonicPrefix
-/// say, so that the parser finds the paths.
-pub const DIFF_OPTS: [&str; 6] =
-    ["--no-color", "--no-ext-diff", "--no-textconv", "--ignore-submodules=all", "--src-prefix=a/", "--dst-prefix=b/"];
+/// repository config, they could run commands), the a/ b/ prefixes whatever diff.noprefix or diff.mnemonicPrefix
+/// say, so that the parser finds the paths, and the paths from the repository's top whatever diff.relative says (a
+/// diff run from a folder below it would name them from there, which core::stage and the notes do not find).
+pub const DIFF_OPTS: [&str; 7] = [
+    "--no-color",
+    "--no-ext-diff",
+    "--no-textconv",
+    "--ignore-submodules=all",
+    "--src-prefix=a/",
+    "--dst-prefix=b/",
+    "--no-relative",
+];
 
 const SHOW: [&str; 3] = ["--stat", "-p", "--diff-merges=first-parent"];
 
