@@ -35,20 +35,37 @@ pub fn config_file() -> Option<PathBuf> {
     Some(dir.join("herdr").join("config.toml"))
 }
 
-/// The config's line that binds an action of the plugin.
-fn command_of(action: &str) -> String {
-    format!("{}.{action}\"", exec::plugin())
-}
-
-/// Whether the config binds one of the plugin's actions, on a line not commented out.
+/// Whether the config binds one of the plugin's actions.
 pub fn bound() -> bool {
     let text = config_file().and_then(|f| std::fs::read_to_string(f).ok()).unwrap_or_default();
     KEYS.iter().any(|(_, action, _)| binds(&text, action))
 }
 
-/// Whether a line of the config, not commented out, binds the action.
+/// Whether a [[keys.command]] block of the config binds the action.
 fn binds(text: &str, action: &str) -> bool {
-    text.lines().any(|l| !l.trim_start().starts_with('#') && l.contains(&command_of(action)))
+    keys_in(text).iter().any(|(_, a)| a == action)
+}
+
+/// A TOML value as a string: a quoted one up to its closing quote (`"prefix+#"` keeps its `#`), else the bare value
+/// before a comment.
+fn toml_str(v: &str) -> String {
+    let v = v.trim();
+    let mut chars = v.chars();
+    match chars.next() {
+        Some('\'') => chars.take_while(|&c| c != '\'').collect(),
+        Some('"') => {
+            let mut out = String::new();
+            while let Some(c) = chars.next() {
+                match c {
+                    '"' => break,
+                    '\\' => out.extend(chars.next()),
+                    c => out.push(c),
+                }
+            }
+            out
+        }
+        _ => v.split('#').next().unwrap_or("").trim().to_string(),
+    }
 }
 
 /// The keys the config binds to each of the plugin's actions ([[keys.command]] blocks): (key, action), in the
@@ -60,7 +77,6 @@ pub fn action_keys() -> Vec<(String, String)> {
 
 fn keys_in(text: &str) -> Vec<(String, String)> {
     let prefix = format!("{}.", exec::plugin());
-    let value = |v: &str| v.split('#').next().unwrap_or("").trim().trim_matches(['"', '\'']).to_string();
     let (mut out, mut block) = (Vec::new(), None::<(String, String)>);
     let mut end = |block: &mut Option<(String, String)>| {
         if let Some((key, command)) = block.take()
@@ -74,15 +90,15 @@ fn keys_in(text: &str) -> Vec<(String, String)> {
         let l = line.trim();
         if l.starts_with('[') {
             end(&mut block);
-            if l.replace(' ', "") == "[[keys.command]]" {
+            if l.split('#').next().unwrap_or("").replace([' ', '\t'], "") == "[[keys.command]]" {
                 block = Some(Default::default());
             }
         } else if let Some((k, v)) = l.split_once('=')
             && let Some(b) = &mut block
         {
             match k.trim() {
-                "key" => b.0 = value(v),
-                "command" => b.1 = value(v),
+                "key" => b.0 = toml_str(v),
+                "command" => b.1 = toml_str(v),
                 _ => {}
             }
         }
@@ -114,7 +130,7 @@ fn plan(text: &str, shown: &str) -> Result<(String, Vec<String>), &'static str> 
         } else if table.is_empty() && l.starts_with("keys=") {
             return Err("sets keys inline");
         } else if let Some(k) = l.strip_prefix("key=").filter(|_| table == "keys" || table.starts_with("keys.")) {
-            keys.push(k.split('#').next().unwrap_or("").trim_matches(['"', '\'']).to_string());
+            keys.push(toml_str(k));
         }
     }
     let mut add = String::new();
@@ -285,8 +301,17 @@ mod tests {
     fn a_binding_commented_out_binds_nothing() {
         let text = "# [[keys.command]]\n# key = \"prefix+f\"\n  # command = \"gcaudan.explorer.toggle\"\n";
         assert!(!binds(text, "toggle"));
-        assert!(binds("command = \"gcaudan.explorer.toggle\" # mine\n", "toggle"));
         assert!(plan(text, "c").unwrap().0.contains("prefix+f"));
+        let trailing = "[[keys.command]]\nkey = \"x\" # \"gcaudan.explorer.toggle\"\ncommand = \"other\"\n";
+        assert!(!binds(trailing, "toggle"));
+    }
+
+    #[test]
+    fn bindings_are_read_as_toml_strings() {
+        let text = "[[keys.command]] # mine\nkey = \"prefix+#\" # hash\ncommand = 'gcaudan.explorer.toggle'\n";
+        assert_eq!(keys_in(text), [("prefix+#".to_string(), "toggle".to_string())]);
+        assert!(binds(text, "toggle"));
+        assert!(!plan(text, "c").unwrap().0.contains("explorer.toggle"));
     }
 
     #[test]
