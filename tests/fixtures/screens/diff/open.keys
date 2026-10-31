@@ -1,0 +1,11 @@
+# The Changes pane on a file with one added line.
+size 80 12
+file a.txt one\nthree\n
+git init -q -b main
+git add a.txt
+git commit -q -m first
+file a.txt one\ntwo\nthree\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/a.txt
+env EXPLORER_ROOT=$ROOT/work
+start

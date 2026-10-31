@@ -1,0 +1,6 @@
+# A binary file as a hex dump.
+size 80 8
+file data.bin ab\x00cd\x01\x02efghijklmnopqrstuvwxyz
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/data.bin
+start

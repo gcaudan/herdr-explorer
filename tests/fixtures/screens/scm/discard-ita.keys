@@ -1,0 +1,14 @@
+# d on a file added with git add -N: to the trash with its index entry, as an untracked file.
+size 120 20
+file a.txt one\n
+git init -q -b main
+git add a.txt
+git commit -q -m first
+file new.txt new\n
+git add -N new.txt
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+herdr pane get {"result":{"pane":{"pane_id":"w1:p2","tab_id":"t1","workspace_id":"w1"}}}
+start
+wait 800
+keys j d
+wait 300

@@ -1,0 +1,9 @@
+# ] without changes, outside git.
+size 60 8
+file a.txt one\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false,"changes":true}
+env EXPLORER_FILE=$ROOT/work/a.txt
+start
+wait 500
+keys ]
+until 1000

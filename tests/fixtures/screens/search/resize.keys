@@ -1,0 +1,6 @@
+# Resized: the preview on the right once 100 columns wide.
+size 80 10
+file a.txt line one\nline two\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start
+resize 120 10

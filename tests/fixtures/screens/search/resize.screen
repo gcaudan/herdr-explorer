@@ -1,0 +1,11 @@
+size 120x10
+⟪bg=#252526⟫ ⟪fg=#ffffff bg=#04395e b⟫ Go to file ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ Search in files ⟪bg=#252526⟫                                                                                    ⟪fg=#8c8c8c bg=#252526⟫work⟪bg=#252526⟫ ⟪⟫
+⟪fg=#8c8c8c⟫ ⌕ ⟪r⟫ ⟪⟫                                                                                                        ⟪fg=#8c8c8c⟫1  ⟪fg=#8c8c8c bg=#2d2d2d⟫ hidden ⟪⟫
+⟪fg=#8c8c8c⟫────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────⟪⟫
+⟪bg=#04395e⟫ a.txt                                                      ⟪fg=#8c8c8c⟫│⟪bg=#252526 b⟫ a.txt⟪bg=#252526⟫                                                     ⟪⟫
+                                                            ⟪fg=#8c8c8c⟫│ 1 ⟪⟫line one
+                                                            ⟪fg=#8c8c8c⟫│ 2 ⟪⟫line two
+                                                            ⟪fg=#8c8c8c⟫│⟪⟫
+                                                            ⟪fg=#8c8c8c⟫│⟪⟫
+                                                            ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ↵⟪fg=#8c8c8c bg=#252526⟫ open⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+f⟪fg=#8c8c8c bg=#252526⟫ search in files⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+e⟪fg=#8c8c8c bg=#252526⟫ editor⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+o⟪fg=#8c8c8c bg=#252526⟫ app⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+t⟪fg=#8c8c8c bg=#252526⟫ insert⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+y⟪fg=#8c8c8c bg=#252526⟫ copy relative path⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ close⟪bg=#252526⟫   ⟪⟫

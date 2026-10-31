@@ -1,0 +1,18 @@
+# Without herdr: notes and viewed need it.
+size 80 16
+file a.txt one\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\neleven\ntwelve\n
+file b.txt alpha\nbeta\n
+git init -q -b main
+git add a.txt b.txt
+git commit -q -m first
+file a.txt one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\neleven!\ntwelve\n
+file b.txt alpha\nbeta\ngamma\n
+file c.txt new file\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_ROOT=$ROOT/work
+start
+wait 800
+keys a
+wait 300
+keys m
+until 1500

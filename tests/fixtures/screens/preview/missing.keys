@@ -1,0 +1,6 @@
+# A file deleted: why, and what to do; then a folder.
+size 50 10
+dir folder
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/gone.txt
+start

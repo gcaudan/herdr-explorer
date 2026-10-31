@@ -1,0 +1,21 @@
+size 120x20
+⟪bg=#252526 b⟫ work ⟪bg=#252526⟫ ⟪fg=#519aba bg=#2b3d45⟫ ⎇ main ⟪fg=#8c8c8c bg=#252526⟫  not published⟪bg=#252526⟫                                                    ⟪fg=#ffffff bg=#0e639c b⟫ ↑ Publish branch ⟪fg=#d4d4d4 bg=#252526 b⟫ ⇣ Fetch  Actions ▾ ⟪⟫
+ ⟪fg=#8c8c8c⟫Changes 2⟪⟫   ⟪fg=#8c8c8c⟫History⟪⟫   ⟪fg=#8c8c8c⟫Stashes⟪⟫   ⟪fg=#d4d4d4 b u⟫Refs⟪⟫   ⟪fg=#8c8c8c⟫PRs⟪⟫   ⟪fg=#8c8c8c⟫│⟪bg=#252526⟫                                                                         ⟪⟫
+⟪fg=#8c8c8c bg=#04395e⟫ ▾ ⟪bg=#04395e b⟫LOCAL BRANCHES⟪fg=#8c8c8c bg=#04395e⟫  2⟪bg=#04395e⟫                          ⟪fg=#8c8c8c⟫│⟪⟫
+    feat⟪fg=#8c8c8c⟫  feature⟪⟫              ⟪fg=#8c8c8c⟫ in the future │⟪⟫
+   ⟪fg=#8dc149 bg=#3a4729 b⟫ main ⟪fg=#8c8c8c⟫  current · not publi… in the future │⟪⟫
+⟪fg=#8c8c8c⟫ ▾ ⟪b⟫TAGS⟪fg=#8c8c8c⟫  1⟪⟫                                    ⟪fg=#8c8c8c⟫│⟪⟫
+    ⟪fg=#cbcb41⟫v1⟪fg=#8c8c8c⟫  second⟪⟫                 ⟪fg=#8c8c8c⟫ in the future │⟪⟫
+⟪fg=#8c8c8c⟫ ▾ ⟪b⟫WORKTREES⟪fg=#8c8c8c⟫  1⟪⟫                               ⟪fg=#8c8c8c⟫│⟪⟫                 ⟪fg=#8c8c8c⟫Select a branch to compare it with main⟪⟫
+    work⟪fg=#8c8c8c⟫  this folder⟪fg=#519aba⟫  main⟪fg=#8c8c8c⟫  /tmp/hxs/scm-ref…│⟪⟫
+⟪fg=#8c8c8c⟫  No remote branches or remotes⟪⟫               ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ⏎⟪fg=#8c8c8c bg=#252526⟫ checkout⟪fg=#d4d4d4 bg=#252526 b⟫   M⟪fg=#8c8c8c bg=#252526⟫ merge⟪fg=#d4d4d4 bg=#252526 b⟫   R⟪fg=#8c8c8c bg=#252526⟫ rebase onto⟪fg=#d4d4d4 bg=#252526 b⟫   =⟪fg=#8c8c8c bg=#252526⟫ compare⟪fg=#d4d4d4 bg=#252526 b⟫   B⟪fg=#8c8c8c bg=#252526⟫ compare base⟪fg=#d4d4d4 bg=#252526 b⟫   D⟪fg=#8c8c8c bg=#252526⟫ delete branch⟪fg=#d4d4d4 bg=#252526 b⟫   b⟪fg=#8c8c8c bg=#252526⟫ branch⟪fg=#d4d4d4 bg=#252526 b⟫   f⟪fg=#8c8c8c bg=#252526⟫ fetch⟪bg=#252526⟫    ⟪fg=#d4d4d4 bg=#252526 b⟫?⟪fg=#8c8c8c bg=#252526⟫ all keys ⟪⟫

@@ -1,0 +1,3181 @@
+{
+ "module": "core/notes",
+ "cases": [
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "out": []
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "state/notes-w1_t1.json": "[{\"file\":\"/a\",\"text\":\"x\"},{\"file\":1,\"text\":\"y\"},null,[1],{\"file\":\"/b\"},\"s\"]"
+   },
+   "out": [
+    {
+     "file": "/a",
+     "text": "x"
+    }
+   ]
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "state/notes-w1_t1.json": "{\"file\":\"/a\",\"text\":\"x\"}"
+   },
+   "out": []
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "state/notes-w1_t1.json": "nope"
+   },
+   "out": []
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "files": {
+    "state/notes-w1_t1.json": "[{\"file\":\"/a\",\"text\":\"x\"}]"
+   },
+   "out": []
+  },
+  {
+   "fn": "locate",
+   "args": [
+    {
+     "file": "/f",
+     "from": 2,
+     "to": 3,
+     "kind": "",
+     "text": "on 2",
+     "t": 2,
+     "anchor": [
+      "two",
+      "three"
+     ]
+    },
+    [
+     "one",
+     "two",
+     "three"
+    ]
+   ],
+   "out": {
+    "file": "/f",
+    "from": 2,
+    "to": 3,
+    "kind": "",
+    "text": "on 2",
+    "t": 2,
+    "anchor": [
+     "two",
+     "three"
+    ]
+   }
+  },
+  {
+   "fn": "locate",
+   "args": [
+    {
+     "file": "/f",
+     "from": 2,
+     "to": 3,
+     "kind": "",
+     "text": "on 2",
+     "t": 2,
+     "anchor": [
+      "two",
+      "three"
+     ]
+    },
+    [
+     "new",
+     "one",
+     "two",
+     "three"
+    ]
+   ],
+   "out": {
+    "file": "/f",
+    "from": 3,
+    "to": 4,
+    "kind": "",
+    "text": "on 2",
+    "t": 2,
+    "anchor": [
+     "two",
+     "three"
+    ]
+   }
+  },
+  {
+   "fn": "locate",
+   "args": [
+    {
+     "file": "/f",
+     "from": 2,
+     "to": 3,
+     "kind": "",
+     "text": "on 2",
+     "t": 2,
+     "anchor": [
+      "two",
+      "three"
+     ],
+     "stale": true
+    },
+    [
+     "one",
+     "two",
+     "three"
+    ]
+   ],
+   "out": {
+    "file": "/f",
+    "from": 2,
+    "to": 3,
+    "kind": "",
+    "text": "on 2",
+    "t": 2,
+    "anchor": [
+     "two",
+     "three"
+    ]
+   }
+  },
+  {
+   "fn": "locate",
+   "args": [
+    {
+     "file": "/f",
+     "from": 2,
+     "to": 3,
+     "kind": "",
+     "text": "on 2",
+     "t": 2,
+     "anchor": [
+      "two",
+      "three"
+     ]
+    },
+    [
+     "one",
+     "three"
+    ]
+   ],
+   "out": {
+    "file": "/f",
+    "from": 2,
+    "to": 3,
+    "kind": "",
+    "text": "on 2",
+    "t": 2,
+    "anchor": [
+     "two",
+     "three"
+    ],
+    "stale": true
+   }
+  },
+  {
+   "fn": "locate",
+   "args": [
+    {
+     "file": "/f",
+     "from": 2,
+     "to": 3,
+     "kind": "",
+     "text": "on 2",
+     "t": 2,
+     "anchor": [
+      "two",
+      "three"
+     ],
+     "stale": true
+    },
+    [
+     "one",
+     "three"
+    ]
+   ],
+   "out": {
+    "file": "/f",
+    "from": 2,
+    "to": 3,
+    "kind": "",
+    "text": "on 2",
+    "t": 2,
+    "anchor": [
+     "two",
+     "three"
+    ],
+    "stale": true
+   }
+  },
+  {
+   "fn": "locate",
+   "args": [
+    {
+     "file": "/f",
+     "from": 2,
+     "to": 3,
+     "kind": "",
+     "text": "on 2",
+     "t": 2,
+     "anchor": [
+      "two",
+      "three"
+     ]
+    },
+    null
+   ],
+   "out": {
+    "file": "/f",
+    "from": 2,
+    "to": 3,
+    "kind": "",
+    "text": "on 2",
+    "t": 2,
+    "anchor": [
+     "two",
+     "three"
+    ],
+    "stale": true
+   }
+  },
+  {
+   "fn": "locate",
+   "args": [
+    {
+     "file": "/f",
+     "from": 2,
+     "to": 3,
+     "kind": "",
+     "text": "on 2",
+     "t": 2,
+     "anchor": [
+      "two",
+      "three"
+     ]
+    },
+    "unknown"
+   ],
+   "out": {
+    "file": "/f",
+    "from": 2,
+    "to": 3,
+    "kind": "",
+    "text": "on 2",
+    "t": 2,
+    "anchor": [
+     "two",
+     "three"
+    ]
+   }
+  },
+  {
+   "fn": "locate",
+   "args": [
+    {
+     "file": "/f",
+     "from": 0,
+     "to": 0,
+     "kind": "",
+     "text": "on 0",
+     "t": 0,
+     "anchor": [
+      "two"
+     ]
+    },
+    [
+     "one"
+    ]
+   ],
+   "out": {
+    "file": "/f",
+    "from": 0,
+    "to": 0,
+    "kind": "",
+    "text": "on 0",
+    "t": 0,
+    "anchor": [
+     "two"
+    ]
+   }
+  },
+  {
+   "fn": "locate",
+   "args": [
+    {
+     "file": "/f",
+     "from": 2,
+     "to": 2,
+     "kind": "",
+     "text": "on 2",
+     "t": 2,
+     "anchor": []
+    },
+    [
+     "one"
+    ]
+   ],
+   "out": {
+    "file": "/f",
+    "from": 2,
+    "to": 2,
+    "kind": "",
+    "text": "on 2",
+    "t": 2,
+    "anchor": []
+   }
+  },
+  {
+   "fn": "locate",
+   "args": [
+    {
+     "file": "/f",
+     "from": 2,
+     "to": 2,
+     "kind": "",
+     "text": "on 2",
+     "t": 2
+    },
+    [
+     "one"
+    ]
+   ],
+   "out": {
+    "file": "/f",
+    "from": 2,
+    "to": 2,
+    "kind": "",
+    "text": "on 2",
+    "t": 2
+   }
+  },
+  {
+   "fn": "locate",
+   "args": [
+    {
+     "file": "/f",
+     "from": 5,
+     "to": 5,
+     "kind": "",
+     "text": "on 5",
+     "t": 5,
+     "anchor": [
+      "x"
+     ]
+    },
+    [
+     "x",
+     "a",
+     "a",
+     "a",
+     "a",
+     "a",
+     "a",
+     "a",
+     "x"
+    ]
+   ],
+   "out": {
+    "file": "/f",
+    "from": 1,
+    "to": 1,
+    "kind": "",
+    "text": "on 5",
+    "t": 5,
+    "anchor": [
+     "x"
+    ]
+   }
+  },
+  {
+   "fn": "locate",
+   "args": [
+    {
+     "file": "/f",
+     "from": 6,
+     "to": 6,
+     "kind": "",
+     "text": "on 6",
+     "t": 6,
+     "anchor": [
+      "x"
+     ]
+    },
+    [
+     "x",
+     "a",
+     "a",
+     "a",
+     "a",
+     "a",
+     "a",
+     "a",
+     "x"
+    ]
+   ],
+   "out": {
+    "file": "/f",
+    "from": 9,
+    "to": 9,
+    "kind": "",
+    "text": "on 6",
+    "t": 6,
+    "anchor": [
+     "x"
+    ]
+   }
+  },
+  {
+   "fn": "locate",
+   "args": [
+    {
+     "file": "/f",
+     "from": 5,
+     "to": 5,
+     "kind": "",
+     "text": "on 5",
+     "t": 5,
+     "anchor": [
+      "x"
+     ]
+    },
+    [
+     "a",
+     "x",
+     "a",
+     "a",
+     "a",
+     "a",
+     "a",
+     "a",
+     "x"
+    ]
+   ],
+   "out": {
+    "file": "/f",
+    "from": 2,
+    "to": 2,
+    "kind": "",
+    "text": "on 5",
+    "t": 5,
+    "anchor": [
+     "x"
+    ]
+   }
+  },
+  {
+   "fn": "locate",
+   "args": [
+    {
+     "file": "/f",
+     "from": 9,
+     "to": 10,
+     "kind": "",
+     "text": "on 9",
+     "t": 9,
+     "anchor": [
+      "x",
+      "y"
+     ]
+    },
+    [
+     "x",
+     "y",
+     "z"
+    ]
+   ],
+   "out": {
+    "file": "/f",
+    "from": 1,
+    "to": 2,
+    "kind": "",
+    "text": "on 9",
+    "t": 9,
+    "anchor": [
+     "x",
+     "y"
+    ]
+   }
+  },
+  {
+   "fn": "locate",
+   "args": [
+    {
+     "file": "/f",
+     "from": 1,
+     "to": 1,
+     "kind": "",
+     "text": "on 1",
+     "t": 1,
+     "anchor": [
+      null
+     ]
+    },
+    [
+     "x"
+    ]
+   ],
+   "out": {
+    "file": "/f",
+    "from": 1,
+    "to": 1,
+    "kind": "",
+    "text": "on 1",
+    "t": 1,
+    "anchor": [
+     null
+    ],
+    "stale": true
+   }
+  },
+  {
+   "fn": "locate",
+   "args": [
+    {
+     "file": "/f",
+     "from": 1.5,
+     "to": 1,
+     "kind": "",
+     "text": "on 1.5",
+     "t": 1.5,
+     "anchor": [
+      "x"
+     ]
+    },
+    [
+     "x",
+     "x"
+    ]
+   ],
+   "out": {
+    "file": "/f",
+    "from": 1,
+    "to": 1,
+    "kind": "",
+    "text": "on 1.5",
+    "t": 1.5,
+    "anchor": [
+     "x"
+    ]
+   }
+  },
+  {
+   "fn": "locate",
+   "args": [
+    {
+     "file": "/f",
+     "from": "3",
+     "to": 3,
+     "kind": "",
+     "text": "on 3",
+     "t": "3",
+     "anchor": [
+      "x"
+     ]
+    },
+    [
+     "a",
+     "b",
+     "x"
+    ]
+   ],
+   "out": {
+    "file": "/f",
+    "from": "3",
+    "to": 3,
+    "kind": "",
+    "text": "on 3",
+    "t": "3",
+    "anchor": [
+     "x"
+    ]
+   }
+  },
+  {
+   "fn": "current",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": "one\ntwo\nthree\nfour\nfive\n",
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":2,\"to\":3,\"kind\":\"\",\"text\":\"on 2\",\"t\":2,\"anchor\":[\"two\",\"three\"]}]"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":2,\"to\":3,\"kind\":\"\",\"text\":\"on 2\",\"t\":2,\"anchor\":[\"two\",\"three\"]}]"
+   },
+   "out": [
+    {
+     "file": "$ROOT/f",
+     "from": 2,
+     "to": 3,
+     "kind": "",
+     "text": "on 2",
+     "t": 2,
+     "anchor": [
+      "two",
+      "three"
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "current",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": "zero\none\ntwo\nthree\nfour\nfive\n",
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":2,\"to\":3,\"kind\":\"\",\"text\":\"on 2\",\"t\":2,\"anchor\":[\"two\",\"three\"]},{\"file\":\"$ROOT/g\",\"from\":1,\"to\":1,\"kind\":\"\",\"text\":\"on 1\",\"t\":1,\"anchor\":[\"x\"]},{\"file\":\"$ROOT/f\",\"from\":0,\"to\":0,\"kind\":\"\",\"text\":\"on 0\",\"t\":0}]"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":3,\"to\":4,\"kind\":\"\",\"text\":\"on 2\",\"t\":2,\"anchor\":[\"two\",\"three\"]},{\"file\":\"$ROOT/g\",\"from\":1,\"to\":1,\"kind\":\"\",\"text\":\"on 1\",\"t\":1,\"anchor\":[\"x\"],\"stale\":true},{\"file\":\"$ROOT/f\",\"from\":0,\"to\":0,\"kind\":\"\",\"text\":\"on 0\",\"t\":0}]"
+   },
+   "out": [
+    {
+     "file": "$ROOT/f",
+     "from": 3,
+     "to": 4,
+     "kind": "",
+     "text": "on 2",
+     "t": 2,
+     "anchor": [
+      "two",
+      "three"
+     ]
+    },
+    {
+     "file": "$ROOT/g",
+     "from": 1,
+     "to": 1,
+     "kind": "",
+     "text": "on 1",
+     "t": 1,
+     "anchor": [
+      "x"
+     ],
+     "stale": true
+    },
+    {
+     "file": "$ROOT/f",
+     "from": 0,
+     "to": 0,
+     "kind": "",
+     "text": "on 0",
+     "t": 0
+    }
+   ]
+  },
+  {
+   "fn": "current",
+   "args": [
+    "w1:t1",
+    ""
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": "zero\none\ntwo\nthree\nfour\nfive\n",
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":2,\"to\":3,\"kind\":\"\",\"text\":\"on 2\",\"t\":2,\"anchor\":[\"two\",\"three\"]}]"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":3,\"to\":4,\"kind\":\"\",\"text\":\"on 2\",\"t\":2,\"anchor\":[\"two\",\"three\"]}]"
+   },
+   "out": [
+    {
+     "file": "$ROOT/f",
+     "from": 3,
+     "to": 4,
+     "kind": "",
+     "text": "on 2",
+     "t": 2,
+     "anchor": [
+      "two",
+      "three"
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "current",
+   "args": [
+    "w1:t1",
+    "$ROOT/f"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": "zero\none\ntwo\nthree\nfour\nfive\n",
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":2,\"to\":3,\"kind\":\"\",\"text\":\"on 2\",\"t\":2,\"anchor\":[\"two\",\"three\"]},{\"file\":\"$ROOT/g\",\"from\":1,\"to\":1,\"kind\":\"\",\"text\":\"on 1\",\"t\":1,\"anchor\":[\"x\"]}]"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":3,\"to\":4,\"kind\":\"\",\"text\":\"on 2\",\"t\":2,\"anchor\":[\"two\",\"three\"]},{\"file\":\"$ROOT/g\",\"from\":1,\"to\":1,\"kind\":\"\",\"text\":\"on 1\",\"t\":1,\"anchor\":[\"x\"]}]"
+   },
+   "out": [
+    {
+     "file": "$ROOT/f",
+     "from": 3,
+     "to": 4,
+     "kind": "",
+     "text": "on 2",
+     "t": 2,
+     "anchor": [
+      "two",
+      "three"
+     ]
+    },
+    {
+     "file": "$ROOT/g",
+     "from": 1,
+     "to": 1,
+     "kind": "",
+     "text": "on 1",
+     "t": 1,
+     "anchor": [
+      "x"
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "current",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": "one\r\ntwo\r\n",
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":1,\"to\":1,\"kind\":\"\",\"text\":\"on 1\",\"t\":1,\"anchor\":[\"two\"]}]"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":2,\"to\":2,\"kind\":\"\",\"text\":\"on 1\",\"t\":1,\"anchor\":[\"two\"]}]"
+   },
+   "out": [
+    {
+     "file": "$ROOT/f",
+     "from": 2,
+     "to": 2,
+     "kind": "",
+     "text": "on 1",
+     "t": 1,
+     "anchor": [
+      "two"
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "current",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": null,
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f/x\",\"from\":1,\"to\":1,\"kind\":\"\",\"text\":\"on 1\",\"t\":1,\"anchor\":[\"two\"]}]"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f/x\",\"from\":1,\"to\":1,\"kind\":\"\",\"text\":\"on 1\",\"t\":1,\"anchor\":[\"two\"],\"stale\":true}]"
+   },
+   "out": [
+    {
+     "file": "$ROOT/f/x",
+     "from": 1,
+     "to": 1,
+     "kind": "",
+     "text": "on 1",
+     "t": 1,
+     "anchor": [
+      "two"
+     ],
+     "stale": true
+    }
+   ]
+  },
+  {
+   "fn": "current",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": "a\n\n",
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":3,\"to\":3,\"kind\":\"\",\"text\":\"on 3\",\"t\":3,\"anchor\":[\"\"]}]"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":2,\"to\":2,\"kind\":\"\",\"text\":\"on 3\",\"t\":3,\"anchor\":[\"\"]}]"
+   },
+   "out": [
+    {
+     "file": "$ROOT/f",
+     "from": 2,
+     "to": 2,
+     "kind": "",
+     "text": "on 3",
+     "t": 3,
+     "anchor": [
+      ""
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "current",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": "a\n\n",
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":2,\"to\":2,\"kind\":\"\",\"text\":\"on 2\",\"t\":2,\"anchor\":[\"\"],\"extra\":{\"k\":1},\"stale\":true}]"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":2,\"to\":2,\"kind\":\"\",\"text\":\"on 2\",\"t\":2,\"anchor\":[\"\"],\"extra\":{\"k\":1}}]"
+   },
+   "out": [
+    {
+     "file": "$ROOT/f",
+     "from": 2,
+     "to": 2,
+     "kind": "",
+     "text": "on 2",
+     "t": 2,
+     "anchor": [
+      ""
+     ],
+     "extra": {
+      "k": 1
+     }
+    }
+   ]
+  },
+  {
+   "fn": "add",
+   "args": [
+    "w1:t1",
+    {
+     "file": "$ROOT/f",
+     "from": 2,
+     "to": 3,
+     "kind": "fix",
+     "text": " rename\tit\n "
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": "one\ntwo\nthree\nfour\nfive\n"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":2,\"to\":3,\"kind\":\"fix\",\"text\":\"rename it\",\"t\":1700000000000,\"anchor\":[\"two\",\"three\"]}]"
+   },
+   "out": "Note added (1)"
+  },
+  {
+   "fn": "add",
+   "args": [
+    "w1:t1",
+    {
+     "file": "$ROOT/f",
+     "from": 3,
+     "to": 2,
+     "kind": "odd",
+     "text": "x"
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": "one\ntwo\nthree\nfour\nfive\n",
+    "state/notes-w1_t1.json": "[{\"file\":\"/x\",\"from\":1,\"to\":1,\"kind\":\"\",\"text\":\"on 1\",\"t\":1}]"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"/x\",\"from\":1,\"to\":1,\"kind\":\"\",\"text\":\"on 1\",\"t\":1},{\"file\":\"$ROOT/f\",\"from\":2,\"to\":3,\"kind\":\"\",\"text\":\"x\",\"t\":1700000000000,\"anchor\":[\"two\",\"three\"]}]"
+   },
+   "out": "Note added (2)"
+  },
+  {
+   "fn": "add",
+   "args": [
+    "w1:t1",
+    {
+     "file": "$ROOT/f",
+     "text": "whole"
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": "one\ntwo\nthree\nfour\nfive\n"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":0,\"to\":0,\"kind\":\"\",\"text\":\"whole\",\"t\":1700000000000}]"
+   },
+   "out": "Note added (1)"
+  },
+  {
+   "fn": "add",
+   "args": [
+    "w1:t1",
+    {
+     "file": "$ROOT/f",
+     "from": 4,
+     "text": "past"
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": "a\n"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":4,\"to\":4,\"kind\":\"\",\"text\":\"past\",\"t\":1700000000000}]"
+   },
+   "out": "Note added (1)"
+  },
+  {
+   "fn": "add",
+   "args": [
+    "w1:t1",
+    {
+     "file": "$ROOT/f",
+     "from": 1,
+     "to": 2,
+     "text": "shown",
+     "lines": [
+      "x",
+      "y"
+     ],
+     "stale": true
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": "one\ntwo\nthree\nfour\nfive\n"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":1,\"to\":2,\"kind\":\"\",\"text\":\"shown\",\"t\":1700000000000,\"anchor\":[\"x\",\"y\"],\"stale\":true}]"
+   },
+   "out": "Note added (1)"
+  },
+  {
+   "fn": "add",
+   "args": [
+    "w1:t1",
+    {
+     "file": "$ROOT/f",
+     "from": 1,
+     "to": 2,
+     "text": "shown",
+     "lines": [
+      "x"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": "one\ntwo\nthree\nfour\nfive\n"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":1,\"to\":2,\"kind\":\"\",\"text\":\"shown\",\"t\":1700000000000}]"
+   },
+   "out": "Note added (1)"
+  },
+  {
+   "fn": "add",
+   "args": [
+    "w1:t1",
+    {
+     "file": "$ROOT/f",
+     "from": 1,
+     "to": 2,
+     "text": "unknown",
+     "lines": null,
+     "stale": true
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": "one\ntwo\nthree\nfour\nfive\n"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":1,\"to\":2,\"kind\":\"\",\"text\":\"unknown\",\"t\":1700000000000}]"
+   },
+   "out": "Note added (1)"
+  },
+  {
+   "fn": "add",
+   "args": [
+    "w1:t1",
+    {
+     "file": "$ROOT/f",
+     "from": 1,
+     "to": 1,
+     "text": "stale",
+     "stale": true
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": "one\ntwo\nthree\nfour\nfive\n"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":1,\"to\":1,\"kind\":\"\",\"text\":\"stale\",\"t\":1700000000000,\"anchor\":[\"one\"],\"stale\":true}]"
+   },
+   "out": "Note added (1)"
+  },
+  {
+   "fn": "add",
+   "args": [
+    "w1:t1",
+    {
+     "file": "$ROOT/f",
+     "from": 1,
+     "to": 201,
+     "text": "long"
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": "one\ntwo\nthree\nfour\nfive\n"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":1,\"to\":201,\"kind\":\"\",\"text\":\"long\",\"t\":1700000000000}]"
+   },
+   "out": "Note added (1)"
+  },
+  {
+   "fn": "add",
+   "args": [
+    "w1:t1",
+    {
+     "file": "$ROOT/l",
+     "from": 1,
+     "text": "linked"
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "f": "one\ntwo\nthree\nfour\nfive\n",
+    "l": {
+     "link": "$ROOT/f"
+    }
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"$ROOT/f\",\"from\":1,\"to\":1,\"kind\":\"\",\"text\":\"linked\",\"t\":1700000000000,\"anchor\":[\"one\"]}]"
+   },
+   "out": "Note added (1)"
+  },
+  {
+   "fn": "add",
+   "args": [
+    "w1:t1",
+    {
+     "file": "$ROOT/f",
+     "text": " \u001b "
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "after": {
+    "state/notes-w1_t1.json": null
+   },
+   "out": "Empty note"
+  },
+  {
+   "fn": "add",
+   "args": [
+    "w1:t1",
+    {
+     "file": "",
+     "text": "x"
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "after": {
+    "state/notes-w1_t1.json": null
+   },
+   "out": "Empty note"
+  },
+  {
+   "fn": "add",
+   "args": [
+    "w1:t1",
+    {
+     "file": "$ROOT/f",
+     "text": "x"
+    }
+   ],
+   "files": {
+    "f": "one\ntwo\nthree\nfour\nfive\n"
+   },
+   "out": "Cannot save the note"
+  },
+  {
+   "fn": "undo",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "after": {
+    "state/notes-w1_t1.json": null
+   },
+   "out": "No note"
+  },
+  {
+   "fn": "undo",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "state/notes-w1_t1.json": "[{\"file\":\"/a\",\"from\":1,\"to\":1,\"kind\":\"\",\"text\":\"on 1\",\"t\":1},{\"file\":\"/b\",\"from\":2,\"to\":2,\"kind\":\"\",\"text\":\"on 2\",\"t\":2}]"
+   },
+   "after": {
+    "state/notes-w1_t1.json": "[{\"file\":\"/a\",\"from\":1,\"to\":1,\"kind\":\"\",\"text\":\"on 1\",\"t\":1}]"
+   },
+   "out": "Note removed: on 2"
+  },
+  {
+   "fn": "undo",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state"
+   },
+   "files": {
+    "state/notes-w1_t1.json": "[{\"file\":\"/a\",\"from\":1,\"to\":1,\"kind\":\"\",\"text\":\"on 1\",\"t\":1}]"
+   },
+   "after": {
+    "state/notes-w1_t1.json": null
+   },
+   "out": "Note removed: on 1"
+  },
+  {
+   "fn": "where",
+   "args": [
+    {
+     "file": "$ROOT/d/f",
+     "from": 12,
+     "to": 14,
+     "kind": "",
+     "text": "on 12",
+     "t": 12
+    },
+    "$ROOT/d"
+   ],
+   "files": {
+    "d": null
+   },
+   "out": "f:12-14"
+  },
+  {
+   "fn": "where",
+   "args": [
+    {
+     "file": "$ROOT/d/f",
+     "from": 12,
+     "to": 12,
+     "kind": "",
+     "text": "on 12",
+     "t": 12
+    },
+    "$ROOT"
+   ],
+   "out": "d/f:12"
+  },
+  {
+   "fn": "where",
+   "args": [
+    {
+     "file": "$ROOT/d/f",
+     "from": 0,
+     "to": 0,
+     "kind": "",
+     "text": "on 0",
+     "t": 0
+    },
+    "$ROOT/d"
+   ],
+   "out": "f"
+  },
+  {
+   "fn": "where",
+   "args": [
+    {
+     "file": "$ROOT/d/f",
+     "from": 12,
+     "to": 14,
+     "kind": "",
+     "text": "on 12",
+     "t": 12
+    },
+    "$ROOT/e"
+   ],
+   "out": "$ROOT/d/f:12-14"
+  },
+  {
+   "fn": "where",
+   "args": [
+    {
+     "file": "$ROOT/d/f",
+     "from": 12,
+     "to": 14,
+     "kind": "",
+     "text": "on 12",
+     "t": 12
+    },
+    ""
+   ],
+   "out": "$ROOT/d/f:12-14"
+  },
+  {
+   "fn": "where",
+   "args": [
+    {
+     "file": "$ROOT/d/f",
+     "from": 12,
+     "to": 14,
+     "kind": "",
+     "text": "on 12",
+     "t": 12
+    },
+    "$ROOT/d/f"
+   ],
+   "out": ".:12-14"
+  },
+  {
+   "fn": "where",
+   "args": [
+    {
+     "file": "$ROOT/d/f",
+     "from": 12,
+     "to": 14,
+     "kind": "",
+     "text": "on 12",
+     "t": 12
+    },
+    "$ROOT/l"
+   ],
+   "files": {
+    "d": null,
+    "l": {
+     "link": "$ROOT/d"
+    }
+   },
+   "out": "f:12-14"
+  },
+  {
+   "fn": "where",
+   "args": [
+    {
+     "file": "$ROOT/d/f",
+     "from": 12,
+     "to": 14,
+     "kind": "",
+     "text": "on 12",
+     "t": 12
+    },
+    "$ROOT/l",
+    true
+   ],
+   "files": {
+    "d": null,
+    "l": {
+     "link": "$ROOT/d"
+    }
+   },
+   "out": "$ROOT/d/f:12-14"
+  },
+  {
+   "fn": "where",
+   "args": [
+    {
+     "file": "/x",
+     "from": 3
+    },
+    "/"
+   ],
+   "out": "x:3"
+  },
+  {
+   "fn": "where",
+   "args": [
+    {
+     "file": "/r/a",
+     "from": "9",
+     "to": "10"
+    },
+    "/r"
+   ],
+   "out": "a:9-10"
+  },
+  {
+   "fn": "where",
+   "args": [
+    {
+     "file": "/r/a",
+     "from": "9",
+     "to": 10
+    },
+    "/r"
+   ],
+   "out": "a:9-10"
+  },
+  {
+   "fn": "where",
+   "args": [
+    {
+     "file": "/r/a",
+     "from": [
+      2
+     ],
+     "to": "10"
+    },
+    "/r"
+   ],
+   "out": "a:[2]"
+  },
+  {
+   "fn": "format",
+   "args": [
+    [],
+    "/"
+   ],
+   "out": "Review notes:  "
+  },
+  {
+   "fn": "format",
+   "args": [
+    [
+     {
+      "file": "/r/b",
+      "from": 3,
+      "to": 3,
+      "kind": "",
+      "text": "on 3",
+      "t": 3
+     },
+     {
+      "file": "/r/a",
+      "from": 9,
+      "to": 9,
+      "kind": "nit",
+      "text": "on 9",
+      "t": 9
+     },
+     {
+      "file": "/r/a",
+      "from": 2,
+      "to": 4,
+      "kind": "fix",
+      "text": "on 2",
+      "t": 2,
+      "stale": true
+     },
+     {
+      "file": "/r/B",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "line\nbreak",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": 2,
+      "to": 2,
+      "kind": "",
+      "text": "on 2",
+      "t": 0
+     },
+     {
+      "file": "/x/é",
+      "from": 0,
+      "to": 0,
+      "kind": "",
+      "text": "on 0",
+      "t": 0
+     },
+     {
+      "file": "/x/e",
+      "from": 0,
+      "to": 0,
+      "kind": "",
+      "text": "on 0",
+      "t": 0
+     },
+     {
+      "file": "/r/a",
+      "from": 2,
+      "to": 2,
+      "kind": "",
+      "text": "on 2",
+      "t": -1,
+      "stale": 1
+     }
+    ],
+    "/r",
+    " Please \u0007check: "
+   ],
+   "out": "Please  check: Review notes: a:2 (stale): on 2; a:2: on 2; a:2-4 (fix, stale): on 2; a:9 (nit): on 9; b:3: on 3; B:1: line break; /x/e: on 0; /x/é: on 0 "
+  },
+  {
+   "fn": "format",
+   "args": [
+    [
+     {
+      "file": "/r/a10",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "on 1",
+      "t": 1
+     },
+     {
+      "file": "/r/a9",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "on 1",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": null,
+      "to": 1,
+      "kind": "",
+      "text": "on null",
+      "t": null
+     },
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": "x"
+     }
+    ],
+    "/r",
+    "\n"
+   ],
+   "out": "Review notes: a: on null; a:x: on x; a9:1: on 1; a10:1: on 1 "
+  },
+  {
+   "fn": "format",
+   "args": [
+    [
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 0
+     },
+     {
+      "file": "/r/a",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "on 7",
+      "t": 5
+     },
+     {
+      "file": "/r/a",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "on 3",
+      "t": 10
+     },
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 2
+     },
+     {
+      "file": "/r/a",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "on 6",
+      "t": 7
+     },
+     {
+      "file": "/r/a",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "on 2",
+      "t": 12
+     },
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 4
+     },
+     {
+      "file": "/r/a",
+      "from": 5,
+      "to": 1,
+      "kind": "",
+      "text": "on 5",
+      "t": 9
+     },
+     {
+      "file": "/r/a",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "on 1",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 6
+     },
+     {
+      "file": "/r/a",
+      "from": 4,
+      "to": 1,
+      "kind": "",
+      "text": "on 4",
+      "t": 11
+     },
+     {
+      "file": "/r/a",
+      "from": 0,
+      "to": 1,
+      "kind": "",
+      "text": "on 0",
+      "t": 3
+     }
+    ],
+    "/r",
+    ""
+   ],
+   "out": "Review notes: a:x: on x; a:1: on 1; a:x: on x; a: on 0; a:x: on x; a:2: on 2; a:3: on 3; a:5: on 5; a:6: on 6; a:7: on 7; a:x: on x; a:4: on 4 "
+  },
+  {
+   "fn": "format",
+   "args": [
+    [
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 0
+     },
+     {
+      "file": "/r/a",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "on 7",
+      "t": 5
+     },
+     {
+      "file": "/r/a",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "on 3",
+      "t": 10
+     },
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 2
+     },
+     {
+      "file": "/r/a",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "on 6",
+      "t": 7
+     },
+     {
+      "file": "/r/a",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "on 2",
+      "t": 12
+     },
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 4
+     },
+     {
+      "file": "/r/a",
+      "from": 5,
+      "to": 1,
+      "kind": "",
+      "text": "on 5",
+      "t": 9
+     },
+     {
+      "file": "/r/a",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "on 1",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 6
+     },
+     {
+      "file": "/r/a",
+      "from": 4,
+      "to": 1,
+      "kind": "",
+      "text": "on 4",
+      "t": 11
+     },
+     {
+      "file": "/r/a",
+      "from": 0,
+      "to": 1,
+      "kind": "",
+      "text": "on 0",
+      "t": 3
+     },
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 8
+     },
+     {
+      "file": "/r/a",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "on 3",
+      "t": 0
+     },
+     {
+      "file": "/r/a",
+      "from": 10,
+      "to": 1,
+      "kind": "",
+      "text": "on 10",
+      "t": 5
+     },
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 10
+     },
+     {
+      "file": "/r/a",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "on 2",
+      "t": 2
+     },
+     {
+      "file": "/r/a",
+      "from": 9,
+      "to": 1,
+      "kind": "",
+      "text": "on 9",
+      "t": 7
+     },
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 12
+     },
+     {
+      "file": "/r/a",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "on 1",
+      "t": 4
+     },
+     {
+      "file": "/r/a",
+      "from": 8,
+      "to": 1,
+      "kind": "",
+      "text": "on 8",
+      "t": 9
+     },
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": 0,
+      "to": 1,
+      "kind": "",
+      "text": "on 0",
+      "t": 6
+     },
+     {
+      "file": "/r/a",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "on 7",
+      "t": 11
+     },
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 3
+     },
+     {
+      "file": "/r/a",
+      "from": 10,
+      "to": 1,
+      "kind": "",
+      "text": "on 10",
+      "t": 8
+     },
+     {
+      "file": "/r/a",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "on 6",
+      "t": 0
+     },
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 5
+     },
+     {
+      "file": "/r/a",
+      "from": 9,
+      "to": 1,
+      "kind": "",
+      "text": "on 9",
+      "t": 10
+     },
+     {
+      "file": "/r/a",
+      "from": 5,
+      "to": 1,
+      "kind": "",
+      "text": "on 5",
+      "t": 2
+     },
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 7
+     },
+     {
+      "file": "/r/a",
+      "from": 8,
+      "to": 1,
+      "kind": "",
+      "text": "on 8",
+      "t": 12
+     },
+     {
+      "file": "/r/a",
+      "from": 4,
+      "to": 1,
+      "kind": "",
+      "text": "on 4",
+      "t": 4
+     },
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 9
+     },
+     {
+      "file": "/r/a",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "on 7",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "on 3",
+      "t": 6
+     },
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 11
+     },
+     {
+      "file": "/r/a",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "on 6",
+      "t": 3
+     },
+     {
+      "file": "/r/a",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "on 2",
+      "t": 8
+     },
+     {
+      "file": "/r/a",
+      "from": "x",
+      "to": 1,
+      "kind": "",
+      "text": "on x",
+      "t": 0
+     }
+    ],
+    "/r",
+    ""
+   ],
+   "out": "Review notes: a:x: on x; a:1: on 1; a:x: on x; a:x: on x; a: on 0; a:x: on x; a: on 0; a:1: on 1; a:2: on 2; a:2: on 2; a:3: on 3; a:3: on 3; a:5: on 5; a:5: on 5; a:6: on 6; a:x: on x; a:x: on x; a:2: on 2; a:3: on 3; a:4: on 4; a:6: on 6; a:7: on 7; a:x: on x; a:x: on x; a:7: on 7; a:8: on 8; a:9: on 9; a:x: on x; a:x: on x; a:4: on 4; a:6: on 6; a:7: on 7; a:9: on 9; a:10: on 10; a:10: on 10; a:x: on x; a:x: on x; a:x: on x; a:x: on x; a:8: on 8 "
+  },
+  {
+   "fn": "format",
+   "args": [
+    [
+     {
+      "file": "/r/a",
+      "from": 0,
+      "to": 1,
+      "kind": "",
+      "text": "n0",
+      "t": 0
+     },
+     {
+      "file": "/r/b",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "n1",
+      "t": 1
+     },
+     {
+      "file": "/r/c",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "n2",
+      "t": 2
+     },
+     {
+      "file": "/r/a",
+      "from": 10,
+      "to": 1,
+      "kind": "",
+      "text": "n3",
+      "t": 3
+     },
+     {
+      "file": "/r/b",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "n4",
+      "t": 0
+     },
+     {
+      "file": "/r/c",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "n5",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": 9,
+      "to": 1,
+      "kind": "",
+      "text": "n6",
+      "t": 2
+     },
+     {
+      "file": "/r/b",
+      "from": 5,
+      "to": 1,
+      "kind": "",
+      "text": "n7",
+      "t": 3
+     },
+     {
+      "file": "/r/c",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "n8",
+      "t": 0
+     },
+     {
+      "file": "/r/a",
+      "from": 8,
+      "to": 1,
+      "kind": "",
+      "text": "n9",
+      "t": 1
+     },
+     {
+      "file": "/r/b",
+      "from": 4,
+      "to": 1,
+      "kind": "",
+      "text": "n10",
+      "t": 2
+     },
+     {
+      "file": "/r/c",
+      "from": 0,
+      "to": 1,
+      "kind": "",
+      "text": "n11",
+      "t": 3
+     },
+     {
+      "file": "/r/a",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "n12",
+      "t": 0
+     },
+     {
+      "file": "/r/b",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "n13",
+      "t": 1
+     },
+     {
+      "file": "/r/c",
+      "from": 10,
+      "to": 1,
+      "kind": "",
+      "text": "n14",
+      "t": 2
+     },
+     {
+      "file": "/r/a",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "n15",
+      "t": 3
+     },
+     {
+      "file": "/r/b",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "n16",
+      "t": 0
+     },
+     {
+      "file": "/r/c",
+      "from": 9,
+      "to": 1,
+      "kind": "",
+      "text": "n17",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": 5,
+      "to": 1,
+      "kind": "",
+      "text": "n18",
+      "t": 2
+     },
+     {
+      "file": "/r/b",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "n19",
+      "t": 3
+     },
+     {
+      "file": "/r/c",
+      "from": 8,
+      "to": 1,
+      "kind": "",
+      "text": "n20",
+      "t": 0
+     },
+     {
+      "file": "/r/a",
+      "from": 4,
+      "to": 1,
+      "kind": "",
+      "text": "n21",
+      "t": 1
+     },
+     {
+      "file": "/r/b",
+      "from": 0,
+      "to": 1,
+      "kind": "",
+      "text": "n22",
+      "t": 2
+     },
+     {
+      "file": "/r/c",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "n23",
+      "t": 3
+     },
+     {
+      "file": "/r/a",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "n24",
+      "t": 0
+     },
+     {
+      "file": "/r/b",
+      "from": 10,
+      "to": 1,
+      "kind": "",
+      "text": "n25",
+      "t": 1
+     },
+     {
+      "file": "/r/c",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "n26",
+      "t": 2
+     },
+     {
+      "file": "/r/a",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "n27",
+      "t": 3
+     },
+     {
+      "file": "/r/b",
+      "from": 9,
+      "to": 1,
+      "kind": "",
+      "text": "n28",
+      "t": 0
+     },
+     {
+      "file": "/r/c",
+      "from": 5,
+      "to": 1,
+      "kind": "",
+      "text": "n29",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "n30",
+      "t": 2
+     },
+     {
+      "file": "/r/b",
+      "from": 8,
+      "to": 1,
+      "kind": "",
+      "text": "n31",
+      "t": 3
+     },
+     {
+      "file": "/r/c",
+      "from": 4,
+      "to": 1,
+      "kind": "",
+      "text": "n32",
+      "t": 0
+     },
+     {
+      "file": "/r/a",
+      "from": 0,
+      "to": 1,
+      "kind": "",
+      "text": "n33",
+      "t": 1
+     },
+     {
+      "file": "/r/b",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "n34",
+      "t": 2
+     },
+     {
+      "file": "/r/c",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "n35",
+      "t": 3
+     },
+     {
+      "file": "/r/a",
+      "from": 10,
+      "to": 1,
+      "kind": "",
+      "text": "n36",
+      "t": 0
+     },
+     {
+      "file": "/r/b",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "n37",
+      "t": 1
+     },
+     {
+      "file": "/r/c",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "n38",
+      "t": 2
+     },
+     {
+      "file": "/r/a",
+      "from": 9,
+      "to": 1,
+      "kind": "",
+      "text": "n39",
+      "t": 3
+     },
+     {
+      "file": "/r/b",
+      "from": 5,
+      "to": 1,
+      "kind": "",
+      "text": "n40",
+      "t": 0
+     },
+     {
+      "file": "/r/c",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "n41",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": 8,
+      "to": 1,
+      "kind": "",
+      "text": "n42",
+      "t": 2
+     },
+     {
+      "file": "/r/b",
+      "from": 4,
+      "to": 1,
+      "kind": "",
+      "text": "n43",
+      "t": 3
+     },
+     {
+      "file": "/r/c",
+      "from": 0,
+      "to": 1,
+      "kind": "",
+      "text": "n44",
+      "t": 0
+     },
+     {
+      "file": "/r/a",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "n45",
+      "t": 1
+     },
+     {
+      "file": "/r/b",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "n46",
+      "t": 2
+     },
+     {
+      "file": "/r/c",
+      "from": 10,
+      "to": 1,
+      "kind": "",
+      "text": "n47",
+      "t": 3
+     },
+     {
+      "file": "/r/a",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "n48",
+      "t": 0
+     },
+     {
+      "file": "/r/b",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "n49",
+      "t": 1
+     },
+     {
+      "file": "/r/c",
+      "from": 9,
+      "to": 1,
+      "kind": "",
+      "text": "n50",
+      "t": 2
+     },
+     {
+      "file": "/r/a",
+      "from": 5,
+      "to": 1,
+      "kind": "",
+      "text": "n51",
+      "t": 3
+     },
+     {
+      "file": "/r/b",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "n52",
+      "t": 0
+     },
+     {
+      "file": "/r/c",
+      "from": 8,
+      "to": 1,
+      "kind": "",
+      "text": "n53",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": 4,
+      "to": 1,
+      "kind": "",
+      "text": "n54",
+      "t": 2
+     },
+     {
+      "file": "/r/b",
+      "from": 0,
+      "to": 1,
+      "kind": "",
+      "text": "n55",
+      "t": 3
+     },
+     {
+      "file": "/r/c",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "n56",
+      "t": 0
+     },
+     {
+      "file": "/r/a",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "n57",
+      "t": 1
+     },
+     {
+      "file": "/r/b",
+      "from": 10,
+      "to": 1,
+      "kind": "",
+      "text": "n58",
+      "t": 2
+     },
+     {
+      "file": "/r/c",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "n59",
+      "t": 3
+     },
+     {
+      "file": "/r/a",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "n60",
+      "t": 0
+     },
+     {
+      "file": "/r/b",
+      "from": 9,
+      "to": 1,
+      "kind": "",
+      "text": "n61",
+      "t": 1
+     },
+     {
+      "file": "/r/c",
+      "from": 5,
+      "to": 1,
+      "kind": "",
+      "text": "n62",
+      "t": 2
+     },
+     {
+      "file": "/r/a",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "n63",
+      "t": 3
+     },
+     {
+      "file": "/r/b",
+      "from": 8,
+      "to": 1,
+      "kind": "",
+      "text": "n64",
+      "t": 0
+     },
+     {
+      "file": "/r/c",
+      "from": 4,
+      "to": 1,
+      "kind": "",
+      "text": "n65",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": 0,
+      "to": 1,
+      "kind": "",
+      "text": "n66",
+      "t": 2
+     },
+     {
+      "file": "/r/b",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "n67",
+      "t": 3
+     },
+     {
+      "file": "/r/c",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "n68",
+      "t": 0
+     },
+     {
+      "file": "/r/a",
+      "from": 10,
+      "to": 1,
+      "kind": "",
+      "text": "n69",
+      "t": 1
+     },
+     {
+      "file": "/r/b",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "n70",
+      "t": 2
+     },
+     {
+      "file": "/r/c",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "n71",
+      "t": 3
+     },
+     {
+      "file": "/r/a",
+      "from": 9,
+      "to": 1,
+      "kind": "",
+      "text": "n72",
+      "t": 0
+     },
+     {
+      "file": "/r/b",
+      "from": 5,
+      "to": 1,
+      "kind": "",
+      "text": "n73",
+      "t": 1
+     },
+     {
+      "file": "/r/c",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "n74",
+      "t": 2
+     },
+     {
+      "file": "/r/a",
+      "from": 8,
+      "to": 1,
+      "kind": "",
+      "text": "n75",
+      "t": 3
+     },
+     {
+      "file": "/r/b",
+      "from": 4,
+      "to": 1,
+      "kind": "",
+      "text": "n76",
+      "t": 0
+     },
+     {
+      "file": "/r/c",
+      "from": 0,
+      "to": 1,
+      "kind": "",
+      "text": "n77",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "n78",
+      "t": 2
+     },
+     {
+      "file": "/r/b",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "n79",
+      "t": 3
+     },
+     {
+      "file": "/r/c",
+      "from": 10,
+      "to": 1,
+      "kind": "",
+      "text": "n80",
+      "t": 0
+     },
+     {
+      "file": "/r/a",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "n81",
+      "t": 1
+     },
+     {
+      "file": "/r/b",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "n82",
+      "t": 2
+     },
+     {
+      "file": "/r/c",
+      "from": 9,
+      "to": 1,
+      "kind": "",
+      "text": "n83",
+      "t": 3
+     },
+     {
+      "file": "/r/a",
+      "from": 5,
+      "to": 1,
+      "kind": "",
+      "text": "n84",
+      "t": 0
+     },
+     {
+      "file": "/r/b",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "n85",
+      "t": 1
+     },
+     {
+      "file": "/r/c",
+      "from": 8,
+      "to": 1,
+      "kind": "",
+      "text": "n86",
+      "t": 2
+     },
+     {
+      "file": "/r/a",
+      "from": 4,
+      "to": 1,
+      "kind": "",
+      "text": "n87",
+      "t": 3
+     },
+     {
+      "file": "/r/b",
+      "from": 0,
+      "to": 1,
+      "kind": "",
+      "text": "n88",
+      "t": 0
+     },
+     {
+      "file": "/r/c",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "n89",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "n90",
+      "t": 2
+     },
+     {
+      "file": "/r/b",
+      "from": 10,
+      "to": 1,
+      "kind": "",
+      "text": "n91",
+      "t": 3
+     },
+     {
+      "file": "/r/c",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "n92",
+      "t": 0
+     },
+     {
+      "file": "/r/a",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "n93",
+      "t": 1
+     },
+     {
+      "file": "/r/b",
+      "from": 9,
+      "to": 1,
+      "kind": "",
+      "text": "n94",
+      "t": 2
+     },
+     {
+      "file": "/r/c",
+      "from": 5,
+      "to": 1,
+      "kind": "",
+      "text": "n95",
+      "t": 3
+     },
+     {
+      "file": "/r/a",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "n96",
+      "t": 0
+     },
+     {
+      "file": "/r/b",
+      "from": 8,
+      "to": 1,
+      "kind": "",
+      "text": "n97",
+      "t": 1
+     },
+     {
+      "file": "/r/c",
+      "from": 4,
+      "to": 1,
+      "kind": "",
+      "text": "n98",
+      "t": 2
+     },
+     {
+      "file": "/r/a",
+      "from": 0,
+      "to": 1,
+      "kind": "",
+      "text": "n99",
+      "t": 3
+     },
+     {
+      "file": "/r/b",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "n100",
+      "t": 0
+     },
+     {
+      "file": "/r/c",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "n101",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": 10,
+      "to": 1,
+      "kind": "",
+      "text": "n102",
+      "t": 2
+     },
+     {
+      "file": "/r/b",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "n103",
+      "t": 3
+     },
+     {
+      "file": "/r/c",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "n104",
+      "t": 0
+     },
+     {
+      "file": "/r/a",
+      "from": 9,
+      "to": 1,
+      "kind": "",
+      "text": "n105",
+      "t": 1
+     },
+     {
+      "file": "/r/b",
+      "from": 5,
+      "to": 1,
+      "kind": "",
+      "text": "n106",
+      "t": 2
+     },
+     {
+      "file": "/r/c",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "n107",
+      "t": 3
+     },
+     {
+      "file": "/r/a",
+      "from": 8,
+      "to": 1,
+      "kind": "",
+      "text": "n108",
+      "t": 0
+     },
+     {
+      "file": "/r/b",
+      "from": 4,
+      "to": 1,
+      "kind": "",
+      "text": "n109",
+      "t": 1
+     },
+     {
+      "file": "/r/c",
+      "from": 0,
+      "to": 1,
+      "kind": "",
+      "text": "n110",
+      "t": 2
+     },
+     {
+      "file": "/r/a",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "n111",
+      "t": 3
+     },
+     {
+      "file": "/r/b",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "n112",
+      "t": 0
+     },
+     {
+      "file": "/r/c",
+      "from": 10,
+      "to": 1,
+      "kind": "",
+      "text": "n113",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "n114",
+      "t": 2
+     },
+     {
+      "file": "/r/b",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "n115",
+      "t": 3
+     },
+     {
+      "file": "/r/c",
+      "from": 9,
+      "to": 1,
+      "kind": "",
+      "text": "n116",
+      "t": 0
+     },
+     {
+      "file": "/r/a",
+      "from": 5,
+      "to": 1,
+      "kind": "",
+      "text": "n117",
+      "t": 1
+     },
+     {
+      "file": "/r/b",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "n118",
+      "t": 2
+     },
+     {
+      "file": "/r/c",
+      "from": 8,
+      "to": 1,
+      "kind": "",
+      "text": "n119",
+      "t": 3
+     },
+     {
+      "file": "/r/a",
+      "from": 4,
+      "to": 1,
+      "kind": "",
+      "text": "n120",
+      "t": 0
+     },
+     {
+      "file": "/r/b",
+      "from": 0,
+      "to": 1,
+      "kind": "",
+      "text": "n121",
+      "t": 1
+     },
+     {
+      "file": "/r/c",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "n122",
+      "t": 2
+     },
+     {
+      "file": "/r/a",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "n123",
+      "t": 3
+     },
+     {
+      "file": "/r/b",
+      "from": 10,
+      "to": 1,
+      "kind": "",
+      "text": "n124",
+      "t": 0
+     },
+     {
+      "file": "/r/c",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "n125",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "n126",
+      "t": 2
+     },
+     {
+      "file": "/r/b",
+      "from": 9,
+      "to": 1,
+      "kind": "",
+      "text": "n127",
+      "t": 3
+     },
+     {
+      "file": "/r/c",
+      "from": 5,
+      "to": 1,
+      "kind": "",
+      "text": "n128",
+      "t": 0
+     },
+     {
+      "file": "/r/a",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "n129",
+      "t": 1
+     },
+     {
+      "file": "/r/b",
+      "from": 8,
+      "to": 1,
+      "kind": "",
+      "text": "n130",
+      "t": 2
+     },
+     {
+      "file": "/r/c",
+      "from": 4,
+      "to": 1,
+      "kind": "",
+      "text": "n131",
+      "t": 3
+     },
+     {
+      "file": "/r/a",
+      "from": 0,
+      "to": 1,
+      "kind": "",
+      "text": "n132",
+      "t": 0
+     },
+     {
+      "file": "/r/b",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "n133",
+      "t": 1
+     },
+     {
+      "file": "/r/c",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "n134",
+      "t": 2
+     },
+     {
+      "file": "/r/a",
+      "from": 10,
+      "to": 1,
+      "kind": "",
+      "text": "n135",
+      "t": 3
+     },
+     {
+      "file": "/r/b",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "n136",
+      "t": 0
+     },
+     {
+      "file": "/r/c",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "n137",
+      "t": 1
+     },
+     {
+      "file": "/r/a",
+      "from": 9,
+      "to": 1,
+      "kind": "",
+      "text": "n138",
+      "t": 2
+     },
+     {
+      "file": "/r/b",
+      "from": 5,
+      "to": 1,
+      "kind": "",
+      "text": "n139",
+      "t": 3
+     },
+     {
+      "file": "/r/c",
+      "from": 1,
+      "to": 1,
+      "kind": "",
+      "text": "n140",
+      "t": 0
+     },
+     {
+      "file": "/r/a",
+      "from": 8,
+      "to": 1,
+      "kind": "",
+      "text": "n141",
+      "t": 1
+     },
+     {
+      "file": "/r/b",
+      "from": 4,
+      "to": 1,
+      "kind": "",
+      "text": "n142",
+      "t": 2
+     },
+     {
+      "file": "/r/c",
+      "from": 0,
+      "to": 1,
+      "kind": "",
+      "text": "n143",
+      "t": 3
+     },
+     {
+      "file": "/r/a",
+      "from": 7,
+      "to": 1,
+      "kind": "",
+      "text": "n144",
+      "t": 0
+     },
+     {
+      "file": "/r/b",
+      "from": 3,
+      "to": 1,
+      "kind": "",
+      "text": "n145",
+      "t": 1
+     },
+     {
+      "file": "/r/c",
+      "from": 10,
+      "to": 1,
+      "kind": "",
+      "text": "n146",
+      "t": 2
+     },
+     {
+      "file": "/r/a",
+      "from": 6,
+      "to": 1,
+      "kind": "",
+      "text": "n147",
+      "t": 3
+     },
+     {
+      "file": "/r/b",
+      "from": 2,
+      "to": 1,
+      "kind": "",
+      "text": "n148",
+      "t": 0
+     },
+     {
+      "file": "/r/c",
+      "from": 9,
+      "to": 1,
+      "kind": "",
+      "text": "n149",
+      "t": 1
+     }
+    ],
+    "/r",
+    ""
+   ],
+   "out": "Review notes: a: n0; a: n132; a: n33; a: n66; a: n99; a:1: n96; a:1: n129; a:1: n30; a:1: n63; a:2: n60; a:2: n93; a:2: n126; a:2: n27; a:3: n24; a:3: n57; a:3: n90; a:3: n123; a:4: n120; a:4: n21; a:4: n54; a:4: n87; a:5: n84; a:5: n117; a:5: n18; a:5: n51; a:6: n48; a:6: n81; a:6: n114; a:6: n15; a:6: n147; a:7: n12; a:7: n144; a:7: n45; a:7: n78; a:7: n111; a:8: n108; a:8: n9; a:8: n141; a:8: n42; a:8: n75; a:9: n72; a:9: n105; a:9: n6; a:9: n138; a:9: n39; a:10: n36; a:10: n69; a:10: n102; a:10: n3; a:10: n135; b: n88; b: n121; b: n22; b: n55; b:1: n52; b:1: n85; b:1: n118; b:1: n19; b:2: n16; b:2: n148; b:2: n49; b:2: n82; b:2: n115; b:3: n112; b:3: n13; b:3: n145; b:3: n46; b:3: n79; b:4: n76; b:4: n109; b:4: n10; b:4: n142; b:4: n43; b:5: n40; b:5: n73; b:5: n106; b:5: n7; b:5: n139; b:6: n4; b:6: n136; b:6: n37; b:6: n70; b:6: n103; b:7: n100; b:7: n1; b:7: n133; b:7: n34; b:7: n67; b:8: n64; b:8: n97; b:8: n130; b:8: n31; b:9: n28; b:9: n61; b:9: n94; b:9: n127; b:10: n124; b:10: n25; b:10: n58; b:10: n91; c: n44; c: n77; c: n110; c: n11; c: n143; c:1: n8; c:1: n140; c:1: n41; c:1: n74; c:1: n107; c:2: n104; c:2: n5; c:2: n137; c:2: n38; c:2: n71; c:3: n68; c:3: n101; c:3: n2; c:3: n134; c:3: n35; c:4: n32; c:4: n65; c:4: n98; c:4: n131; c:5: n128; c:5: n29; c:5: n62; c:5: n95; c:6: n92; c:6: n125; c:6: n26; c:6: n59; c:7: n56; c:7: n89; c:7: n122; c:7: n23; c:8: n20; c:8: n53; c:8: n86; c:8: n119; c:9: n116; c:9: n17; c:9: n149; c:9: n50; c:9: n83; c:10: n80; c:10: n113; c:10: n14; c:10: n146; c:10: n47 "
+  }
+ ]
+}

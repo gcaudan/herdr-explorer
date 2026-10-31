@@ -1,0 +1,17 @@
+# u: a staged hunk taken back, after n went to it.
+size 80 16
+file a.txt one\nthree\nfour\nfive\nsix\n
+git init -q -b main
+git add a.txt
+git commit -q -m first
+file a.txt one\ntwo\nthree\nfive\nsix!\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/a.txt
+env EXPLORER_ROOT=$ROOT/work
+env EXPLORER_TAB=t1
+git add a.txt
+start
+keys d
+wait 800
+keys n u
+until 2000

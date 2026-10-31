@@ -1,0 +1,11 @@
+size 40x10
+⟪bg=#252526 b i⟫ long.txt⟪fg=#8c8c8c bg=#252526⟫  3 lines⟪bg=#252526⟫      ⟪fg=#d4d4d4 bg=#04395e b⟫ File ⟪fg=#8c8c8c bg=#3a3a3e⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+short
+the quick brown fox jumps over the lazy
+ dog and runs far away
+end
+
+
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   a⟪fg=#8c8c8c bg=#252526⟫ note⟪fg=#d4d4d4 bg=#252526 b⟫   e⟪fg=#8c8c8c bg=#252526⟫ editor⟪fg=#d4d4d4 bg=#252526 b⟫   o⟪fg=#8c8c8c bg=#252526⟫ app     ⟪⟫

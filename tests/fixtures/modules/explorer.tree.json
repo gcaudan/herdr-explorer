@@ -1,0 +1,2656 @@
+{
+ "module": "explorer/tree",
+ "cases": [
+  {
+   "fn": "code",
+   "args": [
+    "?",
+    "?"
+   ],
+   "out": "U"
+  },
+  {
+   "fn": "code",
+   "args": [
+    "!",
+    "!"
+   ],
+   "out": "!"
+  },
+  {
+   "fn": "code",
+   "args": [
+    "U",
+    "U"
+   ],
+   "out": "C"
+  },
+  {
+   "fn": "code",
+   "args": [
+    "A",
+    "A"
+   ],
+   "out": "C"
+  },
+  {
+   "fn": "code",
+   "args": [
+    "D",
+    "D"
+   ],
+   "out": "C"
+  },
+  {
+   "fn": "code",
+   "args": [
+    "A",
+    "U"
+   ],
+   "out": "C"
+  },
+  {
+   "fn": "code",
+   "args": [
+    "U",
+    "D"
+   ],
+   "out": "C"
+  },
+  {
+   "fn": "code",
+   "args": [
+    " ",
+    "D"
+   ],
+   "out": "D"
+  },
+  {
+   "fn": "code",
+   "args": [
+    "D",
+    " "
+   ],
+   "out": "D"
+  },
+  {
+   "fn": "code",
+   "args": [
+    "R",
+    " "
+   ],
+   "out": "R"
+  },
+  {
+   "fn": "code",
+   "args": [
+    " ",
+    "R"
+   ],
+   "out": "R"
+  },
+  {
+   "fn": "code",
+   "args": [
+    "R",
+    "M"
+   ],
+   "out": "R"
+  },
+  {
+   "fn": "code",
+   "args": [
+    "C",
+    " "
+   ],
+   "out": "A"
+  },
+  {
+   "fn": "code",
+   "args": [
+    "A",
+    " "
+   ],
+   "out": "A"
+  },
+  {
+   "fn": "code",
+   "args": [
+    "A",
+    "M"
+   ],
+   "out": "A"
+  },
+  {
+   "fn": "code",
+   "args": [
+    " ",
+    "M"
+   ],
+   "out": "M"
+  },
+  {
+   "fn": "code",
+   "args": [
+    "M",
+    "M"
+   ],
+   "out": "M"
+  },
+  {
+   "fn": "code",
+   "args": [
+    " ",
+    "T"
+   ],
+   "out": "M"
+  },
+  {
+   "fn": "code",
+   "args": [
+    "X",
+    "Y"
+   ],
+   "out": "M"
+  },
+  {
+   "fn": "parseStatus",
+   "args": [
+    " M sub/a/x.js\u0000D  sub/a/y.js\u0000R  sub/new.js\u0000sub/old.js\u0000?? sub/tmp/\u0000!! sub/dist/\u0000 M other/z.js\u0000",
+    "sub"
+   ],
+   "out": {
+    "files": [
+     [
+      "a/x.js",
+      "M"
+     ],
+     [
+      "a/y.js",
+      "D"
+     ],
+     [
+      "new.js",
+      "R"
+     ]
+    ],
+    "dirs": [
+     [
+      "a",
+      "D"
+     ],
+     [
+      "",
+      "D"
+     ]
+    ],
+    "untracked": [
+     "tmp"
+    ],
+    "ignored": [
+     "dist"
+    ]
+   }
+  },
+  {
+   "fn": "parseStatus",
+   "args": [
+    "?? a/b/c.js\u0000 M a/d.js\u0000UU a/b/e.js\u0000A  f.js\u0000C  g.js\u0000h.js\u0000 D a/b/c/d/e.js\u0000",
+    ""
+   ],
+   "out": {
+    "files": [
+     [
+      "a/b/c.js",
+      "U"
+     ],
+     [
+      "a/d.js",
+      "M"
+     ],
+     [
+      "a/b/e.js",
+      "C"
+     ],
+     [
+      "f.js",
+      "A"
+     ],
+     [
+      "g.js",
+      "A"
+     ],
+     [
+      "a/b/c/d/e.js",
+      "D"
+     ]
+    ],
+    "dirs": [
+     [
+      "a/b",
+      "C"
+     ],
+     [
+      "a",
+      "C"
+     ],
+     [
+      "",
+      "C"
+     ],
+     [
+      "a/b/c/d",
+      "D"
+     ],
+     [
+      "a/b/c",
+      "D"
+     ]
+    ],
+    "untracked": [],
+    "ignored": []
+   }
+  },
+  {
+   "fn": "parseStatus",
+   "args": [
+    "?? x\u0000 M\u0000M  é/ü.js\u0000!! .cache/\u0000garbage",
+    ""
+   ],
+   "out": {
+    "files": [
+     [
+      "x",
+      "U"
+     ],
+     [
+      "é/ü.js",
+      "M"
+     ],
+     [
+      "bage",
+      "M"
+     ]
+    ],
+    "dirs": [
+     [
+      "",
+      "M"
+     ],
+     [
+      "é",
+      "M"
+     ]
+    ],
+    "untracked": [],
+    "ignored": [
+     ".cache"
+    ]
+   }
+  },
+  {
+   "fn": "parseStatus",
+   "args": [
+    "",
+    ""
+   ],
+   "out": {
+    "files": [],
+    "dirs": [],
+    "untracked": [],
+    "ignored": []
+   }
+  },
+  {
+   "fn": "parseStatus",
+   "args": [
+    "é ab\u0000😀 cd\u0000a😀b c\u0000 M ok\u0000",
+    ""
+   ],
+   "out": {
+    "files": [
+     [
+      "ab",
+      "M"
+     ],
+     [
+      "ok",
+      "M"
+     ]
+    ],
+    "dirs": [
+     [
+      "",
+      "M"
+     ]
+    ],
+    "untracked": [],
+    "ignored": []
+   }
+  },
+  {
+   "fn": "parseStatus",
+   "args": [
+    " M subdir/x\u0000 M sub/y\u0000",
+    "sub"
+   ],
+   "out": {
+    "files": [
+     [
+      "y",
+      "M"
+     ]
+    ],
+    "dirs": [
+     [
+      "",
+      "M"
+     ]
+    ],
+    "untracked": [],
+    "ignored": []
+   }
+  },
+  {
+   "fn": "treeBefore",
+   "args": [
+    "a/z.js",
+    false,
+    "b.js",
+    false
+   ],
+   "out": true
+  },
+  {
+   "fn": "treeBefore",
+   "args": [
+    "b.js",
+    false,
+    "a/z.js",
+    false
+   ],
+   "out": false
+  },
+  {
+   "fn": "treeBefore",
+   "args": [
+    "f2.js",
+    false,
+    "f10.js",
+    false
+   ],
+   "out": true
+  },
+  {
+   "fn": "treeBefore",
+   "args": [
+    "a",
+    true,
+    "a/x.js",
+    false
+   ],
+   "out": true
+  },
+  {
+   "fn": "treeBefore",
+   "args": [
+    "a/x.js",
+    false,
+    "a",
+    true
+   ],
+   "out": false
+  },
+  {
+   "fn": "treeBefore",
+   "args": [
+    "a",
+    false,
+    "a",
+    false
+   ],
+   "out": false
+  },
+  {
+   "fn": "treeBefore",
+   "args": [
+    "A/x",
+    false,
+    "a/y",
+    false
+   ],
+   "out": false
+  },
+  {
+   "fn": "treeBefore",
+   "args": [
+    "é",
+    false,
+    "f",
+    false
+   ],
+   "out": true
+  },
+  {
+   "fn": "treeBefore",
+   "args": [
+    "x/b",
+    false,
+    "x/a/c",
+    false
+   ],
+   "out": false
+  },
+  {
+   "fn": "treeBefore",
+   "args": [
+    "",
+    false,
+    "a",
+    false
+   ],
+   "out": true
+  },
+  {
+   "fn": "parentOf",
+   "args": [
+    ""
+   ],
+   "out": null
+  },
+  {
+   "fn": "parentOf",
+   "args": [
+    "a"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "parentOf",
+   "args": [
+    "a/b"
+   ],
+   "out": "a"
+  },
+  {
+   "fn": "parentOf",
+   "args": [
+    "a/b/c"
+   ],
+   "out": "a/b"
+  },
+  {
+   "fn": "parentOf",
+   "args": [
+    "/a"
+   ],
+   "out": ""
+  },
+  {
+   "fn": "parentOf",
+   "args": [
+    "a/"
+   ],
+   "out": "a"
+  },
+  {
+   "fn": "holds",
+   "args": [
+    {
+     "rel": "src/main/java",
+     "from": "src"
+    },
+    "src/main"
+   ],
+   "out": true
+  },
+  {
+   "fn": "holds",
+   "args": [
+    {
+     "rel": "src/main/java",
+     "from": "src"
+    },
+    "src"
+   ],
+   "out": true
+  },
+  {
+   "fn": "holds",
+   "args": [
+    {
+     "rel": "src/main/java",
+     "from": "src"
+    },
+    "src/main/java/App.java"
+   ],
+   "out": false
+  },
+  {
+   "fn": "holds",
+   "args": [
+    {
+     "rel": "a",
+     "from": ""
+    },
+    ""
+   ],
+   "out": false
+  },
+  {
+   "fn": "holds",
+   "args": [
+    {
+     "rel": "lib"
+    },
+    "lib"
+   ],
+   "out": true
+  },
+  {
+   "fn": "holds",
+   "args": [
+    {
+     "rel": "lib"
+    },
+    "lib/sub"
+   ],
+   "out": false
+  },
+  {
+   "fn": "holds",
+   "args": [
+    {
+     "rel": "srcx/a",
+     "from": "src"
+    },
+    "src"
+   ],
+   "out": false
+  },
+  {
+   "fn": "entryOrder",
+   "args": [
+    [
+     {
+      "name": "b",
+      "dir": false
+     },
+     {
+      "name": "B2",
+      "dir": true
+     },
+     {
+      "name": "a10",
+      "dir": false
+     },
+     {
+      "name": "a9",
+      "dir": false
+     },
+     {
+      "name": "Été",
+      "dir": false
+     },
+     {
+      "name": "ete",
+      "dir": false
+     },
+     {
+      "name": "_x",
+      "dir": false
+     },
+     {
+      "name": ".git",
+      "dir": true
+     },
+     {
+      "name": "A",
+      "dir": false
+     },
+     {
+      "name": "a",
+      "dir": false
+     }
+    ]
+   ],
+   "out": [
+    ".git",
+    "B2",
+    "_x",
+    "a",
+    "A",
+    "a9",
+    "a10",
+    "b",
+    "ete",
+    "Été"
+   ]
+  },
+  {
+   "fn": "rows",
+   "args": [
+    "$ROOT",
+    {
+     "hidden": true,
+     "ignored": true,
+     "compact": false
+    },
+    "",
+    {
+     "expanded": [
+      ""
+     ]
+    }
+   ],
+   "files": {
+    "b.txt": "",
+    "B.txt": "",
+    "README": "",
+    "readme": "",
+    "E": "",
+    "e": "",
+    "é": "",
+    "A": "",
+    "a": "",
+    "a10.txt": "",
+    "a9.txt": "",
+    "Zeta/x": "",
+    "alpha/inner/deep.md": "",
+    "alpha/x.js": "",
+    ".hidden": "",
+    ".git/HEAD": "",
+    "Été.md": "",
+    "eta.md": "",
+    "émile/f": "",
+    "src/main/java/App.java": "",
+    "only/one.txt": "",
+    "node_modules/main.js": "",
+    "link": {
+     "link": "$ROOT/alpha"
+    },
+    "dead": {
+     "link": "$ROOT/nowhere"
+    }
+   },
+   "out": [
+    {
+     "name": "alpha",
+     "dir": true,
+     "rel": "alpha",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "émile",
+     "dir": true,
+     "rel": "émile",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "link",
+     "dir": true,
+     "rel": "link",
+     "link": true,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "node_modules",
+     "dir": true,
+     "rel": "node_modules",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "only",
+     "dir": true,
+     "rel": "only",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "src",
+     "dir": true,
+     "rel": "src",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "Zeta",
+     "dir": true,
+     "rel": "Zeta",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": ".hidden",
+     "dir": false,
+     "rel": ".hidden",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "a",
+     "dir": false,
+     "rel": "a",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "A",
+     "dir": false,
+     "rel": "A",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "a9.txt",
+     "dir": false,
+     "rel": "a9.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "a10.txt",
+     "dir": false,
+     "rel": "a10.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "b.txt",
+     "dir": false,
+     "rel": "b.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "B.txt",
+     "dir": false,
+     "rel": "B.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "dead",
+     "dir": false,
+     "rel": "dead",
+     "link": true,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "e",
+     "dir": false,
+     "rel": "e",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "E",
+     "dir": false,
+     "rel": "E",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "é",
+     "dir": false,
+     "rel": "é",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "eta.md",
+     "dir": false,
+     "rel": "eta.md",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "Été.md",
+     "dir": false,
+     "rel": "Été.md",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "readme",
+     "dir": false,
+     "rel": "readme",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "README",
+     "dir": false,
+     "rel": "README",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    }
+   ]
+  },
+  {
+   "fn": "rows",
+   "args": [
+    "$ROOT",
+    {
+     "hidden": false,
+     "ignored": true,
+     "compact": false
+    },
+    "",
+    {
+     "expanded": [
+      "",
+      "alpha",
+      "link",
+      "Zeta"
+     ]
+    }
+   ],
+   "files": {
+    "b.txt": "",
+    "B.txt": "",
+    "README": "",
+    "readme": "",
+    "E": "",
+    "e": "",
+    "é": "",
+    "A": "",
+    "a": "",
+    "a10.txt": "",
+    "a9.txt": "",
+    "Zeta/x": "",
+    "alpha/inner/deep.md": "",
+    "alpha/x.js": "",
+    ".hidden": "",
+    ".git/HEAD": "",
+    "Été.md": "",
+    "eta.md": "",
+    "émile/f": "",
+    "src/main/java/App.java": "",
+    "only/one.txt": "",
+    "node_modules/main.js": "",
+    "link": {
+     "link": "$ROOT/alpha"
+    },
+    "dead": {
+     "link": "$ROOT/nowhere"
+    }
+   },
+   "out": [
+    {
+     "name": "alpha",
+     "dir": true,
+     "rel": "alpha",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": true
+    },
+    {
+     "name": "inner",
+     "dir": true,
+     "rel": "alpha/inner",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 1,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "x.js",
+     "dir": false,
+     "rel": "alpha/x.js",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 1,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "émile",
+     "dir": true,
+     "rel": "émile",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "link",
+     "dir": true,
+     "rel": "link",
+     "link": true,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": true
+    },
+    {
+     "name": "inner",
+     "dir": true,
+     "rel": "link/inner",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 1,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "x.js",
+     "dir": false,
+     "rel": "link/x.js",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 1,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "node_modules",
+     "dir": true,
+     "rel": "node_modules",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "only",
+     "dir": true,
+     "rel": "only",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "src",
+     "dir": true,
+     "rel": "src",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "Zeta",
+     "dir": true,
+     "rel": "Zeta",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": true
+    },
+    {
+     "name": "x",
+     "dir": false,
+     "rel": "Zeta/x",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 1,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "a",
+     "dir": false,
+     "rel": "a",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "A",
+     "dir": false,
+     "rel": "A",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "a9.txt",
+     "dir": false,
+     "rel": "a9.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "a10.txt",
+     "dir": false,
+     "rel": "a10.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "b.txt",
+     "dir": false,
+     "rel": "b.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "B.txt",
+     "dir": false,
+     "rel": "B.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "dead",
+     "dir": false,
+     "rel": "dead",
+     "link": true,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "e",
+     "dir": false,
+     "rel": "e",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "E",
+     "dir": false,
+     "rel": "E",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "é",
+     "dir": false,
+     "rel": "é",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "eta.md",
+     "dir": false,
+     "rel": "eta.md",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "Été.md",
+     "dir": false,
+     "rel": "Été.md",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "readme",
+     "dir": false,
+     "rel": "readme",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "README",
+     "dir": false,
+     "rel": "README",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    }
+   ]
+  },
+  {
+   "fn": "rows",
+   "args": [
+    "$ROOT",
+    {
+     "hidden": false,
+     "ignored": false,
+     "compact": true
+    },
+    "!! node_modules/\u0000",
+    {
+     "expanded": [
+      "",
+      "src/main/java"
+     ]
+    }
+   ],
+   "files": {
+    "b.txt": "",
+    "B.txt": "",
+    "README": "",
+    "readme": "",
+    "E": "",
+    "e": "",
+    "é": "",
+    "A": "",
+    "a": "",
+    "a10.txt": "",
+    "a9.txt": "",
+    "Zeta/x": "",
+    "alpha/inner/deep.md": "",
+    "alpha/x.js": "",
+    ".hidden": "",
+    ".git/HEAD": "",
+    "Été.md": "",
+    "eta.md": "",
+    "émile/f": "",
+    "src/main/java/App.java": "",
+    "only/one.txt": "",
+    "node_modules/main.js": "",
+    "link": {
+     "link": "$ROOT/alpha"
+    },
+    "dead": {
+     "link": "$ROOT/nowhere"
+    }
+   },
+   "out": [
+    {
+     "name": "alpha",
+     "dir": true,
+     "rel": "alpha",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "émile",
+     "dir": true,
+     "rel": "émile",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "link",
+     "dir": true,
+     "rel": "link",
+     "link": true,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "only",
+     "dir": true,
+     "rel": "only",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "java",
+     "dir": true,
+     "rel": "src/main/java",
+     "link": false,
+     "gone": false,
+     "from": "src",
+     "chain": "src/main/",
+     "depth": 0,
+     "hit": null,
+     "open": true
+    },
+    {
+     "name": "App.java",
+     "dir": false,
+     "rel": "src/main/java/App.java",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 1,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "Zeta",
+     "dir": true,
+     "rel": "Zeta",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "a",
+     "dir": false,
+     "rel": "a",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "A",
+     "dir": false,
+     "rel": "A",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "a9.txt",
+     "dir": false,
+     "rel": "a9.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "a10.txt",
+     "dir": false,
+     "rel": "a10.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "b.txt",
+     "dir": false,
+     "rel": "b.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "B.txt",
+     "dir": false,
+     "rel": "B.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "dead",
+     "dir": false,
+     "rel": "dead",
+     "link": true,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "e",
+     "dir": false,
+     "rel": "e",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "E",
+     "dir": false,
+     "rel": "E",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "é",
+     "dir": false,
+     "rel": "é",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "eta.md",
+     "dir": false,
+     "rel": "eta.md",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "Été.md",
+     "dir": false,
+     "rel": "Été.md",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "readme",
+     "dir": false,
+     "rel": "readme",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "README",
+     "dir": false,
+     "rel": "README",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    }
+   ]
+  },
+  {
+   "fn": "rows",
+   "args": [
+    "$ROOT",
+    {
+     "hidden": false,
+     "ignored": true,
+     "compact": true
+    },
+    "",
+    {
+     "expanded": [
+      "",
+      "src"
+     ]
+    }
+   ],
+   "files": {
+    "b.txt": "",
+    "B.txt": "",
+    "README": "",
+    "readme": "",
+    "E": "",
+    "e": "",
+    "é": "",
+    "A": "",
+    "a": "",
+    "a10.txt": "",
+    "a9.txt": "",
+    "Zeta/x": "",
+    "alpha/inner/deep.md": "",
+    "alpha/x.js": "",
+    ".hidden": "",
+    ".git/HEAD": "",
+    "Été.md": "",
+    "eta.md": "",
+    "émile/f": "",
+    "src/main/java/App.java": "",
+    "only/one.txt": "",
+    "node_modules/main.js": "",
+    "link": {
+     "link": "$ROOT/alpha"
+    },
+    "dead": {
+     "link": "$ROOT/nowhere"
+    }
+   },
+   "out": [
+    {
+     "name": "alpha",
+     "dir": true,
+     "rel": "alpha",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "émile",
+     "dir": true,
+     "rel": "émile",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "link",
+     "dir": true,
+     "rel": "link",
+     "link": true,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "node_modules",
+     "dir": true,
+     "rel": "node_modules",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "only",
+     "dir": true,
+     "rel": "only",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "java",
+     "dir": true,
+     "rel": "src/main/java",
+     "link": false,
+     "gone": false,
+     "from": "src",
+     "chain": "src/main/",
+     "depth": 0,
+     "hit": null,
+     "open": true
+    },
+    {
+     "name": "App.java",
+     "dir": false,
+     "rel": "src/main/java/App.java",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 1,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "Zeta",
+     "dir": true,
+     "rel": "Zeta",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "a",
+     "dir": false,
+     "rel": "a",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "A",
+     "dir": false,
+     "rel": "A",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "a9.txt",
+     "dir": false,
+     "rel": "a9.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "a10.txt",
+     "dir": false,
+     "rel": "a10.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "b.txt",
+     "dir": false,
+     "rel": "b.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "B.txt",
+     "dir": false,
+     "rel": "B.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "dead",
+     "dir": false,
+     "rel": "dead",
+     "link": true,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "e",
+     "dir": false,
+     "rel": "e",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "E",
+     "dir": false,
+     "rel": "E",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "é",
+     "dir": false,
+     "rel": "é",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "eta.md",
+     "dir": false,
+     "rel": "eta.md",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "Été.md",
+     "dir": false,
+     "rel": "Été.md",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "readme",
+     "dir": false,
+     "rel": "readme",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "README",
+     "dir": false,
+     "rel": "README",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    }
+   ]
+  },
+  {
+   "fn": "rows",
+   "args": [
+    "$ROOT",
+    {
+     "hidden": true,
+     "ignored": true,
+     "compact": false
+    },
+    "!! node_modules/\u0000",
+    {
+     "query": "main",
+     "expanded": []
+    }
+   ],
+   "files": {
+    "b.txt": "",
+    "B.txt": "",
+    "README": "",
+    "readme": "",
+    "E": "",
+    "e": "",
+    "é": "",
+    "A": "",
+    "a": "",
+    "a10.txt": "",
+    "a9.txt": "",
+    "Zeta/x": "",
+    "alpha/inner/deep.md": "",
+    "alpha/x.js": "",
+    ".hidden": "",
+    ".git/HEAD": "",
+    "Été.md": "",
+    "eta.md": "",
+    "émile/f": "",
+    "src/main/java/App.java": "",
+    "only/one.txt": "",
+    "node_modules/main.js": "",
+    "link": {
+     "link": "$ROOT/alpha"
+    },
+    "dead": {
+     "link": "$ROOT/nowhere"
+    }
+   },
+   "out": [
+    {
+     "name": "src",
+     "dir": true,
+     "rel": "src",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": true
+    },
+    {
+     "name": "main",
+     "dir": true,
+     "rel": "src/main",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 1,
+     "hit": [
+      0,
+      4
+     ],
+     "open": false
+    }
+   ]
+  },
+  {
+   "fn": "rows",
+   "args": [
+    "$ROOT",
+    {
+     "hidden": true,
+     "ignored": true,
+     "compact": false
+    },
+    "",
+    {
+     "query": "été",
+     "expanded": []
+    }
+   ],
+   "files": {
+    "b.txt": "",
+    "B.txt": "",
+    "README": "",
+    "readme": "",
+    "E": "",
+    "e": "",
+    "é": "",
+    "A": "",
+    "a": "",
+    "a10.txt": "",
+    "a9.txt": "",
+    "Zeta/x": "",
+    "alpha/inner/deep.md": "",
+    "alpha/x.js": "",
+    ".hidden": "",
+    ".git/HEAD": "",
+    "Été.md": "",
+    "eta.md": "",
+    "émile/f": "",
+    "src/main/java/App.java": "",
+    "only/one.txt": "",
+    "node_modules/main.js": "",
+    "link": {
+     "link": "$ROOT/alpha"
+    },
+    "dead": {
+     "link": "$ROOT/nowhere"
+    }
+   },
+   "out": [
+    {
+     "name": "Été.md",
+     "dir": false,
+     "rel": "Été.md",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": [
+      0,
+      3
+     ],
+     "open": false
+    }
+   ]
+  },
+  {
+   "fn": "rows",
+   "args": [
+    "$ROOT",
+    {
+     "hidden": true,
+     "ignored": true,
+     "compact": false
+    },
+    "",
+    {
+     "query": "a",
+     "expanded": []
+    }
+   ],
+   "files": {
+    "b.txt": "",
+    "B.txt": "",
+    "README": "",
+    "readme": "",
+    "E": "",
+    "e": "",
+    "é": "",
+    "A": "",
+    "a": "",
+    "a10.txt": "",
+    "a9.txt": "",
+    "Zeta/x": "",
+    "alpha/inner/deep.md": "",
+    "alpha/x.js": "",
+    ".hidden": "",
+    ".git/HEAD": "",
+    "Été.md": "",
+    "eta.md": "",
+    "émile/f": "",
+    "src/main/java/App.java": "",
+    "only/one.txt": "",
+    "node_modules/main.js": "",
+    "link": {
+     "link": "$ROOT/alpha"
+    },
+    "dead": {
+     "link": "$ROOT/nowhere"
+    }
+   },
+   "out": [
+    {
+     "name": "alpha",
+     "dir": true,
+     "rel": "alpha",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": [
+      0,
+      1
+     ],
+     "open": false
+    },
+    {
+     "name": "node_modules",
+     "dir": true,
+     "rel": "node_modules",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": true
+    },
+    {
+     "name": "main.js",
+     "dir": false,
+     "rel": "node_modules/main.js",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 1,
+     "hit": [
+      1,
+      2
+     ],
+     "open": false
+    },
+    {
+     "name": "src",
+     "dir": true,
+     "rel": "src",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": true
+    },
+    {
+     "name": "main",
+     "dir": true,
+     "rel": "src/main",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 1,
+     "hit": [
+      1,
+      2
+     ],
+     "open": true
+    },
+    {
+     "name": "java",
+     "dir": true,
+     "rel": "src/main/java",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 2,
+     "hit": [
+      1,
+      2
+     ],
+     "open": true
+    },
+    {
+     "name": "App.java",
+     "dir": false,
+     "rel": "src/main/java/App.java",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 3,
+     "hit": [
+      0,
+      1
+     ],
+     "open": false
+    },
+    {
+     "name": "Zeta",
+     "dir": true,
+     "rel": "Zeta",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": [
+      3,
+      4
+     ],
+     "open": false
+    },
+    {
+     "name": "a",
+     "dir": false,
+     "rel": "a",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": [
+      0,
+      1
+     ],
+     "open": false
+    },
+    {
+     "name": "A",
+     "dir": false,
+     "rel": "A",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": [
+      0,
+      1
+     ],
+     "open": false
+    },
+    {
+     "name": "a9.txt",
+     "dir": false,
+     "rel": "a9.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": [
+      0,
+      1
+     ],
+     "open": false
+    },
+    {
+     "name": "a10.txt",
+     "dir": false,
+     "rel": "a10.txt",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": [
+      0,
+      1
+     ],
+     "open": false
+    },
+    {
+     "name": "dead",
+     "dir": false,
+     "rel": "dead",
+     "link": true,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": [
+      2,
+      3
+     ],
+     "open": false
+    },
+    {
+     "name": "eta.md",
+     "dir": false,
+     "rel": "eta.md",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": [
+      2,
+      3
+     ],
+     "open": false
+    },
+    {
+     "name": "readme",
+     "dir": false,
+     "rel": "readme",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": [
+      2,
+      3
+     ],
+     "open": false
+    },
+    {
+     "name": "README",
+     "dir": false,
+     "rel": "README",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": [
+      2,
+      3
+     ],
+     "open": false
+    }
+   ]
+  },
+  {
+   "fn": "rows",
+   "args": [
+    "$ROOT",
+    {
+     "hidden": true,
+     "ignored": true,
+     "compact": false
+    },
+    " M alpha/x.js\u0000 D alpha/gone.js\u0000 D old/f.js\u0000?? eta.md\u0000!! node_modules/\u0000",
+    {
+     "changed": true,
+     "expanded": []
+    }
+   ],
+   "files": {
+    "b.txt": "",
+    "B.txt": "",
+    "README": "",
+    "readme": "",
+    "E": "",
+    "e": "",
+    "é": "",
+    "A": "",
+    "a": "",
+    "a10.txt": "",
+    "a9.txt": "",
+    "Zeta/x": "",
+    "alpha/inner/deep.md": "",
+    "alpha/x.js": "",
+    ".hidden": "",
+    ".git/HEAD": "",
+    "Été.md": "",
+    "eta.md": "",
+    "émile/f": "",
+    "src/main/java/App.java": "",
+    "only/one.txt": "",
+    "node_modules/main.js": "",
+    "link": {
+     "link": "$ROOT/alpha"
+    },
+    "dead": {
+     "link": "$ROOT/nowhere"
+    }
+   },
+   "out": [
+    {
+     "name": "alpha",
+     "dir": true,
+     "rel": "alpha",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": true
+    },
+    {
+     "name": "gone.js",
+     "dir": false,
+     "rel": "alpha/gone.js",
+     "link": false,
+     "gone": true,
+     "from": null,
+     "chain": null,
+     "depth": 1,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "x.js",
+     "dir": false,
+     "rel": "alpha/x.js",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 1,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "old",
+     "dir": true,
+     "rel": "old",
+     "link": false,
+     "gone": true,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": true
+    },
+    {
+     "name": "f.js",
+     "dir": false,
+     "rel": "old/f.js",
+     "link": false,
+     "gone": true,
+     "from": null,
+     "chain": null,
+     "depth": 1,
+     "hit": null,
+     "open": false
+    },
+    {
+     "name": "eta.md",
+     "dir": false,
+     "rel": "eta.md",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": false
+    }
+   ]
+  },
+  {
+   "fn": "rows",
+   "args": [
+    "$ROOT",
+    {
+     "hidden": false,
+     "ignored": true,
+     "compact": true
+    },
+    " M src/main/java/App.java\u0000 D .old/x\u0000",
+    {
+     "changed": true,
+     "expanded": []
+    }
+   ],
+   "files": {
+    "b.txt": "",
+    "B.txt": "",
+    "README": "",
+    "readme": "",
+    "E": "",
+    "e": "",
+    "é": "",
+    "A": "",
+    "a": "",
+    "a10.txt": "",
+    "a9.txt": "",
+    "Zeta/x": "",
+    "alpha/inner/deep.md": "",
+    "alpha/x.js": "",
+    ".hidden": "",
+    ".git/HEAD": "",
+    "Été.md": "",
+    "eta.md": "",
+    "émile/f": "",
+    "src/main/java/App.java": "",
+    "only/one.txt": "",
+    "node_modules/main.js": "",
+    "link": {
+     "link": "$ROOT/alpha"
+    },
+    "dead": {
+     "link": "$ROOT/nowhere"
+    }
+   },
+   "out": [
+    {
+     "name": "java",
+     "dir": true,
+     "rel": "src/main/java",
+     "link": false,
+     "gone": false,
+     "from": "src",
+     "chain": "src/main/",
+     "depth": 0,
+     "hit": null,
+     "open": true
+    },
+    {
+     "name": "App.java",
+     "dir": false,
+     "rel": "src/main/java/App.java",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 1,
+     "hit": null,
+     "open": false
+    }
+   ]
+  },
+  {
+   "fn": "rows",
+   "args": [
+    "$ROOT",
+    {
+     "hidden": true,
+     "ignored": true,
+     "compact": false
+    },
+    " M alpha/x.js\u0000 D alpha/gone.js\u0000",
+    {
+     "changed": true,
+     "query": "o",
+     "expanded": []
+    }
+   ],
+   "files": {
+    "b.txt": "",
+    "B.txt": "",
+    "README": "",
+    "readme": "",
+    "E": "",
+    "e": "",
+    "é": "",
+    "A": "",
+    "a": "",
+    "a10.txt": "",
+    "a9.txt": "",
+    "Zeta/x": "",
+    "alpha/inner/deep.md": "",
+    "alpha/x.js": "",
+    ".hidden": "",
+    ".git/HEAD": "",
+    "Été.md": "",
+    "eta.md": "",
+    "émile/f": "",
+    "src/main/java/App.java": "",
+    "only/one.txt": "",
+    "node_modules/main.js": "",
+    "link": {
+     "link": "$ROOT/alpha"
+    },
+    "dead": {
+     "link": "$ROOT/nowhere"
+    }
+   },
+   "out": [
+    {
+     "name": "alpha",
+     "dir": true,
+     "rel": "alpha",
+     "link": false,
+     "gone": false,
+     "from": null,
+     "chain": null,
+     "depth": 0,
+     "hit": null,
+     "open": true
+    },
+    {
+     "name": "gone.js",
+     "dir": false,
+     "rel": "alpha/gone.js",
+     "link": false,
+     "gone": true,
+     "from": null,
+     "chain": null,
+     "depth": 1,
+     "hit": [
+      1,
+      2
+     ],
+     "open": false
+    }
+   ]
+  },
+  {
+   "fn": "changedFiles",
+   "args": [
+    "$ROOT",
+    " M alpha/x.js\u0000 D alpha/gone.js\u0000 D old/f.js\u0000?? émile/\u0000M  b.txt\u0000"
+   ],
+   "files": {
+    "b.txt": "",
+    "B.txt": "",
+    "README": "",
+    "readme": "",
+    "E": "",
+    "e": "",
+    "é": "",
+    "A": "",
+    "a": "",
+    "a10.txt": "",
+    "a9.txt": "",
+    "Zeta/x": "",
+    "alpha/inner/deep.md": "",
+    "alpha/x.js": "",
+    ".hidden": "",
+    ".git/HEAD": "",
+    "Été.md": "",
+    "eta.md": "",
+    "émile/f": "",
+    "src/main/java/App.java": "",
+    "only/one.txt": "",
+    "node_modules/main.js": "",
+    "link": {
+     "link": "$ROOT/alpha"
+    },
+    "dead": {
+     "link": "$ROOT/nowhere"
+    }
+   },
+   "out": [
+    "alpha/gone.js",
+    "alpha/x.js",
+    "émile/f",
+    "old/f.js",
+    "b.txt"
+   ]
+  }
+ ]
+}

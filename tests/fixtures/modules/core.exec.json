@@ -1,0 +1,578 @@
+{
+ "module": "core/exec",
+ "cases": [
+  {
+   "fn": "words",
+   "args": [
+    "code --wait"
+   ],
+   "out": [
+    "code",
+    "--wait"
+   ]
+  },
+  {
+   "fn": "words",
+   "args": [
+    "subl -w \"a b\""
+   ],
+   "out": [
+    "subl",
+    "-w",
+    "a b"
+   ]
+  },
+  {
+   "fn": "words",
+   "args": [
+    "vim 'x y' z"
+   ],
+   "out": [
+    "vim",
+    "x y",
+    "z"
+   ]
+  },
+  {
+   "fn": "words",
+   "args": [
+    "  "
+   ],
+   "out": []
+  },
+  {
+   "fn": "words",
+   "args": [
+    "\"unclosed arg"
+   ],
+   "out": [
+    "\"unclosed",
+    "arg"
+   ]
+  },
+  {
+   "fn": "words",
+   "args": [
+    "a\"b\"c"
+   ],
+   "out": [
+    "a\"b\"c"
+   ]
+  },
+  {
+   "fn": "words",
+   "args": [
+    ""
+   ],
+   "out": []
+  },
+  {
+   "fn": "words",
+   "args": [
+    "é  ü"
+   ],
+   "out": [
+    "é",
+    "ü"
+   ]
+  },
+  {
+   "fn": "version",
+   "args": [
+    "1.2.3"
+   ],
+   "out": [
+    1,
+    2,
+    3
+   ]
+  },
+  {
+   "fn": "version",
+   "args": [
+    "1.10"
+   ],
+   "out": [
+    1,
+    10
+   ]
+  },
+  {
+   "fn": "version",
+   "args": [
+    "x.2"
+   ],
+   "out": [
+    0,
+    2
+   ]
+  },
+  {
+   "fn": "version",
+   "args": [
+    ""
+   ],
+   "out": [
+    0
+   ]
+  },
+  {
+   "fn": "version",
+   "args": [
+    "1..2"
+   ],
+   "out": [
+    1,
+    0,
+    2
+   ]
+  },
+  {
+   "fn": "version",
+   "args": [
+    "01.2a"
+   ],
+   "out": [
+    1,
+    2
+   ]
+  },
+  {
+   "fn": "newer",
+   "args": [
+    "1.10.0",
+    "1.9.2"
+   ],
+   "out": true
+  },
+  {
+   "fn": "newer",
+   "args": [
+    "1.9.2",
+    "1.10.0"
+   ],
+   "out": false
+  },
+  {
+   "fn": "newer",
+   "args": [
+    "1.2",
+    "1.2.0"
+   ],
+   "out": false
+  },
+  {
+   "fn": "newer",
+   "args": [
+    "1.2.1",
+    "1.2"
+   ],
+   "out": true
+  },
+  {
+   "fn": "newer",
+   "args": [
+    "2",
+    "1.9.9"
+   ],
+   "out": true
+  },
+  {
+   "fn": "newer",
+   "args": [
+    "0.7.1",
+    "0.7.1"
+   ],
+   "out": false
+  },
+  {
+   "fn": "newer",
+   "args": [
+    "a",
+    "0"
+   ],
+   "out": false
+  },
+  {
+   "fn": "addConfig",
+   "args": [
+    {},
+    [
+     [
+      "a.b",
+      "1"
+     ],
+     [
+      "c.d",
+      "x=y"
+     ]
+    ]
+   ],
+   "out": {
+    "GIT_CONFIG_KEY_0": "a.b",
+    "GIT_CONFIG_VALUE_0": "1",
+    "GIT_CONFIG_KEY_1": "c.d",
+    "GIT_CONFIG_VALUE_1": "x=y",
+    "GIT_CONFIG_COUNT": "2"
+   }
+  },
+  {
+   "fn": "addConfig",
+   "args": [
+    {
+     "GIT_CONFIG_COUNT": "2",
+     "X": "y"
+    },
+    [
+     [
+      "e.f",
+      ""
+     ]
+    ]
+   ],
+   "out": {
+    "GIT_CONFIG_COUNT": "3",
+    "X": "y",
+    "GIT_CONFIG_KEY_2": "e.f",
+    "GIT_CONFIG_VALUE_2": ""
+   }
+  },
+  {
+   "fn": "addConfig",
+   "args": [
+    {
+     "GIT_CONFIG_COUNT": "zz"
+    },
+    []
+   ],
+   "out": {
+    "GIT_CONFIG_COUNT": "0"
+   }
+  },
+  {
+   "fn": "result",
+   "args": [
+    "{\"result\":{\"a\":1}}"
+   ],
+   "out": {
+    "a": 1
+   }
+  },
+  {
+   "fn": "result",
+   "args": [
+    "{\"x\":1}"
+   ],
+   "out": null
+  },
+  {
+   "fn": "result",
+   "args": [
+    "nope"
+   ],
+   "out": null
+  },
+  {
+   "fn": "result",
+   "args": [
+    ""
+   ],
+   "out": null
+  },
+  {
+   "fn": "result",
+   "args": [
+    "{\"result\":null}"
+   ],
+   "out": null
+  },
+  {
+   "fn": "staleState",
+   "args": [
+    "S",
+    [
+     "notes-w1_t1.json",
+     "notes-w1_t2.json",
+     "preview-w1_t2.json",
+     "settings.json",
+     "width",
+     "panes"
+    ],
+    [
+     "w1_p1.json",
+     "w1_p7.json"
+    ],
+    [
+     "w1:t1"
+    ],
+    [
+     "w1:p1"
+    ]
+   ],
+   "out": [
+    "S/notes-w1_t2.json",
+    "S/preview-w1_t2.json",
+    "S/panes/w1_p7.json"
+   ]
+  },
+  {
+   "fn": "staleState",
+   "args": [
+    "S",
+    [
+     "notes-a.json",
+     "search.json",
+     "expanded.json",
+     "turn-x.y.json",
+     "viewed-.json"
+    ],
+    [],
+    [],
+    []
+   ],
+   "out": [
+    "S/notes-a.json",
+    "S/turn-x.y.json"
+   ]
+  },
+  {
+   "fn": "gitOperation",
+   "args": [
+    "$ROOT"
+   ],
+   "files": {},
+   "out": ""
+  },
+  {
+   "fn": "gitOperation",
+   "args": [
+    "$ROOT"
+   ],
+   "files": {
+    "MERGE_HEAD": ""
+   },
+   "out": "MERGING"
+  },
+  {
+   "fn": "gitOperation",
+   "args": [
+    "$ROOT"
+   ],
+   "files": {
+    "rebase-apply/applying": ""
+   },
+   "out": "APPLYING"
+  },
+  {
+   "fn": "gitOperation",
+   "args": [
+    "$ROOT"
+   ],
+   "files": {
+    "rebase-merge": null
+   },
+   "out": "REBASING"
+  },
+  {
+   "fn": "gitOperation",
+   "args": [
+    "$ROOT"
+   ],
+   "files": {
+    "rebase-apply": null
+   },
+   "out": "REBASING"
+  },
+  {
+   "fn": "gitOperation",
+   "args": [
+    "$ROOT"
+   ],
+   "files": {
+    "CHERRY_PICK_HEAD": ""
+   },
+   "out": "CHERRY-PICKING"
+  },
+  {
+   "fn": "gitOperation",
+   "args": [
+    "$ROOT"
+   ],
+   "files": {
+    "REVERT_HEAD": ""
+   },
+   "out": "REVERTING"
+  },
+  {
+   "fn": "gitOperation",
+   "args": [
+    "$ROOT"
+   ],
+   "files": {
+    "sequencer/todo": "revert abc x\n"
+   },
+   "out": "REVERTING"
+  },
+  {
+   "fn": "gitOperation",
+   "args": [
+    "$ROOT"
+   ],
+   "files": {
+    "sequencer/todo": "pick abc\n"
+   },
+   "out": "CHERRY-PICKING"
+  },
+  {
+   "fn": "gitOperation",
+   "args": [
+    "$ROOT"
+   ],
+   "files": {
+    "sequencer": null
+   },
+   "out": "CHERRY-PICKING"
+  },
+  {
+   "fn": "gitOperation",
+   "args": [
+    "$ROOT"
+   ],
+   "files": {
+    "BISECT_LOG": ""
+   },
+   "out": "BISECTING"
+  },
+  {
+   "fn": "gitOperation",
+   "args": [
+    "$ROOT"
+   ],
+   "files": {
+    "MERGE_HEAD": "",
+    "REVERT_HEAD": ""
+   },
+   "out": "MERGING"
+  },
+  {
+   "fn": "remoteLink",
+   "args": [
+    "$ROOT/a/b"
+   ],
+   "files": {
+    "a/b": ""
+   },
+   "out": false
+  },
+  {
+   "fn": "remoteLink",
+   "args": [
+    "$ROOT/l/x"
+   ],
+   "files": {
+    "l": {
+     "link": "//server/share"
+    }
+   },
+   "out": true
+  },
+  {
+   "fn": "remoteLink",
+   "args": [
+    "$ROOT/l/x"
+   ],
+   "files": {
+    "l": {
+     "link": "$ROOT/d"
+    },
+    "d": null
+   },
+   "out": false
+  },
+  {
+   "fn": "remoteLink",
+   "args": [
+    "$ROOT/l"
+   ],
+   "files": {
+    "l": {
+     "link": "m"
+    },
+    "m": {
+     "link": "//host/s"
+    }
+   },
+   "out": true
+  },
+  {
+   "fn": "remoteLink",
+   "args": [
+    "$ROOT/l"
+   ],
+   "files": {
+    "l": {
+     "link": "m"
+    },
+    "m": {
+     "link": "l"
+    }
+   },
+   "out": true
+  },
+  {
+   "fn": "remoteLink",
+   "args": [
+    "$ROOT/l/x",
+    "$ROOT/l"
+   ],
+   "files": {
+    "l": {
+     "link": "//server/share"
+    }
+   },
+   "out": false
+  },
+  {
+   "fn": "remoteLink",
+   "args": [
+    "$ROOT/missing/x"
+   ],
+   "out": false
+  },
+  {
+   "fn": "realPath",
+   "args": [
+    "$ROOT/l/x/y"
+   ],
+   "files": {
+    "l": {
+     "link": "d"
+    },
+    "d": null
+   },
+   "out": "$ROOT/d/x/y"
+  },
+  {
+   "fn": "realPath",
+   "args": [
+    "$ROOT/r/x"
+   ],
+   "files": {
+    "r": {
+     "link": "//server/share"
+    }
+   },
+   "out": "$ROOT/r/x"
+  },
+  {
+   "fn": "realPath",
+   "args": [
+    "$ROOT/a/../b"
+   ],
+   "files": {
+    "b": ""
+   },
+   "out": "$ROOT/b"
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+# Files asked for by the explorer: in the temporary tab, then in a new kept tab, then the first one again.
+size 60 10
+file a.txt alpha\n
+file b.txt beta\nline two\n
+file c.txt gamma\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/a.txt
+env EXPLORER_ROOT=$ROOT/work
+env EXPLORER_TAB=t1
+start
+wait 300
+state preview-t1.json {"file":"b.txt","line":2}
+wait 500
+state preview-t1.json {"file":"c.txt","keep":true}
+wait 500
+state preview-t1.json {"file":"b.txt","keep":true}
+wait 500
+until 2800

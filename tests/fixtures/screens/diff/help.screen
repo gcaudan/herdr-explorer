@@ -1,0 +1,31 @@
+size 80x30
+⟪fg=#8c8c8c⟫ ‹ ⟪b⟫Keys⟪fg=#8c8c8c⟫ · Changes⟪⟫
+⟪fg=#519aba b⟫ Move⟪⟫
+⟪fg=#d4d4d4 b⟫  ↑↓ j k     ⟪fg=#8c8c8c⟫line⟪⟫
+⟪fg=#d4d4d4 b⟫  pgup pgdn  ⟪fg=#8c8c8c⟫page⟪⟫
+⟪fg=#d4d4d4 b⟫  space      ⟪fg=#8c8c8c⟫page down⟪⟫
+⟪fg=#d4d4d4 b⟫  ctrl+u/d   ⟪fg=#8c8c8c⟫half page⟪⟫
+⟪fg=#d4d4d4 b⟫  g G        ⟪fg=#8c8c8c⟫top, bottom⟪⟫
+⟪fg=#519aba b⟫ Diff⟪⟫
+⟪fg=#d4d4d4 b⟫  ,          ⟪fg=#8c8c8c⟫the view's options (or ⚙)⟪⟫
+⟪fg=#d4d4d4 b⟫  n N        ⟪fg=#8c8c8c⟫next, previous hunk⟪⟫
+⟪fg=#d4d4d4 b⟫  v          ⟪fg=#8c8c8c⟫inline, split (side by side)⟪⟫
+⟪fg=#d4d4d4 b⟫  w          ⟪fg=#8c8c8c⟫wrap long lines⟪⟫
+⟪fg=#d4d4d4 b⟫  ← → h l    ⟪fg=#8c8c8c⟫left, right (no wrap)⟪⟫
+⟪fg=#d4d4d4 b⟫  b          ⟪fg=#8c8c8c⟫compare with: HEAD, merge base, last agent turn, a commit or range,⟪⟫
+⟪fg=#519aba b⟫ Stage (HEAD)⟪⟫
+⟪fg=#d4d4d4 b⟫  shift+↑↓…  ⟪fg=#8c8c8c⟫select lines⟪⟫
+⟪fg=#d4d4d4 b⟫  s          ⟪fg=#8c8c8c⟫stage the line, hunk (@@ row) or file (name row)⟪⟫
+⟪fg=#d4d4d4 b⟫  u          ⟪fg=#8c8c8c⟫unstage it⟪⟫
+⟪fg=#d4d4d4 b⟫  D          ⟪fg=#8c8c8c⟫discard it from the working tree⟪⟫
+⟪fg=#519aba b⟫ Review⟪⟫
+⟪fg=#d4d4d4 b⟫  a          ⟪fg=#8c8c8c⟫note on the line (hunk, file)⟪⟫
+⟪fg=#d4d4d4 b⟫  tab        ⟪fg=#8c8c8c⟫kind of note, while typing⟪⟫
+⟪fg=#d4d4d4 b⟫  A          ⟪fg=#8c8c8c⟫send the notes to the agent⟪⟫
+⟪fg=#d4d4d4 b⟫  C          ⟪fg=#8c8c8c⟫copy the notes⟪⟫
+⟪fg=#d4d4d4 b⟫  U          ⟪fg=#8c8c8c⟫remove the last note⟪⟫
+⟪fg=#d4d4d4 b⟫  y          ⟪fg=#8c8c8c⟫copy path:line⟪⟫
+⟪fg=#d4d4d4 b⟫  m          ⟪fg=#8c8c8c⟫mark the file viewed: folded until it changes⟪⟫
+⟪fg=#d4d4d4 b⟫  ] [        ⟪fg=#8c8c8c⟫next, previous file not viewed⟪⟫
+⟪fg=#8c8c8c⟫──────────────────────────────────────────────────────────────────────────────▾⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ↑↓⟪fg=#8c8c8c bg=#252526⟫ scroll⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ close⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫<build>⟪bg=#252526⟫ ⟪⟫

@@ -1,0 +1,11 @@
+size 50x10
+⟪bg=#252526 b i⟫ notes.txt⟪fg=#8c8c8c bg=#252526⟫  4 lines · 28 B⟪bg=#252526⟫        ⟪fg=#d4d4d4 bg=#04395e b⟫ File ⟪fg=#8c8c8c bg=#3a3a3e⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+⟪fg=#8c8c8c bg=#37373d⟫ 1 ⟪bg=#37373d⟫one                                            ⟪⟫
+⟪fg=#8c8c8c⟫ 2 ⟪⟫two ⟪bg=#04395e⟫three⟪⟫
+⟪fg=#8c8c8c⟫ 3 ⟪⟫four
+⟪fg=#8c8c8c⟫ 4 ⟪bg=#04395e⟫five⟪⟫ six
+
+
+
+
+⟪fg=#8dc149 bg=#252526⟫ ✓ ⟪bg=#252526⟫Mark 2/3                                       ⟪⟫

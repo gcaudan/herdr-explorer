@@ -1,0 +1,19 @@
+size 60x14
+⟪bg=#252526 b i⟫ pic.png⟪fg=#8c8c8c bg=#252526⟫  PNG 12×8 · 231 B⟪bg=#252526⟫                  ⟪fg=#d4d4d4 bg=#04395e b⟫ File ⟪fg=#8c8c8c bg=#3a3a3e⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+
+
+
+
+
+
+
+
+
+
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ p⟪fg=#8c8c8c bg=#252526⟫ pixelated⟪fg=#d4d4d4 bg=#252526 b⟫   o⟪fg=#8c8c8c bg=#252526⟫ open⟪fg=#d4d4d4 bg=#252526 b⟫   y⟪fg=#8c8c8c bg=#252526⟫ copy path⟪fg=#d4d4d4 bg=#252526 b⟫   q⟪fg=#8c8c8c bg=#252526⟫ close⟪fg=#d4d4d4 bg=#252526 b⟫   ?⟪fg=#8c8c8c bg=#252526⟫ keys      ⟪⟫
+graphics
+a=d,d=I,i=18502,q=2 @14;60
+a=t,f=32,o=z,s=48,v=32,i=18502,q=2 @14;60
+a=p,i=18502,p=1,c=6,r=2,C=1,q=2 @2;28

@@ -1,0 +1,9 @@
+# A folder outside any repository.
+size 80 16
+file a.txt one\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+herdr pane get {"result":{"pane":{"pane_id":"w1:p2","tab_id":"t1","workspace_id":"w1"}}}
+env EXPLORER_ROOT=$ROOT/work
+start
+wait 800
+until 1500

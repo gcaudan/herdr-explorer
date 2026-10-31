@@ -1,0 +1,643 @@
+{
+ "module": "core/places",
+ "cases": [
+  {
+   "fn": "target",
+   "args": [
+    "app.js:12-14,30,42:5-18",
+    "$ROOT"
+   ],
+   "out": [
+    "$ROOT/app.js",
+    [
+     {
+      "from": 12,
+      "to": 14,
+      "a": 0,
+      "b": 0
+     },
+     {
+      "from": 30,
+      "to": 30,
+      "a": 0,
+      "b": 0
+     },
+     {
+      "from": 42,
+      "to": 42,
+      "a": 5,
+      "b": 18
+     }
+    ]
+   ]
+  },
+  {
+   "fn": "target",
+   "args": [
+    "app.js:12:5",
+    "$ROOT"
+   ],
+   "out": [
+    "$ROOT/app.js",
+    [
+     {
+      "from": 12,
+      "to": 12,
+      "a": 0,
+      "b": 0
+     }
+    ]
+   ]
+  },
+  {
+   "fn": "target",
+   "args": [
+    "app.js:12",
+    "$ROOT"
+   ],
+   "out": [
+    "$ROOT/app.js",
+    [
+     {
+      "from": 12,
+      "to": 12,
+      "a": 0,
+      "b": 0
+     }
+    ]
+   ]
+  },
+  {
+   "fn": "target",
+   "args": [
+    "app.js:7-7",
+    "$ROOT"
+   ],
+   "out": [
+    "$ROOT/app.js",
+    [
+     {
+      "from": 7,
+      "to": 7,
+      "a": 0,
+      "b": 0
+     }
+    ]
+   ]
+  },
+  {
+   "fn": "target",
+   "args": [
+    "app.js",
+    "$ROOT"
+   ],
+   "out": [
+    "$ROOT/app.js",
+    []
+   ]
+  },
+  {
+   "fn": "target",
+   "args": [
+    "notes:draft",
+    "$ROOT"
+   ],
+   "out": [
+    "$ROOT/notes:draft",
+    []
+   ]
+  },
+  {
+   "fn": "target",
+   "args": [
+    "notes:12,x",
+    "$ROOT"
+   ],
+   "out": [
+    "$ROOT/notes:12,x",
+    []
+   ]
+  },
+  {
+   "fn": "target",
+   "args": [
+    "a:12",
+    "$ROOT"
+   ],
+   "files": {
+    "a:12": ""
+   },
+   "out": [
+    "$ROOT/a:12",
+    []
+   ]
+  },
+  {
+   "fn": "target",
+   "args": [
+    "dir/a.js:3",
+    "$ROOT"
+   ],
+   "files": {
+    "dir": null
+   },
+   "out": [
+    "$ROOT/dir/a.js",
+    [
+     {
+      "from": 3,
+      "to": 3,
+      "a": 0,
+      "b": 0
+     }
+    ]
+   ]
+  },
+  {
+   "fn": "target",
+   "args": [
+    ":12",
+    "$ROOT"
+   ],
+   "out": [
+    "$ROOT/:12",
+    []
+   ]
+  },
+  {
+   "fn": "target",
+   "args": [
+    "app.js:",
+    "$ROOT"
+   ],
+   "out": [
+    "$ROOT/app.js:",
+    []
+   ]
+  },
+  {
+   "fn": "target",
+   "args": [
+    "app.js:0",
+    "$ROOT"
+   ],
+   "throws": "wrong place: 0"
+  },
+  {
+   "fn": "target",
+   "args": [
+    "app.js:14-12",
+    "$ROOT"
+   ],
+   "throws": "wrong place: 14-12"
+  },
+  {
+   "fn": "target",
+   "args": [
+    "app.js:12:9-5",
+    "$ROOT"
+   ],
+   "throws": "wrong place: 12:9-5"
+  },
+  {
+   "fn": "target",
+   "args": [
+    "app.js:12:0-5",
+    "$ROOT"
+   ],
+   "throws": "wrong place: 12:0-5"
+  },
+  {
+   "fn": "target",
+   "args": [
+    "app.js:12-14:1-2",
+    "$ROOT"
+   ],
+   "out": [
+    "$ROOT/app.js",
+    [
+     {
+      "from": 12,
+      "to": 14,
+      "a": 0,
+      "b": 0
+     }
+    ]
+   ]
+  },
+  {
+   "fn": "target",
+   "args": [
+    "/abs/x.rs:4",
+    "$ROOT"
+   ],
+   "out": [
+    "/abs/x.rs",
+    [
+     {
+      "from": 4,
+      "to": 4,
+      "a": 0,
+      "b": 0
+     }
+    ]
+   ]
+  },
+  {
+   "fn": "target",
+   "args": [
+    "../up.txt:2-3",
+    "$ROOT"
+   ],
+   "out": [
+    "/tmp/up.txt",
+    [
+     {
+      "from": 2,
+      "to": 3,
+      "a": 0,
+      "b": 0
+     }
+    ]
+   ]
+  },
+  {
+   "fn": "target",
+   "args": [
+    "c:/x.js:5",
+    "$ROOT"
+   ],
+   "out": [
+    "$ROOT/c:/x.js",
+    [
+     {
+      "from": 5,
+      "to": 5,
+      "a": 0,
+      "b": 0
+     }
+    ]
+   ]
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///tmp/a%20b.js",
+    "me"
+   ],
+   "out": "/tmp/a b.js"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///tmp/a%20b.js#L12",
+    "me"
+   ],
+   "out": "/tmp/a b.js:12"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///tmp/a%20b.js#L12-L14",
+    "me"
+   ],
+   "out": "/tmp/a b.js:12-14"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///tmp/a.js#12-14",
+    "me"
+   ],
+   "out": "/tmp/a.js:12-14"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///tmp/a.js#l3",
+    "me"
+   ],
+   "out": "/tmp/a.js:3"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///tmp/a.js#section",
+    "me"
+   ],
+   "out": "/tmp/a.js"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file://localhost/tmp/a.js",
+    "me"
+   ],
+   "out": "/tmp/a.js"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file://ME/tmp/a.js",
+    "me"
+   ],
+   "out": "/tmp/a.js"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file://server/share/x.js",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///tmp/a.js?x=1#L2",
+    "me"
+   ],
+   "out": "/tmp/a.js:2"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///tmp/%E2%9C%93.js",
+    "me"
+   ],
+   "out": "/tmp/✓.js"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "https://example.com/x.js",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "src/app.js:12:5",
+    "me"
+   ],
+   "out": "src/app.js:12:5"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "  src/app.js  ",
+    "me"
+   ],
+   "out": "src/app.js"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    null,
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "ftp://x/y",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a/b/../c/./d.js#L3",
+    "me"
+   ],
+   "out": "/a/c/d.js:3"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a/%2e%2E/b",
+    "me"
+   ],
+   "out": "/b"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a%2Fb",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a%2fb",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a%zz",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a%E2%9C",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a\tb\n.js",
+    "me"
+   ],
+   "out": "/ab.js"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "FILE:///x.js",
+    "me"
+   ],
+   "out": "/x.js"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file://a@b/x",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file://me:80/x",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file://h%41st/x",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///C|/x/../..",
+    "me"
+   ],
+   "out": "/C:/"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file://C:/x",
+    "me"
+   ],
+   "out": "/C:/x"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:\\\\\\x\\y",
+    "me"
+   ],
+   "out": "file:\\\\\\x\\y"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///x#L1-L2",
+    "me"
+   ],
+   "out": "/x:1-2"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///x#1-",
+    "me"
+   ],
+   "out": "/x"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///x#",
+    "me"
+   ],
+   "out": "/x"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///x?q#L5",
+    "me"
+   ],
+   "out": "/x:5"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///",
+    "me"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file://",
+    "me"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a//b/",
+    "me"
+   ],
+   "out": "/a//b/"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///%41%20b",
+    "me"
+   ],
+   "out": "/A b"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///../../x",
+    "me"
+   ],
+   "out": "/x"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a/..",
+    "me"
+   ],
+   "out": "/"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///a/.",
+    "me"
+   ],
+   "out": "/a/"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file://ME.local/x",
+    "me"
+   ],
+   "out": null
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///é ü/ç.js",
+    "me"
+   ],
+   "out": "/é ü/ç.js"
+  },
+  {
+   "fn": "clicked",
+   "args": [
+    "file:///x#L٣",
+    "me"
+   ],
+   "out": "/x"
+  }
+ ]
+}

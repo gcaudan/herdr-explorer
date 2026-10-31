@@ -1,0 +1,23 @@
+size 70x22
+⟪fg=#8c8c8c⟫ ‹ ⟪b⟫Keys⟪fg=#8c8c8c⟫ · Go to file⟪⟫
+⟪fg=#519aba b⟫ Results⟪⟫
+⟪fg=#d4d4d4 b⟫  ↑↓         ⟪fg=#8c8c8c⟫select⟪⟫
+⟪fg=#d4d4d4 b⟫  ctrl+n     ⟪fg=#8c8c8c⟫next⟪⟫
+⟪fg=#d4d4d4 b⟫  ctrl+k     ⟪fg=#8c8c8c⟫previous⟪⟫
+⟪fg=#d4d4d4 b⟫  pgup pgdn  ⟪fg=#8c8c8c⟫page⟪⟫
+⟪fg=#d4d4d4 b⟫  ctrl+home  ⟪fg=#8c8c8c⟫first⟪⟫
+⟪fg=#d4d4d4 b⟫  ctrl+end   ⟪fg=#8c8c8c⟫last⟪⟫
+⟪fg=#d4d4d4 b⟫  alt+← →    ⟪fg=#8c8c8c⟫fold, unfold a file⟪⟫
+⟪fg=#519aba b⟫ Open⟪⟫
+⟪fg=#d4d4d4 b⟫  ⏎          ⟪fg=#8c8c8c⟫in the preview⟪⟫
+⟪fg=#d4d4d4 b⟫  ctrl+e     ⟪fg=#8c8c8c⟫in the editor⟪⟫
+⟪fg=#d4d4d4 b⟫  alt+⏎      ⟪fg=#8c8c8c⟫in the editor⟪⟫
+⟪fg=#d4d4d4 b⟫  ctrl+o     ⟪fg=#8c8c8c⟫in its app (else the editor)⟪⟫
+⟪fg=#d4d4d4 b⟫  ctrl+t     ⟪fg=#8c8c8c⟫insert in terminal⟪⟫
+⟪fg=#d4d4d4 b⟫  ctrl+y     ⟪fg=#8c8c8c⟫copy the relative path⟪⟫
+⟪fg=#519aba b⟫ Search⟪⟫
+⟪fg=#d4d4d4 b⟫  ctrl+p     ⟪fg=#8c8c8c⟫go to file⟪⟫
+⟪fg=#d4d4d4 b⟫  ctrl+f     ⟪fg=#8c8c8c⟫search in files⟪⟫
+⟪fg=#d4d4d4 b⟫  tab        ⟪fg=#8c8c8c⟫next field⟪⟫
+⟪fg=#8c8c8c⟫────────────────────────────────────────────────────────────────────▾⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ↑↓⟪fg=#8c8c8c bg=#252526⟫ scroll⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ close⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫<build>⟪bg=#252526⟫ ⟪⟫

@@ -1,0 +1,12 @@
+# ctrl+r: the replacement's field above the footer, tab into it, alt+a replaces all.
+size 50 10
+file code.js const answer = 42;\nconsole.log(answer);\nlet apple = 1;\nlet apples = apple + 1;\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/code.js
+start
+keys i
+keys ctrl+r
+text apple
+keys tab
+text pear
+keys alt+a

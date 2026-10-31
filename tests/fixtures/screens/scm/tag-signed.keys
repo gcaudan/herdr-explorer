@@ -1,0 +1,20 @@
+# T with tag.gpgSign and the repository's core.editor: a lightweight tag, no editor run.
+size 120 20
+env GIT_AUTHOR_NAME=Ada
+env GIT_AUTHOR_EMAIL=ada@example.com
+env GIT_COMMITTER_NAME=Ada
+env GIT_COMMITTER_EMAIL=ada@example.com
+file a.txt one\n
+git init -q -b main
+git add a.txt
+git commit -q -m first
+git config tag.gpgSign true
+git config core.editor false
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+herdr pane get {"result":{"pane":{"pane_id":"w1:p2","tab_id":"t1","workspace_id":"w1"}}}
+start
+wait 800
+keys T
+text v2
+keys enter
+wait 1500

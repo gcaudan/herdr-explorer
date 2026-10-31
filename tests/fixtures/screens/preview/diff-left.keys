@@ -1,0 +1,14 @@
+# A long line of the Diff view scrolled sideways: rows made again from the column.
+size 50 10
+file a.txt short\n
+git init -q -b main
+git add a.txt
+git commit -q -m first
+file a.txt short\nthe quick brown fox jumps over the lazy dog and keeps running far away\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/a.txt
+start
+keys d
+wait 800
+keys right right
+until 1500

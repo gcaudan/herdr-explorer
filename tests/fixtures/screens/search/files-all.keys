@@ -1,0 +1,9 @@
+# Go to file without a query: every file, sorted, the count in the rule.
+size 60 12
+file alpha.txt a\n
+file beta/main.rs b\n
+file beta/mod.rs c\n
+file .hidden/x.txt x\n
+file node_modules/m/i.js m\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start

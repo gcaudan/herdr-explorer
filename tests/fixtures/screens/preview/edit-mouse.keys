@@ -1,0 +1,11 @@
+# The mouse while editing: a click puts the cursor, a drag selects, a double click selects a word.
+size 50 10
+file code.js const answer = 42;\nconsole.log(answer);\nlet apple = 1;\nlet apples = apple + 1;\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/code.js
+start
+keys i
+text \e[<0;8;2M\e[<32;12;3M
+text \e[<0;12;3m
+wait 300
+text \e[<0;7;4M\e[<0;7;4m\e[<0;7;4M\e[<0;7;4m

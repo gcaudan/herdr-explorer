@@ -1,0 +1,11 @@
+size 60x10
+⟪bg=#252526 b⟫ ⟪bg=#252526⟫                                                        ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+
+            ⟪fg=#8c8c8c⟫Select a file, commit, stash or tag⟪⟫
+
+                          ⟪fg=#d4d4d4 b⟫ q⟪fg=#8c8c8c⟫ close⟪⟫
+
+
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ z⟪fg=#8c8c8c bg=#252526⟫ zoom⟪fg=#d4d4d4 bg=#252526 b⟫   q⟪fg=#8c8c8c bg=#252526⟫ close⟪fg=#d4d4d4 bg=#252526 b⟫   ?⟪fg=#8c8c8c bg=#252526⟫ keys                                  ⟪⟫

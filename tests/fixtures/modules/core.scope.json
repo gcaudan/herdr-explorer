@@ -1,0 +1,1394 @@
+{
+ "module": "core/scope",
+ "cases": [
+  {
+   "fn": "label",
+   "args": [
+    {
+     "kind": "head"
+    }
+   ],
+   "out": "HEAD"
+  },
+  {
+   "fn": "label",
+   "args": [
+    {
+     "kind": "branch"
+    }
+   ],
+   "out": "main base"
+  },
+  {
+   "fn": "label",
+   "args": [
+    {
+     "kind": "branch"
+    },
+    "develop"
+   ],
+   "out": "develop base"
+  },
+  {
+   "fn": "label",
+   "args": [
+    {
+     "kind": "turn"
+    }
+   ],
+   "out": "last turn"
+  },
+  {
+   "fn": "label",
+   "args": [
+    {
+     "kind": "rev",
+     "rev": "refs/heads/a..refs/remotes/origin/b"
+    }
+   ],
+   "out": "a..origin/b"
+  },
+  {
+   "fn": "label",
+   "args": [
+    {
+     "kind": "ref",
+     "rev": "feature"
+    }
+   ],
+   "out": "vs feature"
+  },
+  {
+   "fn": "label",
+   "args": [
+    {
+     "kind": "other"
+    }
+   ],
+   "out": "HEAD"
+  },
+  {
+   "fn": "same",
+   "args": [
+    {
+     "kind": "rev",
+     "rev": "a"
+    },
+    {
+     "kind": "rev",
+     "rev": "a"
+    }
+   ],
+   "out": true
+  },
+  {
+   "fn": "same",
+   "args": [
+    {
+     "kind": "rev",
+     "rev": "a"
+    },
+    {
+     "kind": "rev",
+     "rev": "b"
+    }
+   ],
+   "out": false
+  },
+  {
+   "fn": "same",
+   "args": [
+    {
+     "kind": "head"
+    },
+    {
+     "kind": "head",
+     "rev": ""
+    }
+   ],
+   "out": true
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "out": {
+    "kind": "head"
+   }
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "scope-w1_t1.json": "{\"kind\":\"branch\"}"
+   },
+   "out": {
+    "kind": "branch"
+   }
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "scope-w1_t1.json": "{\"kind\":\"rev\",\"rev\":\"a..b\"}"
+   },
+   "out": {
+    "kind": "rev",
+    "rev": "a..b"
+   }
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "scope-w1_t1.json": "{\"kind\":\"rev\",\"rev\":\"\"}"
+   },
+   "out": {
+    "kind": "head"
+   }
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "scope-w1_t1.json": "{\"kind\":\"ref\"}"
+   },
+   "out": {
+    "kind": "head"
+   }
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "scope-w1_t1.json": "{\"kind\":\"nope\"}"
+   },
+   "out": {
+    "kind": "head"
+   }
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "scope-w1_t1.json": "not json"
+   },
+   "out": {
+    "kind": "head"
+   }
+  },
+  {
+   "fn": "read",
+   "args": [
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "scope-w1_t1.json": "{\"kind\":\"turn\",\"extra\":1}"
+   },
+   "out": {
+    "kind": "turn",
+    "extra": 1
+   }
+  },
+  {
+   "fn": "read",
+   "args": [
+    ""
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "out": {
+    "kind": "head"
+   }
+  },
+  {
+   "fn": "write",
+   "args": [
+    "w1:t1",
+    {
+     "kind": "head"
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "scope-w1_t1.json": "{\"kind\":\"turn\"}"
+   },
+   "after": {
+    "scope-w1_t1.json": null
+   },
+   "out": true
+  },
+  {
+   "fn": "write",
+   "args": [
+    "w1:t1",
+    {
+     "kind": "branch"
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "after": {
+    "scope-w1_t1.json": "{\"kind\":\"branch\"}"
+   },
+   "out": true
+  },
+  {
+   "fn": "write",
+   "args": [
+    "w1:t1",
+    {
+     "kind": "rev",
+     "rev": "a...b"
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "after": {
+    "scope-w1_t1.json": "{\"kind\":\"rev\",\"rev\":\"a...b\"}"
+   },
+   "out": true
+  },
+  {
+   "fn": "write",
+   "args": [
+    "w1:t1",
+    {
+     "kind": "turn",
+     "rev": ""
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "after": {
+    "scope-w1_t1.json": "{\"kind\":\"turn\"}"
+   },
+   "out": true
+  },
+  {
+   "fn": "write",
+   "args": [
+    "w1:t1",
+    {
+     "kind": "branch"
+    }
+   ],
+   "out": false
+  },
+  {
+   "fn": "branchesIn",
+   "args": [
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; git branch old; GIT_COMMITTER_DATE=2024-02-01T00:00:00Z git commit -q --allow-empty -m two;\n  git checkout -q -b feature; GIT_COMMITTER_DATE=2024-03-01T00:00:00Z git commit -q --allow-empty -m three; git checkout -q main;\n  git update-ref refs/remotes/origin/main old; git update-ref refs/remotes/up/x/HEAD old;\n  git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main;",
+    "$ROOT/repo"
+   ],
+   "env": {
+    "HOME": "$ROOT/home",
+    "XDG_CONFIG_HOME": "$ROOT/home",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "LC_ALL": "C",
+    "LANG": "C",
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state",
+    "GIT_AUTHOR_NAME": "A",
+    "GIT_AUTHOR_EMAIL": "a@example.com",
+    "GIT_AUTHOR_DATE": "2024-01-01T00:00:00Z",
+    "GIT_COMMITTER_NAME": "A",
+    "GIT_COMMITTER_EMAIL": "a@example.com"
+   },
+   "out": [
+    "feature",
+    "main",
+    "old",
+    "origin/main",
+    "up/x"
+   ]
+  },
+  {
+   "fn": "branchesIn",
+   "args": [
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; git branch old; GIT_COMMITTER_DATE=2024-02-01T00:00:00Z git commit -q --allow-empty -m two;\n  git checkout -q -b feature; GIT_COMMITTER_DATE=2024-03-01T00:00:00Z git commit -q --allow-empty -m three; git checkout -q main;\n  git update-ref refs/remotes/origin/main old; git update-ref refs/remotes/up/x/HEAD old;\n  git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main;",
+    "$ROOT/repo/.git"
+   ],
+   "env": {
+    "HOME": "$ROOT/home",
+    "XDG_CONFIG_HOME": "$ROOT/home",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "LC_ALL": "C",
+    "LANG": "C",
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state",
+    "GIT_AUTHOR_NAME": "A",
+    "GIT_AUTHOR_EMAIL": "a@example.com",
+    "GIT_AUTHOR_DATE": "2024-01-01T00:00:00Z",
+    "GIT_COMMITTER_NAME": "A",
+    "GIT_COMMITTER_EMAIL": "a@example.com"
+   },
+   "out": [
+    "feature",
+    "main",
+    "old",
+    "origin/main",
+    "up/x"
+   ]
+  },
+  {
+   "fn": "branchesIn",
+   "args": [
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; ",
+    "$ROOT/plain"
+   ],
+   "env": {
+    "HOME": "$ROOT/home",
+    "XDG_CONFIG_HOME": "$ROOT/home",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "LC_ALL": "C",
+    "LANG": "C",
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state",
+    "GIT_AUTHOR_NAME": "A",
+    "GIT_AUTHOR_EMAIL": "a@example.com",
+    "GIT_AUTHOR_DATE": "2024-01-01T00:00:00Z",
+    "GIT_COMMITTER_NAME": "A",
+    "GIT_COMMITTER_EMAIL": "a@example.com"
+   },
+   "out": []
+  },
+  {
+   "fn": "worktreeOf",
+   "args": [
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; ",
+    "$ROOT/repo",
+    false,
+    null
+   ],
+   "env": {
+    "HOME": "$ROOT/home",
+    "XDG_CONFIG_HOME": "$ROOT/home",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "LC_ALL": "C",
+    "LANG": "C",
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state",
+    "GIT_AUTHOR_NAME": "A",
+    "GIT_AUTHOR_EMAIL": "a@example.com",
+    "GIT_AUTHOR_DATE": "2024-01-01T00:00:00Z",
+    "GIT_COMMITTER_NAME": "A",
+    "GIT_COMMITTER_EMAIL": "a@example.com"
+   },
+   "out": {
+    "trees": [
+     "2a296f71041e92f42de3d356948635837fb96118"
+    ],
+    "state": ""
+   }
+  },
+  {
+   "fn": "worktreeOf",
+   "args": [
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'bb\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
+    "$ROOT/repo",
+    false,
+    null
+   ],
+   "env": {
+    "HOME": "$ROOT/home",
+    "XDG_CONFIG_HOME": "$ROOT/home",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "LC_ALL": "C",
+    "LANG": "C",
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state",
+    "GIT_AUTHOR_NAME": "A",
+    "GIT_AUTHOR_EMAIL": "a@example.com",
+    "GIT_AUTHOR_DATE": "2024-01-01T00:00:00Z",
+    "GIT_COMMITTER_NAME": "A",
+    "GIT_COMMITTER_EMAIL": "a@example.com"
+   },
+   "out": {
+    "trees": [
+     "f33fb7d438c0c56e7dda9f03c464d51be307464c"
+    ],
+    "state": ""
+   }
+  },
+  {
+   "fn": "worktreeOf",
+   "args": [
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'bb\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
+    "$ROOT/repo",
+    false,
+    "d"
+   ],
+   "env": {
+    "HOME": "$ROOT/home",
+    "XDG_CONFIG_HOME": "$ROOT/home",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "LC_ALL": "C",
+    "LANG": "C",
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state",
+    "GIT_AUTHOR_NAME": "A",
+    "GIT_AUTHOR_EMAIL": "a@example.com",
+    "GIT_AUTHOR_DATE": "2024-01-01T00:00:00Z",
+    "GIT_COMMITTER_NAME": "A",
+    "GIT_COMMITTER_EMAIL": "a@example.com"
+   },
+   "out": {
+    "trees": [
+     "e98663eae891052f7c4cca6a7c23c95803468f10"
+    ],
+    "state": ""
+   }
+  },
+  {
+   "fn": "worktreeOf",
+   "args": [
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'bb\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
+    "$ROOT/repo",
+    true,
+    null,
+    2
+   ],
+   "env": {
+    "HOME": "$ROOT/home",
+    "XDG_CONFIG_HOME": "$ROOT/home",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "LC_ALL": "C",
+    "LANG": "C",
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state",
+    "GIT_AUTHOR_NAME": "A",
+    "GIT_AUTHOR_EMAIL": "a@example.com",
+    "GIT_AUTHOR_DATE": "2024-01-01T00:00:00Z",
+    "GIT_COMMITTER_NAME": "A",
+    "GIT_COMMITTER_EMAIL": "a@example.com"
+   },
+   "out": {
+    "trees": [
+     "f33fb7d438c0c56e7dda9f03c464d51be307464c",
+     "f33fb7d438c0c56e7dda9f03c464d51be307464c"
+    ],
+    "state": "./index/HASH\n./index/HASH.from\n"
+   }
+  },
+  {
+   "fn": "worktreeOf",
+   "args": [
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'bb\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
+    "$ROOT/repo/d",
+    false,
+    null
+   ],
+   "env": {
+    "HOME": "$ROOT/home",
+    "XDG_CONFIG_HOME": "$ROOT/home",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "LC_ALL": "C",
+    "LANG": "C",
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state",
+    "GIT_AUTHOR_NAME": "A",
+    "GIT_AUTHOR_EMAIL": "a@example.com",
+    "GIT_AUTHOR_DATE": "2024-01-01T00:00:00Z",
+    "GIT_COMMITTER_NAME": "A",
+    "GIT_COMMITTER_EMAIL": "a@example.com"
+   },
+   "out": {
+    "trees": [
+     "e98663eae891052f7c4cca6a7c23c95803468f10"
+    ],
+    "state": ""
+   }
+  },
+  {
+   "fn": "worktreeOf",
+   "args": [
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; ",
+    "$ROOT/plain",
+    true,
+    null
+   ],
+   "env": {
+    "HOME": "$ROOT/home",
+    "XDG_CONFIG_HOME": "$ROOT/home",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "LC_ALL": "C",
+    "LANG": "C",
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state",
+    "GIT_AUTHOR_NAME": "A",
+    "GIT_AUTHOR_EMAIL": "a@example.com",
+    "GIT_AUTHOR_DATE": "2024-01-01T00:00:00Z",
+    "GIT_COMMITTER_NAME": "A",
+    "GIT_COMMITTER_EMAIL": "a@example.com"
+   },
+   "out": {
+    "trees": [
+     null
+    ],
+    "state": ""
+   }
+  },
+  {
+   "fn": "worktreeOf",
+   "args": [
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'bb\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
+    "$ROOT/repo",
+    true,
+    null
+   ],
+   "env": {
+    "HOME": "$ROOT/home",
+    "XDG_CONFIG_HOME": "$ROOT/home",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "LC_ALL": "C",
+    "LANG": "C",
+    "HERDR_PLUGIN_STATE_DIR": "",
+    "GIT_AUTHOR_NAME": "A",
+    "GIT_AUTHOR_EMAIL": "a@example.com",
+    "GIT_AUTHOR_DATE": "2024-01-01T00:00:00Z",
+    "GIT_COMMITTER_NAME": "A",
+    "GIT_COMMITTER_EMAIL": "a@example.com"
+   },
+   "out": {
+    "trees": [
+     "f33fb7d438c0c56e7dda9f03c464d51be307464c"
+    ],
+    "state": ""
+   }
+  },
+  {
+   "fn": "agentStatusIn",
+   "args": [
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; printf 'bb\\n' > a.txt; printf 'new\\n' > new.txt; printf 'no\\n' > ignored.txt; mkdir d; printf 'x\\n' > d/x;\n  truncate -s 11M big.bin;",
+    [
+     [
+      "w1:t1",
+      "p1",
+      "working",
+      "$ROOT/repo/d"
+     ],
+     [
+      "w1:t1",
+      "p1",
+      "working",
+      "$ROOT/repo"
+     ],
+     [
+      "w1:t1",
+      "p1",
+      "blocked",
+      "$ROOT/repo"
+     ],
+     [
+      "w1:t1",
+      "p1",
+      "idle",
+      "$ROOT/repo"
+     ],
+     [
+      "w1:t1",
+      "p1",
+      "idle",
+      "$ROOT/repo"
+     ],
+     [
+      "w1:t1",
+      "p2",
+      "done",
+      "$ROOT/repo"
+     ],
+     [
+      "w1:t1",
+      "p2",
+      "working",
+      "$ROOT/repo"
+     ]
+    ]
+   ],
+   "env": {
+    "HOME": "$ROOT/home",
+    "XDG_CONFIG_HOME": "$ROOT/home",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "LC_ALL": "C",
+    "LANG": "C",
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state",
+    "GIT_AUTHOR_NAME": "A",
+    "GIT_AUTHOR_EMAIL": "a@example.com",
+    "GIT_AUTHOR_DATE": "2024-01-01T00:00:00Z",
+    "GIT_COMMITTER_NAME": "A",
+    "GIT_COMMITTER_EMAIL": "a@example.com"
+   },
+   "out": [
+    [
+     "snapshot",
+     {
+      "pane": "p1",
+      "top": "$ROOT/repo",
+      "tree": "f33fb7d438c0c56e7dda9f03c464d51be307464c",
+      "t": "number",
+      "ended": false
+     }
+    ],
+    [
+     "same turn",
+     {
+      "pane": "p1",
+      "top": "$ROOT/repo",
+      "tree": "f33fb7d438c0c56e7dda9f03c464d51be307464c",
+      "t": "number",
+      "ended": false
+     }
+    ],
+    [
+     "kept",
+     {
+      "pane": "p1",
+      "top": "$ROOT/repo",
+      "tree": "f33fb7d438c0c56e7dda9f03c464d51be307464c",
+      "t": "number",
+      "ended": false
+     }
+    ],
+    [
+     "kept",
+     {
+      "pane": "p1",
+      "top": "$ROOT/repo",
+      "tree": "f33fb7d438c0c56e7dda9f03c464d51be307464c",
+      "t": "number",
+      "ended": true
+     }
+    ],
+    [
+     "kept",
+     {
+      "pane": "p1",
+      "top": "$ROOT/repo",
+      "tree": "f33fb7d438c0c56e7dda9f03c464d51be307464c",
+      "t": "number",
+      "ended": true
+     }
+    ],
+    [
+     "kept",
+     {
+      "pane": "p1",
+      "top": "$ROOT/repo",
+      "tree": "f33fb7d438c0c56e7dda9f03c464d51be307464c",
+      "t": "number",
+      "ended": true
+     }
+    ],
+    [
+     "snapshot",
+     {
+      "pane": "p2",
+      "top": "$ROOT/repo",
+      "tree": "f33fb7d438c0c56e7dda9f03c464d51be307464c",
+      "t": "number",
+      "ended": false
+     }
+    ]
+   ]
+  },
+  {
+   "fn": "agentStatusIn",
+   "args": [
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; ",
+    [
+     [
+      "w1:t1",
+      "p1",
+      "working",
+      "$ROOT/plain"
+     ],
+     [
+      "w1:t2",
+      "p1",
+      "idle",
+      "$ROOT/repo"
+     ]
+    ]
+   ],
+   "env": {
+    "HOME": "$ROOT/home",
+    "XDG_CONFIG_HOME": "$ROOT/home",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "LC_ALL": "C",
+    "LANG": "C",
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state",
+    "GIT_AUTHOR_NAME": "A",
+    "GIT_AUTHOR_EMAIL": "a@example.com",
+    "GIT_AUTHOR_DATE": "2024-01-01T00:00:00Z",
+    "GIT_COMMITTER_NAME": "A",
+    "GIT_COMMITTER_EMAIL": "a@example.com"
+   },
+   "out": [
+    [
+     "not a repository",
+     null
+    ],
+    [
+     "kept",
+     null
+    ]
+   ]
+  },
+  {
+   "fn": "agentStatusIn",
+   "args": [
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; ",
+    [
+     [
+      "w1:t1",
+      "p1",
+      "done",
+      "$ROOT/repo"
+     ],
+     [
+      "w1:t1",
+      "p1",
+      "working",
+      "$ROOT/repo"
+     ]
+    ]
+   ],
+   "env": {
+    "HOME": "$ROOT/home",
+    "XDG_CONFIG_HOME": "$ROOT/home",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "LC_ALL": "C",
+    "LANG": "C",
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state",
+    "GIT_AUTHOR_NAME": "A",
+    "GIT_AUTHOR_EMAIL": "a@example.com",
+    "GIT_AUTHOR_DATE": "2024-01-01T00:00:00Z",
+    "GIT_COMMITTER_NAME": "A",
+    "GIT_COMMITTER_EMAIL": "a@example.com"
+   },
+   "files": {
+    "state/turn-w1_t1.json": "{\"pane\":\"p1\",\"top\":\"$ROOT/repo\",\"tree\":null,\"t\":5,\"ended\":false}"
+   },
+   "out": [
+    [
+     "kept",
+     {
+      "pane": "p1",
+      "top": "$ROOT/repo",
+      "tree": null,
+      "t": "number",
+      "ended": true
+     }
+    ],
+    [
+     "snapshot",
+     {
+      "pane": "p1",
+      "top": "$ROOT/repo",
+      "tree": "2a296f71041e92f42de3d356948635837fb96118",
+      "t": "number",
+      "ended": false
+     }
+    ]
+   ]
+  },
+  {
+   "fn": "agentStatusIn",
+   "args": [
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; ",
+    [
+     [
+      "w1:t1",
+      "p1",
+      "idle",
+      "$ROOT/repo"
+     ]
+    ]
+   ],
+   "env": {
+    "HOME": "$ROOT/home",
+    "XDG_CONFIG_HOME": "$ROOT/home",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "LC_ALL": "C",
+    "LANG": "C",
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state",
+    "GIT_AUTHOR_NAME": "A",
+    "GIT_AUTHOR_EMAIL": "a@example.com",
+    "GIT_AUTHOR_DATE": "2024-01-01T00:00:00Z",
+    "GIT_COMMITTER_NAME": "A",
+    "GIT_COMMITTER_EMAIL": "a@example.com"
+   },
+   "files": {
+    "state/turn-w1_t1.json": "{\"pane\":\"p1\"}"
+   },
+   "out": [
+    [
+     "kept",
+     {
+      "pane": "p1",
+      "ended": true,
+      "t": "undefined"
+     }
+    ]
+   ]
+  },
+  {
+   "fn": "agentStatusIn",
+   "args": [
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; ",
+    [
+     [
+      "w1:t1",
+      "p1",
+      "working",
+      "$ROOT/repo"
+     ]
+    ]
+   ],
+   "env": {
+    "HOME": "$ROOT/home",
+    "XDG_CONFIG_HOME": "$ROOT/home",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "LC_ALL": "C",
+    "LANG": "C",
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state",
+    "GIT_AUTHOR_NAME": "A",
+    "GIT_AUTHOR_EMAIL": "a@example.com",
+    "GIT_AUTHOR_DATE": "2024-01-01T00:00:00Z",
+    "GIT_COMMITTER_NAME": "A",
+    "GIT_COMMITTER_EMAIL": "a@example.com"
+   },
+   "files": {
+    "state/turn-w1_t1.json": "{\"pane\":\"p1\",\"top\":\"$ROOT/repo\",\"tree\":null,\"t\":5,\"ended\":true}"
+   },
+   "out": [
+    [
+     "snapshot",
+     {
+      "pane": "p1",
+      "top": "$ROOT/repo",
+      "tree": "2a296f71041e92f42de3d356948635837fb96118",
+      "t": "number",
+      "ended": false
+     }
+    ]
+   ]
+  },
+  {
+   "fn": "agentStatusIn",
+   "args": [
+    "set -e; mkdir -p $ROOT/home $ROOT/repo $ROOT/plain; cd $ROOT/repo; git init -q -b main;\n  printf 'a\\n' > a.txt; printf 'ignored.txt\\n' > .gitignore; git add -A;\n  GIT_COMMITTER_DATE=2024-01-01T00:00:00Z git commit -qm init; ",
+    [
+     [
+      "",
+      "p1",
+      "working",
+      "$ROOT/repo"
+     ]
+    ]
+   ],
+   "env": {
+    "HOME": "$ROOT/home",
+    "XDG_CONFIG_HOME": "$ROOT/home",
+    "GIT_CONFIG_NOSYSTEM": "1",
+    "LC_ALL": "C",
+    "LANG": "C",
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/state",
+    "GIT_AUTHOR_NAME": "A",
+    "GIT_AUTHOR_EMAIL": "a@example.com",
+    "GIT_AUTHOR_DATE": "2024-01-01T00:00:00Z",
+    "GIT_COMMITTER_NAME": "A",
+    "GIT_COMMITTER_EMAIL": "a@example.com"
+   },
+   "out": [
+    [
+     "snapshot dropped: a newer turn",
+     null
+    ]
+   ]
+  },
+  {
+   "fn": "itemsOf",
+   "args": [
+    {
+     "kind": "head"
+    },
+    ""
+   ],
+   "out": [
+    {
+     "label": "HEAD",
+     "value": [
+      "●",
+      ""
+     ],
+     "run": [
+      "pick",
+      {
+       "kind": "head"
+      }
+     ]
+    },
+    {
+     "label": "Merge base with main",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "branch"
+      }
+     ]
+    },
+    {
+     "label": "Last agent turn",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "turn"
+      }
+     ]
+    },
+    null,
+    {
+     "label": "Commit or range…",
+     "value": null,
+     "run": [
+      "ask",
+      "rev"
+     ]
+    },
+    {
+     "label": "Branch…",
+     "value": null,
+     "run": [
+      "ask",
+      "ref"
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "itemsOf",
+   "args": [
+    {
+     "kind": "branch"
+    },
+    "develop"
+   ],
+   "out": [
+    {
+     "label": "HEAD",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "head"
+      }
+     ]
+    },
+    {
+     "label": "Merge base with develop",
+     "value": [
+      "●",
+      ""
+     ],
+     "run": [
+      "pick",
+      {
+       "kind": "branch"
+      }
+     ]
+    },
+    {
+     "label": "Last agent turn",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "turn"
+      }
+     ]
+    },
+    null,
+    {
+     "label": "Commit or range…",
+     "value": null,
+     "run": [
+      "ask",
+      "rev"
+     ]
+    },
+    {
+     "label": "Branch…",
+     "value": null,
+     "run": [
+      "ask",
+      "ref"
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "itemsOf",
+   "args": [
+    {
+     "kind": "turn"
+    },
+    ""
+   ],
+   "out": [
+    {
+     "label": "HEAD",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "head"
+      }
+     ]
+    },
+    {
+     "label": "Merge base with main",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "branch"
+      }
+     ]
+    },
+    {
+     "label": "Last agent turn",
+     "value": [
+      "●",
+      ""
+     ],
+     "run": [
+      "pick",
+      {
+       "kind": "turn"
+      }
+     ]
+    },
+    null,
+    {
+     "label": "Commit or range…",
+     "value": null,
+     "run": [
+      "ask",
+      "rev"
+     ]
+    },
+    {
+     "label": "Branch…",
+     "value": null,
+     "run": [
+      "ask",
+      "ref"
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "itemsOf",
+   "args": [
+    {
+     "kind": "rev",
+     "rev": "a..b"
+    },
+    ""
+   ],
+   "out": [
+    {
+     "label": "HEAD",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "head"
+      }
+     ]
+    },
+    {
+     "label": "Merge base with main",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "branch"
+      }
+     ]
+    },
+    {
+     "label": "Last agent turn",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "turn"
+      }
+     ]
+    },
+    null,
+    {
+     "label": "Commit or range…  a..b",
+     "value": [
+      "●",
+      ""
+     ],
+     "run": [
+      "ask",
+      "rev"
+     ]
+    },
+    {
+     "label": "Branch…",
+     "value": null,
+     "run": [
+      "ask",
+      "ref"
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "itemsOf",
+   "args": [
+    {
+     "kind": "ref",
+     "rev": "main"
+    },
+    "x"
+   ],
+   "out": [
+    {
+     "label": "HEAD",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "head"
+      }
+     ]
+    },
+    {
+     "label": "Merge base with x",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "branch"
+      }
+     ]
+    },
+    {
+     "label": "Last agent turn",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "turn"
+      }
+     ]
+    },
+    null,
+    {
+     "label": "Commit or range…",
+     "value": null,
+     "run": [
+      "ask",
+      "rev"
+     ]
+    },
+    {
+     "label": "Branch…  main",
+     "value": [
+      "●",
+      ""
+     ],
+     "run": [
+      "ask",
+      "ref"
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "itemsOf",
+   "args": [
+    {
+     "kind": "rev"
+    },
+    ""
+   ],
+   "out": [
+    {
+     "label": "HEAD",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "head"
+      }
+     ]
+    },
+    {
+     "label": "Merge base with main",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "branch"
+      }
+     ]
+    },
+    {
+     "label": "Last agent turn",
+     "value": null,
+     "run": [
+      "pick",
+      {
+       "kind": "turn"
+      }
+     ]
+    },
+    null,
+    {
+     "label": "Commit or range…  undefined",
+     "value": [
+      "●",
+      ""
+     ],
+     "run": [
+      "ask",
+      "rev"
+     ]
+    },
+    {
+     "label": "Branch…",
+     "value": null,
+     "run": [
+      "ask",
+      "ref"
+     ]
+    }
+   ]
+  },
+  {
+   "fn": "revKeyOf",
+   "args": [
+    "  HEAD~2  ",
+    [
+     "x",
+     "left",
+     "enter",
+     "escape",
+     "ctrl+c",
+     "f9"
+    ]
+   ],
+   "out": [
+    [
+     {
+      "changed": true
+     },
+     "  HEAD~2  x"
+    ],
+    [
+     {
+      "changed": true
+     },
+     "  HEAD~2  x"
+    ],
+    [
+     {
+      "done": true,
+      "rev": "HEAD~2  x"
+     },
+     "  HEAD~2  x"
+    ],
+    [
+     {
+      "done": true,
+      "rev": ""
+     },
+     "  HEAD~2  x"
+    ],
+    [
+     {
+      "done": true,
+      "rev": ""
+     },
+     "  HEAD~2  x"
+    ],
+    [
+     {
+      "changed": false
+     },
+     "  HEAD~2  x"
+    ]
+   ]
+  },
+  {
+   "fn": "revKeyOf",
+   "args": [
+    "",
+    [
+     "enter",
+     "backspace"
+    ]
+   ],
+   "out": [
+    [
+     {
+      "done": true,
+      "rev": ""
+     },
+     ""
+    ],
+    [
+     {
+      "changed": true
+     },
+     ""
+    ]
+   ]
+  }
+ ]
+}

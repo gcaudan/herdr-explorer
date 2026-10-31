@@ -1,0 +1,21 @@
+size 80x20
+⟪fg=#8c8c8c⟫ ‹ ⟪b⟫Keys⟪fg=#8c8c8c⟫ · Changes⟪⟫
+⟪fg=#8c8c8c bg=#252526⟫  ⟪bg=#252526⟫note⟪bg=#252526 r⟫ ⟪fg=#8c8c8c bg=#252526⟫                                                                       5⟪⟫
+⟪fg=#519aba b⟫ Review⟪⟫
+⟪fg=#d4d4d4 b⟫  a     ⟪fg=#8c8c8c⟫note on the line (hunk, file)⟪⟫
+⟪fg=#d4d4d4 b⟫  tab   ⟪fg=#8c8c8c⟫kind of note, while typing⟪⟫
+⟪fg=#d4d4d4 b⟫  A     ⟪fg=#8c8c8c⟫send the notes to the agent⟪⟫
+⟪fg=#d4d4d4 b⟫  C     ⟪fg=#8c8c8c⟫copy the notes⟪⟫
+⟪fg=#d4d4d4 b⟫  U     ⟪fg=#8c8c8c⟫remove the last note⟪⟫
+
+
+
+
+
+
+
+
+
+
+⟪fg=#8c8c8c⟫───────────────────────────────────────────────────────────────────────────────⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ↑↓⟪fg=#8c8c8c bg=#252526⟫ scroll⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ close⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫<build>⟪bg=#252526⟫ ⟪⟫

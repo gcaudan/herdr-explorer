@@ -1,0 +1,12 @@
+# The filter typed, then kept with Tab.
+size 60 16
+file README.md # Hello\n
+file src/main.rs fn main() {}\n
+file src/lib.rs pub fn f() {}\n
+dir docs
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false,"follow":false}
+start
+keys / m a
+keys tab
+# The width checked at 300, 1000 and 2500 ms, whatever the keys took.
+until 2800

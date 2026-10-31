@@ -1,0 +1,13 @@
+# esc with unsaved changes asks first; Don't save drops them; a second edit asks again.
+size 50 12
+file code.js const answer = 42;\nconsole.log(answer);\nlet apple = 1;\nlet apples = apple + 1;\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/code.js
+start
+keys i
+text X
+keys escape
+keys d
+keys i
+text Y
+keys escape

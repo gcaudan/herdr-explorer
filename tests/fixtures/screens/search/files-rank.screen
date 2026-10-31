@@ -1,0 +1,15 @@
+size 70x14
+⟪bg=#252526⟫ ⟪fg=#ffffff bg=#04395e b⟫ Go to file ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ Search in files ⟪bg=#252526⟫                                  ⟪fg=#8c8c8c bg=#252526⟫work⟪bg=#252526⟫ ⟪⟫
+⟪fg=#8c8c8c⟫ ⌕ ⟪⟫fb⟪r⟫ ⟪⟫                                               ⟪fg=#8c8c8c⟫6 of 6  ⟪fg=#8c8c8c bg=#2d2d2d⟫ hidden ⟪⟫
+⟪fg=#8c8c8c⟫──────────────────────────────────────────────────────────────────────⟪⟫
+⟪bg=#04395e⟫ ⟪fg=#18a3ff bg=#04395e b⟫fb⟪bg=#04395e⟫.txt                                                               ⟪⟫
+ ⟪fg=#18a3ff b⟫fb⟪⟫-é.txt                                                         ⟪fg=#8c8c8c⟫x/ä⟪⟫
+ ⟪fg=#18a3ff b⟫FB⟪⟫.txt                                                           ⟪fg=#8c8c8c⟫Fab⟪⟫
+ ⟪fg=#18a3ff b⟫f⟪⟫_⟪fg=#18a3ff b⟫b⟪⟫.md                            ⟪fg=#8c8c8c⟫deep/folder/very/long/path/to/some⟪⟫
+ ⟪fg=#18a3ff b⟫b⟪⟫ar.js                                                           ⟪fg=#18a3ff b⟫f⟪fg=#8c8c8c⟫oo⟪⟫
+ ⟪fg=#18a3ff b⟫f⟪⟫oo⟪fg=#18a3ff b⟫B⟪⟫ar.js                                                        ⟪fg=#8c8c8c⟫src⟪⟫
+
+
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ ↵⟪fg=#8c8c8c bg=#252526⟫ open⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+f⟪fg=#8c8c8c bg=#252526⟫ search in files⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+e⟪fg=#8c8c8c bg=#252526⟫ editor⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+o⟪fg=#8c8c8c bg=#252526⟫ app⟪bg=#252526⟫         ⟪⟫

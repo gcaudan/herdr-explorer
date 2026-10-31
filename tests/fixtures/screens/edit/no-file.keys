@@ -1,0 +1,4 @@
+# No file given: the message, then the pane done 3 s later.
+size 40 8
+start
+wait 3500

@@ -1,0 +1,21 @@
+size 60x20
+⟪fg=#8c8c8c⟫ ‹ ⟪b⟫Key bindings⟪⟫
+⟪fg=#8c8c8c b⟫ MOVE⟪⟫
+  Up                                                    ⟪fg=#519aba⟫↑ k⟪⟫
+⟪bg=#04395e⟫  Down                                                ⟪fg=#cbcb41 bg=#04395e⟫↓ j x⟪bg=#04395e⟫ ⟪⟫
+  Page up                                              ⟪fg=#519aba⟫pgup⟪⟫
+  Page down                                            ⟪fg=#519aba⟫pgdn⟪⟫
+  Half page up                                       ⟪fg=#519aba⟫ctrl+u⟪⟫
+  Half page down                                     ⟪fg=#519aba⟫ctrl+d⟪⟫
+  First                                              ⟪fg=#519aba⟫home g⟪⟫
+  Last                                                ⟪fg=#519aba⟫end G⟪⟫
+  Unfold                                                ⟪fg=#519aba⟫→ l⟪⟫
+  Fold, parent                                          ⟪fg=#519aba⟫← h⟪⟫
+  Filter                                                  ⟪fg=#519aba⟫/⟪⟫
+⟪fg=#8c8c8c b⟫ REVIEW⟪⟫
+⟪fg=#8c8c8c⟫──────────────────────────────────────────────────────────▾⟪⟫
+⟪b⟫ Down⟪fg=#cbcb41⟫  changed⟪⟫
+⟪fg=#8c8c8c⟫ Keys     ⟪fg=#cbcb41⟫↓ j x⟪⟫
+⟪fg=#8c8c8c⟫ Default  ↓ j⟪⟫
+⟪fg=#d4d4d4 b⟫ r⟪fg=#8c8c8c⟫ back to the default keys⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ⏎⟪fg=#8c8c8c bg=#252526⟫ add⟪fg=#d4d4d4 bg=#252526 b⟫   del⟪fg=#8c8c8c bg=#252526⟫ remove⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪bg=#252526⟫                                ⟪⟫

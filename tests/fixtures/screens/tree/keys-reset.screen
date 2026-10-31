@@ -1,0 +1,21 @@
+size 60x20
+⟪fg=#8c8c8c⟫ ‹ ⟪b⟫Key bindings⟪⟫
+⟪fg=#8c8c8c bg=#252526⟫ ⌕ ⟪bg=#252526⟫fold⟪bg=#252526 r⟫ ⟪fg=#8c8c8c bg=#252526⟫                                                   4⟪⟫
+⟪fg=#8c8c8c b⟫ MOVE⟪⟫
+⟪bg=#04395e⟫  Unfold                                                ⟪fg=#519aba bg=#04395e⟫→ l⟪bg=#04395e⟫ ⟪⟫
+  Fold, parent                                          ⟪fg=#519aba⟫← h⟪⟫
+⟪fg=#8c8c8c b⟫ OPEN⟪⟫
+  Open, fold                                        ⟪fg=#519aba⟫⏎ space⟪⟫
+⟪fg=#8c8c8c b⟫ FILES⟪⟫
+  New folder                                              ⟪fg=#519aba⟫N⟪⟫
+
+
+
+
+
+⟪fg=#8c8c8c⟫───────────────────────────────────────────────────────────⟪⟫
+⟪b⟫ Unfold⟪⟫
+⟪fg=#8c8c8c⟫ Keys     ⟪fg=#519aba⟫→ l⟪⟫
+⟪fg=#8c8c8c⟫ Default  → l⟪⟫
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ ⏎⟪fg=#8c8c8c bg=#252526⟫ add⟪fg=#d4d4d4 bg=#252526 b⟫   del⟪fg=#8c8c8c bg=#252526⟫ remove⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪bg=#252526⟫                                ⟪⟫

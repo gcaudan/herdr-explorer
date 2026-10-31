@@ -1,0 +1,13 @@
+size 60x12
+⟪bg=#252526⟫ ⟪fg=#ffffff bg=#04395e b⟫ Go to file ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ Search in files ⟪bg=#252526⟫                        ⟪fg=#8c8c8c bg=#252526⟫work⟪bg=#252526⟫ ⟪⟫
+⟪fg=#8c8c8c⟫ ⌕ ⟪⟫ma⟪r⟫ ⟪⟫                                     ⟪fg=#8c8c8c⟫1 of 3  ⟪fg=#8c8c8c bg=#2d2d2d⟫ hidden ⟪⟫
+⟪fg=#8c8c8c⟫────────────────────────────────────────────────────────────⟪⟫
+⟪bg=#04395e⟫ ⟪fg=#18a3ff bg=#04395e b⟫ma⟪bg=#04395e⟫in.rs                                               ⟪fg=#8c8c8c bg=#04395e⟫beta⟪bg=#04395e⟫ ⟪⟫
+
+
+
+
+
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ ↵⟪fg=#8c8c8c bg=#252526⟫ open⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+f⟪fg=#8c8c8c bg=#252526⟫ search in files⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+e⟪fg=#8c8c8c bg=#252526⟫ editor⟪bg=#252526⟫            ⟪⟫

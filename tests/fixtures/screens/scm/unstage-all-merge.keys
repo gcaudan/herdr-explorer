@@ -1,0 +1,20 @@
+# A during a merge: the index only, the merge goes on.
+size 120 20
+file a.txt one\n
+git init -q -b main
+git add a.txt
+git commit -q -m first
+git checkout -q -b other
+file b.txt bee\n
+git add b.txt
+git commit -q -m other
+git checkout -q main
+file a.txt one\ntwo\n
+git commit -q -a -m second
+git merge -q --no-ff --no-commit other
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+herdr pane get {"result":{"pane":{"pane_id":"w1:p2","tab_id":"t1","workspace_id":"w1"}}}
+start
+wait 800
+keys A
+wait 1500

@@ -1,0 +1,15 @@
+size 60x14
+⟪bg=#252526 b i⟫ a.txt⟪fg=#8c8c8c bg=#252526⟫  4 lines · 19 B⟪bg=#252526⟫                      ⟪fg=#d4d4d4 bg=#04395e b⟫ File ⟪fg=#8c8c8c bg=#3a3a3e⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+⟪fg=#d4d4d4⟫   ⟪⟫  ⟪fg=#cbcb41⟫✎ whole file remark⟪⟫
+⟪fg=#d4d4d4⟫   ⟪⟫  ⟪fg=#8c8c8c⟫✎ L5 stale, gone line⟪⟫
+⟪fg=#8c8c8c⟫ 1 ⟪⟫one
+⟪fg=#cbcb41 b⟫ 2 ⟪⟫two
+⟪fg=#cbcb41 b⟫ 3 ⟪⟫three
+⟪fg=#d4d4d4⟫   ⟪⟫  ⟪fg=#cbcb41⟫✎ fix: rename these⟪⟫
+⟪fg=#8c8c8c⟫ 4 ⟪⟫four
+
+
+
+
+
+⟪fg=#8dc149 bg=#252526⟫ ✓ ⟪bg=#252526⟫Note removed: elsewhere                                  ⟪⟫

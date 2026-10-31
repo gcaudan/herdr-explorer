@@ -1,0 +1,21 @@
+size 120x20
+⟪bg=#252526 b⟫ work ⟪bg=#252526⟫ ⟪fg=#519aba bg=#2b3d45⟫ ⎇ main ⟪fg=#8c8c8c bg=#252526⟫  not published⟪bg=#252526⟫                                                    ⟪fg=#ffffff bg=#0e639c b⟫ ↑ Publish branch ⟪fg=#d4d4d4 bg=#252526 b⟫ ⇣ Fetch  Actions ▾ ⟪⟫
+ ⟪fg=#8c8c8c⟫Changes 2⟪⟫   ⟪fg=#8c8c8c⟫History⟪⟫   ⟪fg=#d4d4d4 b u⟫Stashes⟪fg=#8c8c8c⟫ 1⟪⟫   ⟪fg=#8c8c8c⟫Refs⟪⟫   ⟪fg=#8c8c8c⟫PRs⟪⟫ ⟪fg=#8c8c8c⟫│⟪bg=#252526⟫                                                                         ⟪⟫
+⟪fg=#519aba bg=#04395e⟫ + Stash all changes…  (n)⟪bg=#04395e⟫                    ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#cbcb41⟫ stash@{0}  ⟪⟫On main: wip       ⟪fg=#8c8c8c⟫ in the future │⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫                        ⟪fg=#8c8c8c⟫Select a stash to see it⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ n⟪fg=#8c8c8c bg=#252526⟫ stash⟪fg=#d4d4d4 bg=#252526 b⟫   a⟪fg=#8c8c8c bg=#252526⟫ apply⟪fg=#d4d4d4 bg=#252526 b⟫   o⟪fg=#8c8c8c bg=#252526⟫ pop⟪fg=#d4d4d4 bg=#252526 b⟫   d⟪fg=#8c8c8c bg=#252526⟫ drop⟪fg=#d4d4d4 bg=#252526 b⟫   ⏎⟪fg=#8c8c8c bg=#252526⟫ show⟪fg=#d4d4d4 bg=#252526 b⟫   b⟪fg=#8c8c8c bg=#252526⟫ branch⟪fg=#d4d4d4 bg=#252526 b⟫   f⟪fg=#8c8c8c bg=#252526⟫ fetch⟪fg=#d4d4d4 bg=#252526 b⟫   P⟪fg=#8c8c8c bg=#252526⟫ push⟪fg=#d4d4d4 bg=#252526 b⟫   L⟪fg=#8c8c8c bg=#252526⟫ pull⟪fg=#d4d4d4 bg=#252526 b⟫   m⟪fg=#8c8c8c bg=#252526⟫ actions⟪fg=#d4d4d4 bg=#252526 b⟫   q⟪fg=#8c8c8c bg=#252526⟫ quit⟪bg=#252526⟫     ⟪fg=#d4d4d4 bg=#252526 b⟫?⟪fg=#8c8c8c bg=#252526⟫ all keys ⟪⟫

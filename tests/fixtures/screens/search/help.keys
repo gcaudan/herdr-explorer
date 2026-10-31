@@ -1,0 +1,6 @@
+# f1: the key help over the pane, then esc.
+size 70 22
+file a.txt a\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start
+keys f1

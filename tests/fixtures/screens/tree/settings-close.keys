@@ -1,0 +1,13 @@
+# The settings view left by a click on its title, the tree shown with Hidden files turned off from it.
+size 60 20
+file README.md # Hello\n
+file notes.md text\n
+dir src
+file src/main.rs fn main() {}\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false,"follow":false}
+file .env x\n
+start
+keys ,
+keys down down down right
+text \e[<0;3;1M\e[<0;3;1m
+until 2800

@@ -1,0 +1,12 @@
+# Mouse: a click on a tab, on a chip, on a file header (fold), the wheel.
+size 70 12
+file a.txt x\nx\n
+file b.txt x\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start
+text \e[<0;20;1M
+text x
+wait 300
+text \e[<0;5;5M
+text \e[<0;45;2M
+wait 300

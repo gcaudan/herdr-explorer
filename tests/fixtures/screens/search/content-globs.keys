@@ -1,0 +1,19 @@
+# Search in files: include and exclude globs, tab between the fields.
+size 80 14
+file src/a.rs x\n
+file src/mod.rs x\n
+file src/deep/b.rs x\n
+file lib/c.rs x\n
+file d.txt x\n
+file e.ts x\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start
+keys ctrl+f
+text x
+wait 300
+keys tab
+text *.rs,*.{ts,txt}
+wait 300
+keys tab
+text src/deep,mod*
+wait 300

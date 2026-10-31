@@ -1,0 +1,12 @@
+# Following the terminal: its folder, under the root, unfolded and selected at the first look (2 s after the start).
+size 60 16
+file README.md # Hello\n
+file src/main.rs fn main() {}\n
+dir src/deep
+file src/deep/a.txt a\n
+dir docs
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false,"follow":true}
+herdr pane neighbor {"result":{"neighbor":{"neighbor_pane_id":"w1:p1"}}}
+herdr pane get {"result":{"pane":{"pane_id":"w1:p1","label":"Terminal","cwd":"$ROOT/work/src/deep"}}}
+start
+until 2800

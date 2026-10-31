@@ -1,0 +1,3490 @@
+{
+ "module": "core/actions",
+ "cases": [
+  {
+   "fn": "quote",
+   "args": [
+    "a.txt"
+   ],
+   "out": "a.txt"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "src/app.js"
+   ],
+   "out": "src/app.js"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "é/日本.md"
+   ],
+   "out": "é/日本.md"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "a b.txt"
+   ],
+   "out": "'a b.txt'"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "it's"
+   ],
+   "out": "'it'\\''s'"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "-rf"
+   ],
+   "out": "./-rf"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "--x y"
+   ],
+   "out": "'./--x y'"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    ""
+   ],
+   "out": "''"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "$HOME"
+   ],
+   "out": "'$HOME'"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "a;b"
+   ],
+   "out": "'a;b'"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "a`b`"
+   ],
+   "out": "'a`b`'"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "a\\b"
+   ],
+   "out": "'a'\\\\'b'"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "a\"b"
+   ],
+   "out": "'a\"b'"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "~/x"
+   ],
+   "out": "'~/x'"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "a*"
+   ],
+   "out": "'a*'"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "[id].ts"
+   ],
+   "out": "'[id].ts'"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "@scope/pkg"
+   ],
+   "out": "@scope/pkg"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "v1.2+3,x=y:z"
+   ],
+   "out": "v1.2+3,x=y:z"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "‘q’"
+   ],
+   "out": "'‘q’'"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "á"
+   ],
+   "out": "'á'"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "½"
+   ],
+   "out": "½"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "tab\tx"
+   ],
+   "out": "'tab\tx'"
+  },
+  {
+   "fn": "quote",
+   "args": [
+    "a b"
+   ],
+   "out": "'a b'"
+  },
+  {
+   "fn": "target",
+   "args": [
+    "/r",
+    "a.txt"
+   ],
+   "out": "/r/a.txt"
+  },
+  {
+   "fn": "target",
+   "args": [
+    "/r",
+    " a/b.txt "
+   ],
+   "out": "/r/a/b.txt"
+  },
+  {
+   "fn": "target",
+   "args": [
+    "/r",
+    "../x"
+   ],
+   "out": null
+  },
+  {
+   "fn": "target",
+   "args": [
+    "/r",
+    "a/../../x"
+   ],
+   "out": null
+  },
+  {
+   "fn": "target",
+   "args": [
+    "/r",
+    "a/.."
+   ],
+   "out": null
+  },
+  {
+   "fn": "target",
+   "args": [
+    "/r",
+    "."
+   ],
+   "out": null
+  },
+  {
+   "fn": "target",
+   "args": [
+    "/r",
+    ""
+   ],
+   "out": null
+  },
+  {
+   "fn": "target",
+   "args": [
+    "/r",
+    "   "
+   ],
+   "out": null
+  },
+  {
+   "fn": "target",
+   "args": [
+    "/r",
+    "/abs"
+   ],
+   "out": null
+  },
+  {
+   "fn": "target",
+   "args": [
+    "/r",
+    "a\nb"
+   ],
+   "out": null
+  },
+  {
+   "fn": "target",
+   "args": [
+    "/r",
+    "ab"
+   ],
+   "out": null
+  },
+  {
+   "fn": "target",
+   "args": [
+    "/r",
+    "a "
+   ],
+   "out": "/r/a"
+  },
+  {
+   "fn": "target",
+   "args": [
+    "/r",
+    "x//y/"
+   ],
+   "out": "/r/x/y"
+  },
+  {
+   "fn": "target",
+   "args": [
+    "/r",
+    "..x"
+   ],
+   "out": "/r/..x"
+  },
+  {
+   "fn": "target",
+   "args": [
+    "/",
+    "etc"
+   ],
+   "out": "/etc"
+  },
+  {
+   "fn": "target",
+   "args": [
+    "/r",
+    " a"
+   ],
+   "out": "/r/a"
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "b",
+       "rect": {
+        "x": 30,
+        "y": 0,
+        "width": 70,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.3,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "a"
+   ],
+   "out": {
+    "width": 30,
+    "splitWidth": 100,
+    "ratio": 0.3,
+    "left": true
+   }
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "b",
+       "rect": {
+        "x": 30,
+        "y": 0,
+        "width": 70,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.3,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "b"
+   ],
+   "out": {
+    "width": 70,
+    "splitWidth": 100,
+    "ratio": 0.3,
+    "left": false
+   }
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "b",
+       "rect": {
+        "x": 30,
+        "y": 0,
+        "width": 70,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.3,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "c"
+   ],
+   "out": null
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 25,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "b",
+       "rect": {
+        "x": 25,
+        "y": 0,
+        "width": 50,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "c",
+       "rect": {
+        "x": 75,
+        "y": 0,
+        "width": 25,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.25,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      },
+      {
+       "direction": "right",
+       "ratio": 0.6667,
+       "rect": {
+        "x": 25,
+        "y": 0,
+        "width": 75,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "a"
+   ],
+   "out": {
+    "width": 25,
+    "splitWidth": 100,
+    "ratio": 0.25,
+    "left": true
+   }
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 25,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "b",
+       "rect": {
+        "x": 25,
+        "y": 0,
+        "width": 50,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "c",
+       "rect": {
+        "x": 75,
+        "y": 0,
+        "width": 25,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.25,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      },
+      {
+       "direction": "right",
+       "ratio": 0.6667,
+       "rect": {
+        "x": 25,
+        "y": 0,
+        "width": 75,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "b"
+   ],
+   "out": {
+    "width": 50,
+    "splitWidth": 75,
+    "ratio": 0.6667,
+    "left": true
+   }
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 25,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "b",
+       "rect": {
+        "x": 25,
+        "y": 0,
+        "width": 50,
+        "height": 40
+       }
+      },
+      {
+       "pane_id": "c",
+       "rect": {
+        "x": 75,
+        "y": 0,
+        "width": 25,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.25,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      },
+      {
+       "direction": "right",
+       "ratio": 0.6667,
+       "rect": {
+        "x": 25,
+        "y": 0,
+        "width": 75,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "c"
+   ],
+   "out": {
+    "width": 25,
+    "splitWidth": 75,
+    "ratio": 0.6667,
+    "left": false
+   }
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 31,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.3,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "a"
+   ],
+   "out": {
+    "width": 31,
+    "splitWidth": 100,
+    "ratio": 0.3,
+    "left": true
+   }
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.3,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "a"
+   ],
+   "out": null
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "down",
+       "ratio": 0.3,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "a"
+   ],
+   "out": null
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 30,
+        "height": 20
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.3,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "a"
+   ],
+   "out": null
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "a",
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 50,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.505,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "a"
+   ],
+   "out": {
+    "width": 50,
+    "splitWidth": 100,
+    "ratio": 0.505,
+    "left": true
+   }
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [
+      {
+       "pane_id": "b",
+       "rect": {
+        "x": 50,
+        "y": 0,
+        "width": 50,
+        "height": 40
+       }
+      }
+     ],
+     "splits": [
+      {
+       "direction": "right",
+       "ratio": 0.495,
+       "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 40
+       }
+      }
+     ]
+    },
+    "b"
+   ],
+   "out": {
+    "width": 50,
+    "splitWidth": 100,
+    "ratio": 0.495,
+    "left": false
+   }
+  },
+  {
+   "fn": "sideSplit",
+   "args": [
+    {
+     "panes": [],
+     "splits": []
+    },
+    "a"
+   ],
+   "out": null
+  },
+  {
+   "fn": "webPage",
+   "args": [
+    "https://github.com/gcaudan/herdr-explorer#readme"
+   ],
+   "out": true
+  },
+  {
+   "fn": "webPage",
+   "args": [
+    "https://a.b/"
+   ],
+   "out": true
+  },
+  {
+   "fn": "webPage",
+   "args": [
+    "https://a.b"
+   ],
+   "out": false
+  },
+  {
+   "fn": "webPage",
+   "args": [
+    "http://a.b/x"
+   ],
+   "out": false
+  },
+  {
+   "fn": "webPage",
+   "args": [
+    "https:///x"
+   ],
+   "out": false
+  },
+  {
+   "fn": "webPage",
+   "args": [
+    "https://a.b/x y"
+   ],
+   "out": false
+  },
+  {
+   "fn": "webPage",
+   "args": [
+    "https://a.b/x?q=1"
+   ],
+   "out": false
+  },
+  {
+   "fn": "webPage",
+   "args": [
+    "https://a_b-c.d/x/%20#y"
+   ],
+   "out": true
+  },
+  {
+   "fn": "webPage",
+   "args": [
+    "https://a.b/x\n"
+   ],
+   "out": false
+  },
+  {
+   "fn": "webPage",
+   "args": [
+    "file:///etc"
+   ],
+   "out": false
+  },
+  {
+   "fn": "webPage",
+   "args": [
+    "https://é.fr/x"
+   ],
+   "out": false
+  },
+  {
+   "fn": "webPage",
+   "args": [
+    "https://a.b/./../x"
+   ],
+   "out": true
+  },
+  {
+   "fn": "webPage",
+   "args": [
+    "javascript:alert(1)//https://a.b/"
+   ],
+   "out": false
+  },
+  {
+   "fn": "canPreview",
+   "args": [
+    "/x/a.png"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canPreview",
+   "args": [
+    "/x/A.PDF"
+   ],
+   "out": false
+  },
+  {
+   "fn": "canPreview",
+   "args": [
+    "/x/x.docx"
+   ],
+   "out": false
+  },
+  {
+   "fn": "canPreview",
+   "args": [
+    "/x/x.mov"
+   ],
+   "out": false
+  },
+  {
+   "fn": "canPreview",
+   "args": [
+    "/x/x.txt"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canPreview",
+   "args": [
+    "/x/x.md"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canPreview",
+   "args": [
+    "/x/x.sh"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canPreview",
+   "args": [
+    "/x/x"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canPreview",
+   "args": [
+    "/x/.png"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canPreview",
+   "args": [
+    "/x/x.tar.gz"
+   ],
+   "out": false
+  },
+  {
+   "fn": "canPreview",
+   "args": [
+    "/x/x.svg"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canPreview",
+   "args": [
+    "/x/x.HTML"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canPreview",
+   "args": [
+    "/x/x.exe"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canPreview",
+   "args": [
+    "/x/x.ico."
+   ],
+   "out": true
+  },
+  {
+   "fn": "canPreview",
+   "args": [
+    "/x/dir.zip/x.js"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "/nowhere/a.png"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "/nowhere/A.PDF"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "/nowhere/x.docx"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "/nowhere/x.mov"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "/nowhere/x.txt"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "/nowhere/x.md"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "/nowhere/x.sh"
+   ],
+   "out": false
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "/nowhere/x"
+   ],
+   "out": false
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "/nowhere/.png"
+   ],
+   "out": false
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "/nowhere/x.tar.gz"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "/nowhere/x.svg"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "/nowhere/x.HTML"
+   ],
+   "out": true
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "/nowhere/x.exe"
+   ],
+   "out": false
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "/nowhere/x.ico."
+   ],
+   "out": false
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "/nowhere/dir.zip/x.js"
+   ],
+   "out": false
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "$ROOT/doc.pdf"
+   ],
+   "files": {
+    "doc.pdf": {
+     "link": "run.sh"
+    },
+    "run.sh": ""
+   },
+   "out": false
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "$ROOT/doc.pdf"
+   ],
+   "files": {
+    "doc.pdf": {
+     "link": "real.PDF"
+    },
+    "real.PDF": ""
+   },
+   "out": true
+  },
+  {
+   "fn": "canOpen",
+   "args": [
+    "$ROOT/notes.txt"
+   ],
+   "files": {
+    "notes.txt": {
+     "link": "missing.sh"
+    }
+   },
+   "out": true
+  },
+  {
+   "fn": "relativeTo",
+   "args": [
+    "/a/b",
+    "/a/b/c/d.txt"
+   ],
+   "out": "c/d.txt"
+  },
+  {
+   "fn": "relativeTo",
+   "args": [
+    "/a/b",
+    "/a/b"
+   ],
+   "out": "."
+  },
+  {
+   "fn": "relativeTo",
+   "args": [
+    "/a/b",
+    "/a/x.txt"
+   ],
+   "out": "/a/x.txt"
+  },
+  {
+   "fn": "relativeTo",
+   "args": [
+    "",
+    "/a/x.txt"
+   ],
+   "out": "/a/x.txt"
+  },
+  {
+   "fn": "relativeTo",
+   "args": [
+    "/a/b",
+    "/a/b/..x"
+   ],
+   "out": "..x"
+  },
+  {
+   "fn": "create",
+   "args": [
+    "$ROOT",
+    "$ROOT",
+    "new.txt",
+    false
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/new.txt",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "new.txt: ",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "create",
+   "args": [
+    "$ROOT",
+    "$ROOT",
+    "n/e/w.txt",
+    false
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/n/e/w.txt",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "n/",
+     "n/e/",
+     "n/e/w.txt: ",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "create",
+   "args": [
+    "$ROOT",
+    "$ROOT",
+    "folder/",
+    false
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/folder",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "folder/",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "create",
+   "args": [
+    "$ROOT",
+    "$ROOT",
+    "folder\\",
+    false
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/folder",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "folder/",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "create",
+   "args": [
+    "$ROOT",
+    "$ROOT",
+    "a.txt",
+    false
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     null,
+     "Already exists"
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "create",
+   "args": [
+    "$ROOT",
+    "$ROOT",
+    "broken",
+    false
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     null,
+     "Cannot create: EEXIST"
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "create",
+   "args": [
+    "$ROOT",
+    "$ROOT",
+    "../out",
+    false
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     null,
+     "Invalid name"
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "create",
+   "args": [
+    "$ROOT",
+    "$ROOT",
+    "",
+    false
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     null,
+     "Invalid name"
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "create",
+   "args": [
+    "$ROOT",
+    "$ROOT",
+    "f/x",
+    false
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     null,
+     "Cannot create: EEXIST"
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "create",
+   "args": [
+    "$ROOT",
+    "$ROOT",
+    "d/s",
+    false
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     null,
+     "Already exists"
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "create",
+   "args": [
+    "$ROOT",
+    "$ROOT",
+    "sp ",
+    false
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/sp",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "sp: ",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "create",
+   "args": [
+    "$ROOT",
+    "$ROOT",
+    "x/ ",
+    false
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/x",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d",
+     "x: "
+    ]
+   ]
+  },
+  {
+   "fn": "create",
+   "args": [
+    "$ROOT",
+    "$ROOT",
+    "dir",
+    true
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/dir",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "dir/",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "create",
+   "args": [
+    "$ROOT",
+    "$ROOT",
+    "d/s/z",
+    true
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/d/s/z",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/s/z/",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "rename",
+   "args": [
+    "$ROOT",
+    "@/a.txt",
+    "b.txt"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/b.txt",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "b.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "rename",
+   "args": [
+    "$ROOT",
+    "@/a.txt",
+    "a.txt"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/a.txt",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "rename",
+   "args": [
+    "$ROOT",
+    "@/a.txt",
+    " a.txt "
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/a.txt",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "rename",
+   "args": [
+    "$ROOT",
+    "@/a.txt",
+    "f"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     null,
+     "Already exists"
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "rename",
+   "args": [
+    "$ROOT",
+    "@/a.txt",
+    "sub/b.txt"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/sub/b.txt",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "sub/",
+     "sub/b.txt: A",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "rename",
+   "args": [
+    "$ROOT",
+    "@/a.txt",
+    "../b.txt"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     null,
+     "Invalid name"
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "rename",
+   "args": [
+    "$ROOT",
+    "@/a.txt",
+    "A.txt"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/A.txt",
+     null
+    ],
+    [
+     ".rc: R",
+     "A.txt: A",
+     "a copy.txt: C",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "rename",
+   "args": [
+    "$ROOT",
+    "@/d/l",
+    "m"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/d/m",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/m -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "rename",
+   "args": [
+    "$ROOT",
+    "@/d",
+    "e/f"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/e/f",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "e/",
+     "e/f/",
+     "e/f/l -> x.md",
+     "e/f/s/",
+     "e/f/s/y: Y",
+     "e/f/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "rename",
+   "args": [
+    "$ROOT",
+    "@/broken",
+    "b2"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/b2",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "b2 -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "rename",
+   "args": [
+    "$ROOT",
+    "@/a.txt",
+    "broken"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     null,
+     "Already exists"
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "rename",
+   "args": [
+    "$ROOT",
+    "@/nothing",
+    "x"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     null,
+     "Cannot rename: ENOENT"
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "duplicate",
+   "args": [
+    "$ROOT",
+    "@/a.txt"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/a copy 2.txt",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy 2.txt: A",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "duplicate",
+   "args": [
+    "$ROOT",
+    "@/f"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/f copy",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "f copy: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "duplicate",
+   "args": [
+    "$ROOT",
+    "@/d"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/d copy",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "d copy/",
+     "d copy/l -> x.md",
+     "d copy/s/",
+     "d copy/s/y: Y",
+     "d copy/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "duplicate",
+   "args": [
+    "$ROOT",
+    "@/up"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/up copy",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d",
+     "up copy -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "duplicate",
+   "args": [
+    "$ROOT",
+    "@/d/l"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/d/l copy",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/l copy -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "duplicate",
+   "args": [
+    "$ROOT",
+    "@/.rc"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/.rc copy",
+     null
+    ],
+    [
+     ".rc: R",
+     ".rc copy: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "duplicate",
+   "args": [
+    "$ROOT",
+    "@/k.tar.gz"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/k.tar copy.gz",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar copy.gz: K",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "duplicate",
+   "args": [
+    "$ROOT",
+    "@/d/s/y"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    [
+     "$ROOT/d/s/y copy",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/s/y copy: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "duplicate",
+   "args": [
+    "$ROOT",
+    "@/a.txt"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K",
+    "a copy 2.txt": "2",
+    "a copy 3.txt": "3"
+   },
+   "out": [
+    [
+     "$ROOT/a copy 4.txt",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy 2.txt: 2",
+     "a copy 3.txt: 3",
+     "a copy 4.txt: A",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "duplicate",
+   "args": [
+    "$ROOT",
+    "@/x"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K",
+    "x": "x",
+    "x copy": null
+   },
+   "out": [
+    [
+     "$ROOT/x copy 2",
+     null
+    ],
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d",
+     "x: x",
+     "x copy/",
+     "x copy 2: x"
+    ]
+   ]
+  },
+  {
+   "fn": "remove",
+   "args": [
+    "$ROOT",
+    "@/a.txt"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    null,
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "remove",
+   "args": [
+    "$ROOT",
+    "@/d"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    null,
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "remove",
+   "args": [
+    "$ROOT",
+    "@/up"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    null,
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K"
+    ]
+   ]
+  },
+  {
+   "fn": "remove",
+   "args": [
+    "$ROOT",
+    "@/d/l"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    null,
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "remove",
+   "args": [
+    "$ROOT",
+    "@/broken"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    null,
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "remove",
+   "args": [
+    "$ROOT",
+    "@/nothing"
+   ],
+   "files": {
+    "a.txt": "A",
+    "f": "F",
+    "d/x.md": "X",
+    "d/s/y": "Y",
+    "d/l": {
+     "link": "x.md"
+    },
+    "broken": {
+     "link": "none"
+    },
+    "up": {
+     "link": "$ROOT/d"
+    },
+    "a copy.txt": "C",
+    ".rc": "R",
+    "k.tar.gz": "K"
+   },
+   "out": [
+    null,
+    [
+     ".rc: R",
+     "a copy.txt: C",
+     "a.txt: A",
+     "broken -> none",
+     "d/",
+     "d/l -> x.md",
+     "d/s/",
+     "d/s/y: Y",
+     "d/x.md: X",
+     "f: F",
+     "k.tar.gz: K",
+     "up -> $ROOT/d"
+    ]
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "stage",
+    "$ROOT",
+    "echo a > a; echo b > b",
+    "a"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Staged",
+    "A  a\n?? b\n",
+    []
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "stage",
+    "$ROOT",
+    "echo a > a; git add a; git commit -qm 1; rm a",
+    "a"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Staged",
+    "D  a\n",
+    []
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "stage",
+    "$ROOT",
+    "mkdir d; echo x > \"d/*\"; echo y > d/y",
+    "d/*"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Staged",
+    "A  d/*\n?? d/y\n",
+    []
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "stage",
+    "$ROOT",
+    "true",
+    "missing"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Cannot stage",
+    "",
+    []
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "unstage",
+    "$ROOT",
+    "echo a > a; git add a",
+    "a"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Unstaged",
+    "?? a\n",
+    []
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "unstage",
+    "$ROOT",
+    "echo a > a; git add a; git commit -qm 1; echo b > a; git add a",
+    "a"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Unstaged",
+    " M a\n",
+    []
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "unstage",
+    "$ROOT",
+    "mkdir d; echo a > d/a; echo b > d/b; git add d",
+    "d"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Unstaged",
+    "?? d/a\n?? d/b\n",
+    []
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "unstage",
+    "$ROOT",
+    "echo a > a; git add a; git commit -qm 1; git rm -q a",
+    "a"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Unstaged",
+    " D a\n",
+    []
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "discard",
+    "$ROOT",
+    "echo a > a; git add a; git commit -qm 1; echo b > a; git add a; echo c > a",
+    "a"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Changes discarded",
+    "",
+    []
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "discard",
+    "$ROOT",
+    "echo a > a; git add a; git commit -qm 1; echo n > n; git add n",
+    "n"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Changes discarded",
+    "",
+    [
+     "n"
+    ]
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "discard",
+    "$ROOT",
+    "echo a > a; git add a; git commit -qm 1; git rm -q a",
+    "a"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Changes discarded",
+    "",
+    []
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "discard",
+    "$ROOT",
+    "echo a > a; git add a; git commit -qm 1; rm a",
+    "a"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Changes discarded",
+    "",
+    []
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "discard",
+    "$ROOT",
+    "echo a > a; git add a; git commit -qm 1; echo u > u",
+    "u"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Changes discarded",
+    "",
+    [
+     "u"
+    ]
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "discard",
+    "$ROOT",
+    "echo a > a; git add a",
+    "a"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Changes discarded",
+    "",
+    [
+     "a"
+    ]
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "discard",
+    "$ROOT",
+    "mkdir d; echo a > d/a; git add d; git commit -qm 1; echo x > d/a; echo u > d/u; echo v > d/v",
+    "d"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Changes discarded",
+    "",
+    [
+     "u",
+     "v"
+    ]
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "discard",
+    "$ROOT",
+    "touch ../no-trash; mkdir d; echo a > d/a; git add d; git commit -qm 1; echo u > d/u; echo v > d/v",
+    "d"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "2 untracked files kept: no trash",
+    "?? d/u\n?? d/v\n",
+    []
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "discard",
+    "$ROOT",
+    "touch ../no-trash; echo a > a; git add a; git commit -qm 1; echo u > u",
+    "u"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "1 untracked file kept: no trash",
+    "?? u\n",
+    []
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "discard",
+    "$ROOT",
+    "echo a > a; git add a; git commit -qm 1; echo i > .gitignore; echo z > i; git add .gitignore; git commit -qm 2",
+    "i"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Changes discarded",
+    "",
+    []
+   ]
+  },
+  {
+   "fn": "git",
+   "args": [
+    "discard",
+    "$ROOT",
+    "mkdir d; seq 1 50 > d/old; git add d; git commit -qm 1; git mv d/old d/new; echo more >> d/new; git add d",
+    "d"
+   ],
+   "env": {
+    "PATH": "$ROOT/bin:/usr/bin:/bin"
+   },
+   "out": [
+    "Changes discarded",
+    "",
+    [
+     "new"
+    ]
+   ]
+  }
+ ]
+}

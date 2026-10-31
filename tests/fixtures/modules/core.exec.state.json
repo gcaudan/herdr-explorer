@@ -1,0 +1,1593 @@
+{
+ "module": "core/exec.state",
+ "cases": [
+  {
+   "fn": "readWidth",
+   "args": [],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "out": 32
+  },
+  {
+   "fn": "readWidth",
+   "args": [],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "width": "50"
+   },
+   "out": 50
+  },
+  {
+   "fn": "readWidth",
+   "args": [],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "width": "5"
+   },
+   "out": 10
+  },
+  {
+   "fn": "readWidth",
+   "args": [],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "width": "abc"
+   },
+   "out": 32
+  },
+  {
+   "fn": "readWidth",
+   "args": [],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "width": "  42px"
+   },
+   "out": 42
+  },
+  {
+   "fn": "readWidth",
+   "args": [],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "width": "-7"
+   },
+   "out": 10
+  },
+  {
+   "fn": "readWidth",
+   "args": [],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "width": "1e3"
+   },
+   "out": 10
+  },
+  {
+   "fn": "readWidth",
+   "args": [],
+   "out": 32
+  },
+  {
+   "fn": "readSettings",
+   "args": [],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "out": {
+    "hidden": true,
+    "ignored": true,
+    "open": "preview",
+    "editor": "",
+    "singleClick": false,
+    "side": "left",
+    "autoOpen": true,
+    "compact": true,
+    "follow": true,
+    "glyphs": "nerd",
+    "theme": "auto",
+    "icons": "",
+    "wrap": false,
+    "lineNumbers": true,
+    "changes": true,
+    "images": "auto",
+    "reviewPrefix": "",
+    "scmCommand": "",
+    "diffLayout": "",
+    "updateCheck": true,
+    "scmTree": false,
+    "scmGraphAll": true,
+    "scmListShare": {}
+   }
+  },
+  {
+   "fn": "readSettings",
+   "args": [],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "settings.json": "{\"side\":\"right\"}"
+   },
+   "out": {
+    "hidden": true,
+    "ignored": true,
+    "open": "preview",
+    "editor": "",
+    "singleClick": false,
+    "side": "right",
+    "autoOpen": true,
+    "compact": true,
+    "follow": true,
+    "glyphs": "nerd",
+    "theme": "auto",
+    "icons": "",
+    "wrap": false,
+    "lineNumbers": true,
+    "changes": true,
+    "images": "auto",
+    "reviewPrefix": "",
+    "scmCommand": "",
+    "diffLayout": "",
+    "updateCheck": true,
+    "scmTree": false,
+    "scmGraphAll": true,
+    "scmListShare": {}
+   }
+  },
+  {
+   "fn": "readSettings",
+   "args": [],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "settings.json": "not json"
+   },
+   "out": {
+    "hidden": true,
+    "ignored": true,
+    "open": "preview",
+    "editor": "",
+    "singleClick": false,
+    "side": "left",
+    "autoOpen": true,
+    "compact": true,
+    "follow": true,
+    "glyphs": "nerd",
+    "theme": "auto",
+    "icons": "",
+    "wrap": false,
+    "lineNumbers": true,
+    "changes": true,
+    "images": "auto",
+    "reviewPrefix": "",
+    "scmCommand": "",
+    "diffLayout": "",
+    "updateCheck": true,
+    "scmTree": false,
+    "scmGraphAll": true,
+    "scmListShare": {}
+   }
+  },
+  {
+   "fn": "readSettings",
+   "args": [],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "settings.json": "[1,2]"
+   },
+   "out": {
+    "0": 1,
+    "1": 2,
+    "hidden": true,
+    "ignored": true,
+    "open": "preview",
+    "editor": "",
+    "singleClick": false,
+    "side": "left",
+    "autoOpen": true,
+    "compact": true,
+    "follow": true,
+    "glyphs": "nerd",
+    "theme": "auto",
+    "icons": "",
+    "wrap": false,
+    "lineNumbers": true,
+    "changes": true,
+    "images": "auto",
+    "reviewPrefix": "",
+    "scmCommand": "",
+    "diffLayout": "",
+    "updateCheck": true,
+    "scmTree": false,
+    "scmGraphAll": true,
+    "scmListShare": {}
+   }
+  },
+  {
+   "fn": "readSettings",
+   "args": [],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "settings.json": "\"ab\""
+   },
+   "out": {
+    "0": "a",
+    "1": "b",
+    "hidden": true,
+    "ignored": true,
+    "open": "preview",
+    "editor": "",
+    "singleClick": false,
+    "side": "left",
+    "autoOpen": true,
+    "compact": true,
+    "follow": true,
+    "glyphs": "nerd",
+    "theme": "auto",
+    "icons": "",
+    "wrap": false,
+    "lineNumbers": true,
+    "changes": true,
+    "images": "auto",
+    "reviewPrefix": "",
+    "scmCommand": "",
+    "diffLayout": "",
+    "updateCheck": true,
+    "scmTree": false,
+    "scmGraphAll": true,
+    "scmListShare": {}
+   }
+  },
+  {
+   "fn": "readSettings",
+   "args": [],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "settings.json": "5"
+   },
+   "out": {
+    "hidden": true,
+    "ignored": true,
+    "open": "preview",
+    "editor": "",
+    "singleClick": false,
+    "side": "left",
+    "autoOpen": true,
+    "compact": true,
+    "follow": true,
+    "glyphs": "nerd",
+    "theme": "auto",
+    "icons": "",
+    "wrap": false,
+    "lineNumbers": true,
+    "changes": true,
+    "images": "auto",
+    "reviewPrefix": "",
+    "scmCommand": "",
+    "diffLayout": "",
+    "updateCheck": true,
+    "scmTree": false,
+    "scmGraphAll": true,
+    "scmListShare": {}
+   }
+  },
+  {
+   "fn": "readSettings",
+   "args": [],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "settings.json": "null"
+   },
+   "out": {
+    "hidden": true,
+    "ignored": true,
+    "open": "preview",
+    "editor": "",
+    "singleClick": false,
+    "side": "left",
+    "autoOpen": true,
+    "compact": true,
+    "follow": true,
+    "glyphs": "nerd",
+    "theme": "auto",
+    "icons": "",
+    "wrap": false,
+    "lineNumbers": true,
+    "changes": true,
+    "images": "auto",
+    "reviewPrefix": "",
+    "scmCommand": "",
+    "diffLayout": "",
+    "updateCheck": true,
+    "scmTree": false,
+    "scmGraphAll": true,
+    "scmListShare": {}
+   }
+  },
+  {
+   "fn": "readSettings",
+   "args": [],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "settings.json": "{\"theme\":\"dark\",\"x\":1,\"7\":2,\"hidden\":false}"
+   },
+   "out": {
+    "7": 2,
+    "hidden": false,
+    "ignored": true,
+    "open": "preview",
+    "editor": "",
+    "singleClick": false,
+    "side": "left",
+    "autoOpen": true,
+    "compact": true,
+    "follow": true,
+    "glyphs": "nerd",
+    "theme": "dark",
+    "icons": "",
+    "wrap": false,
+    "lineNumbers": true,
+    "changes": true,
+    "images": "auto",
+    "reviewPrefix": "",
+    "scmCommand": "",
+    "diffLayout": "",
+    "updateCheck": true,
+    "scmTree": false,
+    "scmGraphAll": true,
+    "scmListShare": {},
+    "x": 1
+   }
+  },
+  {
+   "fn": "readSettings",
+   "args": [],
+   "files": {
+    "settings.json": "{\"side\":\"right\"}"
+   },
+   "out": {
+    "hidden": true,
+    "ignored": true,
+    "open": "preview",
+    "editor": "",
+    "singleClick": false,
+    "side": "left",
+    "autoOpen": true,
+    "compact": true,
+    "follow": true,
+    "glyphs": "nerd",
+    "theme": "auto",
+    "icons": "",
+    "wrap": false,
+    "lineNumbers": true,
+    "changes": true,
+    "images": "auto",
+    "reviewPrefix": "",
+    "scmCommand": "",
+    "diffLayout": "",
+    "updateCheck": true,
+    "scmTree": false,
+    "scmGraphAll": true,
+    "scmListShare": {}
+   }
+  },
+  {
+   "fn": "writeSettings",
+   "args": [
+    {
+     "a": 1,
+     "b": [
+      1,
+      {
+       "c": "é"
+      }
+     ],
+     "d": {}
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "after": {
+    "settings.json": "{\n \"a\": 1,\n \"b\": [\n  1,\n  {\n   \"c\": \"é\"\n  }\n ],\n \"d\": {}\n}"
+   },
+   "out": null
+  },
+  {
+   "fn": "writeSettings",
+   "args": [
+    {
+     "a": 1
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT/new/dir"
+   },
+   "after": {
+    "new/dir/settings.json": "{\n \"a\": 1\n}"
+   },
+   "out": null
+  },
+  {
+   "fn": "paneFile",
+   "args": [
+    "w1:p2"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "out": "$ROOT/panes/w1_p2.json"
+  },
+  {
+   "fn": "paneFile",
+   "args": [
+    ""
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "out": ""
+  },
+  {
+   "fn": "paneFile",
+   "args": [
+    "a/b c.é"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "out": "$ROOT/panes/a_b_c._.json"
+  },
+  {
+   "fn": "paneFile",
+   "args": [
+    "x😀"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "out": "$ROOT/panes/x_.json"
+  },
+  {
+   "fn": "paneFile",
+   "args": [
+    "w1:p2"
+   ],
+   "out": null
+  },
+  {
+   "fn": "readPaneState",
+   "args": [
+    "w1:p2"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "panes/w1_p2.json": "{\"root\":\"/x\"}"
+   },
+   "out": {
+    "root": "/x"
+   }
+  },
+  {
+   "fn": "readPaneState",
+   "args": [
+    "w1:p2"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "files": {
+    "panes/w1_p2.json": "{"
+   },
+   "out": null
+  },
+  {
+   "fn": "readPaneState",
+   "args": [
+    "w1:p9"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "out": null
+  },
+  {
+   "fn": "writePaneState",
+   "args": [
+    "w1:p2",
+    {
+     "root": "/x",
+     "n": 1.5
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "after": {
+    "panes/w1_p2.json": "{\"root\":\"/x\",\"n\":1.5}"
+   },
+   "out": null
+  },
+  {
+   "fn": "tabFile",
+   "args": [
+    "notes",
+    "w1:t1"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "out": "$ROOT/notes-w1_t1.json"
+  },
+  {
+   "fn": "tabFile",
+   "args": [
+    "scope",
+    ""
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "out": ""
+  },
+  {
+   "fn": "tabFile",
+   "args": [
+    "x",
+    "é😀-a_b.c"
+   ],
+   "env": {
+    "HERDR_PLUGIN_STATE_DIR": "$ROOT"
+   },
+   "out": "$ROOT/x-__-a_b_c.json"
+  },
+  {
+   "fn": "tabFile",
+   "args": [
+    "notes",
+    "w1:t1"
+   ],
+   "out": null
+  },
+  {
+   "fn": "readKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "out": [
+    [
+     "a",
+     "newFile"
+    ],
+    [
+     "d",
+     "del"
+    ],
+    [
+     "delete",
+     "del"
+    ],
+    [
+     "enter",
+     "open"
+    ]
+   ]
+  },
+  {
+   "fn": "readKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "{\"explorer\":{\"newFile\":[\"n\"],\"del\":\"x\",\"bogus\":[\"q\"]}}"
+   },
+   "out": [
+    [
+     "enter",
+     "open"
+    ],
+    [
+     "n",
+     "newFile"
+    ],
+    [
+     "x",
+     "del"
+    ]
+   ]
+  },
+  {
+   "fn": "readKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "{\"explorer\":{\"newFile\":[\"d\"]}}"
+   },
+   "out": [
+    [
+     "d",
+     "newFile"
+    ],
+    [
+     "delete",
+     "del"
+    ],
+    [
+     "enter",
+     "open"
+    ]
+   ]
+  },
+  {
+   "fn": "readKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "{\"explorer\":{\"newFile\":[1,\"z\",null]}}"
+   },
+   "out": [
+    [
+     "d",
+     "del"
+    ],
+    [
+     "delete",
+     "del"
+    ],
+    [
+     "enter",
+     "open"
+    ],
+    [
+     "z",
+     "newFile"
+    ]
+   ]
+  },
+  {
+   "fn": "readKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "{\"explorer\":null}"
+   },
+   "out": [
+    [
+     "a",
+     "newFile"
+    ],
+    [
+     "d",
+     "del"
+    ],
+    [
+     "delete",
+     "del"
+    ],
+    [
+     "enter",
+     "open"
+    ]
+   ]
+  },
+  {
+   "fn": "readKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "nope"
+   },
+   "out": [
+    [
+     "a",
+     "newFile"
+    ],
+    [
+     "d",
+     "del"
+    ],
+    [
+     "delete",
+     "del"
+    ],
+    [
+     "enter",
+     "open"
+    ]
+   ]
+  },
+  {
+   "fn": "readKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "null"
+   },
+   "out": [
+    [
+     "a",
+     "newFile"
+    ],
+    [
+     "d",
+     "del"
+    ],
+    [
+     "delete",
+     "del"
+    ],
+    [
+     "enter",
+     "open"
+    ]
+   ]
+  },
+  {
+   "fn": "readKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "{\"explorer\":[[\"a\"]]}"
+   },
+   "out": [
+    [
+     "a",
+     "newFile"
+    ],
+    [
+     "d",
+     "del"
+    ],
+    [
+     "delete",
+     "del"
+    ],
+    [
+     "enter",
+     "open"
+    ]
+   ]
+  },
+  {
+   "fn": "readKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "{\"explorer\":\"str\"}"
+   },
+   "out": [
+    [
+     "a",
+     "newFile"
+    ],
+    [
+     "d",
+     "del"
+    ],
+    [
+     "delete",
+     "del"
+    ],
+    [
+     "enter",
+     "open"
+    ]
+   ]
+  },
+  {
+   "fn": "readKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "{\"explorer\":5}"
+   },
+   "out": [
+    [
+     "a",
+     "newFile"
+    ],
+    [
+     "d",
+     "del"
+    ],
+    [
+     "delete",
+     "del"
+    ],
+    [
+     "enter",
+     "open"
+    ]
+   ]
+  },
+  {
+   "fn": "readKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "{\"explorer\":0}"
+   },
+   "out": [
+    [
+     "a",
+     "newFile"
+    ],
+    [
+     "d",
+     "del"
+    ],
+    [
+     "delete",
+     "del"
+    ],
+    [
+     "enter",
+     "open"
+    ]
+   ]
+  },
+  {
+   "fn": "readKeys",
+   "args": [
+    "explorer",
+    {}
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "{\"explorer\":\"str\"}"
+   },
+   "out": []
+  },
+  {
+   "fn": "readKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "files": {
+    "keys.json": "{\"explorer\":{\"newFile\":[\"n\"]}}"
+   },
+   "out": [
+    [
+     "a",
+     "newFile"
+    ],
+    [
+     "d",
+     "del"
+    ],
+    [
+     "delete",
+     "del"
+    ],
+    [
+     "enter",
+     "open"
+    ]
+   ]
+  },
+  {
+   "fn": "keysTemplate",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "after": {
+    "keys.json": "{\n  \"explorer\": {\n    \"newFile\": [\"a\"],\n    \"del\": [\"d\",\"delete\"],\n    \"open\": [\"enter\"]\n  }\n}\n"
+   },
+   "out": "$ROOT/keys.json"
+  },
+  {
+   "fn": "keysTemplate",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "{\"explorer\":{\"newFile\":[\"a\"],\"del\":[\"d\",\"delete\"],\"open\":[\"enter\"]}}"
+   },
+   "after": {
+    "keys.json": "{\"explorer\":{\"newFile\":[\"a\"],\"del\":[\"d\",\"delete\"],\"open\":[\"enter\"]}}"
+   },
+   "out": "$ROOT/keys.json"
+  },
+  {
+   "fn": "keysTemplate",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "{\"explorer\":{\"del\":[\"x\"]}}"
+   },
+   "after": {
+    "keys.json": "{\n  \"explorer\": {\n    \"newFile\": [\"a\"],\n    \"del\": [\"x\"],\n    \"open\": [\"enter\"]\n  }\n}\n"
+   },
+   "out": "$ROOT/keys.json"
+  },
+  {
+   "fn": "keysTemplate",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "nope"
+   },
+   "after": {
+    "keys.json": "nope"
+   },
+   "out": "$ROOT/keys.json"
+  },
+  {
+   "fn": "keysTemplate",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "{\"other\":{\"x\":[\"y\"]}}"
+   },
+   "after": {
+    "keys.json": "{\n  \"other\": {\n    \"x\": [\"y\"]\n  },\n  \"explorer\": {\n    \"newFile\": [\"a\"],\n    \"del\": [\"d\",\"delete\"],\n    \"open\": [\"enter\"]\n  }\n}\n"
+   },
+   "out": "$ROOT/keys.json"
+  },
+  {
+   "fn": "keysTemplate",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "[1]"
+   },
+   "after": {
+    "keys.json": "[1]"
+   },
+   "out": "$ROOT/keys.json"
+  },
+  {
+   "fn": "keysTemplate",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "{\"explorer\":{\"zz\":1},\"other\":\"ab\"}"
+   },
+   "after": {
+    "keys.json": "{\"explorer\":{\"zz\":1},\"other\":\"ab\"}"
+   },
+   "out": "$ROOT/keys.json"
+  },
+  {
+   "fn": "keysTemplate",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "null"
+   },
+   "after": {
+    "keys.json": "null"
+   },
+   "out": "$ROOT/keys.json"
+  },
+  {
+   "fn": "keysTemplate",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "5"
+   },
+   "after": {
+    "keys.json": "5"
+   },
+   "out": "$ROOT/keys.json"
+  },
+  {
+   "fn": "keysTemplate",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "\"s\""
+   },
+   "after": {
+    "keys.json": "\"s\""
+   },
+   "out": "$ROOT/keys.json"
+  },
+  {
+   "fn": "keysTemplate",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "{\"explorer\":null}"
+   },
+   "after": {
+    "keys.json": "{\n  \"explorer\": {\n    \"newFile\": [\"a\"],\n    \"del\": [\"d\",\"delete\"],\n    \"open\": [\"enter\"]\n  }\n}\n"
+   },
+   "out": "$ROOT/keys.json"
+  },
+  {
+   "fn": "keysTemplate",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "a"
+     ],
+     "del": [
+      "d",
+      "delete"
+     ],
+     "open": [
+      "enter"
+     ]
+    }
+   ],
+   "out": null
+  },
+  {
+   "fn": "writeKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "n",
+      "N"
+     ],
+     "open": null
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "after": {
+    "keys.json": "{\n  \"explorer\": {\n    \"newFile\": [\"n\",\"N\"]\n  }\n}\n"
+   },
+   "out": true
+  },
+  {
+   "fn": "writeKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "n",
+      "N"
+     ],
+     "open": null
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "{\"explorer\":{\"del\":[\"x\"],\"open\":[\"o\"]},\"other\":{\"y\":[\"z\"]}}"
+   },
+   "after": {
+    "keys.json": "{\n  \"explorer\": {\n    \"del\": [\"x\"],\n    \"newFile\": [\"n\",\"N\"]\n  },\n  \"other\": {\n    \"y\": [\"z\"]\n  }\n}\n"
+   },
+   "out": true
+  },
+  {
+   "fn": "writeKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "n",
+      "N"
+     ],
+     "open": null
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "nope"
+   },
+   "after": {
+    "keys.json": "nope"
+   },
+   "out": false
+  },
+  {
+   "fn": "writeKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "n",
+      "N"
+     ],
+     "open": null
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "null"
+   },
+   "after": {
+    "keys.json": "null"
+   },
+   "out": false
+  },
+  {
+   "fn": "writeKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "n",
+      "N"
+     ],
+     "open": null
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "{\"explorer\":null,\"b\":null}"
+   },
+   "after": {
+    "keys.json": "{\"explorer\":null,\"b\":null}"
+   },
+   "out": false
+  },
+  {
+   "fn": "writeKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "n",
+      "N"
+     ],
+     "open": null
+    }
+   ],
+   "env": {
+    "HERDR_PLUGIN_CONFIG_DIR": "$ROOT"
+   },
+   "files": {
+    "keys.json": "[]"
+   },
+   "after": {
+    "keys.json": "{\n  \"explorer\": {\n    \"newFile\": [\"n\",\"N\"]\n  }\n}\n"
+   },
+   "out": true
+  },
+  {
+   "fn": "writeKeys",
+   "args": [
+    "explorer",
+    {
+     "newFile": [
+      "n"
+     ]
+    }
+   ],
+   "out": false
+  },
+  {
+   "fn": "writeAtomic",
+   "args": [
+    "$ROOT/a/b/c.txt",
+    "hi"
+   ],
+   "after": {
+    "a/b/c.txt": "hi"
+   },
+   "out": true
+  },
+  {
+   "fn": "writeAtomic",
+   "args": [
+    "$ROOT/f",
+    "new"
+   ],
+   "files": {
+    "f": "old"
+   },
+   "after": {
+    "f": "new"
+   },
+   "out": true
+  },
+  {
+   "fn": "writeAtomic",
+   "args": [
+    "$ROOT/f/g",
+    "x"
+   ],
+   "files": {
+    "f": "a file"
+   },
+   "after": {
+    "f/g": null
+   },
+   "out": false
+  }
+ ]
+}

@@ -1,0 +1,10 @@
+# A newer release: ↑ and its version in the header; a click on it asks, with its first changes (herdr asked whether
+# it installed the plugin).
+size 60 18
+file README.md # Hello\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":true,"follow":false}
+state update.json {"latest":"99.0.0","notes":["diff: stage hunks","add a light theme","scm: keep the list","one more"],"url":"https://github.com/gcaudan/herdr-explorer/releases/tag/v99.0.0"}
+start
+wait 700
+text \e[<0;52;1M\e[<0;52;1m
+until 2800

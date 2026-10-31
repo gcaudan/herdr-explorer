@@ -1,0 +1,21 @@
+size 120x20
+⟪bg=#252526 b⟫ work ⟪bg=#252526⟫ ⟪fg=#519aba bg=#2b3d45⟫ ⎇ main ⟪fg=#8c8c8c bg=#252526⟫  not published⟪bg=#252526⟫                                                    ⟪fg=#ffffff bg=#0e639c b⟫ ↑ Publish branch ⟪fg=#d4d4d4 bg=#252526 b⟫ ⇣ Fetch  Actions ▾ ⟪⟫
+ ⟪fg=#d4d4d4 b u⟫Changes⟪fg=#8c8c8c⟫ 2⟪⟫   ⟪fg=#8c8c8c⟫History⟪⟫   ⟪fg=#8c8c8c⟫Stashes⟪⟫   ⟪fg=#8c8c8c⟫…⟪fg=#d4d4d4 bg=#04395e b⟫ List ⟪fg=#8c8c8c bg=#3a3a3e⟫ Tree ⟪fg=#8c8c8c⟫│⟪bg=#04395e b⟫ a.txt⟪fg=#8dc149 bg=#04395e⟫  +1⟪fg=#c74e39 bg=#04395e⟫ −0⟪bg=#04395e⟫                                                        ⟪fg=#8c8c8c bg=#04395e⟫ ⚙ ⟪bg=#04395e⟫ ⟪⟫
+ ⟪bg=#313131⟫ ⟪fg=#8c8c8c bg=#313131⟫Message  (c)⟪bg=#313131⟫                               ⟪⟫ ⟪fg=#8c8c8c⟫│⟪fg=#519aba bg=#1e242c⟫ @@ -1,3 +1,4 @@⟪bg=#1e242c⟫                                                         ⟪⟫
+ ⟪fg=#ffffff bg=#0e639c b⟫ ✓ Commit all 2 ⟪fg=#a074c4⟫ ✧ Claude ⟪fg=#8c8c8c⟫ ☐ Amend ⟪⟫          ⟪fg=#8c8c8c⟫│1 1  ⟪⟫ one
+                                              ⟪fg=#8c8c8c⟫│2 2  ⟪⟫ two
+⟪fg=#8c8c8c⟫ ▾ ⟪b⟫CHANGES⟪fg=#8c8c8c⟫  2⟪⟫                                 ⟪fg=#8c8c8c⟫│3 3  ⟪⟫ three
+⟪bg=#37373d⟫   ⟪fg=#6d8086 bg=#37373d⟫● ⟪fg=#e2c08d bg=#37373d⟫a.txt⟪bg=#37373d⟫                           ⟪fg=#d4d4d4 bg=#37373d b⟫ ↶  + ⟪fg=#e2c08d bg=#37373d⟫ M ⟪fg=#8c8c8c⟫│⟪fg=#8c8c8c bg=#233c24⟫  4 ⟪fg=#8dc149 bg=#233c24⟫+⟪bg=#233c24⟫ four                                                               ⟪⟫
+   ⟪fg=#6d8086⟫● ⟪fg=#73c991⟫new.txt⟪⟫                               ⟪fg=#73c991⟫ U ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+                                              ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#d4d4d4 bg=#252526 b⟫ ↑↓⟪fg=#8c8c8c bg=#252526⟫ scroll⟪fg=#d4d4d4 bg=#252526 b⟫   n N⟪fg=#8c8c8c bg=#252526⟫ hunks⟪fg=#d4d4d4 bg=#252526 b⟫   tab⟪fg=#8c8c8c bg=#252526⟫ list⟪fg=#d4d4d4 bg=#252526 b⟫   q⟪fg=#8c8c8c bg=#252526⟫ back⟪bg=#252526⟫                                                                   ⟪fg=#d4d4d4 bg=#252526 b⟫?⟪fg=#8c8c8c bg=#252526⟫ all keys ⟪⟫

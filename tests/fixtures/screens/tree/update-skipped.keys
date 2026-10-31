@@ -1,0 +1,10 @@
+# The release skipped, still installable from the settings; u asks about it, without the skip answer.
+size 60 20
+file README.md # Hello\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":true,"follow":false}
+state update.json {"latest":"99.0.0","skip":"99.0.0","notes":["diff: stage hunks"]}
+start
+keys ,
+wait 300
+keys u
+until 2800

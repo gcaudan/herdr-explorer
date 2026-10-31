@@ -1,0 +1,5 @@
+# The preview on the right wraps long lines when the setting says so.
+size 100 10
+file a.txt short\nlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong\nend\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false,"wrap":true}
+start

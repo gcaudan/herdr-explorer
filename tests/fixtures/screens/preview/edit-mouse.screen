@@ -1,0 +1,11 @@
+size 50x10
+⟪bg=#252526 b⟫ code.js⟪fg=#8c8c8c bg=#252526⟫  editing · 4 lines · LF⟪bg=#252526⟫  ⟪fg=#d4d4d4 bg=#04395e b⟫ File ⟪fg=#8c8c8c bg=#3a3a3e⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+ ⟪fg=#8c8c8c⟫1 ⟪fg=#569cd6⟫const⟪⟫ ⟪fg=#9cdcfe⟫answer⟪⟫ = ⟪fg=#b5cea8⟫42⟪⟫;
+ ⟪fg=#8c8c8c⟫2 ⟪fg=#9cdcfe⟫console⟪⟫.⟪fg=#dcdcaa⟫log⟪⟫(⟪fg=#9cdcfe⟫answer⟪⟫);
+ ⟪fg=#d4d4d4⟫3 ⟪fg=#569cd6⟫let⟪bg=#04395e⟫ ⟪fg=#9cdcfe⟫apple⟪⟫ = ⟪fg=#b5cea8⟫1⟪⟫;
+ ⟪fg=#8c8c8c⟫4 ⟪fg=#569cd6⟫let⟪⟫ ⟪fg=#9cdcfe⟫apples⟪⟫ = ⟪fg=#9cdcfe⟫apple⟪⟫ + ⟪fg=#b5cea8⟫1⟪⟫;
+
+
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ ctrl+s⟪fg=#8c8c8c bg=#252526⟫ save⟪fg=#d4d4d4 bg=#252526 b⟫   esc⟪fg=#8c8c8c bg=#252526⟫ done               Ln 3, Col 5 ⟪⟫

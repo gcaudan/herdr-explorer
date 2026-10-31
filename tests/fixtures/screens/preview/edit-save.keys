@@ -1,0 +1,12 @@
+# A save (ctrl+s), then esc: back to the preview, which shows the file as saved.
+size 50 10
+file code.js const answer = 42;\nconsole.log(answer);\nlet apple = 1;\nlet apples = apple + 1;\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/code.js
+start
+keys i
+text // top
+keys enter
+keys ctrl+s
+wait 300
+keys escape

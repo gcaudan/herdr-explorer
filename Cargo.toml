@@ -1,0 +1,21 @@
+# The plugin's one binary. No dependency, not even for tests: the FFI, the codecs and the JSON are written here.
+# The version that counts is the one in herdr-plugin.toml, embedded by build.rs.
+[package]
+name = "herdr-explorer"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[lib]
+name = "herdr_explorer"
+path = "src/lib.rs"
+
+[[bin]]
+name = "herdr-explorer"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

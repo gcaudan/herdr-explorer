@@ -1,0 +1,11 @@
+size 50x10
+⟪bg=#252526 b⟫ code.js ●⟪fg=#8c8c8c bg=#252526⟫  modified⟪bg=#252526⟫              ⟪fg=#d4d4d4 bg=#04395e b⟫ File ⟪fg=#8c8c8c bg=#3a3a3e⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+ ⟪fg=#8c8c8c⟫1 ⟪fg=#569cd6⟫const⟪⟫ ⟪fg=#9cdcfe⟫answer⟪⟫ = ⟪fg=#b5cea8⟫42⟪⟫;
+ ⟪fg=#8c8c8c⟫2 ⟪fg=#9cdcfe⟫console⟪⟫.⟪fg=#dcdcaa⟫log⟪⟫(⟪fg=#9cdcfe⟫answer⟪⟫);
+⟪fg=#519aba⟫▎⟪fg=#d4d4d4⟫3 ⟪fg=#569cd6⟫let⟪⟫ ⟪fg=#9cdcfe⟫pear⟪⟫ = ⟪fg=#b5cea8⟫1⟪⟫;
+⟪fg=#519aba⟫▎⟪fg=#8c8c8c⟫4 ⟪fg=#569cd6⟫let⟪⟫ ⟪fg=#9cdcfe⟫pears⟪⟫ = ⟪fg=#9cdcfe⟫pear⟪⟫ + ⟪fg=#b5cea8⟫1⟪⟫;
+
+
+
+⟪fg=#8c8c8c bg=#252526⟫ → ⟪bg=#252526⟫pear⟪bg=#252526 r⟫ ⟪bg=#252526⟫                    ⟪fg=#d4d4d4 bg=#252526 b⟫ ⏎⟪fg=#8c8c8c bg=#252526⟫ replace⟪fg=#d4d4d4 bg=#252526 b⟫   alt+a⟪fg=#8c8c8c bg=#252526⟫ all⟪⟫
+⟪fg=#8c8c8c bg=#252526⟫ ⌕ apple 0/0  Replaced 3⟪bg=#252526⟫                          ⟪⟫

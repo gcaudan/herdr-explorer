@@ -1,0 +1,8 @@
+# Go to file: nothing matches, then backspace back to one.
+size 60 12
+file alpha.txt a\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start
+text zq
+keys backspace backspace
+text zz

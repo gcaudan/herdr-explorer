@@ -1,0 +1,14 @@
+# The Diff view (d): the file's changes since HEAD, inline, the lines added and removed in the header.
+size 80 14
+file a.txt one\nthree\nfour\nfive\nsix\n
+git init -q -b main
+git add a.txt
+git commit -q -m first
+file a.txt one\ntwo\nthree\nfive\nsix!\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/a.txt
+env EXPLORER_ROOT=$ROOT/work
+env EXPLORER_TAB=t1
+start
+keys d
+until 1500

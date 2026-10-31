@@ -1,0 +1,11 @@
+size 50x10
+⟪bg=#252526 b⟫ code.js⟪fg=#8c8c8c bg=#252526⟫  5 lines · 86 B⟪bg=#252526⟫          ⟪fg=#d4d4d4 bg=#04395e b⟫ File ⟪fg=#8c8c8c bg=#3a3a3e⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+⟪fg=#8c8c8c⟫ 1 ⟪fg=#6a9955⟫// top⟪⟫
+⟪fg=#8c8c8c⟫ 2 ⟪fg=#569cd6⟫const⟪⟫ ⟪fg=#9cdcfe⟫answer⟪⟫ = ⟪fg=#b5cea8⟫42⟪⟫;
+⟪fg=#8c8c8c⟫ 3 ⟪fg=#9cdcfe⟫console⟪⟫.⟪fg=#dcdcaa⟫log⟪⟫(⟪fg=#9cdcfe⟫answer⟪⟫);
+⟪fg=#8c8c8c⟫ 4 ⟪fg=#569cd6⟫let⟪⟫ ⟪fg=#9cdcfe⟫apple⟪⟫ = ⟪fg=#b5cea8⟫1⟪⟫;
+⟪fg=#8c8c8c⟫ 5 ⟪fg=#569cd6⟫let⟪⟫ ⟪fg=#9cdcfe⟫apples⟪⟫ = ⟪fg=#9cdcfe⟫apple⟪⟫ + ⟪fg=#b5cea8⟫1⟪⟫;
+
+
+
+⟪fg=#8dc149 bg=#252526⟫ ✓ ⟪bg=#252526⟫Saved code.js · LF                             ⟪⟫

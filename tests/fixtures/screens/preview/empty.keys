@@ -1,0 +1,6 @@
+# An empty file.
+size 50 10
+file empty.txt
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/empty.txt
+start

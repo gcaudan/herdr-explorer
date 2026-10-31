@@ -1,0 +1,8 @@
+# Rendered Markdown: every note at the top, with its lines.
+size 60 14
+file a.md # Head\n\nSome text.\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+state notes-t1.json [{"file":"$ROOT/work/a.md","from":2,"to":3,"kind":"fix","text":"rename these","t":1},{"file":"$ROOT/work/a.md","from":0,"to":0,"kind":"","text":"whole file remark","t":2},{"file":"$ROOT/work/a.md","from":5,"to":5,"kind":"","text":"gone line","t":3,"stale":true},{"file":"$ROOT/work/other.txt","from":1,"to":1,"kind":"nit","text":"elsewhere","t":4}]
+env EXPLORER_FILE=$ROOT/work/a.md
+env EXPLORER_TAB=t1
+start

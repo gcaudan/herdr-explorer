@@ -1,0 +1,10 @@
+# The file changed on disk while edited without changes: read again, the edit going on.
+size 50 10
+file code.js const answer = 42;\nconsole.log(answer);\nlet apple = 1;\nlet apples = apple + 1;\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/code.js
+start
+keys i
+file code.js new text\nsecond line\n
+wait 600
+text Z

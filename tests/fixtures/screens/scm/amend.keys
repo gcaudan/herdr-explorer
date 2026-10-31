@@ -1,0 +1,31 @@
+# alt+a: amend, with the last message.
+size 120 20
+env GIT_AUTHOR_NAME=Ada
+env GIT_AUTHOR_EMAIL=ada@example.com
+env GIT_COMMITTER_NAME=Ada
+env GIT_COMMITTER_EMAIL=ada@example.com
+env GIT_AUTHOR_DATE=2099-01-02T03:04:05Z
+env GIT_COMMITTER_DATE=2099-01-02T03:04:05Z
+file a.txt one\nthree\n
+file b.txt alpha\n
+git init -q -b main
+git add a.txt b.txt
+git commit -q -m first
+git checkout -q -b feat
+file c.txt cee\n
+git add c.txt
+git commit -q -m feature
+git checkout -q main
+file a.txt one\ntwo\nthree\n
+git commit -q -a -m second
+git tag v1
+file b.txt alpha\nbeta\n
+git stash push -q -m wip
+file a.txt one\ntwo\nthree\nfour\n
+file new.txt new\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+herdr pane get {"result":{"pane":{"pane_id":"w1:p2","tab_id":"t1","workspace_id":"w1"}}}
+start
+wait 800
+keys alt+a
+wait 800

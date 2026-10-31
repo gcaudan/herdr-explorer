@@ -1,0 +1,14 @@
+# The edit mode: i, typing (lines added and changed in the gutter), the cursor's line and column, an undo.
+size 50 10
+file code.js const answer = 42;\nconsole.log(answer);\nlet apple = 1;\nlet apples = apple + 1;\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/code.js
+start
+keys i
+keys end
+text  // the answer
+keys enter
+text x
+keys down down enter
+text y
+keys ctrl+z

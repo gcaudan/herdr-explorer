@@ -1,0 +1,17 @@
+size 60x16
+⟪b⟫ ⟪fg=#8c8c8c⟫╭ README.md ─────────────╮⟪⟫                               ⟪fg=#8c8c8c⟫⚙ ⟪⟫
+⟪fg=#8c8c8c⟫ │⟪bg=#04395e⟫ Preview⟪fg=#8c8c8c bg=#04395e⟫  p⟪bg=#04395e⟫             ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#8c8c8c⟫ │⟪bg=#37373d⟫ Open in editor⟪fg=#8c8c8c bg=#37373d⟫  e⟪bg=#37373d⟫      ⟪fg=#8c8c8c⟫│⟪⟫
+⟪fg=#8c8c8c bg=#04395e⟫ ⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ Open in app⟪fg=#8c8c8c bg=#37373d⟫  o⟪bg=#37373d⟫         ⟪fg=#8c8c8c⟫│⟪bg=#04395e⟫                                 ⟪⟫
+ ⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ Edit in terminal⟪fg=#8c8c8c bg=#37373d⟫  E⟪bg=#37373d⟫    ⟪fg=#8c8c8c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ Insert into terminal   ⟪fg=#8c8c8c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫├────────────────────────┤⟪⟫
+ ⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ New file…⟪fg=#8c8c8c bg=#37373d⟫  n⟪bg=#37373d⟫           ⟪fg=#8c8c8c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ New folder…⟪fg=#8c8c8c bg=#37373d⟫  N⟪bg=#37373d⟫         ⟪fg=#8c8c8c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ Rename…⟪fg=#8c8c8c bg=#37373d⟫  R⟪bg=#37373d⟫             ⟪fg=#8c8c8c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ Duplicate              ⟪fg=#8c8c8c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫│⟪fg=#cc3e44 bg=#37373d⟫ Delete…⟪fg=#8c8c8c bg=#37373d⟫  delete⟪bg=#37373d⟫        ⟪fg=#8c8c8c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫├────────────────────────┤⟪⟫
+ ⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ Open folder            ⟪fg=#8c8c8c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫│⟪bg=#37373d⟫ Copy path⟪fg=#8c8c8c bg=#37373d⟫  y⟪bg=#37373d⟫           ⟪fg=#8c8c8c⟫│⟪⟫
+ ⟪fg=#8c8c8c⟫╰──────────────────────▾─╯⟪⟫

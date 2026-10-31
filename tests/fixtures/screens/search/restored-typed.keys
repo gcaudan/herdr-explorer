@@ -1,0 +1,10 @@
+# A restored search: typing replaces it, backspace empties it; saved on exit.
+size 70 12
+file a.txt hello world\nbye\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+state search.json {"files":"al","content":"hello","include":"*.txt","exclude":"","case":true,"word":false,"regex":false}
+start
+text b
+keys ctrl+f backspace
+text by
+wait 300

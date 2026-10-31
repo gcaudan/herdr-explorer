@@ -1,0 +1,11 @@
+size 60x10
+⟪bg=#252526 b⟫ a.txt⟪fg=#8c8c8c bg=#252526⟫  4 lines · 19 B⟪bg=#252526⟫                      ⟪fg=#d4d4d4 bg=#04395e b⟫ File ⟪fg=#8c8c8c bg=#3a3a3e⟫ Diff ⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ ⚙ ⟪⟫
+⟪fg=#8c8c8c⟫ 1 ⟪⟫one
+⟪fg=#cbcb41 bg=#37373d b⟫ 2 ⟪bg=#37373d⟫two                                                      ⟪⟫
+⟪fg=#8c8c8c⟫   ⟪⟫  ⟪fg=#cbcb41⟫✎ check this⟪⟫
+⟪fg=#8c8c8c⟫ 3 ⟪⟫three
+⟪fg=#8c8c8c⟫ 4 ⟪⟫four
+
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ A⟪fg=#8c8c8c bg=#252526⟫ send 1 note⟪fg=#d4d4d4 bg=#252526 b⟫   /⟪fg=#8c8c8c bg=#252526⟫ find⟪fg=#d4d4d4 bg=#252526 b⟫   a⟪fg=#8c8c8c bg=#252526⟫ note⟪fg=#d4d4d4 bg=#252526 b⟫   e⟪fg=#8c8c8c bg=#252526⟫ editor⟪fg=#d4d4d4 bg=#252526 b⟫   o⟪fg=#8c8c8c bg=#252526⟫ app         ⟪⟫

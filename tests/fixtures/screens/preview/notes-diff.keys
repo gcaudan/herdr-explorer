@@ -1,0 +1,15 @@
+# a in the Diff view: a note on the lines of the hunk n went to.
+size 60 12
+file a.txt one\ntwo\nthree\nfour\n
+git init -q
+git add a.txt
+git commit -q -m init
+file a.txt one\nTWO\nthree\nfour\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/a.txt
+env EXPLORER_VIEW=diff
+env EXPLORER_TAB=t1
+start
+keys n a
+text fix it
+keys enter

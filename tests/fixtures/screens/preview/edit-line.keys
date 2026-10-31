@@ -1,0 +1,11 @@
+# ctrl+g: the line asked for, with line numbers on; then the selection made with shift.
+size 50 10
+file code.js const answer = 42;\nconsole.log(answer);\nlet apple = 1;\nlet apples = apple + 1;\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false,"lineNumbers":true}
+env EXPLORER_FILE=$ROOT/work/code.js
+start
+keys i
+keys ctrl+g
+text 3
+keys enter
+text \e[1;2C\e[1;2C\e[1;2C

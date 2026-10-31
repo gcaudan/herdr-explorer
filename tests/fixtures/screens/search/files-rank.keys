@@ -1,0 +1,11 @@
+# Go to file: ranked by score (file name, segment and camel-case starts), then length, then path.
+size 70 14
+file src/fooBar.js a\n
+file foo/bar.js b\n
+file fb.txt c\n
+file deep/folder/very/long/path/to/some/f_b.md d\n
+file Fab/FB.txt e\n
+file x/ä/fb-é.txt f\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+start
+text fb

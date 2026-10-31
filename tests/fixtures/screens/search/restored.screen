@@ -1,0 +1,13 @@
+size 70x12
+⟪bg=#252526⟫ ⟪fg=#8c8c8c bg=#252526⟫ Go to file ⟪bg=#252526⟫ ⟪fg=#ffffff bg=#04395e b⟫ Search in files ⟪bg=#252526⟫                                  ⟪fg=#8c8c8c bg=#252526⟫work⟪bg=#252526⟫ ⟪⟫
+⟪fg=#8c8c8c⟫ ⌕ ⟪⟫hello                                        ⟪fg=#ffffff bg=#04395e⟫ Aa ⟪fg=#8c8c8c bg=#2d2d2d⟫ ab  .* ⟪⟫ ⟪fg=#8c8c8c bg=#2d2d2d⟫ hidden ⟪⟫
+⟪fg=#8c8c8c⟫   in ⟪bg=#3c3c3c⟫ ⟪bg=#04395e⟫*.txt⟪bg=#3c3c3c r⟫ ⟪bg=#3c3c3c⟫                    ⟪⟫ ⟪fg=#8c8c8c⟫  not in ⟪bg=#3c3c3c⟫                        ⟪⟫
+⟪fg=#8c8c8c⟫── 2 results in 2 files⟪⟫ ⟪fg=#8c8c8c⟫──────────────────────────────────────────────⟪⟫
+⟪fg=#8c8c8c⟫ ▾ ⟪b⟫a.txt⟪fg=#8c8c8c⟫  ⟪⟫                                                         ⟪fg=#8c8c8c⟫ 1 ⟪⟫
+⟪fg=#8c8c8c bg=#04395e⟫       1  ⟪fg=#ffffff bg=#784614⟫hello⟪bg=#04395e⟫ world                                                 ⟪⟫
+⟪fg=#8c8c8c⟫ ▾ ⟪b⟫alpha.txt⟪fg=#8c8c8c⟫  ⟪⟫                                                     ⟪fg=#8c8c8c⟫ 1 ⟪⟫
+⟪fg=#8c8c8c⟫       1  ⟪fg=#ffffff bg=#784614⟫hello⟪⟫
+
+
+
+⟪fg=#d4d4d4 bg=#252526 b⟫ ↵⟪fg=#8c8c8c bg=#252526⟫ open⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+p⟪fg=#8c8c8c bg=#252526⟫ go to file⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+e⟪fg=#8c8c8c bg=#252526⟫ editor⟪fg=#d4d4d4 bg=#252526 b⟫   ctrl+o⟪fg=#8c8c8c bg=#252526⟫ app⟪bg=#252526⟫              ⟪⟫

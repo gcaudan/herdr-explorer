@@ -1,0 +1,10 @@
+# ctrl+f: the matches marked, the one selected counted; enter to the next.
+size 50 10
+file code.js const answer = 42;\nconsole.log(answer);\nlet apple = 1;\nlet apples = apple + 1;\n
+state settings.json {"glyphs":"unicode","theme":"dark","updateCheck":false}
+env EXPLORER_FILE=$ROOT/work/code.js
+start
+keys i
+keys ctrl+f
+text apple
+keys enter
