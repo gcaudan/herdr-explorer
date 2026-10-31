@@ -1298,7 +1298,7 @@
    "after": {
     "keys.json": "null"
    },
-   "throws": "keys.json is null, not an object"
+   "out": "$ROOT/keys.json"
   },
   {
    "fn": "keysTemplate",
@@ -1326,7 +1326,7 @@
    "after": {
     "keys.json": "5"
    },
-   "throws": "keys.json is a number, not an object: 5"
+   "out": "$ROOT/keys.json"
   },
   {
    "fn": "keysTemplate",
@@ -1354,7 +1354,7 @@
    "after": {
     "keys.json": "\"s\""
    },
-   "throws": "keys.json is a string, not an object: s"
+   "out": "$ROOT/keys.json"
   },
   {
    "fn": "keysTemplate",
@@ -1490,7 +1490,7 @@
    "after": {
     "keys.json": "null"
    },
-   "throws": "keys.json is null, not an object"
+   "out": false
   },
   {
    "fn": "writeKeys",
@@ -1513,7 +1513,7 @@
    "after": {
     "keys.json": "{\"explorer\":null,\"b\":null}"
    },
-   "throws": "keys.json: the b entry is null"
+   "out": false
   },
   {
    "fn": "writeKeys",

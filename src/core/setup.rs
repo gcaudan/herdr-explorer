@@ -40,10 +40,15 @@ fn command_of(action: &str) -> String {
     format!("{}.{action}\"", exec::plugin())
 }
 
-/// Whether the config binds one of the plugin's actions.
+/// Whether the config binds one of the plugin's actions, on a line not commented out.
 pub fn bound() -> bool {
     let text = config_file().and_then(|f| std::fs::read_to_string(f).ok()).unwrap_or_default();
-    KEYS.iter().any(|(_, action, _)| text.contains(&command_of(action)))
+    KEYS.iter().any(|(_, action, _)| binds(&text, action))
+}
+
+/// Whether a line of the config, not commented out, binds the action.
+fn binds(text: &str, action: &str) -> bool {
+    text.lines().any(|l| !l.trim_start().starts_with('#') && l.contains(&command_of(action)))
 }
 
 /// The keys the config binds to each of the plugin's actions ([[keys.command]] blocks): (key, action), in the
@@ -115,7 +120,7 @@ fn plan(text: &str, shown: &str) -> Result<(String, Vec<String>), &'static str> 
     let mut add = String::new();
     let mut done = Vec::new();
     for (key, action, description) in KEYS {
-        if text.contains(&command_of(action)) {
+        if binds(text, action) {
             continue;
         }
         // herdr reads keys without regard to case: Prefix+F is prefix+f.
@@ -274,6 +279,14 @@ mod tests {
         assert!(!add.contains("prefix+f") && add.contains("prefix+a") && add.contains("prefix+d"), "{add}");
         assert!(done[0].contains("prefix+f already bound in c, skipped"), "{done:?}");
         assert_eq!(summary(&done), "Key bindings added; prefix+f already bound: skipped");
+    }
+
+    #[test]
+    fn a_binding_commented_out_binds_nothing() {
+        let text = "# [[keys.command]]\n# key = \"prefix+f\"\n  # command = \"gcaudan.explorer.toggle\"\n";
+        assert!(!binds(text, "toggle"));
+        assert!(binds("command = \"gcaudan.explorer.toggle\" # mine\n", "toggle"));
+        assert!(plan(text, "c").unwrap().0.contains("prefix+f"));
     }
 
     #[test]

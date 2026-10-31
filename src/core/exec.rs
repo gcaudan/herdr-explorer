@@ -1291,23 +1291,16 @@ fn read_all_keys(file: &str) -> Result<Value, bool> {
     }
 }
 
-/// value set as the pane's entry of what keys.json held: an array takes it as a property; null or another value is a panic,
-/// and the pane ends.
-fn assign(all: Value, pane: &str, value: Value) -> Value {
+/// value set as the pane's entry of what keys.json held: an array takes it as a property; None for null or another
+/// value, which the file's owner fixes (the file is left alone).
+fn assign(all: Value, pane: &str, value: Value) -> Option<Value> {
     let mut fields = match all {
         Value::Obj(f) => f,
         Value::Arr(_) => spread(&all),
-        other => {
-            let kind = match other {
-                Value::Num(_) => "number",
-                Value::Str(_) => "string",
-                _ => "boolean",
-            };
-            panic!("keys.json is a {kind}, not an object: {}", json::text(&other))
-        }
+        _ => return None,
     };
     json::insert(&mut fields, pane.to_string(), value);
-    Value::Obj(fields)
+    Some(Value::Obj(fields))
 }
 
 /// The file with every action of the pane and its current keys, created or completed so that the user edits a full
@@ -1319,16 +1312,15 @@ pub fn keys_template(pane: &str, defaults: &Bindings) -> Option<String> {
         Err(true) => Value::Obj(Vec::new()),
         Err(false) => return Some(file),
     };
-    if all.is_null() {
-        panic!("keys.json is null, not an object");
-    }
     let own = member(&all, pane);
     let keys = merge(&bindings_value(defaults), if own.truthy() { &own } else { &Value::Null });
     let present = matches!(&all, Value::Obj(f) if f.iter().any(|(k, _)| k == pane));
     if present && json::stringify(&own) == json::stringify(&keys) {
         return Some(file);
     }
-    save_keys(&assign(all, pane, keys));
+    if let Some(all) = assign(all, pane, keys) {
+        save_keys(&all);
+    }
     Some(file)
 }
 
@@ -1341,9 +1333,6 @@ pub fn write_keys(pane: &str, changes: &[(String, Option<Value>)]) -> bool {
         Err(true) => Value::Obj(Vec::new()),
         Err(false) => return false,
     };
-    if all.is_null() {
-        panic!("keys.json is null, not an object");
-    }
     let mut own = Value::Obj(spread(&member(&all, pane)));
     for (action, keys) in changes {
         match keys {
@@ -1353,13 +1342,16 @@ pub fn write_keys(pane: &str, changes: &[(String, Option<Value>)]) -> bool {
             Some(k) => own.set(action, k.clone()),
         }
     }
-    save_keys(&assign(all, pane, own))
+    assign(all, pane, own).is_some_and(|all| save_keys(&all))
 }
 
 /// keys.json written with one action per line, through a temporary file renamed, so that a pane never reads it
-/// half-written. A pane's entry that is null is a panic, and the pane ends.
+/// half-written. A pane's entry that is null leaves the file alone.
 fn save_keys(all: &Value) -> bool {
     let Some(file) = keys_file() else { return false };
+    if spread(all).iter().any(|(_, actions)| actions.is_null()) {
+        return false;
+    }
     let quote = |s: &str| {
         let mut q = String::new();
         json::quote(&mut q, s);
@@ -1368,9 +1360,6 @@ fn save_keys(all: &Value) -> bool {
     let lines: Vec<String> = spread(all)
         .iter()
         .map(|(p, actions)| {
-            if actions.is_null() {
-                panic!("keys.json: the {p} entry is null");
-            }
             let body: Vec<String> =
                 spread(actions).iter().map(|(a, k)| format!("    {}: {}", quote(a), json::stringify(k))).collect();
             format!("  {}: {{\n{}\n  }}", quote(p), body.join(",\n"))
