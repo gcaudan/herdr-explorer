@@ -154,6 +154,7 @@
 | `<theme>: not found`                             | the icon theme was uninstalled. Choose another one                                 |
 | `<key>: already bound`, `<key> taken from <action>` | (Key bindings) the key already had that action, or moved from another one |
 | `No config folder`, `Cannot write keys.json`     | herdr gave no config folder, or `keys.json` cannot be written (fix or delete an unreadable file) |
+| `Cannot write keys.json: <why>`, `keys.json not completed: <why>` | `keys.json` is not an object, or one of its entries is not: fix it by hand, the plugin leaves it alone |
 | `Action failed`                                  | unexpected error in an action                                                      |
 | `File deleted`, `Folder`, `Not a regular file`, `Cannot read: <code>` | (Preview) the file is gone, is a folder, a pipe or device, or unreadable |
 | `Link to a network share: not opened` | (Preview) the file is a symbolic link (or sits behind one) to `\\host\share`, never followed, see [Security](../SECURITY.md#windows) |

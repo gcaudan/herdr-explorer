@@ -973,7 +973,10 @@ impl Explorer {
             .map(|(a, k)| (a, k.map(|k| Value::Arr(k.into_iter().map(Value::Str).collect()))))
             .collect();
         if !exec::write_keys("explorer", &changes) {
-            return Some("Cannot write keys.json".into());
+            return Some(
+                exec::keys_fault("explorer")
+                    .map_or("Cannot write keys.json".into(), |why| format!("Cannot write keys.json: {why}")),
+            );
         }
         self.keys = exec::read_keys("explorer", &self.defaults);
         exec::keys_problem("explorer")
@@ -1127,7 +1130,10 @@ impl Explorer {
                 } else {
                     let pane = self.pane.clone();
                     return self.run_action(|ex| match exec::keys_template("explorer", &ex.defaults) {
-                        Some(file) => later(move || actions::edit(&file, &pane, None)),
+                        Some(file) => {
+                            let why = exec::keys_fault("explorer").map(|why| format!("keys.json not completed: {why}"));
+                            later(move || actions::edit(&file, &pane, None).or(why))
+                        }
                         None => Act::Now(Some("No config folder".into())),
                     });
                 }

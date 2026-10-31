@@ -1291,6 +1291,27 @@ fn read_all_keys(file: &str) -> Result<Value, bool> {
     }
 }
 
+/// Why keys.json cannot be written for the pane without losing what it holds: it is not an object, or another pane's
+/// entry is not one, or the pane's own entry is a string, a number or true (null and false are replaced).
+fn unwritable(all: &Value, pane: &str) -> Option<String> {
+    if !matches!(all, Value::Obj(_) | Value::Arr(_)) {
+        return Some("keys.json is not an object".into());
+    }
+    spread(all).iter().find_map(|(p, entry)| {
+        let bad = if p == pane {
+            matches!(entry, Value::Str(_) | Value::Num(_) | Value::Bool(true))
+        } else {
+            !matches!(entry, Value::Obj(_))
+        };
+        bad.then(|| format!("the {p} entry is not an object"))
+    })
+}
+
+/// Why keys.json cannot be written for the pane, for the pane to show; None when it can, or is missing or unreadable.
+pub fn keys_fault(pane: &str) -> Option<String> {
+    unwritable(&read_all_keys(&keys_file()?).ok()?, pane)
+}
+
 /// value set as the pane's entry of what keys.json held: an array takes it as a property; None for null or another
 /// value, which the file's owner fixes (the file is left alone).
 fn assign(all: Value, pane: &str, value: Value) -> Option<Value> {
@@ -1312,6 +1333,9 @@ pub fn keys_template(pane: &str, defaults: &Bindings) -> Option<String> {
         Err(true) => Value::Obj(Vec::new()),
         Err(false) => return Some(file),
     };
+    if unwritable(&all, pane).is_some() {
+        return Some(file);
+    }
     let own = member(&all, pane);
     let keys = merge(&bindings_value(defaults), if own.truthy() { &own } else { &Value::Null });
     let present = matches!(&all, Value::Obj(f) if f.iter().any(|(k, _)| k == pane));
@@ -1333,6 +1357,9 @@ pub fn write_keys(pane: &str, changes: &[(String, Option<Value>)]) -> bool {
         Err(true) => Value::Obj(Vec::new()),
         Err(false) => return false,
     };
+    if unwritable(&all, pane).is_some() {
+        return false;
+    }
     let mut own = Value::Obj(spread(&member(&all, pane)));
     for (action, keys) in changes {
         match keys {
@@ -1346,12 +1373,9 @@ pub fn write_keys(pane: &str, changes: &[(String, Option<Value>)]) -> bool {
 }
 
 /// keys.json written with one action per line, through a temporary file renamed, so that a pane never reads it
-/// half-written. A pane's entry that is null leaves the file alone.
+/// half-written.
 fn save_keys(all: &Value) -> bool {
     let Some(file) = keys_file() else { return false };
-    if spread(all).iter().any(|(_, actions)| actions.is_null()) {
-        return false;
-    }
     let quote = |s: &str| {
         let mut q = String::new();
         json::quote(&mut q, s);

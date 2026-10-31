@@ -1240,7 +1240,7 @@
     "keys.json": "[1]"
    },
    "after": {
-    "keys.json": "{\n  \"0\": {\n\n  },\n  \"explorer\": {\n    \"newFile\": [\"a\"],\n    \"del\": [\"d\",\"delete\"],\n    \"open\": [\"enter\"]\n  }\n}\n"
+    "keys.json": "[1]"
    },
    "out": "$ROOT/keys.json"
   },
@@ -1268,7 +1268,7 @@
     "keys.json": "{\"explorer\":{\"zz\":1},\"other\":\"ab\"}"
    },
    "after": {
-    "keys.json": "{\n  \"explorer\": {\n    \"newFile\": [\"a\"],\n    \"del\": [\"d\",\"delete\"],\n    \"open\": [\"enter\"],\n    \"zz\": 1\n  },\n  \"other\": {\n    \"0\": \"a\",\n    \"1\": \"b\"\n  }\n}\n"
+    "keys.json": "{\"explorer\":{\"zz\":1},\"other\":\"ab\"}"
    },
    "out": "$ROOT/keys.json"
   },
