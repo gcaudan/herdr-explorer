@@ -1,7 +1,9 @@
 //! A mutation bench for the decoders and parsers: the inputs of the module fixtures, altered at random (bits flipped,
 //! bytes cut, repeated, inserted or spliced from another input), go through each of them. A panic, or a call longer
 //! than 2 s, fails the test and leaves the input in target/mutate/. `MUTATE_ROUNDS` sets the calls per target (200 by
-//! default, more for the nightly pass of CI); `MUTATE_SEED` and the same rounds replay a run.
+//! default, more for the nightly pass of CI); `MUTATE_SEED` and the same rounds replay a run. The nightly pass is a
+//! release build with overflow checks (`--release`, `CARGO_PROFILE_RELEASE_OVERFLOW_CHECKS=true`): a replay of its
+//! seed needs the same build, as the 2 s limit times it.
 
 use herdr_explorer::codec::{base64, inflate};
 use herdr_explorer::core::regex::Regex;

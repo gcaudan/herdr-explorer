@@ -165,11 +165,11 @@ pub fn parse(text: &str) -> Diff {
                 cr: l.len() != raw.len(),
             });
             if sign != '+' {
-                o += 1;
+                o = o.saturating_add(1);
                 old_left -= 1;
             }
             if sign != '-' {
-                n += 1;
+                n = n.saturating_add(1);
                 new_left -= 1;
             }
             if sign == '+' {

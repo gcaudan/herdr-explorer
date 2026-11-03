@@ -156,7 +156,7 @@ PowerShell 5.1's parser) parse. Each night it runs a long pass of the mutation b
 | `hook.rs`, `launch.rs` | the hook and peek run as the binary, and the launcher's restarts |
 | `watch.rs` | the folder watcher |
 | `worker.rs` | a worker job that panics: its fallback result is still sent, in a binary of its own |
-| `mutate.rs` | the decoders and parsers (images, zlib, JSON, base64, diffs, git output, Markdown, highlighting, regular expressions) on the fixtures' inputs altered at random: no panic, no call over 2 s. `MUTATE_ROUNDS` sets the calls per target, `MUTATE_SEED` replays a run |
+| `mutate.rs` | the decoders and parsers (images, zlib, JSON, base64, diffs, git output, Markdown, highlighting, regular expressions) on the fixtures' inputs altered at random: no panic, no call over 2 s. `MUTATE_ROUNDS` sets the calls per target, `MUTATE_SEED` replays a run. The nightly pass is a release build with overflow checks (`cargo test --release --test mutate`, `CARGO_PROFILE_RELEASE_OVERFLOW_CHECKS=true`), which a replay of its seed needs too |
 | `fetch_bin.rs` | `scripts/fetch-bin.sh` against a local release, without the network |
 
 The module fixtures and the screen captures were recorded from the JS before the switch to Rust and are not

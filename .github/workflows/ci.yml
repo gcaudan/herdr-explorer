@@ -56,14 +56,17 @@ jobs:
           }
           if ($failed) { exit 1 }
 
-  # A new seed each night: a failure gives the seed and rounds that replay it (MUTATE_SEED, MUTATE_ROUNDS).
+  # A new seed each night: a failure gives the seed and rounds that replay it (MUTATE_SEED, MUTATE_ROUNDS). Built
+  # as released, so that the 2 s limit times the binary users run (a debug build decodes a large image 15 times
+  # slower), with the overflow checks of a debug build kept.
   mutate:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: rustup toolchain install
-      - run: cargo test --test mutate
+      - run: cargo test --release --test mutate
         env:
+          CARGO_PROFILE_RELEASE_OVERFLOW_CHECKS: 'true'
           MUTATE_ROUNDS: 20000
           MUTATE_SEED: ${{ github.run_id }}

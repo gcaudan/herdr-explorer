@@ -232,6 +232,24 @@ fn a_note_after_a_removed_line_keeps_it_paired_with_the_added_one() {
 }
 
 #[test]
+fn a_hunk_starting_past_i64_keeps_its_lines_at_the_last_number() {
+    // A start past i64 saturates (diff::head); the lines after it stay there instead of overflowing (the nightly
+    // mutation bench, seed 41435682775).
+    let text = [
+        "diff --git a/x b/x",
+        "--- a/x",
+        "+++ b/x",
+        "@@ -99999999999999999999,2 +99999999999999999999,2 @@",
+        " a",
+        " b",
+        "",
+    ];
+    let lines = &diff::parse(&text.join("\n")).files[0].hunks[0].lines;
+    let at: Vec<(Option<i64>, Option<i64>)> = lines.iter().map(|l| (l.old, l.new)).collect();
+    assert_eq!(at, [(Some(i64::MAX), Some(i64::MAX)); 2]);
+}
+
+#[test]
 fn diff_rows_wrap_long_lines_or_scroll_them_from_a_column() {
     let long = "abcdefghij".repeat(6);
     let (del, add) = (format!("-{long}"), format!("+{long}!"));
