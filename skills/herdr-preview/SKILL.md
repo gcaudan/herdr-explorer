@@ -20,8 +20,7 @@ keeps typing to you.
 3. **Run it**, with the narrowest places that match what you talk about (see [Places](#places)):
 
    ```sh
-   manifest=$(herdr plugin list --plugin gcaudan.explorer --json | grep -o '"manifest_path":"[^"]*"' | cut -d'"' -f4 | sed -e 's/[\][\]/\\/g' -e 's/^[\][\]?[\]//')
-   peek="${manifest%herdr-plugin.toml}bin/herdr-explorer"
+   peek=$(herdr plugin list --plugin gcaudan.explorer --json | python -c 'import json,sys,pathlib;p=json.load(sys.stdin)["result"]["plugins"][0]["manifest_path"];b=chr(92);p=p[4:] if p[:4]==b+b+"?"+b else p;print((pathlib.Path(p).parent/"bin"/"herdr-explorer").as_posix())')
    "$peek" peek src/app.js:12-14,42:5-18
    "$peek" peek --diff src/app.js:40-52
    ```
