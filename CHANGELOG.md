@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.1](https://github.com/gcaudan/herdr-explorer/compare/v1.0.0...v1.0.1) (2026-11-03)
+
+
+### Fixes
+
+* **diff:** saturate line numbers of a hunk starting past i64 ([#37](https://github.com/gcaudan/herdr-explorer/issues/37)) ([4cbe14b](https://github.com/gcaudan/herdr-explorer/commit/4cbe14b92e3e9f0428af95eeb3df4b42b1d30e9b))
+* **fetch-bin:** hash with .NET, not Get-FileHash, missing when herdr starts from pwsh ([#32](https://github.com/gcaudan/herdr-explorer/issues/32)) ([ad41ad3](https://github.com/gcaudan/herdr-explorer/commit/ad41ad37dd1da9212de2d8cd7c069caf68c736fb))
+* **herdr-preview:** resolve the peek binary path with a python one-liner ([#36](https://github.com/gcaudan/herdr-explorer/issues/36)) ([ee92356](https://github.com/gcaudan/herdr-explorer/commit/ee923565854ffa0fe8a8421adad26625e67dc3ac))
+* keep the explorer's width when a pane is stacked in its column ([#31](https://github.com/gcaudan/herdr-explorer/issues/31)) ([44feb40](https://github.com/gcaudan/herdr-explorer/commit/44feb406e4f56b60a2912fecdd5ace23b0c1501c))
+* never close a pane the user renamed with one of the plugin's labels ([#33](https://github.com/gcaudan/herdr-explorer/issues/33)) ([2526323](https://github.com/gcaudan/herdr-explorer/commit/25263234a219fe1490c6ab58bb48b2abb3b8de83))
+
 ## [1.0.0](https://github.com/gcaudan/herdr-explorer/compare/v0.8.0...v1.0.0) (2026-10-31)
 
 
