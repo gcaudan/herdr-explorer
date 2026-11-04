@@ -83,10 +83,8 @@ pub fn run(args: Vec<OsString>) -> ExitCode {
             // The explorer's and the preview's first process stays as their launcher; the child runs the pane. The
             // other panes are short-lived and run without one.
             let launched = matches!(id, "tree" | "preview");
-            // The launcher ends without the exit's work: the token's report it made is not waited for, as its pane
-            // ends with it (a child that could not start).
             if launched && let Some(code) = crate::launch::launch(id) {
-                return ExitCode::from(u8::try_from(code).unwrap_or(1));
+                return done(code);
             }
             // A short-lived pane is its own first process, which reports the pane's token, and whose folder herdr
             // reads: the root's, or the editor's file's without one. The launcher's child keeps the folder its
@@ -100,7 +98,7 @@ pub fn run(args: Vec<OsString>) -> ExitCode {
                     _ => None,
                 };
                 crate::core::exec::home(file_dir.as_deref());
-                crate::core::exec::report_pane(id);
+                crate::core::exec::report_pane(id, true);
             }
             match cmd {
                 Command::Pane("tree", args) => done(crate::explorer::run(&strings(args))),
