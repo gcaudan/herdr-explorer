@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/gcaudan/herdr-explorer/compare/v1.0.1...v1.1.0) (2026-11-04)
+
+
+### Features
+
+* report a pane token so other plugins can recognise the explorer's panes ([#34](https://github.com/gcaudan/herdr-explorer/issues/34)) ([fd4ad73](https://github.com/gcaudan/herdr-explorer/commit/fd4ad73620629c6463dd5f9b5a130ac47a808f0b))
+
+
+### Fixes
+
+* kill the pane token report at exit and read its setting as the view shows it ([#39](https://github.com/gcaudan/herdr-explorer/issues/39)) ([1c6291b](https://github.com/gcaudan/herdr-explorer/commit/1c6291b60d2d2c79c1673f4e186b97daab8722db))
+
 ## [1.0.1](https://github.com/gcaudan/herdr-explorer/compare/v1.0.0...v1.0.1) (2026-11-03)
 
 
