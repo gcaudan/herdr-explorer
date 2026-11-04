@@ -45,7 +45,7 @@ fn the_launcher_starts_its_child_again_until_it_quits() {
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
     });
-    let code = herdr_explorer::launch::launcher(&child, &[OsString::from("a"), OsString::from("b c")]);
+    let code = herdr_explorer::launch::launcher(&child, &[OsString::from("a"), OsString::from("b c")], None);
     kill.join().unwrap();
 
     assert_eq!(code, 9);

@@ -20,8 +20,9 @@ use std::process::Command;
 use std::sync::mpsc;
 use std::time::Duration;
 
-/// The launcher's exit code, once its last child ended; `None` in the child, which goes on to run the pane.
-pub fn launch() -> Option<i32> {
+/// The launcher's exit code, once its last child ended; `None` in the child, which goes on to run the pane. The
+/// launcher, the pane's first process, reports the pane's token (`exec::report_pane`) for its entrypoint.
+pub fn launch(entrypoint: &str) -> Option<i32> {
     if let Some(ipc) = std::env::var_os("EXPLORER_IPC_FILE") {
         let launcher = std::env::var("EXPLORER_LAUNCHER").ok().and_then(|p| p.parse().ok());
         let lifeline = std::env::var("EXPLORER_LIFELINE").ok().and_then(|p| p.parse().ok());
@@ -38,7 +39,7 @@ pub fn launch() -> Option<i32> {
     exec::home(None);
     let Ok(exe) = std::env::current_exe() else { return Some(1) };
     let args: Vec<OsString> = std::env::args_os().skip(1).collect();
-    Some(launcher(&exe, &args))
+    Some(launcher(&exe, &args, Some(entrypoint)))
 }
 
 /// The launcher gone (killed), the child goes too, instead of running on in a terminal that nobody shows. On Unix, the
@@ -79,8 +80,8 @@ enum Wake {
 /// Runs exe with args until it ends with another code than 75, and gives that code (1 when it was killed by a
 /// signal, or could not start). The ending signals it gets are passed on to the child. Nothing is polled: a thread
 /// waits for the child, the messages' folder is watched, the signals come from their own thread; this one sleeps
-/// until one of them wakes it.
-pub fn launcher(exe: &Path, args: &[OsString]) -> i32 {
+/// until one of them wakes it. The pane's token, given its entrypoint, is reported once the lifeline is made.
+pub fn launcher(exe: &Path, args: &[OsString], entrypoint: Option<&str>) -> i32 {
     // Raw mode from one child to the next, never read here: in line mode, a ctrl+c typed while the next one starts
     // would kill the pane on Unix. Each child restores at exit the mode it found; this one when dropped.
     let _raw = if sys::stdin_is_tty() { sys::RawMode::enable().ok() } else { None };
@@ -110,6 +111,11 @@ pub fn launcher(exe: &Path, args: &[OsString]) -> i32 {
     let lifeline_fd = lifeline.as_ref().map(|(r, _)| std::os::fd::AsRawFd::as_raw_fd(r).to_string());
     #[cfg(not(unix))]
     let lifeline_fd: Option<String> = None;
+    // After the lifeline: its write end is made close-on-exec after the pipe, so a herdr started meanwhile by another
+    // thread could inherit it, and hold a child whose launcher was killed until that herdr ends.
+    if let Some(entrypoint) = entrypoint {
+        exec::report_pane(entrypoint);
+    }
     let ipc = folder.join("ipc");
     // Without a watch (an unsupported system), the messages are read once a second, and at each child's end.
     let watcher = {

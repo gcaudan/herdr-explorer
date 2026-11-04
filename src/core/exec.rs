@@ -757,6 +757,33 @@ pub fn herdr() -> Option<&'static str> {
     HERDR.get_or_init(|| which(&env_var("HERDR_BIN_PATH").unwrap_or_else(|| "herdr".into()))).as_deref()
 }
 
+/// The pane token's name, which other plugins rely on; its value is the pane's entrypoint.
+const PANE_TOKEN: &str = "herdr_explorer";
+
+/// Reports the pane's token (`PANE_TOKEN`) to herdr, once, from the pane's first process. On a thread, as the pane's
+/// first screen does not wait for herdr; waited for at exit (`at_exit`), as a short-lived pane (the editor's) could
+/// end first, but until 1 s after the start at most: a herdr that does not answer does not hold the pane's exit, nor
+/// the work after. A herdr that refuses it changes nothing; anyone can overwrite or clear it, and it does not outlive a
+/// herdr restart: the plugin itself does not read it. None with the paneToken setting off, read here: it applies to
+/// the panes opened afterwards, and leaves the tokens already reported.
+pub fn report_pane(entrypoint: &str) {
+    let Some(pane) = env_var("HERDR_PANE_ID") else { return };
+    if read_settings().get("paneToken") == Some(&Value::Bool(false)) {
+        return;
+    }
+    let token = format!("{PANE_TOKEN}={entrypoint}");
+    let deadline = Instant::now() + Duration::from_secs(1);
+    let (done, ended) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let args = ["pane", "report-metadata", &pane, "--source", &plugin(), "--token", &token];
+        let _ = run(herdr(), &args, &herdr_opts());
+        let _ = done.send(());
+    });
+    at_exit(move || {
+        let _ = ended.recv_timeout(deadline.saturating_duration_since(Instant::now()));
+    });
+}
+
 /// The options of a herdr command: a time limit, as a herdr that never answers (a restart) would hold the caller, and
 /// the calls queued behind it.
 pub fn herdr_opts() -> Opts {
@@ -1030,6 +1057,7 @@ pub fn defaults() -> Value {
         "scmCommand" => "",     // source control tool run by prefix+d ("lazygit", "gitui", "tig"); empty: the plugin's
         "diffLayout" => "",     // diffs 'inline' or 'split' (side by side), or { narrow, wide }; empty: by width
         "updateCheck" => true,  // check GitHub once a day for a newer release
+        "paneToken" => true,    // report_pane: each pane's token for other plugins; new since the JavaScript
         "scmTree" => false,     // source control: the changes as a folder tree rather than a list
         "scmGraphAll" => true,  // source control history: every branch, or only the current one
         "scmListShare" => Value::Obj(Vec::new()), // source control: the list's share of the width beside the diff, by view

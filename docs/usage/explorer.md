@@ -212,7 +212,7 @@ setting. The settings are shared by every explorer. See [configuration.md](../co
 | Preview    | Wrap lines, Line numbers, Changes, Images, Diff layout (auto, split, inline) |
 | Review     | Notes prefix, Source control tool                                   |
 | New tabs   | Open automatically, Dock side (left or right)                       |
-| Advanced   | Key bindings, Check for updates                                     |
+| Advanced   | Pane token, Key bindings, Check for updates                         |
 
 `up`/`down` (and their bound keys, page and first/last included) move, `/` finds a setting, `right`/`l` and
 `enter` give a setting its next value (on **Icon theme**, **Editor**, **Notes prefix**, **Source control tool** and **Key bindings**: open its

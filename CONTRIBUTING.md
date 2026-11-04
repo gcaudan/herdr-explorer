@@ -133,7 +133,7 @@ PowerShell 5.1's parser) parse. Each night it runs a long pass of the mutation b
 | `modules.rs` | the module fixtures recorded from the JS of 0.8.0 (`tests/fixtures/modules/`     ), replayed against the port. `HX_RECORD=1` writes what the port returns instead, for a change of behaviour its commit explains |
 | `screens.rs` | screen captures of the panes in a terminal, started directly, against those recorded from the JS (Linux). Each scenario is a `tests/fixtures/screens/<pane>/<name>.keys` file, whose directives `tests/support/pty.rs` documents; `HX_ONLY=<prefix>` runs only the scenarios whose name starts with it, `HX_RECORD=1` records them again. The version and commit at the foot of the key help are compared as `<build>`, so that a capture does not change with each commit |
 | `shims.rs` | every command of the manifest runs the binary or a script |
-| `smoke.rs` | the manifest's commands as herdr runs them (Linux): each pane started and quit, the hook and peek, the restart on code 75 and the folder announced through `EXPLORER_IPC_FILE` |
+| `smoke.rs` | the manifest's commands as herdr runs them (Linux): each pane started and quit, its token reported once (none with `paneToken` off), the hook and peek, the restart on code 75 and the folder announced through `EXPLORER_IPC_FILE` |
 | `docs.rs` | relative links and `#anchors` of `README.md`, `SECURITY.md`, `CONTRIBUTING.md` and the `.md` files under `docs/` |
 | `layers.rs` | imports follow the layers of [How it works](docs/architecture.md#how-it-works): never up a layer, never from one pane to another. A new top-level module must be added to a layer there |
 | `show.rs` | a commit, stash or tag shown by the preview's Diff view |

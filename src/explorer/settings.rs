@@ -515,6 +515,12 @@ impl Explorer {
                 self.choice("side", &["left", "right"], |v| v),
             ),
             Row::group("ADVANCED"),
+            // First of its group, new since the JavaScript: its recorded scenarios reach Key bindings by end, up.
+            Row::setting(
+                "Pane token",
+                "Tell herdr which of the plugin's panes a pane is, for other plugins. Off: the panes opened afterwards report none.",
+                self.on_off("paneToken"),
+            ),
             Row::setting(
                 "Key bindings",
                 "Change the explorer keys, saved in keys.json.",

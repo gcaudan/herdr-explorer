@@ -107,6 +107,7 @@
     "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
+    "paneToken": true,
     "scmTree": false,
     "scmGraphAll": true,
     "scmListShare": {}
@@ -142,6 +143,7 @@
     "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
+    "paneToken": true,
     "scmTree": false,
     "scmGraphAll": true,
     "scmListShare": {}
@@ -177,6 +179,7 @@
     "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
+    "paneToken": true,
     "scmTree": false,
     "scmGraphAll": true,
     "scmListShare": {}
@@ -214,6 +217,7 @@
     "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
+    "paneToken": true,
     "scmTree": false,
     "scmGraphAll": true,
     "scmListShare": {}
@@ -251,6 +255,7 @@
     "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
+    "paneToken": true,
     "scmTree": false,
     "scmGraphAll": true,
     "scmListShare": {}
@@ -286,6 +291,7 @@
     "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
+    "paneToken": true,
     "scmTree": false,
     "scmGraphAll": true,
     "scmListShare": {}
@@ -321,6 +327,7 @@
     "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
+    "paneToken": true,
     "scmTree": false,
     "scmGraphAll": true,
     "scmListShare": {}
@@ -357,6 +364,7 @@
     "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
+    "paneToken": true,
     "scmTree": false,
     "scmGraphAll": true,
     "scmListShare": {},
@@ -390,6 +398,7 @@
     "scmCommand": "",
     "diffLayout": "",
     "updateCheck": true,
+    "paneToken": true,
     "scmTree": false,
     "scmGraphAll": true,
     "scmListShare": {}

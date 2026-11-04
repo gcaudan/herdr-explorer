@@ -335,6 +335,14 @@ fn each_pane_starts_as_the_manifest_runs_it_and_quits_with_code_0() {
     let starts = s.starts();
     assert_eq!(starts.len(), 6, "{starts:?}");
     assert!(starts.iter().all(|l| l.starts_with("pane ") && l.ends_with("ipc=")), "{starts:?}");
+    // Each pane's token reported once, by its first process: not again by the launcher's child, and before the
+    // editor's pane, short-lived, ends.
+    let calls = std::fs::read_to_string(s.root.join("herdr/calls.log")).unwrap_or_default();
+    for id in ["tree", "preview", "search", "diff", "scm", "edit"] {
+        let report =
+            format!("pane\treport-metadata\tw1:p2\t--source\tgcaudan.explorer\t--token\therdr_explorer={id}\n");
+        assert_eq!(calls.matches(&report).count(), 1, "{id}:\n{calls}");
+    }
 }
 
 #[test]
@@ -405,6 +413,35 @@ fn the_binary_started_by_the_manifest_starts_the_preview_again_on_new_code() {
     p.send(b"q");
     assert_eq!(p.code(), Some(0), "{}", p.screen());
     p.none_left();
+    // The pane's token reported once, by the launcher: not again by the child started on new code.
+    let calls = std::fs::read_to_string(s.root.join("herdr/calls.log")).unwrap_or_default();
+    assert_eq!(calls.matches("\treport-metadata\t").count(), 1, "{calls}");
+}
+
+#[test]
+fn no_pane_reports_its_token_with_the_setting_off() {
+    let s = Setup::new("no-token");
+    std::fs::write(
+        s.root.join("state/settings.json"),
+        r#"{"glyphs":"unicode","theme":"dark","updateCheck":false,"paneToken":false}"#,
+    )
+    .unwrap();
+    let root = s.work.display().to_string();
+    // The explorer by its launcher, the search as its own first process.
+    let mut p = s.start(&s.cmd(&["pane", "tree"]), &[("EXPLORER_ROOT", &root)]);
+    p.until("a.txt");
+    std::thread::sleep(Duration::from_millis(500));
+    p.send(b"q");
+    p.closed_by_herdr(&s);
+    p.none_left();
+    let mut p = s.start(&s.cmd(&["pane", "search"]), &[("EXPLORER_ROOT", &root)]);
+    p.until("a.txt");
+    std::thread::sleep(Duration::from_millis(500));
+    p.send(b"\x1b");
+    assert_eq!(p.code(), Some(0), "{}", p.screen());
+    p.none_left();
+    let calls = std::fs::read_to_string(s.root.join("herdr/calls.log")).unwrap_or_default();
+    assert!(!calls.contains("\treport-metadata\t"), "{calls}");
 }
 
 #[test]

@@ -75,19 +75,20 @@ pub fn run(args: Vec<OsString>) -> ExitCode {
         Ok(Command::Hook(args)) => done(crate::hook::run(&strings(args))),
         Ok(Command::Peek(args)) => done(crate::peek::run(strings(args))),
         Ok(Command::Setup) => done(crate::core::setup::run()),
-        Ok(cmd @ Command::Pane(..)) => {
+        Ok(cmd @ Command::Pane(id, _)) => {
             // Marked as the plugin's, so that it is told apart from a pane the user gave one of its labels.
             if let Some(pane) = crate::core::exec::env_var("HERDR_PANE_ID") {
                 crate::core::exec::mark_pane(&pane);
             }
             // The explorer's and the preview's first process stays as their launcher; the child runs the pane. The
             // other panes are short-lived and run without one.
-            let launched = matches!(cmd, Command::Pane("tree" | "preview", _));
-            if launched && let Some(code) = crate::launch::launch() {
-                return ExitCode::from(u8::try_from(code).unwrap_or(1));
+            let launched = matches!(id, "tree" | "preview");
+            if launched && let Some(code) = crate::launch::launch(id) {
+                return done(code);
             }
-            // A short-lived pane is its own first process, whose folder herdr reads: the root's, or the editor's
-            // file's without one. The launcher's child keeps the folder its launcher gives it.
+            // A short-lived pane is its own first process, which reports the pane's token, and whose folder herdr
+            // reads: the root's, or the editor's file's without one. The launcher's child keeps the folder its
+            // launcher gives it.
             if !launched {
                 let file_dir = match cmd {
                     Command::Pane("edit", _) if crate::core::exec::env_var("EXPLORER_ROOT").is_none() => {
@@ -97,6 +98,7 @@ pub fn run(args: Vec<OsString>) -> ExitCode {
                     _ => None,
                 };
                 crate::core::exec::home(file_dir.as_deref());
+                crate::core::exec::report_pane(id);
             }
             match cmd {
                 Command::Pane("tree", args) => done(crate::explorer::run(&strings(args))),

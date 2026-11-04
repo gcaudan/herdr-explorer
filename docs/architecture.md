@@ -62,7 +62,8 @@ The binary talks to herdr through its CLI (`herdr pane …`, `herdr plugin pane 
 answers it parses. It recognises the plugin's panes by their label (Explorer, Preview, Search, Source Control,
 Changes, Editor), which the user can also give any pane: before closing one, or counting it as the plugin's, it checks
 the state file each pane writes when it starts (`panes/<pane id>.json`), else its foreground process
-(`exec::own_pane`). [CONTRIBUTING.md](../CONTRIBUTING.md#project-structure) gives the role of each source file, and
+(`exec::own_pane`). Each pane also reports a [pane token](#pane-token) for other plugins.
+[CONTRIBUTING.md](../CONTRIBUTING.md#project-structure) gives the role of each source file, and
 [SECURITY.md](../SECURITY.md) how git and the other programs are run.
 
 ## Placement
@@ -137,6 +138,21 @@ Inputs reach a pane through `--env` variables of `herdr plugin pane open`:
 | `EXPLORER_HISTORY` | scm | a file whose history to show, in place of `EXPLORER_FILE` |
 | `EXPLORER_MODE`, `EXPLORER_QUERY` | search | `files` or `content`, and the first query |
 | `EXPLORER_EDITOR` | edit | the terminal editor command of the settings |
+
+## Pane token
+
+Each pane reports the token `herdr_explorer` to herdr once, when it starts (`herdr pane report-metadata`, source:
+the plugin's id, `gcaudan.explorer`). Its value is the pane's entrypoint: `tree`, `preview`, `search`, `diff`,
+`scm` or `edit`. Other plugins read it in the `tokens` of `herdr pane list`, `herdr pane get` and pane events, to
+tell the explorer's panes without relying on their label, which a user can give any pane.
+
+The token is a hint, not a proof: any other source can overwrite or clear it, and it does not outlive a herdr
+restart (the restored panes report it again when they start). A pane open before an update to a version that
+reports it, restarted on the new code, gets it only once opened again. The plugin itself does not read it.
+
+The `paneToken` setting (**Settings → Pane token**, [configuration.md](configuration.md#settings)) turns it off: a
+pane started then reports none, and the tokens already reported stay. The token's name and values are fixed, as
+other plugins rely on them.
 
 ## Review notes
 

@@ -30,6 +30,7 @@ follow the groups of the settings view: Appearance, Tree, Opening, Preview, Revi
 | `scmCommand` | `""` | Source control tool | a command run instead of the plugin's source control by `prefix+d` (and **Source control** of the menu), in the review tab at the explorer's root: `lazygit`, `gitui`, `tig`, with its arguments, split at spaces outside quotes and run without a shell. Empty: the plugin's. An external tool runs the repository's hooks and filters ([SECURITY.md](../SECURITY.md#running-programs)) | at the next opening |
 | `autoOpen` | `true` | Open automatically | open the explorer in every new tab that has a single pane; off: only with `prefix+f` | new tabs only |
 | `side` | `"left"` | Dock side | `"left"` or `"right"`: where new explorers dock; an open explorer keeps its side | new tabs only |
+| `paneToken` | `true` | Pane token | report each pane's [pane token](architecture.md#pane-token) to herdr, for other plugins | the panes opened afterwards |
 | `updateCheck` | `true` | Check for updates | check GitHub once a day for a newer release | explorers within a second |
 | `reviewShare` | `0.35` | source control: `<` `>`, dragging the border | share of the review's width taken by source control beside its preview, from 0.15 to 0.8 | the next reviews |
 | `searchShare` | `0.35` | search: dragging the border | share of the search's tab taken by the search beside its preview, from 0.15 to 0.8 | the next searches |

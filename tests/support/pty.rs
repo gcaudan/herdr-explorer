@@ -326,7 +326,13 @@ pub fn run(scenario: &Path, command: &[OsString], root: &Path) -> Capture {
     let mut s = screen.unwrap();
     s.feed(&std::mem::take(&mut r.output.lock().unwrap().0));
     drop(r);
-    let calls = std::fs::read_to_string(fake.join("calls.log")).unwrap_or_default();
+    // Without the pane token's report (exec::report_pane), which the JavaScript the captures come from did not make,
+    // and which a thread makes at any point of the run: tests/smoke.rs checks it.
+    let calls: String = std::fs::read_to_string(fake.join("calls.log"))
+        .unwrap_or_default()
+        .split_inclusive('\n')
+        .filter(|l| !l.starts_with("pane\treport-metadata\t"))
+        .collect();
     let mut screen = s.text().replace(rootstr, "$ROOT");
     if let Some(v) = version() {
         screen = screen.replace(&format!(" {v} → "), " $VERSION → ");

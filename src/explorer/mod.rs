@@ -782,10 +782,10 @@ impl Explorer {
         }));
     }
 
-    /// The icon theme or icon set chosen in another explorer, the update check, the opening in new tabs, what Enter
-    /// opens, the editor and the preview following the selection changed there, and the preview and diff settings
-    /// changed in their panes. Hidden and ignored files stay this explorer's; Follow terminal is read again at each
-    /// check (follow).
+    /// The icon theme or icon set chosen in another explorer, the update check, the pane token, the opening in new
+    /// tabs, what Enter opens, the editor and the preview following the selection changed there, and the preview and
+    /// diff settings changed in their panes. Hidden and ignored files stay this explorer's; Follow terminal is read again
+    /// at each check (follow).
     fn settings_changed(&mut self) {
         // A file read while being written is skipped, rather than taken for the default settings.
         let Some(file) = exec::settings_file() else { return };
@@ -797,6 +797,7 @@ impl Explorer {
         let chosen = saved.get("icons").filter(|v| v.truthy()).cloned().unwrap_or(Value::Str(String::new()));
         let names = [
             "updateCheck",
+            "paneToken",
             "autoOpen",
             "open",
             "editor",
