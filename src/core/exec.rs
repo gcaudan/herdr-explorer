@@ -768,7 +768,8 @@ const PANE_TOKEN: &str = "herdr_explorer";
 /// setting off, read here: it applies to the panes opened afterwards, and leaves the tokens already reported.
 pub fn report_pane(entrypoint: &str) {
     let Some(pane) = env_var("HERDR_PANE_ID") else { return };
-    if read_settings().get("paneToken") == Some(&Value::Bool(false)) {
+    // Off as the settings view shows it: any value that is not truthy, not only false.
+    if !read_settings().get("paneToken").is_some_and(Value::truthy) {
         return;
     }
     let token = format!("{PANE_TOKEN}={entrypoint}");
