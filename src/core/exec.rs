@@ -762,10 +762,10 @@ const PANE_TOKEN: &str = "herdr_explorer";
 
 /// Reports the pane's token (`PANE_TOKEN`) to herdr, once, from the pane's first process. On a thread, as the pane's
 /// first screen does not wait for herdr; waited for at exit (`at_exit`), as a short-lived pane (the editor's) could
-/// end first, but until 1 s after the start at most: a herdr that does not answer does not hold the pane's exit, nor
-/// the work after. A herdr that refuses it changes nothing; anyone can overwrite or clear it, and it does not outlive a
-/// herdr restart: the plugin itself does not read it. None with the paneToken setting off, read here: it applies to
-/// the panes opened afterwards, and leaves the tokens already reported.
+/// end first, but until 1 s after the start at most: a herdr that does not answer is killed then, and holds neither the
+/// pane's exit nor the work after, nor outlives the pane. A herdr that refuses it changes nothing; anyone can overwrite
+/// or clear it, and it does not outlive a herdr restart: the plugin itself does not read it. None with the paneToken
+/// setting off, read here: it applies to the panes opened afterwards, and leaves the tokens already reported.
 pub fn report_pane(entrypoint: &str) {
     let Some(pane) = env_var("HERDR_PANE_ID") else { return };
     if read_settings().get("paneToken") == Some(&Value::Bool(false)) {
@@ -776,11 +776,14 @@ pub fn report_pane(entrypoint: &str) {
     let (done, ended) = std::sync::mpsc::channel();
     std::thread::spawn(move || {
         let args = ["pane", "report-metadata", &pane, "--source", &plugin(), "--token", &token];
-        let _ = run(herdr(), &args, &herdr_opts());
+        // Killed at the deadline of the wait at exit, which it ends: past the pane's exit, nothing would bound it.
+        let opts = Opts { timeout: Some(deadline.saturating_duration_since(Instant::now())), ..herdr_opts() };
+        let _ = run(herdr(), &args, &opts);
         let _ = done.send(());
     });
+    // A little past the deadline, for the herdr killed at it to be told so.
     at_exit(move || {
-        let _ = ended.recv_timeout(deadline.saturating_duration_since(Instant::now()));
+        let _ = ended.recv_timeout(deadline.saturating_duration_since(Instant::now()) + Duration::from_millis(100));
     });
 }
 
