@@ -375,7 +375,8 @@ pub fn words(s: &str) -> Vec<String> {
 }
 
 /// What a child is given: its folder, environment (the whole of it), standard input, time limit, a session of its own
-/// (detached), a shell to run it, and how much output it may write (execFile's maxBuffer, 64 MiB by default).
+/// (detached), a shell to run it, how much output it may write (execFile's maxBuffer, 64 MiB by default), and a flag
+/// that kills it once set, as a timeout does (cancel).
 #[derive(Default, Clone)]
 pub struct Opts {
     pub cwd: Option<String>,
@@ -385,6 +386,7 @@ pub struct Opts {
     pub detached: bool,
     pub shell: bool,
     pub max_buffer: Option<usize>,
+    pub cancel: Option<Arc<std::sync::atomic::AtomicBool>>,
 }
 
 const MAX_OUT: usize = 64 << 20;
@@ -646,7 +648,7 @@ fn spawn(cmd: &str, args: &[&str], opts: &Opts, kill_on_overflow: bool) -> Outco
             break None;
         }
         match deadline {
-            None if !kill_on_overflow => break child.wait().ok(),
+            None if !kill_on_overflow && opts.cancel.is_none() => break child.wait().ok(),
             _ => {}
         }
         match child.try_wait() {
@@ -654,7 +656,8 @@ fn spawn(cmd: &str, args: &[&str], opts: &Opts, kill_on_overflow: bool) -> Outco
             Ok(None) => {}
             Err(_) => break None,
         }
-        if deadline.is_some_and(|d| Instant::now() >= d) {
+        let cancelled = opts.cancel.as_ref().is_some_and(|c| c.load(Ordering::SeqCst));
+        if cancelled || deadline.is_some_and(|d| Instant::now() >= d) {
             kill(&mut child);
             timed_out = true;
             break None;
@@ -761,26 +764,35 @@ pub fn herdr() -> Option<&'static str> {
 const PANE_TOKEN: &str = "herdr_explorer";
 
 /// Reports the pane's token (`PANE_TOKEN`) to herdr, once, from the pane's first process. On a thread, as the pane's
-/// first screen does not wait for herdr; waited for at exit (`at_exit`), as a short-lived pane (the editor's) could
-/// end first, but until 1 s after the start at most: a herdr that does not answer does not hold the pane's exit, nor
-/// the work after. A herdr that refuses it changes nothing; anyone can overwrite or clear it, and it does not outlive a
-/// herdr restart: the plugin itself does not read it. None with the paneToken setting off, read here: it applies to
-/// the panes opened afterwards, and leaves the tokens already reported.
-pub fn report_pane(entrypoint: &str) {
+/// first screen does not wait for herdr, within herdr's time limit while the pane runs. At exit (`at_exit`), with
+/// `wait_at_exit`, waited for until 1 s after the start at most, as a short-lived pane (the editor's) could end first;
+/// not by a launcher, whose pane ends with it. Then a herdr that has not answered is killed: it holds neither the pane's
+/// exit nor the work after, nor outlives the pane. A herdr that refuses it changes nothing; anyone can overwrite or
+/// clear it, and it does not outlive a herdr restart: the plugin itself does not read it. None with the paneToken
+/// setting off, read here: it applies to the panes opened afterwards, and leaves the tokens already reported.
+pub fn report_pane(entrypoint: &str, wait_at_exit: bool) {
     let Some(pane) = env_var("HERDR_PANE_ID") else { return };
-    if read_settings().get("paneToken") == Some(&Value::Bool(false)) {
+    // Off as the settings view shows it: any value that is not truthy, not only false.
+    if !read_settings().get("paneToken").is_some_and(Value::truthy) {
         return;
     }
     let token = format!("{PANE_TOKEN}={entrypoint}");
     let deadline = Instant::now() + Duration::from_secs(1);
     let (done, ended) = std::sync::mpsc::channel();
+    let cancel = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let opts = Opts { cancel: Some(cancel.clone()), ..herdr_opts() };
     std::thread::spawn(move || {
         let args = ["pane", "report-metadata", &pane, "--source", &plugin(), "--token", &token];
-        let _ = run(herdr(), &args, &herdr_opts());
+        let _ = run(herdr(), &args, &opts);
         let _ = done.send(());
     });
     at_exit(move || {
-        let _ = ended.recv_timeout(deadline.saturating_duration_since(Instant::now()));
+        let wait = if wait_at_exit { deadline.saturating_duration_since(Instant::now()) } else { Duration::ZERO };
+        if ended.recv_timeout(wait).is_err() {
+            // Killed within the 5 ms of the wait's loop (spawn): waited for a little longer, the kill told.
+            cancel.store(true, Ordering::SeqCst);
+            let _ = ended.recv_timeout(Duration::from_millis(100));
+        }
     });
 }
 
@@ -1525,6 +1537,20 @@ mod tests {
             run(Some("/bin/sh"), &["-c", "pwd; echo $X; echo ${HOME:-none}"], &cwd).as_deref(),
             Some("/\n1\nnone\n")
         );
+    }
+
+    #[test]
+    fn a_cancelled_program_is_killed_without_a_time_limit() {
+        let cancel = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let opts = Opts { cancel: Some(cancel.clone()), ..Default::default() };
+        let flag = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(100));
+            cancel.store(true, Ordering::SeqCst);
+        });
+        let t = Instant::now();
+        assert_eq!(run(Some("/bin/sh"), &["-c", "exec sleep 5"], &opts), None);
+        assert!(t.elapsed() < Duration::from_secs(3), "{:?}", t.elapsed());
+        flag.join().unwrap();
     }
 
     #[test]

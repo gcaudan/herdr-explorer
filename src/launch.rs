@@ -114,7 +114,8 @@ pub fn launcher(exe: &Path, args: &[OsString], entrypoint: Option<&str>) -> i32 
     // After the lifeline: its write end is made close-on-exec after the pipe, so a herdr started meanwhile by another
     // thread could inherit it, and hold a child whose launcher was killed until that herdr ends.
     if let Some(entrypoint) = entrypoint {
-        exec::report_pane(entrypoint);
+        // Not waited for at exit, only killed then: the pane ends with its launcher.
+        exec::report_pane(entrypoint, false);
     }
     let ipc = folder.join("ipc");
     // Without a watch (an unsupported system), the messages are read once a second, and at each child's end.

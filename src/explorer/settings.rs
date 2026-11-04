@@ -518,7 +518,7 @@ impl Explorer {
             // First of its group, new since the JavaScript: its recorded scenarios reach Key bindings by end, up.
             Row::setting(
                 "Pane token",
-                "Tell herdr which of the plugin's panes a pane is, for other plugins. Off: the panes opened afterwards report none.",
+                "Tell herdr which of the plugin's panes a pane is, for other plugins. Off: the panes opened afterwards report none, the open ones keep theirs until herdr restarts.",
                 self.on_off("paneToken"),
             ),
             Row::setting(

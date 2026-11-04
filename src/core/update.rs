@@ -187,7 +187,8 @@ fn latest_release(repo: &str) -> Option<(String, Vec<String>, String)> {
 
 /// At most once a day, and not when the setting is off. A failed check is not retried before the next day either.
 pub fn check() {
-    if file().is_none() || exec::read_settings().get("updateCheck") == Some(&Value::Bool(false)) {
+    // Off as the settings view shows it: any value that is not truthy, not only false.
+    if file().is_none() || !exec::read_settings().get("updateCheck").is_some_and(Value::truthy) {
         return;
     }
     let data = read();

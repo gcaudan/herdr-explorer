@@ -98,7 +98,7 @@ pub fn run(args: Vec<OsString>) -> ExitCode {
                     _ => None,
                 };
                 crate::core::exec::home(file_dir.as_deref());
-                crate::core::exec::report_pane(id);
+                crate::core::exec::report_pane(id, true);
             }
             match cmd {
                 Command::Pane("tree", args) => done(crate::explorer::run(&strings(args))),

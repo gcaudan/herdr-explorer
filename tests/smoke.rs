@@ -423,22 +423,38 @@ fn no_pane_reports_its_token_with_the_setting_off() {
     let s = Setup::new("no-token");
     std::fs::write(
         s.root.join("state/settings.json"),
-        r#"{"glyphs":"unicode","theme":"dark","updateCheck":false,"paneToken":false}"#,
+        // 0 rather than false: off as the settings view shows it, any value that is not truthy.
+        r#"{"glyphs":"unicode","theme":"dark","updateCheck":false,"paneToken":0}"#,
     )
     .unwrap();
+    let file = s.work.join("a.txt").display().to_string();
     let root = s.work.display().to_string();
-    // The explorer by its launcher, the search as its own first process.
-    let mut p = s.start(&s.cmd(&["pane", "tree"]), &[("EXPLORER_ROOT", &root)]);
-    p.until("a.txt");
-    std::thread::sleep(Duration::from_millis(500));
-    p.send(b"q");
-    p.closed_by_herdr(&s);
-    p.none_left();
-    let mut p = s.start(&s.cmd(&["pane", "search"]), &[("EXPLORER_ROOT", &root)]);
-    p.until("a.txt");
-    std::thread::sleep(Duration::from_millis(500));
-    p.send(b"\x1b");
-    assert_eq!(p.code(), Some(0), "{}", p.screen());
+    // Each pane, the explorer and the preview by their launcher, the others as their own first process.
+    let panes: [(&str, Vars, &str, &[u8]); 5] = [
+        ("tree", &[("EXPLORER_ROOT", &root)], "a.txt", b"q"),
+        ("preview", &[("EXPLORER_FILE", &file), ("EXPLORER_ROOT", &root)], "hello smoke", b"q"),
+        ("search", &[("EXPLORER_ROOT", &root)], "a.txt", b"\x1b"),
+        ("diff", &[("EXPLORER_FILE", &file), ("EXPLORER_ROOT", &root)], "a.txt", b"q"),
+        ("scm", &[("EXPLORER_ROOT", &root)], "Not a git repository", b"q"),
+    ];
+    for (id, extra, shown, quit) in panes {
+        let mut p = s.start(&s.cmd(&["pane", id]), extra);
+        p.until(shown);
+        std::thread::sleep(Duration::from_millis(500));
+        p.send(quit);
+        if id == "tree" {
+            p.closed_by_herdr(&s);
+        } else {
+            assert_eq!(p.code(), Some(0), "{id}:\n{}", p.screen());
+        }
+        p.none_left();
+    }
+    let editor = s.root.join("editor.sh");
+    std::fs::write(&editor, "#!/bin/sh\nexit 0\n").unwrap();
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(&editor, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let mut p = s.start(&s.cmd(&["pane", "edit"]), &[("EXPLORER_FILE", &file), ("EDITOR", editor.to_str().unwrap())]);
+    assert_eq!(p.code(), Some(0), "edit:\n{}", p.screen());
     p.none_left();
     let calls = std::fs::read_to_string(s.root.join("herdr/calls.log")).unwrap_or_default();
     assert!(!calls.contains("\treport-metadata\t"), "{calls}");
