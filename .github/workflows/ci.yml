@@ -1,5 +1,6 @@
 # Quick checks on every pull request and push to main: the Rust crate's format, lints (host and the 5 release targets)
-# and tests. Each night, a long pass of the mutation bench (tests/mutate.rs).
+# and tests, then the workflows and shell scripts (actionlint, shellcheck). Each night, a long pass of the mutation
+# bench (tests/mutate.rs).
 name: ci
 
 on:
@@ -11,6 +12,11 @@ on:
 
 permissions:
   contents: read
+
+# A new push to a pull request cancels the run of the previous one; on main, each push and each night runs to the end.
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   cargo:
@@ -25,8 +31,14 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       # The runners' rustup installs the toolchain, components and targets pinned in rust-toolchain.toml.
       - run: rustup toolchain install
+      # ~/.cargo and target/, keyed on the system, the toolchain and Cargo.lock; saved by the runs of main only.
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
       # Compiles each release target's FFI without linking it.
@@ -56,6 +68,29 @@ jobs:
           }
           if ($failed) { exit 1 }
 
+  # The workflows (actionlint, which also runs shellcheck on their run: blocks) and the shell scripts (shellcheck,
+  # preinstalled on the runner). actionlint is fetched at a pinned version and checked against its SHA256.
+  lint:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    env:
+      ACTIONLINT_VERSION: 1.7.12
+      ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Shellcheck the scripts
+        run: shellcheck scripts/*.sh tools/fake-herdr/herdr
+      - name: Lint the workflows
+        run: |
+          set -euo pipefail
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSLO "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/$archive"
+          echo "$ACTIONLINT_SHA256  $archive" | sha256sum -c -
+          tar -xzf "$archive" actionlint
+          ./actionlint -color
+
   # A new seed each night: a failure gives the seed and rounds that replay it (MUTATE_SEED, MUTATE_ROUNDS). Built
   # as released, so that the 2 s limit times the binary users run (a debug build decodes a large image 15 times
   # slower), with the overflow checks of a debug build kept.
@@ -64,9 +99,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - run: rustup toolchain install
       - run: cargo test --release --test mutate
         env:
           CARGO_PROFILE_RELEASE_OVERFLOW_CHECKS: 'true'
           MUTATE_ROUNDS: 20000
           MUTATE_SEED: ${{ github.run_id }}
+      # The inputs that failed, to replay without rerunning the seed: the artifact of the run, kept 30 days.
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mutate-${{ github.run_id }}
+          path: target/mutate/
+          if-no-files-found: ignore
+          retention-days: 30
