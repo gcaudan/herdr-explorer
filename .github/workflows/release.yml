@@ -1,17 +1,15 @@
 # Release on every push to main: release-please opens or updates the release pull request from the Conventional
 # Commits (version in herdr-plugin.toml, CHANGELOG.md); merging it creates the tag vX.Y.Z and a draft GitHub release,
-# the binaries of the 5 targets are built and attached with their SHA256SUMS, then the release is published. So
-# releases/latest, which the update check reads, never gives a version without its binaries.
+# the tests run at the tag, the binaries of the 5 targets are built and attached with their SHA256SUMS, then the
+# release is published. So releases/latest, which the update check reads, never gives a version without its binaries,
+# nor one whose tests fail. Each job asks for the token permissions it needs, no more.
 name: release
 
 on:
   push:
     branches: [main]
 
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+permissions: {}
 
 # One release at a time: two quick merges must not both publish.
 concurrency:
@@ -21,6 +19,10 @@ concurrency:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     outputs:
       created: ${{ steps.rp.outputs.release_created }}
       tag: ${{ steps.rp.outputs.tag_name }}
@@ -61,12 +63,35 @@ jobs:
             | grep -qx "version = \"$version\"" || fail "herdr-plugin.toml at $TAG is not $version"
           echo "release $TAG verified"
 
+  # The tests at the tag, on the systems of the build, before any binary: the release pull request, opened with
+  # GITHUB_TOKEN, runs no workflow, so nothing else has tested this commit. A failure leaves the tag and the draft
+  # release unpublished; the fix goes out in the next release.
+  test:
+    needs: release-please
+    if: needs.release-please.outputs.created == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.tag }}
+          persist-credentials: false
+      - run: rustup toolchain install
+      - run: cargo test --locked --no-fail-fast
+
   # The assets of the contract fetch-bin, the updater and the launcher read: bare binaries named after their target,
   # built at the tag with the toolchain of rust-toolchain.toml. x86_64-apple-darwin is cross-compiled, no Intel macOS
   # runner being left.
   build:
-    needs: release-please
-    if: needs.release-please.outputs.created == 'true'
+    needs: [release-please, test]
     strategy:
       fail-fast: false
       matrix:
@@ -77,6 +102,8 @@ jobs:
           - { target: aarch64-apple-darwin, os: macos-latest }
           - { target: x86_64-pc-windows-msvc, os: windows-latest, ext: .exe }
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
     defaults:
       run:
         shell: bash
@@ -84,9 +111,11 @@ jobs:
       TAG: ${{ needs.release-please.outputs.tag }}
       ASSET: herdr-explorer-${{ matrix.target }}${{ matrix.ext }}
     steps:
+      # No token left in .git/config: cargo build runs build.rs and the dependencies' build scripts.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.release-please.outputs.tag }}
+          persist-credentials: false
       - run: rustup toolchain install
       - run: cargo build --release --locked --target ${{ matrix.target }}
       # gh finds a draft release by its tag; a release just created can take a moment to be seen, hence the tries.
@@ -109,6 +138,8 @@ jobs:
   publish:
     needs: [release-please, build]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -125,7 +156,8 @@ jobs:
             x86_64-pc-windows-msvc.exe; do
             [[ -s "herdr-explorer-$t" ]] || fail "herdr-explorer-$t is missing from $TAG"
           done
-          [[ $(ls | wc -l) -eq 5 ]] || fail "$TAG has assets other than the 5 binaries: $(ls | tr '\n' ' ')"
+          files=(*)
+          [[ ${#files[@]} -eq 5 ]] || fail "$TAG has assets other than the 5 binaries: $(printf '%s ' *)"
           sha256sum herdr-explorer-* >SHA256SUMS
           cat SHA256SUMS
           gh release upload "$TAG" SHA256SUMS --clobber

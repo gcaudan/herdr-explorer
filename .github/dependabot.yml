@@ -1,0 +1,14 @@
+# Monthly, one pull request for the actions of the workflows, whose SHA pins and version comments it updates. ci(deps)
+# makes no release. The crate has no dependency, hence no cargo entry: add one, prefixed fix(deps) for the crates the
+# binary ships with, the day it gets some.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci(deps)
+    groups:
+      actions:
+        patterns: ["*"]

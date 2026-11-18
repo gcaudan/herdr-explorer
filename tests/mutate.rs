@@ -11,7 +11,7 @@ use herdr_explorer::json::{self, Value};
 use herdr_explorer::render::{highlight, image, markdown};
 use herdr_explorer::{diff, scm};
 use std::path::{Path, PathBuf};
-use std::sync::mpsc;
+use std::sync::{LazyLock, mpsc};
 use std::time::Duration;
 
 /// xorshift64*: enough to scatter mutations, and the same run for the same seed.
@@ -86,6 +86,33 @@ fn strings(fixture: &str, fns: &[&str]) -> Vec<String> {
 
 type Target = (&'static str, fn(&[u8]));
 
+/// The exec cases of regexp.json whose pattern backtracks exponentially by design, a case of the engine against the
+/// JS (on an empty text), not a pattern of the panes: any text of a few `a` would time out.
+const EXPONENTIAL: &[&str] = &["(a+)+$"];
+
+/// The patterns and flags of the exec cases of regexp.json, the panes' and the engine's cases, each compiled once.
+static PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
+    let file = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/modules/regexp.json");
+    let v = json::parse(&std::fs::read_to_string(&file).unwrap()).unwrap();
+    let mut pairs: Vec<(String, String)> = v
+        .get("cases")
+        .and_then(Value::as_array)
+        .unwrap()
+        .iter()
+        .filter(|case| case.get("fn").and_then(Value::as_str) == Some("exec"))
+        .filter_map(|case| {
+            let args = case.get("args").and_then(Value::as_array)?;
+            Some((args.first()?.as_str()?.to_string(), args.get(1)?.as_str()?.to_string()))
+        })
+        .collect();
+    pairs.retain(|(src, _)| !EXPONENTIAL.contains(&src.as_str()));
+    pairs.sort();
+    pairs.dedup();
+    let patterns: Vec<Regex> = pairs.iter().filter_map(|(src, flags)| Regex::new(src, flags).ok()).collect();
+    assert!(!patterns.is_empty(), "no exec pattern in regexp.json");
+    patterns
+});
+
 fn text(b: &[u8]) -> String {
     String::from_utf8_lossy(b).into_owned()
 }
@@ -126,9 +153,11 @@ const TEXTS: &[Target] = &[
             drop(highlight::highlight(&t, Some(lang)));
         }
     }),
+    // The text mutated, the patterns not: a mutated pattern such as `.*.*.*.*.*x` backtracks in n^5 steps, as any
+    // backtracking engine does, and no pattern of the panes comes from what the user types.
     ("regex", |b| {
         let t = text(b);
-        if let Ok(re) = Regex::new(&t, "i") {
+        for re in PATTERNS.iter() {
             drop(re.exec(&t));
         }
     }),
@@ -157,6 +186,8 @@ fn decoders_and_parsers_survive_mutated_inputs() {
     let rounds = env("MUTATE_ROUNDS").unwrap_or(200) as usize;
     let seed = env("MUTATE_SEED").unwrap_or(0x9e37_79b9_7f4a_7c15);
     let mut rng = Rng(seed | 1);
+    // Compiled here, outside the 2 s of the first call.
+    LazyLock::force(&PATTERNS);
     let images: Vec<Vec<u8>> =
         strings("render.image.json", &["info", "decode"]).iter().map(|s| base64::decode(s)).collect();
     let mut zlib: Vec<Vec<u8>> = strings("codec.json", &["inflate"]).iter().map(|s| base64::decode(s)).collect();
